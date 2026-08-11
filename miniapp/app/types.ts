@@ -181,6 +181,29 @@ export type CompletionResponse = {
   result: ServerResult;
 };
 
+export type ReviewItem = {
+  question_id: string;
+  number: number;
+  type: QuestionType;
+  topic: string;
+  title: string;
+  prompt: string;
+  asset?: string;
+  assets?: string[];
+  is_correct: boolean;
+  user_answer: string;
+  expected_answer: string;
+  guidance: string;
+  guidance_kind: "individual" | "fallback";
+};
+
+export type ReviewResponse = {
+  ok: true;
+  available: boolean;
+  items: ReviewItem[];
+  pdf_status: "pending" | "sending" | "sent" | "failed" | "abandoned";
+};
+
 export type SavedSession = {
   attemptId: string;
   supersedesAttemptId?: string;

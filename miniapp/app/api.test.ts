@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildCompletionPayload,
   createProgressSaveQueue,
+  loadReview,
   loadLocalSession,
   postDiagnostic,
   reconcileRestoredSession,
@@ -243,6 +244,29 @@ describe("diagnostic API payloads", () => {
     expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({
       init_data: "signed-init-data",
     });
+  });
+
+  it("posts only review authentication and session identifiers", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      ok: true, available: true, items: [], pdf_status: "pending",
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetcher);
+    try {
+      await loadReview("init", "attempt_123", "scope");
+      expect(fetcher).toHaveBeenCalledWith("/api/diagnostics/session/review", expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          init_data: "init",
+          attempt_id: "attempt_123",
+          session_scope: "scope",
+        }),
+      }));
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("honors Retry-After before retrying a shared-NAT rate limit", async () => {

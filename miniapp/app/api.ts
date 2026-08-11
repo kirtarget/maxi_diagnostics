@@ -4,6 +4,7 @@ import type {
   CompletionResponse,
   DiagnosticMode,
   PublicDiagnostic,
+  ReviewResponse,
   SavedSession,
   ServerAttempt,
 } from "./types";
@@ -528,6 +529,12 @@ export const markResultViewed = (
   initData: string, attemptId: string, sessionScope: string,
 ) =>
   postDiagnostic<{ ok: true }>("/api/diagnostics/session/viewed", initData, {
+    attempt_id: attemptId,
+    session_scope: sessionScope,
+  });
+
+export const loadReview = (initData: string, attemptId: string, sessionScope: string) =>
+  postDiagnostic<ReviewResponse>("/api/diagnostics/session/review", initData, {
     attempt_id: attemptId,
     session_scope: sessionScope,
   });
