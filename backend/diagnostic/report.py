@@ -342,7 +342,14 @@ def build_report(
         raise ValueError("report_question_limit")
 
     report_snapshot = _value(attempt, "report_snapshot", {}) or {}
+    review_snapshot = (
+        report_snapshot.get("review_snapshot")
+        if isinstance(report_snapshot, Mapping)
+        else None
+    )
     snapshot_school = report_snapshot.get("school") if isinstance(report_snapshot, Mapping) else None
+    if isinstance(review_snapshot, list) and not isinstance(snapshot_school, Mapping):
+        raise ValueError("report_snapshot_invalid")
     if isinstance(snapshot_school, Mapping):
         try:
             school = SchoolConfig(
@@ -353,11 +360,6 @@ def build_report(
         except Exception:
             raise ValueError("report_snapshot_invalid") from None
     frozen_assets = _frozen_assets(_value(attempt, "report_assets"))
-    review_snapshot = (
-        report_snapshot.get("review_snapshot")
-        if isinstance(report_snapshot, Mapping)
-        else None
-    )
     diagnostic = report_snapshot.get("diagnostic") if isinstance(report_snapshot, Mapping) else None
     has_completion_snapshot = isinstance(diagnostic, Mapping) or isinstance(review_snapshot, list)
     if not isinstance(diagnostic, Mapping):

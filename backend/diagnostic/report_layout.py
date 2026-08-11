@@ -197,11 +197,15 @@ def _answer_story(
 ) -> list[Any]:
     if max(len(user_answer), len(expected_answer)) > _TWO_COLUMN_ANSWER_LIMIT:
         return [
-            Paragraph("Ваш ответ", styles["label"]),
-            Paragraph(escape(user_answer), styles["user_answer"]),
+            Paragraph(
+                f"<b>Ваш ответ</b><br/>{escape(user_answer)}",
+                styles["user_answer"],
+            ),
             Spacer(1, 3 * mm),
-            Paragraph("Правильный ответ", styles["label"]),
-            Paragraph(escape(expected_answer), styles["expected_answer"]),
+            Paragraph(
+                f"<b>Правильный ответ</b><br/>{escape(expected_answer)}",
+                styles["expected_answer"],
+            ),
         ]
     answer_table = Table(
         [

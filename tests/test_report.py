@@ -273,6 +273,67 @@ def test_answer_labels_do_not_split_from_answer_values():
     assert "16" in label_page
 
 
+def test_long_answer_label_stays_with_first_splittable_fragment():
+    from diagnostic.report_layout import (
+        ReportTheme,
+        _answer_story,
+        make_styles,
+        register_report_fonts,
+    )
+
+    register_report_fonts()
+    styles = make_styles(
+        ReportTheme(
+            primary=colors.HexColor("#5636D3"),
+            signal=colors.HexColor("#C7F36B"),
+            ink=colors.HexColor("#222222"),
+            paper=colors.HexColor("#F7F5EF"),
+        )
+    )
+    long_answer = "НАЧАЛО ДЛИННОГО ОТВЕТА " + "фрагмент " * 1000
+    output = BytesIO()
+    document = SimpleDocTemplate(
+        output,
+        pagesize=A4,
+        rightMargin=18 * mm,
+        leftMargin=18 * mm,
+        topMargin=18 * mm,
+        bottomMargin=18 * mm,
+    )
+
+    document.build(
+        [Spacer(1, 250 * mm), *_answer_story(long_answer, "16", styles)]
+    )
+    pages = [
+        page.extract_text() or ""
+        for page in PdfReader(BytesIO(output.getvalue())).pages
+    ]
+    label_page = next(page for page in pages if "Ваш ответ" in page)
+
+    assert "НАЧАЛО ДЛИННОГО ОТВЕТА" in label_page
+    assert sum("фрагмент" in page for page in pages) >= 2
+
+
+def test_premium_report_rejects_missing_frozen_school():
+    from diagnostic.report import build_report
+
+    school = load_school(SAMPLE_SCHOOL)
+    school.brand.name = "ЖИВАЯ ШКОЛА"
+    diagnostic = load_catalog(load_school(SAMPLE_SCHOOL)).get("demo-math")
+    snapshot = make_review_report_snapshot(
+        school,
+        diagnostic,
+        [make_review(prompt="Условие", guidance="Решение")],
+    )
+    del snapshot["school"]
+
+    with pytest.raises(ValueError, match="report_snapshot_invalid"):
+        build_report(
+            completed_attempt(question_count=1, report_snapshot=snapshot),
+            school,
+        )
+
+
 def test_build_report_uses_frozen_safe_internal_svg_without_live_assets(tmp_path: Path):
     from diagnostic.report import _optional_image
 
