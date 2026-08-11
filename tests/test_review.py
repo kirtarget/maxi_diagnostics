@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from diagnostic.catalog import load_catalog
@@ -39,3 +40,34 @@ def test_individual_explanation_wins_and_public_review_drops_raw_values():
     assert payload[0]["guidance"] == "Сложите два и два: получится четыре."
     assert "expected_value" not in payload[0]
     assert "user_value" not in payload[0]
+
+
+def test_review_snapshot_freezes_question_options_and_matching_items():
+    catalog = load_catalog(load_school(SAMPLE_SCHOOL))
+    questions = catalog.get("demo-math").questions
+    snapshot = build_review_snapshot(questions, {})
+
+    assert snapshot[0]["options"] == [
+        {"id": "1", "label": "3"},
+        {"id": "2", "label": "4"},
+    ]
+    assert snapshot[1]["options"] == [
+        {"id": "1", "label": "2/4"},
+        {"id": "2", "label": "2/3"},
+        {"id": "3", "label": "3/6"},
+    ]
+    assert snapshot[2]["items"] == [
+        {"id": "a", "label": "2 + 2"},
+        {"id": "b", "label": "3 + 3"},
+    ]
+    assert snapshot[2]["options"] == [
+        {"id": "1", "label": "6"},
+        {"id": "2", "label": "4"},
+    ]
+    json.dumps(snapshot, ensure_ascii=False)
+
+    snapshot[0]["options"][0]["label"] = "changed"
+    snapshot[2]["items"][0]["label"] = "changed"
+
+    assert questions[0].options[0].label == "3"
+    assert questions[2].items[0].label == "2 + 2"

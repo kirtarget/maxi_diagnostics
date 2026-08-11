@@ -101,6 +101,14 @@ def build_review_snapshot(
                 "prompt": question.prompt,
                 "asset": question.asset,
                 "assets": list(assets) if assets else None,
+                "options": [
+                    option.model_dump(mode="json")
+                    for option in getattr(question, "options", ())
+                ],
+                "items": [
+                    item.model_dump(mode="json")
+                    for item in getattr(question, "items", ())
+                ],
                 "is_correct": is_answer_correct(question, user_value),
                 "user_value": user_value,
                 "expected_value": answer_value,
