@@ -3,9 +3,9 @@
   "name": "«Демо-школа»",
   "short_name": "«Демо»",
   "colors": {
-    "primary": "#5636D3",
-    "accent": "#C7F36B",
-    "background": "#F7F5EF",
+    "primary": "#FD7E14",
+    "accent": "#FF9341",
+    "background": "#F5F5F5",
     "signal": "#D8FF42",
     "ink": "#101517",
     "paper": "#F5F5F0"
