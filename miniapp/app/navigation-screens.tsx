@@ -20,6 +20,10 @@ export function WelcomeScreen({
   onStart,
 }: WelcomeScreenProps) {
   const minimumQuestions = Math.min(...diagnostics.map((item) => item.quick_count));
+  const maximumQuestions = Math.max(...diagnostics.map((item) => item.questions.length));
+  const questionRange = minimumQuestions === maximumQuestions
+    ? String(maximumQuestions)
+    : `${minimumQuestions}–${maximumQuestions}`;
   const radarLabel = "Радар результата: сильные темы, пробелы и персональный план";
 
   return (
@@ -40,8 +44,8 @@ export function WelcomeScreen({
         <span className="radar-point radar-point-plan">План</span>
       </div>
       <div className="welcome-facts" aria-label="Параметры диагностики">
-        <div><strong>{minimumQuestions}–20</strong><span>заданий</span></div>
-        <div><strong>≈10</strong><span>минут</span></div>
+        <div><strong>{questionRange}</strong><span>заданий</span></div>
+        <div><strong>Без таймера</strong><span>свой темп</span></div>
         <div><strong>PDF</strong><span>в Telegram</span></div>
       </div>
       <button className="primary-button" onClick={onStart} type="button">

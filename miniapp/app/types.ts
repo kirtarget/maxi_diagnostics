@@ -13,6 +13,7 @@ type BaseQuestion = {
   title: string;
   prompt: string;
   asset?: string;
+  assets?: string[];
 };
 
 export type SingleQuestion = BaseQuestion & {

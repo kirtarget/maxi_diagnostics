@@ -5,6 +5,7 @@ import {
   splitPromptSentences,
   tokenizeMathText,
 } from "./math-text";
+import { isValidNumericInput, updateMatchingAnswer } from "./answer-values";
 import { questionAssetPaths } from "./question-assets";
 import {
   cleanAnswerLabel,
@@ -40,14 +41,6 @@ export type QuestionScreenProps = {
   onNext: () => void;
 };
 
-function isValidNumericAnswer(value: unknown): value is string {
-  return typeof value === "string"
-    && value.length >= 1
-    && value.length <= 64
-    && value === value.trim()
-    && /^[+-]?(?:[0-9]+(?:[.,][0-9]*)?|[.,][0-9]+)(?:[eE][+-]?[0-9]{1,3})?$/.test(value);
-}
-
 function isAnswered(question: Question, answer: AnswerValue | undefined): boolean {
   if (question.type === "single") return typeof answer === "string" && answer.length > 0;
   if (question.type === "multiple") {
@@ -66,7 +59,7 @@ function isAnswered(question: Question, answer: AnswerValue | undefined): boolea
   const matching = parseSequenceMatchingPrompt(question.prompt);
   return matching
     ? isCompleteSequenceMatchingAnswer(matching, answer)
-    : isValidNumericAnswer(answer);
+    : isValidNumericInput(answer);
 }
 
 function FormattedMathText({ text }: { text: string }) {
@@ -446,15 +439,6 @@ function MatchingAnswers({ question, value, onChange, chooseLabel }: {
   onChange: (value: Record<string, string>) => void;
   chooseLabel: string;
 }) {
-  const updateAnswer = (itemId: string, nextValue: string) => {
-    if (nextValue) onChange({ ...value, [itemId]: nextValue });
-    else {
-      const next = { ...value };
-      delete next[itemId];
-      onChange(next);
-    }
-  };
-
   return (
     <div className="matching-list">
       {question.items.map((item, index) => (
@@ -464,7 +448,7 @@ function MatchingAnswers({ question, value, onChange, chooseLabel }: {
           <select
             aria-label={`Соответствие для ${item.label}`}
             value={value[item.id] ?? ""}
-            onChange={(event) => updateAnswer(item.id, event.target.value)}
+            onChange={(event) => onChange(updateMatchingAnswer(value, item.id, event.target.value))}
           >
             <option value="">{chooseLabel}</option>
             {question.options.map((option) => (

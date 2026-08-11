@@ -8,6 +8,17 @@ import type {
   SavedSession,
   ServerAttempt,
 } from "./types";
+import {
+  isValidNumericInput,
+  updateMatchingAnswer,
+  updateNumericInputAnswer,
+} from "./answer-values";
+
+export {
+  isValidNumericInput,
+  updateMatchingAnswer,
+  updateNumericInputAnswer,
+};
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_DIAGNOSTIC_API_URL ?? "").replace(/\/$/, "");
 const REQUEST_TIMEOUT_MS = 12_000;
@@ -436,34 +447,6 @@ export function clearLocalSession(
   } catch {
     return;
   }
-}
-
-export function isValidNumericInput(value: unknown): value is string {
-  if (typeof value !== "string" || value.length < 1 || value.length > 64 || value !== value.trim()) {
-    return false;
-  }
-  if (!/^[+-]?(?:[0-9]+(?:[.,][0-9]*)?|[.,][0-9]+)(?:[eE][+-]?[0-9]{1,3})?$/.test(value)) {
-    return false;
-  }
-  return true;
-}
-
-export function updateMatchingAnswer(
-  current: Record<string, string>, itemId: string, value: string,
-): Record<string, string> {
-  if (value) return { ...current, [itemId]: value };
-  const next = { ...current };
-  delete next[itemId];
-  return next;
-}
-
-export function updateNumericInputAnswer(
-  current: AnswerMap, questionId: string, draft: string,
-): AnswerMap {
-  if (isValidNumericInput(draft)) return { ...current, [questionId]: draft };
-  const next = { ...current };
-  delete next[questionId];
-  return next;
 }
 
 export async function postDiagnostic<T>(

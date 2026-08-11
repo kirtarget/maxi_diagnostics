@@ -2,7 +2,6 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { safeAssetPath } from "./question-assets";
 import { pdfStatusCopy, type PdfStatusCopy, type PersonalRouteAction } from "./result-flow-model";
-import { shouldShowResultMetrics } from "./result-display";
 import type {
   ForecastPoint,
   PublicDiagnostic,
@@ -14,6 +13,10 @@ import type {
 } from "./types";
 
 export type RouteItem = PersonalRouteAction;
+
+function shouldShowResultMetrics(result: Pick<ServerResult, "correct_count" | "score">): boolean {
+  return result.score > 0 && result.correct_count > 0;
+}
 
 function topicName(topic: ServerTopic | string): string {
   return typeof topic === "string" ? topic : topic.topic;
