@@ -34,6 +34,12 @@ def test_importer_drops_blank_or_oversized_explanation():
     assert _explanation({"solution": "x" * 2001}) is None
 
 
+def test_importer_accepts_a_cleaned_explanation_at_the_exact_limit():
+    explanation = "x" * 2000
+
+    assert _explanation({"solution": f" \r\n{explanation}\t\r"}) == explanation
+
+
 def test_explanation_uses_supported_alias_priority_and_plain_strings_only():
     assert _explanation({
         "solution": "Первый источник",

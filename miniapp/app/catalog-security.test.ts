@@ -4,7 +4,7 @@ import { access } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
 describe("public catalog boundary", () => {
-  it("public question types contain no correct field", () => {
+  it("public question types contain no answer key or explanation", () => {
     const source = readFileSync(new URL("./types.ts", import.meta.url), "utf8");
     expect(source).not.toMatch(/\bcorrect\s*:/);
   });
@@ -16,6 +16,7 @@ describe("public catalog boundary", () => {
       types.indexOf("export type AnswerValue"),
     );
     expect(publicQuestionBlock).not.toContain("correct");
+    expect(publicQuestionBlock).not.toContain("explanation");
     expect(publicQuestionBlock).not.toContain("expected_answer");
     expect(types).toContain("export type ReviewItem");
     expect(types).toContain("expected_answer: string");
