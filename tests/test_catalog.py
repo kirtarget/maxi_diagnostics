@@ -11,11 +11,12 @@ ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_SCHOOL = ROOT / "tests/fixtures/sample-school"
 
 
-def test_public_catalog_never_contains_correct_answers():
-    catalog = load_catalog(load_school())
+def test_public_catalog_omits_explanation_and_correct():
+    catalog = load_catalog(load_school(SAMPLE_SCHOOL))
     payload = catalog.public_payload("test-secret")
 
     assert '"correct"' not in json.dumps(payload, ensure_ascii=False)
+    assert '"explanation"' not in json.dumps(payload, ensure_ascii=False)
     assert '"scoring"' not in json.dumps(payload, ensure_ascii=False)
     assert payload != catalog.public_payload("other-secret")
 

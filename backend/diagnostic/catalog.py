@@ -76,6 +76,7 @@ class QuestionBase(BaseModel):
     topic: str = Field(min_length=1, max_length=128)
     title: str = Field(min_length=1, max_length=128)
     prompt: str = Field(min_length=1, max_length=4000)
+    explanation: str | None = Field(default=None, min_length=1, max_length=2000)
     asset: str | None = Field(default=None, max_length=255)
 
     @field_validator("id")
@@ -89,6 +90,26 @@ class QuestionBase(BaseModel):
     @classmethod
     def validate_text(cls, value: str) -> str:
         return _validate_display_text(value)
+
+    @field_validator("explanation")
+    @classmethod
+    def validate_explanation(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if not value.strip():
+            raise ValueError("blank_text")
+        if any(
+            character != "\n"
+            and (
+                unicodedata.category(character).startswith("C")
+                or unicodedata.category(character) in {"Zl", "Zp"}
+            )
+            for character in value
+        ):
+            raise ValueError("unsafe_text")
+        for line in value.split("\n"):
+            validate_report_text(line)
+        return value
 
     @model_validator(mode="after")
     def validate_optional_asset(self) -> "QuestionBase":
@@ -214,7 +235,7 @@ def _public_diagnostic(diagnostic: Diagnostic, content_version: str) -> dict[str
                 for key, value in question.model_dump(
                     mode="json", exclude_none=True
                 ).items()
-                if key != "correct"
+                if key not in {"correct", "explanation"}
             }
             for question in diagnostic.questions
         ],
@@ -299,7 +320,7 @@ def public_question(question: Question) -> dict[str, Any]:
     return {
         key: value
         for key, value in question.model_dump(mode="json", exclude_none=True).items()
-        if key != "correct"
+        if key not in {"correct", "explanation"}
     }
 
 

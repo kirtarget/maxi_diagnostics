@@ -10,7 +10,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from diagnostic.catalog import (
     DiagnosticCatalog,
-    InputQuestion,
     MatchingQuestion,
     MultipleQuestion,
     Question,
@@ -54,7 +53,8 @@ def score_answers(
         raise ValueError("unknown_question")
 
     correct_by_question = {
-        question.id: _is_correct(question, answers.get(question.id)) for question in questions
+        question.id: is_answer_correct(question, answers.get(question.id))
+        for question in questions
     }
     correct_count = sum(correct_by_question.values())
     score = math.floor(
@@ -80,19 +80,17 @@ def score_answers(
     )
 
 
-def _is_correct(question: Question, answer: Any) -> bool:
+def is_answer_correct(question: Question, answer: Any) -> bool:
     if isinstance(question, SingleQuestion):
         return isinstance(answer, str) and answer == question.correct
     if isinstance(question, MultipleQuestion):
         return isinstance(answer, list) and sorted(answer) == sorted(question.correct)
     if isinstance(question, MatchingQuestion):
         return isinstance(answer, dict) and answer == question.correct
-    if isinstance(question, InputQuestion):
-        normalized_answer = _normalize_decimal(answer)
-        return normalized_answer is not None and any(
-            normalized_answer == _normalize_decimal(variant) for variant in question.correct
-        )
-    raise TypeError("unsupported_question_type")
+    normalized_answer = _normalize_decimal(answer)
+    return normalized_answer is not None and any(
+        normalized_answer == _normalize_decimal(variant) for variant in question.correct
+    )
 
 
 def _normalize_decimal(value: Any) -> Decimal | None:
