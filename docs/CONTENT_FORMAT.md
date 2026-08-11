@@ -1,8 +1,8 @@
 # School content format
 
 All files are UTF-8 strict JSON: duplicate keys, `NaN`, and `Infinity` are rejected.
-Keep IDs stable after launch. The `correct` field is server-only and must never be
-copied into TypeScript, HTML, or public assets.
+Keep IDs stable after launch. Before completion, `correct` and `explanation` are
+server-only and excluded from bootstrap, TypeScript, HTML, and public assets.
 
 ## Diagnostic file envelope
 
@@ -47,6 +47,15 @@ There are at most 20 diagnostics and 200 questions across the school; each diagn
 also has at most 200 questions. A question has at most 50 options/items. Each file is
 at most 1 MiB, all diagnostic files together at most 5 MiB, and the complete public
 bootstrap payload at most 2 MiB.
+
+## Answer-review boundary
+
+- `explanation` is optional, server-owned, UTF-8, and at most 2,000 characters.
+- It is excluded from bootstrap and public assets.
+- After an authenticated completed attempt, the Mini App may receive display-only
+  `expected_answer` and resolved guidance for that attempt.
+- A missing explanation uses a visibly labeled general algorithm.
+- Existing attempts without `review_snapshot` remain legacy reports.
 
 ## Brand and links
 

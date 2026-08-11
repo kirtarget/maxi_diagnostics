@@ -69,6 +69,17 @@ def test_content_format_has_complete_server_only_examples():
     assert "arbitrary text" in content.casefold() and "not" in content.casefold()
 
 
+def test_content_format_documents_the_post_completion_review_boundary():
+    content = " ".join(read("docs/CONTENT_FORMAT.md").split())
+
+    assert "`explanation` is optional, server-owned, UTF-8, and at most 2,000 characters" in content
+    assert "excluded from bootstrap and public assets" in content
+    assert "after an authenticated completed attempt" in content.casefold()
+    assert "display-only `expected_answer` and resolved guidance" in content
+    assert "visibly labeled general algorithm" in content
+    assert "without `review_snapshot` remain legacy reports" in content
+
+
 def test_nginx_example_is_fixed_host_same_origin_and_has_no_open_proxy():
     config = read("deploy/nginx/diagnostic.conf.example")
 

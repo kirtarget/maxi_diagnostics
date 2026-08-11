@@ -18,6 +18,10 @@ describe("public catalog boundary", () => {
     expect(publicQuestionBlock).not.toContain("correct");
     expect(publicQuestionBlock).not.toContain("expected_answer");
     expect(types).toContain("export type ReviewItem");
+    expect(types).toContain("expected_answer: string");
+    expect(types.indexOf("expected_answer")).toBeGreaterThan(
+      types.indexOf("export type ReviewItem"),
+    );
   });
 
   it("has no client-owned catalog or link modules", async () => {
