@@ -71,13 +71,15 @@ export function personalRoute(growthTopics: GrowthTopic[]): PersonalRouteAction[
         description: "Собери ключевые правила и закрепи их практикой.",
       });
 
+  const recheck: PersonalRouteAction = {
+    id: "recheck",
+    title: "Проверить рост",
+    description: "Повтори диагностику через месяц и сравни результат.",
+  };
+
   return [
     ...topicActions,
-    {
-      id: "recheck",
-      title: "Проверить рост",
-      description: "Повтори диагностику через месяц и сравни результат.",
-    },
+    recheck,
   ].slice(0, 3);
 }
 

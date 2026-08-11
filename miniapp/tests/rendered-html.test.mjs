@@ -39,6 +39,9 @@ test("renders the configured school identity", async () => {
   assert.ok(output.includes(`--brand-primary:${brand.colors.primary}`));
   assert.ok(output.includes(`--brand-background:${brand.colors.background}`));
   assert.match(output, /Загружаем диагностику/);
+  assert.match(output, /Сканируем знания/);
+  assert.match(output, /Прогноз баллов/);
+  assert.match(output, /Персональный маршрут/);
 });
 
 test("production output contains no answer or private-link leaks", async () => {
