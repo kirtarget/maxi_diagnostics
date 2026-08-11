@@ -269,6 +269,9 @@ class BrandColors(BaseModel):
     primary: str = Field(pattern=r"^#[0-9A-Fa-f]{6}$")
     accent: str = Field(pattern=r"^#[0-9A-Fa-f]{6}$")
     background: str = Field(pattern=r"^#[0-9A-Fa-f]{6}$")
+    signal: str = Field(default="#D8FF42", pattern=r"^#[0-9A-Fa-f]{6}$")
+    ink: str = Field(default="#101517", pattern=r"^#[0-9A-Fa-f]{6}$")
+    paper: str = Field(default="#F5F5F0", pattern=r"^#[0-9A-Fa-f]{6}$")
 
 
 class PdfBrand(BaseModel):

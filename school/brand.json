@@ -5,7 +5,10 @@
   "colors": {
     "primary": "#5636D3",
     "accent": "#C7F36B",
-    "background": "#F7F5EF"
+    "background": "#F7F5EF",
+    "signal": "#D8FF42",
+    "ink": "#101517",
+    "paper": "#F5F5F0"
   },
   "logo": "assets/logo.svg",
   "pdf": {

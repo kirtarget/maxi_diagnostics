@@ -63,6 +63,9 @@ export type Brand = {
     primary: string;
     accent: string;
     background: string;
+    signal: string;
+    ink: string;
+    paper: string;
   };
   logo: string;
   interface: {

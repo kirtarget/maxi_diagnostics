@@ -26,6 +26,15 @@ The bundled Liberation Sans font files under
 License 1.1. The complete font license is included beside them as
 `LICENSE_LIBERATION`.
 
+The bundled Manrope Regular and Bold font files under
+`backend/diagnostic/assets/fonts/` are distributed under the SIL Open Font
+License 1.1. The complete copyright notice and license are included beside
+them as `OFL-Manrope.txt`.
+
+The bundled Forum Regular font file under `backend/diagnostic/assets/fonts/`
+is distributed under the SIL Open Font License 1.1. The complete copyright
+notice and license are included beside it as `OFL-Forum.txt`.
+
 Container builds use pinned official Python and Node.js images, and deployment
 pulls a pinned official PostgreSQL image. Nginx is installed and maintained as
 a host operating-system package; there is no Nginx container in this project.

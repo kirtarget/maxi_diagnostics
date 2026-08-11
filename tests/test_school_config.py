@@ -133,6 +133,16 @@ def test_load_school_returns_brand_and_offer_links(tmp_path: Path):
     assert school.resolve_asset("assets/logo.svg").is_file()
 
 
+def test_brand_color_roles_have_backwards_compatible_defaults(tmp_path: Path):
+    write_sample_school(tmp_path)
+
+    school = load_school(tmp_path)
+
+    assert school.brand.colors.signal == "#D8FF42"
+    assert school.brand.colors.ink == "#101517"
+    assert school.brand.colors.paper == "#F5F5F0"
+
+
 def test_runtime_loader_rejects_symlinked_school_root(monkeypatch, tmp_path: Path):
     write_sample_school(tmp_path)
     original = Path.is_symlink

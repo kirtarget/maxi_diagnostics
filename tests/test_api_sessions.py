@@ -106,6 +106,19 @@ def test_public_school_payload_omits_server_forecast_rules_and_pdf_copy():
     assert '"messages"' not in serialized
 
 
+def test_public_school_payload_includes_resolved_visual_roles():
+    payload = public_school_payload(load_school(SAMPLE_SCHOOL))
+
+    assert payload["brand"]["colors"] == {
+        "primary": "#5636D3",
+        "accent": "#C7F36B",
+        "background": "#F7F5EF",
+        "signal": "#D8FF42",
+        "ink": "#101517",
+        "paper": "#F5F5F0",
+    }
+
+
 def test_report_asset_bundle_is_deterministic_across_restarts():
     from diagnostic.api.sessions import prepare_report_assets
 
