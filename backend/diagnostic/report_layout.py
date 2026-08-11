@@ -35,6 +35,9 @@ _LEGACY_REGULAR = "DiagnosticLiberationSans"
 _LEGACY_BOLD = "DiagnosticLiberationSansBold"
 _TWO_COLUMN_ANSWER_LIMIT = 500
 _NOT_SAVED = "не сохранена"
+_SCORE_UNIT_LABELS = {
+    "accuracy_percent": "баллов",
+}
 
 
 @dataclass(frozen=True)
@@ -216,13 +219,18 @@ def _display(value: Any) -> str:
     return _NOT_SAVED if value is None or value == "" else str(value)
 
 
-def _provenance_lines(attempt: Mapping[str, Any]) -> tuple[str, str]:
+def _score_unit_label(value: Any) -> str:
+    return _SCORE_UNIT_LABELS.get(str(value), _NOT_SAVED)
+
+
+def _provenance_lines(attempt: Mapping[str, Any]) -> tuple[str, str, str]:
     attempt_id = _display(_provenance_value(attempt, "attempt_id"))
     diagnostic_id = _display(_provenance_value(attempt, "diagnostic_id"))
     content_version = _display(_provenance_value(attempt, "content_version"))
     return (
         f"ID результата: {attempt_id}",
-        f"Диагностика: {diagnostic_id} / Версия диагностики: {content_version}",
+        f"Диагностика: {diagnostic_id}",
+        f"Версия диагностики: {content_version}",
     )
 
 
@@ -234,7 +242,7 @@ def summary_story(
     result = _result_snapshot(attempt)
     score = _result_value(attempt, "score")
     max_score = _result_value(attempt, "max_score")
-    score_unit = _result_value(attempt, "score_unit")
+    score_unit = _score_unit_label(_result_value(attempt, "score_unit"))
     correct_count = _result_value(attempt, "correct_count")
     question_count = _result_value(attempt, "question_count")
     subject = _display(_provenance_value(attempt, "subject"))
@@ -449,7 +457,7 @@ def route_story(
 
 
 def draw_page(theme: ReportTheme, attempt: Mapping[str, Any]):
-    result_id, diagnostic_version = _provenance_lines(attempt)
+    result_id, diagnostic_id, content_version = _provenance_lines(attempt)
 
     def _draw(canvas: Canvas, document: BaseDocTemplate) -> None:
         canvas.saveState()
@@ -458,10 +466,11 @@ def draw_page(theme: ReportTheme, attempt: Mapping[str, Any]):
         canvas.line(18 * mm, 285 * mm, 192 * mm, 285 * mm)
         canvas.setFillColor(theme.ink)
         canvas.setFont(_BODY_FONT, 8)
-        canvas.drawString(18 * mm, 12 * mm, "Персональный отчёт")
+        canvas.drawString(18 * mm, 14.5 * mm, "Персональный отчёт")
         canvas.setFont(_BODY_FONT, 6.5)
-        canvas.drawString(18 * mm, 8.5 * mm, result_id)
-        canvas.drawString(18 * mm, 5.5 * mm, diagnostic_version)
+        canvas.drawString(18 * mm, 11.5 * mm, result_id)
+        canvas.drawString(18 * mm, 8.5 * mm, diagnostic_id)
+        canvas.drawString(18 * mm, 5.5 * mm, content_version)
         canvas.drawRightString(192 * mm, 5.5 * mm, str(document.page))
         canvas.restoreState()
 

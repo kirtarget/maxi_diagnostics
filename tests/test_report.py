@@ -241,14 +241,14 @@ def test_premium_report_renders_zero_summary_and_frozen_provenance_in_footer():
         correct_count=0,
         score=0,
         max_score=100,
-        score_unit="баллов",
+        score_unit="accuracy_percent",
         unassessed_part="Письменная часть не проверялась",
         strong_topics=["Механика"],
         growth_topics=["Оптика"],
         result_snapshot={
             "score": 0,
             "max_score": 100,
-            "score_unit": "баллов",
+            "score_unit": "accuracy_percent",
             "correct_count": 0,
             "question_count": 4,
             "unassessed_part": "Письменная часть не проверялась",
@@ -273,6 +273,57 @@ def test_premium_report_renders_zero_summary_and_frozen_provenance_in_footer():
     assert "ID результата: attempt_zero" in text
     assert "Диагностика: demo-physics" in text
     assert "Версия диагностики: content-v0" in text
+    assert "accuracy_percent" not in text
+
+
+def test_premium_report_footer_fits_maximum_persisted_provenance():
+    from diagnostic.report import build_report
+    from diagnostic.report_layout import (
+        _BODY_FONT,
+        _provenance_lines,
+        register_report_fonts,
+    )
+    from reportlab.pdfbase import pdfmetrics
+
+    school = load_school(SAMPLE_SCHOOL)
+    diagnostic = load_catalog(school).get("demo-math")
+    diagnostic_id = "d" * 64
+    content_version = "f" * 64
+    snapshot = make_review_report_snapshot(
+        school,
+        diagnostic,
+        [make_review(prompt="Условие", guidance="Решение")],
+    )
+    snapshot["provenance"] = {
+        "attempt_id": "attempt_maximum_provenance",
+        "diagnostic_id": diagnostic_id,
+        "content_version": content_version,
+        "exam": "ЕГЭ",
+        "subject": "Математика",
+        "mode": "full",
+    }
+    attempt = completed_attempt(
+        attempt_id="attempt_maximum_provenance",
+        diagnostic_id=diagnostic_id,
+        content_version=content_version,
+        report_snapshot=snapshot,
+    )
+
+    register_report_fonts()
+    footer_lines = _provenance_lines(attempt)
+    available_width = 174 * mm
+
+    assert all(
+        pdfmetrics.stringWidth(line, _BODY_FONT, 6.5) <= available_width
+        for line in footer_lines
+    )
+
+    text = "\n".join(
+        page.extract_text() or ""
+        for page in PdfReader(BytesIO(build_report(attempt, school))).pages
+    )
+    assert diagnostic_id in text
+    assert content_version in text
 
 
 def test_premium_report_uses_legacy_snapshot_fallbacks_without_current_catalog():
