@@ -43,6 +43,7 @@ def completion(
     subject: str = "math",
     progress_revision: int = 1,
     result_snapshot: dict[str, object] | None = None,
+    report_snapshot: dict[str, object] | None = None,
 ):
     return attempts.AttemptCompletion(
         attempt_id=attempt_id,
@@ -64,6 +65,7 @@ def completion(
         growth_topics=["geometry"],
         forecast={"target": 70},
         result_snapshot=result_snapshot or {"score": 50},
+        report_snapshot=report_snapshot or {},
     )
 
 
@@ -89,6 +91,27 @@ async def test_completion_is_idempotent_and_notification_dedupe_is_unique():
         "month_retest",
     }
     assert len({row["dedupe_key"] for row in notifications}) == 4
+
+
+@pytest.mark.asyncio
+async def test_review_read_is_owner_scoped_and_keeps_first_snapshot():
+    attempt_id = f"attempt-{uuid4()}"
+    first_snapshot = {"review_snapshot": [{"question_id": "q1", "expected_answer": "4"}]}
+    second_snapshot = {"review_snapshot": [{"question_id": "q1", "expected_answer": "5"}]}
+
+    await attempts.complete_attempt(completion(
+        attempt_id, answers={"q1": "2"}, user_id=101, report_snapshot=first_snapshot,
+    ))
+    await attempts.complete_attempt(completion(
+        attempt_id, answers={"q1": "3"}, user_id=101, report_snapshot=second_snapshot,
+    ))
+
+    owner_row = await attempts.get_review_attempt(attempt_id, 101)
+    stranger_row = await attempts.get_review_attempt(attempt_id, 202)
+
+    assert owner_row is not None
+    assert owner_row["report_snapshot"] == first_snapshot
+    assert stranger_row is None
 
 
 @pytest.mark.asyncio

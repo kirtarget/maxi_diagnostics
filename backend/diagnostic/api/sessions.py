@@ -23,6 +23,7 @@ from diagnostic.analytics import emit_event
 from diagnostic.db import attempts
 from diagnostic.db.attempts import AttemptCompletion, AttemptProgress
 from diagnostic.numeric import is_valid_numeric_answer
+from diagnostic.review import build_review_snapshot, public_review_items
 from diagnostic.scoring import ScoreResult, score_answers
 from diagnostic.school import SchoolConfig
 from diagnostic.session_identity import (
@@ -64,10 +65,11 @@ def build_completion(
             "subject": diagnostic.subject,
             "scoring": diagnostic.scoring.model_dump(mode="json"),
             "questions": [
-                question.model_dump(mode="json", exclude={"correct"})
+                question.model_dump(mode="json", exclude={"correct", "explanation"})
                 for question in selected_questions
             ],
         },
+        "review_snapshot": build_review_snapshot(selected_questions, body.answers),
         "mode": body.mode,
         "school": {
             "brand": school.brand.model_dump(mode="json"),
@@ -433,6 +435,23 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
             "ok": True,
             "attempt": serialize_attempt(row),
             "result": serialize_result(row, result),
+        }
+
+    @router.post("/session/review")
+    async def review(body: SessionRequest, request: Request) -> dict[str, Any]:
+        user = telegram_user(request, body.init_data)
+        await _require_current_session(request, user["id"], body.session_scope)
+        row = await attempts.get_review_attempt(body.attempt_id, user["id"])
+        if row is None:
+            raise HTTPException(status_code=404, detail="result_not_found")
+        if row["status"] != "completed":
+            raise HTTPException(status_code=409, detail="review_not_ready")
+        items = public_review_items(row["report_snapshot"] or {})
+        return {
+            "ok": True,
+            "available": items is not None,
+            "items": items or [],
+            "pdf_status": row["pdf_status"],
         }
 
     @router.post("/session/viewed")

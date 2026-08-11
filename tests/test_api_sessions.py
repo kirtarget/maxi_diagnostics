@@ -346,6 +346,103 @@ def test_completion_returns_server_scored_result_and_pending_pdf(monkeypatch):
     assert response.json()["result"]["unassessed_part"] == "оставшаяся часть полной диагностики"
 
 
+def test_completion_freezes_review_snapshot(monkeypatch):
+    stored = {}
+
+    async def complete_attempt(completion):
+        stored["snapshot"] = completion.report_snapshot
+        return {
+            "attempt_id": completion.attempt_id,
+            "diagnostic_id": completion.diagnostic_id,
+            "mode": completion.mode,
+            "status": "completed",
+            "pdf_status": "pending",
+            "result_snapshot": completion.result_snapshot,
+        }
+
+    client = make_client(monkeypatch, complete_attempt=complete_attempt)
+
+    response = client.post("/api/diagnostics/session/complete", json=base_completion())
+
+    assert response.status_code == 200
+    review = stored["snapshot"]["review_snapshot"]
+    assert review[0]["user_answer"] == "4"
+    assert review[0]["expected_answer"] == "4"
+    assert review[0]["guidance_kind"] == "individual"
+
+
+def test_review_endpoint_requires_owner_and_completion(monkeypatch):
+    from diagnostic.api import sessions
+
+    async def owned_review(_attempt_id, _user_id):
+        return {
+            "status": "completed",
+            "pdf_status": "sent",
+            "report_snapshot": {"review_snapshot": [{
+                "question_id": "q1", "number": 1, "type": "single", "topic": "topic",
+                "title": "Task 1", "prompt": "What is 2 + 2?", "is_correct": False,
+                "user_answer": "3", "expected_answer": "4", "guidance": "Add the numbers.",
+                "guidance_kind": "individual", "user_value": "1", "expected_value": "2",
+            }]},
+        }
+
+    monkeypatch.setattr(sessions.attempts, "get_review_attempt", owned_review)
+    client = make_client(monkeypatch)
+    response = client.post("/api/diagnostics/session/review", json={
+        "init_data": signed_init_data(), "attempt_id": "attempt_123", "session_scope": SESSION_SCOPE,
+    })
+
+    assert response.status_code == 200
+    assert response.json()["available"] is True
+    assert response.json()["pdf_status"] == "sent"
+    assert "expected_value" not in response.text
+
+
+def test_review_endpoint_returns_not_found_for_non_owner(monkeypatch):
+    from diagnostic.api import sessions
+
+    client = make_client(monkeypatch)
+    monkeypatch.setattr(sessions.attempts, "get_review_attempt", AsyncMock(return_value=None))
+
+    response = client.post("/api/diagnostics/session/review", json={
+        "init_data": signed_init_data(), "attempt_id": "attempt_123", "session_scope": SESSION_SCOPE,
+    })
+
+    assert response.status_code == 404
+
+
+def test_review_endpoint_rejects_in_progress_attempt(monkeypatch):
+    from diagnostic.api import sessions
+
+    client = make_client(monkeypatch)
+    monkeypatch.setattr(sessions.attempts, "get_review_attempt", AsyncMock(return_value={
+        "status": "in_progress", "pdf_status": None, "report_snapshot": None,
+    }))
+
+    response = client.post("/api/diagnostics/session/review", json={
+        "init_data": signed_init_data(), "attempt_id": "attempt_123", "session_scope": SESSION_SCOPE,
+    })
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "review_not_ready"
+
+
+def test_review_endpoint_marks_legacy_snapshot_unavailable(monkeypatch):
+    from diagnostic.api import sessions
+
+    client = make_client(monkeypatch)
+    monkeypatch.setattr(sessions.attempts, "get_review_attempt", AsyncMock(return_value={
+        "status": "completed", "pdf_status": "sent", "report_snapshot": {},
+    }))
+
+    response = client.post("/api/diagnostics/session/review", json={
+        "init_data": signed_init_data(), "attempt_id": "attempt_123", "session_scope": SESSION_SCOPE,
+    })
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "available": False, "items": [], "pdf_status": "sent"}
+
+
 def test_completion_reuses_assets_prepared_once_at_app_startup(monkeypatch):
     from diagnostic.api import sessions
 

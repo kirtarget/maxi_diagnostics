@@ -567,6 +567,20 @@ async def get_attempt(attempt_id: str, user_id: int | None = None):
         )
 
 
+async def get_review_attempt(attempt_id: str, user_id: int):
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        return await connection.fetchrow(
+            """
+            SELECT attempt_id, status, pdf_status, report_snapshot
+              FROM diagnostic_attempts
+             WHERE attempt_id=$1 AND user_id=$2
+            """,
+            attempt_id,
+            user_id,
+        )
+
+
 async def get_resumable_attempt(user_id: int):
     pool = await get_pool()
     async with pool.acquire() as connection:
