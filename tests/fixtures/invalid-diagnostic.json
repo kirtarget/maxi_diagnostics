@@ -1,0 +1,25 @@
+{
+  "id": "demo-math",
+  "exam": "demo",
+  "subject": "Математика",
+  "mark": "Демо",
+  "quick_count": 2,
+  "scoring": {
+    "max_score": 100,
+    "score_unit": "accuracy_percent"
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single",
+      "topic": "Вычисления",
+      "title": "Задание 1",
+      "prompt": "Чему равно 2 + 2?",
+      "options": [
+        {"id": "1", "label": "3"},
+        {"id": "2", "label": "4"}
+      ],
+      "correct": "missing"
+    }
+  ]
+}

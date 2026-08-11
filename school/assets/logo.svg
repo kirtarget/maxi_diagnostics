@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" role="img" aria-labelledby="title">
+  <title id="title">Демо-школа</title>
+  <rect width="240" height="64" rx="12" fill="#5636D3"/>
+  <circle cx="36" cy="32" r="16" fill="#C7F36B"/>
+  <text x="64" y="40" fill="#F7F5EF" font-family="Arial, sans-serif" font-size="24">Демо</text>
+</svg>

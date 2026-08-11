@@ -1,0 +1,8 @@
+# Build-only Python packages used to compile the Linux pycairo wheel.
+# Regenerate deliberately together with requirements-lock.txt.
+meson-python==0.20.0
+meson==1.11.2
+ninja==1.13.0
+packaging==26.3
+pyproject-metadata==0.12.1
+wheel==0.45.1

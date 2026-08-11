@@ -1,0 +1,7 @@
+pycairo 1.29.1
+Source: https://github.com/pygobject/pycairo/tree/v1.29.1
+Distribution metadata license: LGPL-2.1-only OR MPL-1.1
+
+This build selects the LGPL-2.1-only option. The complete LGPL 2.1 text is
+copied from the Debian build image at /usr/share/common-licenses/LGPL-2.1 into
+the generated Python runtime license bundle.

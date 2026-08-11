@@ -1,0 +1,14 @@
+{
+  "id": "demo-math",
+  "exam": "demo",
+  "subject": "Математика",
+  "mark": "Демо",
+  "quick_count": 2,
+  "scoring": {"max_score": 100, "score_unit": "accuracy_percent"},
+  "questions": [
+    {"id": "q1", "type": "single", "topic": "Вычисления", "title": "Задание 1", "prompt": "Чему равно 2 + 2?", "options": [{"id": "1", "label": "3"}, {"id": "2", "label": "4"}], "correct": "2"},
+    {"id": "q2", "type": "multiple", "topic": "Дроби", "title": "Задание 2", "prompt": "Выберите дроби, равные одной второй.", "options": [{"id": "1", "label": "2/4"}, {"id": "2", "label": "2/3"}, {"id": "3", "label": "3/6"}], "selection_limit": 2, "correct": ["1", "3"]},
+    {"id": "q3", "type": "matching", "topic": "Соответствия", "title": "Задание 3", "prompt": "Сопоставьте выражения и их значения.", "asset": "assets/questions/demo-figure.svg", "items": [{"id": "a", "label": "2 + 2"}, {"id": "b", "label": "3 + 3"}], "options": [{"id": "1", "label": "6"}, {"id": "2", "label": "4"}], "correct": {"a": "2", "b": "1"}},
+    {"id": "q4", "type": "input", "topic": "Уравнения", "title": "Задание 4", "prompt": "Решите уравнение: x + 8 = 50.", "correct": ["42"]}
+  ]
+}

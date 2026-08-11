@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="140" viewBox="0 0 320 140" role="img" aria-label="Схема соответствий">
+  <rect width="320" height="140" rx="16" fill="#F7F5EF"/>
+  <circle cx="76" cy="70" r="42" fill="#C7F36B"/>
+  <path d="M134 70h58m-18-16 18 16-18 16" fill="none" stroke="#5636D3" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="212" y="38" width="70" height="64" rx="12" fill="#5636D3"/>
+</svg>

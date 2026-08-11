@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
+        env:
+          POSTGRES_DB: diagnostic_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d diagnostic_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PYTHONPATH: backend
+      TEST_DATABASE_URL: postgresql://postgres:ci-test-password@127.0.0.1:5432/diagnostic_test
+      POSTGRES_DB: diagnostic_test
+      POSTGRES_USER: diagnostic
+      POSTGRES_PASSWORD: ci-compose-password
+      DATABASE_URL: postgresql://diagnostic:ci-compose-password@db:5432/diagnostic_test
+      BOT_TOKEN: 123456:ci_test_token_not_used_for_network
+      APPLICATION_SECRET: ci-stable-application-secret-1234567890
+      IMAGE_NAMESPACE: diagnostic-ci
+      INSTALLATION_ID: 00000000-0000-4000-8000-000000000001
+      MINIAPP_URL: https://app.example.com
+      MINIAPP_ORIGIN: https://app.example.com
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: ci-admin-password
+      ANALYTICS_WEBHOOK_URL: ""
+      TIMEZONE: Europe/Moscow
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55 # v5.5.0
+        with:
+          python-version: "3.11.9"
+          cache: pip
+          cache-dependency-path: requirements-dev-lock.txt
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22.14.0"
+          cache: npm
+          cache-dependency-path: miniapp/package-lock.json
+      - run: python -m pip install --no-deps -r requirements-dev-lock.txt
+      - run: python scripts/validate_school.py
+      - run: python scripts/check_brand_isolation.py --history
+      - run: python -m pytest -q
+      - run: npm ci
+        working-directory: miniapp
+      - run: npm run test:unit
+        working-directory: miniapp
+      - run: npm run build
+        working-directory: miniapp
+      - run: npm test
+        working-directory: miniapp
+      - run: docker compose config --quiet
+      - run: docker compose build

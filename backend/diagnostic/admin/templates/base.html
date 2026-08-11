@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Диагностика - {{ school_name }}{% endblock %}</title>
+  <style>
+    :root { --primary: {{ primary_color }}; --accent: {{ accent_color }}; --surface: {{ background_color }}; --ink: #1d1d24; --muted: #666674; --line: #dedde5; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--surface); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    header { color: white; background: var(--primary); }
+    .shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+    header .shell { display: flex; align-items: center; justify-content: space-between; min-height: 72px; gap: 24px; }
+    header p, header h1 { margin: 0; }
+    header p { opacity: .82; font-size: .875rem; }
+    main { padding: 28px 0 56px; }
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .card { background: white; border: 1px solid var(--line); border-radius: 14px; padding: 18px; box-shadow: 0 8px 24px rgba(32, 25, 68, .06); }
+    .metric { font-size: 2rem; font-weight: 750; color: var(--primary); }
+    .muted { color: var(--muted); }
+    section { margin-top: 22px; }
+    section h2 { margin: 0 0 12px; font-size: 1.15rem; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 720px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+    button, input, textarea { font: inherit; }
+    button { border: 0; border-radius: 9px; padding: 9px 13px; color: white; background: var(--primary); cursor: pointer; }
+    button.secondary { color: var(--ink); background: var(--accent); }
+    button.danger { background: #a12638; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    input, textarea { width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; background: white; }
+    textarea { min-height: 130px; resize: vertical; }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    .row { display: flex; gap: 10px; align-items: end; }
+    .row > * { flex: 1; }
+    .status { min-height: 24px; color: var(--muted); }
+    .message-list { display: grid; gap: 12px; }
+    .message-card { border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+    .message-card h3 { margin: 0 0 8px; font-size: .95rem; }
+    .message-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
+    @media (max-width: 820px) { .grid { grid-template-columns: repeat(2, 1fr); } header .shell { align-items: flex-start; flex-direction: column; padding: 16px 0; } }
+    @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } .row { align-items: stretch; flex-direction: column; } .shell { width: min(100% - 20px, 1180px); } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="shell">
+      <div><p>Администрирование</p><h1>{{ school_name }}</h1></div>
+      <p>Только данные диагностики</p>
+    </div>
+  </header>
+  <main class="shell">{% block content %}{% endblock %}</main>
+  <script src="/admin/static/admin.js" defer></script>
+</body>
+</html>

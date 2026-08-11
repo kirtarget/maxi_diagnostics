@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Диагностика - {{ school_name }}{% endblock %}
+{% block content %}
+  <div id="page-status" class="status" role="status" aria-live="polite">Загрузка данных...</div>
+  <div id="summary" class="grid" aria-label="Сводка диагностики"></div>
+
+  <section class="card" aria-labelledby="attempts-heading">
+    <h2 id="attempts-heading">Последние попытки</h2>
+    <div id="attempts-status" class="status" role="status" aria-live="polite">Загрузка...</div>
+    <div class="table-wrap"><table><thead><tr><th>ID</th><th>Пользователь</th><th>Диагностика</th><th>Режим</th><th>Баллы</th><th>PDF</th><th>Обновлено</th></tr></thead><tbody id="attempts-body"></tbody></table></div>
+  </section>
+
+  <section class="card" aria-labelledby="issues-heading">
+    <h2 id="issues-heading">Проблемы доставки</h2>
+    <div id="issues-status" class="status" role="status" aria-live="polite">Загрузка...</div>
+    <div class="table-wrap"><table><thead><tr><th>Тип</th><th>ID</th><th>Пользователь</th><th>Статус</th><th>Попытки</th><th>Обновлено</th></tr></thead><tbody id="issues-body"></tbody></table></div>
+  </section>
+
+  <section class="card" aria-labelledby="messages-heading">
+    <h2 id="messages-heading">Сообщения бота</h2>
+    <p class="muted">HTML хранится как доверенный административный шаблон. Здесь он показывается только как текст.</p>
+    <div id="messages-status" class="status" role="status" aria-live="polite">Загрузка...</div>
+    <div id="messages-list" class="message-list"></div>
+  </section>
+
+  <section class="card" aria-labelledby="delete-heading">
+    <h2 id="delete-heading">Удаление данных пользователя</h2>
+    <p class="muted">Удаляются только попытки, уведомления и отметка открытия диагностики.</p>
+    <div class="row">
+      <label>ID пользователя<input id="delete-user-id" type="number" min="1" inputmode="numeric" autocomplete="off"></label>
+      <button id="delete-user" class="danger" type="button">Подготовить удаление</button>
+    </div>
+    <div id="delete-status" class="status" role="status" aria-live="polite"></div>
+  </section>
+{% endblock %}

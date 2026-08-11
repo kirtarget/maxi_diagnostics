@@ -1,0 +1,68 @@
+from __future__ import annotations
+
+from types import SimpleNamespace
+from unittest.mock import ANY, AsyncMock
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_dispatch_work_caps_pdf_and_notification_batches(monkeypatch):
+    from diagnostic import worker
+
+    deliver = AsyncMock(return_value="sent")
+    followups = AsyncMock(return_value=20)
+    monkeypatch.setattr(worker, "deliver_attempt", deliver)
+    monkeypatch.setattr(worker, "dispatch_followups", followups)
+    purge = AsyncMock(return_value=1)
+    monkeypatch.setattr(worker.attempts, "purge_expired_erasure_tombstones", purge)
+    retention = AsyncMock(return_value={})
+    monkeypatch.setattr(worker.attempts, "purge_retained_diagnostic_data", retention)
+
+    settings = SimpleNamespace(
+        application_secret="stable-secret", diagnostic_retention_days=365,
+        in_progress_retention_days=30,
+    )
+    counts = await worker.dispatch_work(SimpleNamespace(), settings, SimpleNamespace())
+
+    assert counts == {"pdfs": 20, "notifications": 20}
+    assert deliver.await_count == 20
+    followups.assert_awaited_once_with(ANY, ANY, ANY, limit=20)
+    purge.assert_awaited_once_with()
+    retention.assert_awaited_once_with("stable-secret", 365, 30)
+
+
+@pytest.mark.asyncio
+async def test_dispatch_work_continues_after_poison_pdf_and_stops_only_when_empty(monkeypatch):
+    from diagnostic import worker
+
+    deliver = AsyncMock(side_effect=["failed", "sent", "empty"])
+    monkeypatch.setattr(worker, "deliver_attempt", deliver)
+    monkeypatch.setattr(worker, "dispatch_followups", AsyncMock(return_value=0))
+    monkeypatch.setattr(
+        worker.attempts, "purge_expired_erasure_tombstones", AsyncMock(return_value=0)
+    )
+    monkeypatch.setattr(
+        worker.attempts, "purge_retained_diagnostic_data", AsyncMock(return_value={})
+    )
+
+    settings = SimpleNamespace(
+        application_secret="stable-secret", diagnostic_retention_days=365,
+        in_progress_retention_days=30,
+    )
+    counts = await worker.dispatch_work(SimpleNamespace(), settings, SimpleNamespace())
+
+    assert deliver.await_count == 3
+    assert counts == {"pdfs": 1, "notifications": 0}
+
+
+def test_worker_scheduler_runs_every_minute_with_single_instance():
+    from diagnostic.worker import build_worker_scheduler
+
+    scheduler = build_worker_scheduler(SimpleNamespace(), SimpleNamespace(timezone="Europe/Moscow"), SimpleNamespace(), SimpleNamespace())
+    job = scheduler.get_job("diagnostic_delivery")
+
+    assert str(job.trigger.interval) == "0:01:00"
+    assert job.max_instances == 1
+    assert job.coalesce is True
+    assert job.misfire_grace_time == 300

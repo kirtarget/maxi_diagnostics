@@ -1,0 +1,82 @@
+x-backend-environment: &backend-environment
+    DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
+    BOT_TOKEN: ${BOT_TOKEN:?Set BOT_TOKEN in .env}
+    APPLICATION_SECRET: ${APPLICATION_SECRET:?Set APPLICATION_SECRET in .env}
+    MINIAPP_URL: ${MINIAPP_URL:?Set MINIAPP_URL in .env}
+    MINIAPP_ORIGIN: ${MINIAPP_ORIGIN:?Set MINIAPP_ORIGIN in .env}
+    ANALYTICS_WEBHOOK_URL: ${ANALYTICS_WEBHOOK_URL:-}
+    TIMEZONE: ${TIMEZONE:-Europe/Moscow}
+    DIAGNOSTIC_RETENTION_DAYS: ${DIAGNOSTIC_RETENTION_DAYS:-365}
+    IN_PROGRESS_RETENTION_DAYS: ${IN_PROGRESS_RETENTION_DAYS:-30}
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-backend: &backend
+  image: ${IMAGE_NAMESPACE:?Set IMAGE_NAMESPACE in .env}-backend:${IMAGE_TAG:-local}
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+  restart: unless-stopped
+  logging: *default-logging
+
+services:
+  db:
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      INSTALLATION_ID: ${INSTALLATION_ID:?Set INSTALLATION_ID in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "test \"$${INSTALLATION_ID}\" != \"00000000-0000-4000-8000-000000000000\" && pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    restart: unless-stopped
+    logging: *default-logging
+
+  api:
+    <<: *backend
+    environment:
+      <<: *backend-environment
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?Set ADMIN_USERNAME in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+    command: ["python", "-m", "uvicorn", "diagnostic.api.main:create_default_app", "--factory", "--host", "0.0.0.0", "--port", "8080"]
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:18080:8080"
+
+  bot:
+    <<: *backend
+    environment: *backend-environment
+    command: ["python", "-m", "diagnostic.bot.main"]
+    healthcheck:
+      disable: true
+    depends_on:
+      db:
+        condition: service_healthy
+
+  miniapp:
+    image: ${IMAGE_NAMESPACE:?Set IMAGE_NAMESPACE in .env}-miniapp:${IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: miniapp/Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:13000:3000"
+    restart: unless-stopped
+    logging: *default-logging
+
+volumes:
+  postgres_data:
