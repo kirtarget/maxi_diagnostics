@@ -343,6 +343,67 @@ async def test_first_pdf_claim_can_store_document_without_waiting_for_stale_recl
 
 
 @pytest.mark.asyncio
+async def test_pdf_cleanup_keeps_only_display_review_for_the_owner():
+    attempt_id = f"attempt-{uuid4()}"
+    display_review = [{
+        "question_id": "q1", "number": 1, "type": "single", "topic": "algebra",
+        "title": "Question 1", "prompt": "2 + 2", "is_correct": True,
+        "user_answer": "4", "expected_answer": "4", "guidance": "Good work.",
+        "guidance_kind": "individual",
+    }]
+    report_snapshot = {
+        "diagnostic": {"id": "math-10"},
+        "review_snapshot": [{
+            **display_review[0], "user_value": "2", "expected_value": "2",
+            "options": [{"id": "2", "label": "4"}], "items": [],
+        }],
+        "public_review_snapshot": display_review,
+        "school": {"brand": {"name": "Private"}},
+    }
+    await attempts.complete_attempt(completion(
+        attempt_id, answers={"q1": "2"}, report_snapshot=report_snapshot,
+    ))
+    claim = await attempts.claim_pending_pdf(attempt_id)
+
+    assert await attempts.store_pdf_document(attempt_id, claim["pdf_locked_at"], b"%PDF-document") is True
+    after_materialization = await attempts.get_review_attempt(attempt_id, 101)
+    assert after_materialization["report_snapshot"] == {"review_snapshot": display_review}
+    assert await attempts.get_review_attempt(attempt_id, 202) is None
+    assert await attempts.mark_pdf_delivered(attempt_id, claim["pdf_locked_at"], 77) is True
+
+    after_delivery = await attempts.get_review_attempt(attempt_id, 101)
+    assert after_delivery["report_snapshot"] == {"review_snapshot": display_review}
+    assert "user_value" not in after_delivery["report_snapshot"]["review_snapshot"][0]
+    assert "diagnostic" not in after_delivery["report_snapshot"]
+
+
+@pytest.mark.asyncio
+async def test_final_pdf_abandonment_keeps_only_display_review():
+    attempt_id = f"attempt-{uuid4()}"
+    display_review = [{"question_id": "q1", "user_answer": "4", "expected_answer": "4"}]
+    await attempts.complete_attempt(completion(
+        attempt_id,
+        answers={"q1": "2"},
+        report_snapshot={
+            "review_snapshot": [{**display_review[0], "user_value": "2", "expected_value": "2"}],
+            "public_review_snapshot": display_review,
+        },
+    ))
+    claim = await attempts.claim_pending_pdf(attempt_id)
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute(
+            "UPDATE diagnostic_attempts SET pdf_attempts=8 WHERE attempt_id=$1", attempt_id
+        )
+
+    assert await attempts.mark_pdf_failed(attempt_id, claim["pdf_locked_at"], "delivery failed") is True
+    row = await attempts.get_review_attempt(attempt_id, 101)
+    assert row["status"] == "completed"
+    assert row["pdf_status"] == "abandoned"
+    assert row["report_snapshot"] == {"review_snapshot": display_review}
+
+
+@pytest.mark.asyncio
 async def test_repeat_completion_uses_the_original_full_result_for_followups():
     attempt_id = f"attempt-{uuid4()}"
     await attempts.complete_attempt(

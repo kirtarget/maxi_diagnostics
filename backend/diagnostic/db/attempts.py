@@ -22,6 +22,29 @@ _ATTEMPT_DELIVERY_COLUMNS = (
     f"{_ATTEMPT_PUBLIC_COLUMNS}, report_snapshot, report_asset_bundle_id, "
     "report_assets, pdf_document"
 )
+_SANITIZED_REVIEW_SNAPSHOT = """
+CASE
+    WHEN jsonb_typeof(report_snapshot->'public_review_snapshot') = 'array'
+    THEN jsonb_build_object('review_snapshot', report_snapshot->'public_review_snapshot')
+    WHEN jsonb_typeof(report_snapshot->'review_snapshot') = 'array'
+         AND NOT EXISTS (
+             SELECT 1
+               FROM jsonb_array_elements(report_snapshot->'review_snapshot') AS review(item)
+              WHERE jsonb_typeof(review.item) != 'object'
+                 OR EXISTS (
+                     SELECT 1
+                       FROM jsonb_object_keys(review.item) AS field(key)
+                      WHERE field.key NOT IN (
+                          'question_id', 'number', 'type', 'topic', 'title', 'prompt',
+                          'asset', 'assets', 'is_correct', 'user_answer',
+                          'expected_answer', 'guidance', 'guidance_kind'
+                      )
+                 )
+         )
+    THEN jsonb_build_object('review_snapshot', report_snapshot->'review_snapshot')
+    ELSE '{}'::jsonb
+END
+""".strip()
 
 
 @dataclass(frozen=True)
@@ -675,12 +698,12 @@ async def claim_pending_pdf(attempt_id: str | None = None):
     async with pool.acquire() as connection:
         async with connection.transaction():
             await connection.execute(
-                """
+                f"""
                 UPDATE diagnostic_attempts
                    SET pdf_status='abandoned', pdf_locked_at=NULL,
                        pdf_last_error='retry_limit_reached', pdf_document=NULL,
-                       report_assets=NULL, answers='{}'::jsonb,
-                       report_snapshot='{}'::jsonb, report_asset_bundle_id=NULL,
+                       report_assets=NULL, answers='{{}}'::jsonb,
+                       report_snapshot={_SANITIZED_REVIEW_SNAPSHOT}, report_asset_bundle_id=NULL,
                        updated_at=now()
                  WHERE status='completed' AND pdf_status='sending'
                    AND pdf_attempts >= 8
@@ -723,11 +746,12 @@ async def mark_pdf_delivered(
     pool = await get_pool()
     async with pool.acquire() as connection:
         row = await connection.fetchrow(
-            """
+            f"""
             UPDATE diagnostic_attempts
                SET pdf_status='sent', pdf_delivered_at=now(), pdf_message_id=$2,
                    pdf_locked_at=NULL, pdf_last_error=NULL, pdf_document=NULL,
-                   report_assets=NULL, answers='{}'::jsonb, report_snapshot='{}'::jsonb,
+                   report_assets=NULL, answers='{{}}'::jsonb,
+                   report_snapshot={_SANITIZED_REVIEW_SNAPSHOT},
                    report_asset_bundle_id=NULL, updated_at=now()
              WHERE attempt_id=$1 AND pdf_status='sending' AND pdf_locked_at=$3
             RETURNING attempt_id
@@ -919,10 +943,11 @@ async def store_pdf_document(
     pool = await get_pool()
     async with pool.acquire() as connection:
         row = await connection.fetchrow(
-            """
+            f"""
             UPDATE diagnostic_attempts
                SET pdf_document=COALESCE(pdf_document, $3),
-                   report_assets=NULL, answers='{}'::jsonb, report_snapshot='{}'::jsonb,
+                   report_assets=NULL, answers='{{}}'::jsonb,
+                   report_snapshot={_SANITIZED_REVIEW_SNAPSHOT},
                    report_asset_bundle_id=NULL, updated_at=now()
              WHERE attempt_id=$1 AND pdf_status='sending' AND pdf_locked_at=$2
             RETURNING attempt_id
@@ -968,14 +993,16 @@ async def mark_pdf_failed(attempt_id: str, lease: datetime, error_text: str) -> 
     pool = await get_pool()
     async with pool.acquire() as connection:
         row = await connection.fetchrow(
-            """
+            f"""
             UPDATE diagnostic_attempts
                SET pdf_status=CASE WHEN pdf_attempts >= 8 THEN 'abandoned' ELSE 'failed' END,
                    pdf_locked_at=NULL, pdf_last_error=$2,
                    pdf_document=CASE WHEN pdf_attempts >= 8 THEN NULL ELSE pdf_document END,
                    report_assets=CASE WHEN pdf_attempts >= 8 THEN NULL ELSE report_assets END,
-                   answers=CASE WHEN pdf_attempts >= 8 THEN '{}'::jsonb ELSE answers END,
-                   report_snapshot=CASE WHEN pdf_attempts >= 8 THEN '{}'::jsonb ELSE report_snapshot END,
+                   answers=CASE WHEN pdf_attempts >= 8 THEN '{{}}'::jsonb ELSE answers END,
+                   report_snapshot=CASE WHEN pdf_attempts >= 8
+                       THEN {_SANITIZED_REVIEW_SNAPSHOT}
+                       ELSE report_snapshot END,
                    report_asset_bundle_id=CASE WHEN pdf_attempts >= 8 THEN NULL ELSE report_asset_bundle_id END,
                    updated_at=now()
              WHERE attempt_id=$1 AND pdf_status='sending' AND pdf_locked_at=$3

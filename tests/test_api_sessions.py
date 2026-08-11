@@ -369,6 +369,9 @@ def test_completion_freezes_review_snapshot(monkeypatch):
     assert review[0]["user_answer"] == "4"
     assert review[0]["expected_answer"] == "4"
     assert review[0]["guidance_kind"] == "individual"
+    display_review = stored["snapshot"]["public_review_snapshot"]
+    assert display_review[0]["expected_answer"] == "4"
+    assert "expected_value" not in display_review[0]
 
 
 def test_review_endpoint_requires_owner_and_completion(monkeypatch):

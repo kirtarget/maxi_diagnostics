@@ -59,6 +59,8 @@ def build_completion(
         diagnostic.questions[: diagnostic.quick_count]
         if body.mode == "quick" else diagnostic.questions
     )
+    review_snapshot = build_review_snapshot(selected_questions, body.answers)
+    public_review_snapshot = public_review_items({"review_snapshot": review_snapshot})
     report_snapshot = {
         "diagnostic": {
             "id": diagnostic.id,
@@ -69,7 +71,8 @@ def build_completion(
                 for question in selected_questions
             ],
         },
-        "review_snapshot": build_review_snapshot(selected_questions, body.answers),
+        "review_snapshot": review_snapshot,
+        "public_review_snapshot": public_review_snapshot,
         "mode": body.mode,
         "school": {
             "brand": school.brand.model_dump(mode="json"),
