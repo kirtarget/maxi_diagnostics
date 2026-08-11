@@ -5,7 +5,7 @@ import {
   splitPromptSentences,
   tokenizeMathText,
 } from "./math-text";
-import { isValidNumericInput, updateMatchingAnswer } from "./answer-values";
+import { isValidNumericInput, updateCompactAnswer, updateMatchingAnswer } from "./answer-values";
 import { questionAssetPaths } from "./question-assets";
 import {
   cleanAnswerLabel,
@@ -282,11 +282,9 @@ function TableGapAnswer({ matching, onChange, value }: {
                     aria-label={`Элемент для ячейки ${cell.marker}`}
                     disabled={locked}
                     value={selected[currentIndex] ?? ""}
-                    onChange={(event) => {
-                      const next = [...selected];
-                      next[currentIndex] = event.target.value;
-                      onChange(next.join(""));
-                    }}
+                    onChange={(event) => onChange(
+                      updateCompactAnswer(value, currentIndex, event.target.value),
+                    )}
                   >
                     <option value="">Выберите</option>
                     {matching.options.map((option) => (
@@ -331,11 +329,9 @@ function SequenceMatchingAnswer({ matching, onChange, value }: {
                 aria-label={`Вариант для пункта ${item.marker}`}
                 disabled={locked}
                 value={rowValue}
-                onChange={(event) => {
-                  const next = [...selected];
-                  next[index] = event.target.value;
-                  onChange(next.join(""));
-                }}
+                onChange={(event) => onChange(
+                  updateCompactAnswer(value, index, event.target.value),
+                )}
               >
                 <option value="">Выберите вариант</option>
                 {matching.options.map((option) => (

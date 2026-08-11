@@ -387,6 +387,36 @@ def test_completion_freezes_review_snapshot(monkeypatch):
     assert "expected_value" not in display_review[0]
 
 
+def test_completion_freezes_report_provenance_for_premium_footer(monkeypatch):
+    stored = {}
+
+    async def complete_attempt(completion):
+        stored["snapshot"] = completion.report_snapshot
+        return {
+            "attempt_id": completion.attempt_id,
+            "diagnostic_id": completion.diagnostic_id,
+            "mode": completion.mode,
+            "status": "completed",
+            "pdf_status": "pending",
+            "result_snapshot": completion.result_snapshot,
+        }
+
+    client = make_client(monkeypatch, complete_attempt=complete_attempt)
+    request = base_completion()
+
+    response = client.post("/api/diagnostics/session/complete", json=request)
+
+    assert response.status_code == 200
+    assert stored["snapshot"]["provenance"] == {
+        "attempt_id": "attempt_123",
+        "diagnostic_id": "demo-math",
+        "content_version": request["content_version"],
+        "exam": "demo",
+        "subject": "Математика",
+        "mode": "quick",
+    }
+
+
 def test_review_endpoint_requires_owner_and_completion(monkeypatch):
     from diagnostic.api import sessions
 

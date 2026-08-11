@@ -1,4 +1,13 @@
+import json
+from pathlib import Path
+import shutil
+
+import pytest
+
+from diagnostic.catalog import load_catalog
+from diagnostic.school import load_school
 from scripts.import_edcheck_export import (
+    ImportError as EdcheckImportError,
     _convert_question,
     _explanation,
     _inline_image_sources,
@@ -8,6 +17,10 @@ from scripts.import_edcheck_export import (
     _prompt,
 )
 from scripts import import_edcheck_export
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SAMPLE_SCHOOL = ROOT / "tests" / "fixtures" / "sample-school"
 
 
 def test_importer_preserves_clean_bounded_explanation():
@@ -99,7 +112,28 @@ def test_prompt_keeps_text_and_extracts_inline_images_when_export_list_is_empty(
     )
 
 
-def test_materialize_diagnostics_assets_preserves_all_source_images(tmp_path):
+def test_importer_skips_multi_image_questions_before_materialization():
+    converted = _convert_question({
+        "question_id": 123,
+        "question_index": 1,
+        "description_text": "Чему равно 2 + 2?",
+        "description_html": (
+            '<p>Чему равно 2 + 2?</p>'
+            '<img src="data:image/png;base64,iVBORw0KGgo=">'
+            '<img src="https://storage.yandexcloud.net/bucket/question.jpg">'
+        ),
+        "images": [],
+        "audio_file": None,
+        "subject": {"code": "math"},
+        "blocks": [],
+        "type": "short-answer",
+        "correct_answers": ["4"],
+    })
+
+    assert converted is None
+
+
+def test_materializer_rejects_plural_source_images_instead_of_emitting_assets(tmp_path):
     remote = b"\xff\xd8\xff\xe0test-jpeg"
     diagnostics = [
         (
@@ -120,22 +154,58 @@ def test_materialize_diagnostics_assets_preserves_all_source_images(tmp_path):
     asset_directory = tmp_path / "assets" / "questions"
     asset_directory.mkdir(parents=True)
 
-    _materialize_diagnostics_assets(
-        diagnostics,
-        asset_directory,
-        fetch_remote=lambda _source: remote,
+    with pytest.raises(EdcheckImportError, match="Multi-image questions are unsupported"):
+        _materialize_diagnostics_assets(
+            diagnostics,
+            asset_directory,
+            fetch_remote=lambda _source: remote,
+        )
+
+    assert list(asset_directory.iterdir()) == []
+
+
+def test_single_image_import_materializes_and_loads_through_backend_catalog(tmp_path):
+    school_root = tmp_path / "school"
+    shutil.copytree(SAMPLE_SCHOOL, school_root)
+    asset_directory = school_root / "assets" / "questions"
+    asset_directory.mkdir()
+    converted = _convert_question({
+        "question_id": 321,
+        "question_index": 1,
+        "description_text": "Чему равно 2 + 2?",
+        "description_html": (
+            '<p>Чему равно 2 + 2?</p>'
+            '<img src="data:image/png;base64,'
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=">'
+        ),
+        "images": [],
+        "audio_file": None,
+        "subject": {"code": "math"},
+        "blocks": [],
+        "type": "short-answer",
+        "correct_answers": ["4"],
+    })
+    assert converted is not None
+    diagnostic = {
+        "id": "imported-math",
+        "exam": "demo",
+        "subject": "Математика",
+        "mark": "Импорт",
+        "quick_count": 1,
+        "scoring": {"max_score": 100, "score_unit": "accuracy_percent"},
+        "questions": [converted],
+    }
+    diagnostics = [("imported-math.json", diagnostic)]
+
+    _materialize_diagnostics_assets(diagnostics, asset_directory)
+    (school_root / "diagnostics" / "imported-math.json").write_text(
+        json.dumps(diagnostic, ensure_ascii=False),
+        encoding="utf-8",
     )
 
-    question = diagnostics[0][1]["questions"][0]
-    assert question == {
-        "id": "q123",
-        "assets": [
-            "assets/questions/q123-1.png",
-            "assets/questions/q123-2.jpg",
-        ],
-    }
-    assert (asset_directory / "q123-1.png").read_bytes().startswith(b"\x89PNG")
-    assert (asset_directory / "q123-2.jpg").read_bytes() == remote
+    loaded = load_catalog(load_school(school_root)).get("imported-math").questions[0]
+    assert loaded.asset == "assets/questions/q321.png"
+    assert "assets" not in diagnostic["questions"][0]
 
 
 def test_image_extension_recognizes_svg_returned_by_formula_service():

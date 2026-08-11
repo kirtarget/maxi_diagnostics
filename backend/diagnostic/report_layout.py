@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,7 @@ _BODY_BOLD = "Manrope-Bold"
 _LEGACY_REGULAR = "DiagnosticLiberationSans"
 _LEGACY_BOLD = "DiagnosticLiberationSansBold"
 _TWO_COLUMN_ANSWER_LIMIT = 500
+_NOT_SAVED = "не сохранена"
 
 
 @dataclass(frozen=True)
@@ -130,17 +132,118 @@ def make_styles(theme: ReportTheme) -> dict[str, ParagraphStyle]:
     }
 
 
+def _snapshot_mapping(attempt: Mapping[str, Any], key: str) -> Mapping[str, Any]:
+    value = attempt.get(key)
+    return value if isinstance(value, Mapping) else {}
+
+
+def _report_snapshot(attempt: Mapping[str, Any]) -> Mapping[str, Any]:
+    return _snapshot_mapping(attempt, "report_snapshot")
+
+
+def _result_snapshot(attempt: Mapping[str, Any]) -> Mapping[str, Any]:
+    return _snapshot_mapping(attempt, "result_snapshot")
+
+
+def _nonblank(mapping: Mapping[str, Any], key: str) -> Any:
+    value = mapping.get(key)
+    return None if value is None or value == "" else value
+
+
+def _provenance_value(attempt: Mapping[str, Any], key: str) -> Any:
+    report = _report_snapshot(attempt)
+    provenance = report.get("provenance")
+    if isinstance(provenance, Mapping):
+        value = _nonblank(provenance, key)
+        if value is not None:
+            return value
+    value = _nonblank(attempt, key)
+    if value is not None:
+        return value
+    if key == "mode":
+        value = _nonblank(report, key)
+        if value is not None:
+            return value
+    diagnostic = report.get("diagnostic")
+    if isinstance(diagnostic, Mapping):
+        diagnostic_key = "id" if key == "diagnostic_id" else key
+        value = _nonblank(diagnostic, diagnostic_key)
+        if value is not None:
+            return value
+    return None
+
+
+def _result_value(attempt: Mapping[str, Any], key: str) -> Any:
+    result = _result_snapshot(attempt)
+    if key in result and result[key] is not None:
+        return result[key]
+    return attempt.get(key)
+
+
+def _topic_names(attempt: Mapping[str, Any], key: str) -> list[str]:
+    result = _result_snapshot(attempt)
+    raw = result[key] if key in result else attempt.get(key)
+    if not isinstance(raw, (list, tuple)):
+        return []
+    names = [
+        str(item.get("topic") or "") if isinstance(item, Mapping) else str(item)
+        for item in raw
+    ]
+    return [name for name in names if name]
+
+
+def _completion_date(attempt: Mapping[str, Any]) -> str:
+    value = attempt.get("completed_at")
+    if isinstance(value, datetime):
+        return value.strftime("%d.%m.%Y")
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00")).strftime("%d.%m.%Y")
+        except ValueError:
+            pass
+    return _NOT_SAVED
+
+
+def _mode_label(value: Any) -> str:
+    if value == "quick":
+        return "быстрая диагностика"
+    if value == "full":
+        return "полная диагностика"
+    return _NOT_SAVED
+
+
+def _display(value: Any) -> str:
+    return _NOT_SAVED if value is None or value == "" else str(value)
+
+
+def _provenance_lines(attempt: Mapping[str, Any]) -> tuple[str, str]:
+    attempt_id = _display(_provenance_value(attempt, "attempt_id"))
+    diagnostic_id = _display(_provenance_value(attempt, "diagnostic_id"))
+    content_version = _display(_provenance_value(attempt, "content_version"))
+    return (
+        f"ID результата: {attempt_id}",
+        f"Диагностика: {diagnostic_id} / Версия диагностики: {content_version}",
+    )
+
+
 def summary_story(
     attempt: Mapping[str, Any],
     school: SchoolConfig,
     styles: Mapping[str, ParagraphStyle],
 ) -> list[Any]:
-    result = (
-        attempt.get("result_snapshot")
-        if isinstance(attempt.get("result_snapshot"), Mapping)
-        else {}
-    )
-    score = int(result.get("score") or 0)
+    result = _result_snapshot(attempt)
+    score = _result_value(attempt, "score")
+    max_score = _result_value(attempt, "max_score")
+    score_unit = _result_value(attempt, "score_unit")
+    correct_count = _result_value(attempt, "correct_count")
+    question_count = _result_value(attempt, "question_count")
+    subject = _display(_provenance_value(attempt, "subject"))
+    mode = _mode_label(_provenance_value(attempt, "mode"))
+    unassessed_part = _result_value(attempt, "unassessed_part")
+    if not isinstance(unassessed_part, str) or not unassessed_part:
+        unassessed_part = "автоматически проверяемая часть диагностики"
+    strong_topics = _topic_names(attempt, "strong_topics")
+    growth_topics = _topic_names(attempt, "growth_topics")
     forecast = (
         result.get("forecast")
         if isinstance(result.get("forecast"), Mapping)
@@ -150,7 +253,28 @@ def summary_story(
     story: list[Any] = [
         Paragraph(escape(school.brand.name), styles["label"]),
         Paragraph("Ваша точка старта", styles["display"]),
-        Paragraph(f"Текущий результат: <b>{score}</b>", styles["heading"]),
+        Paragraph(f"Предмет: <b>{escape(subject)}</b>", styles["heading"]),
+        Paragraph(f"Режим: {escape(mode)}", styles["body"]),
+        Paragraph(f"Дата завершения: {_completion_date(attempt)}", styles["body"]),
+        Paragraph(
+            f"Текущий результат: <b>{escape(_display(score))} из "
+            f"{escape(_display(max_score))} {escape(_display(score_unit))}</b>",
+            styles["heading"],
+        ),
+        Paragraph(
+            f"Верных ответов: <b>{escape(_display(correct_count))} из "
+            f"{escape(_display(question_count))}</b>",
+            styles["body"],
+        ),
+        Paragraph(f"Границы проверки: {escape(unassessed_part)}", styles["body"]),
+        Paragraph(
+            f"Сильные темы: {escape(', '.join(strong_topics) if strong_topics else 'не выделены')}",
+            styles["body"],
+        ),
+        Paragraph(
+            f"Точки роста: {escape(', '.join(growth_topics) if growth_topics else 'не выделены')}",
+            styles["body"],
+        ),
         Paragraph(
             "Диагностика показывает, что уже получается и где быстрее всего вырастет балл.",
             styles["body"],
@@ -324,7 +448,9 @@ def route_story(
     return story
 
 
-def draw_page(theme: ReportTheme):
+def draw_page(theme: ReportTheme, attempt: Mapping[str, Any]):
+    result_id, diagnostic_version = _provenance_lines(attempt)
+
     def _draw(canvas: Canvas, document: BaseDocTemplate) -> None:
         canvas.saveState()
         canvas.setStrokeColor(theme.primary)
@@ -332,8 +458,11 @@ def draw_page(theme: ReportTheme):
         canvas.line(18 * mm, 285 * mm, 192 * mm, 285 * mm)
         canvas.setFillColor(theme.ink)
         canvas.setFont(_BODY_FONT, 8)
-        canvas.drawString(18 * mm, 10 * mm, "Персональный отчёт")
-        canvas.drawRightString(192 * mm, 10 * mm, str(document.page))
+        canvas.drawString(18 * mm, 12 * mm, "Персональный отчёт")
+        canvas.setFont(_BODY_FONT, 6.5)
+        canvas.drawString(18 * mm, 8.5 * mm, result_id)
+        canvas.drawString(18 * mm, 5.5 * mm, diagnostic_version)
+        canvas.drawRightString(192 * mm, 5.5 * mm, str(document.page))
         canvas.restoreState()
 
     return _draw

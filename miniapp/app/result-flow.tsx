@@ -15,7 +15,10 @@ import type {
 export type RouteItem = PersonalRouteAction;
 
 function shouldShowResultMetrics(result: Pick<ServerResult, "correct_count" | "score">): boolean {
-  return result.score > 0 && result.correct_count > 0;
+  return Number.isFinite(result.score)
+    && result.score >= 0
+    && Number.isFinite(result.correct_count)
+    && result.correct_count >= 0;
 }
 
 function topicName(topic: ServerTopic | string): string {

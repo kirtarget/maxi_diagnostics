@@ -376,7 +376,7 @@ def _convert_question(question: dict[str, Any]) -> dict[str, Any] | None:
     if explanation is not None:
         converted["explanation"] = explanation
     image_sources = _inline_image_sources(question)
-    if len(image_sources) > 5:
+    if len(image_sources) > 1:
         return None
     if image_sources:
         converted["_asset_sources"] = list(image_sources)
@@ -486,13 +486,15 @@ def _materialize_diagnostics_assets(
             sources = question.get("_asset_sources")
             if not sources:
                 continue
-            if not isinstance(sources, list) or not 1 <= len(sources) <= 5:
+            if not isinstance(sources, list) or not sources:
                 raise ImportError("Invalid source image list")
+            if len(sources) > 1:
+                raise ImportError("Multi-image questions are unsupported")
             question_id = question.get("id")
             if not isinstance(question_id, str) or re.fullmatch(r"q[0-9]+", question_id) is None:
                 raise ImportError("Unsafe source image question id")
             relative_paths: list[str] = []
-            for index, source in enumerate(sources, 1):
+            for source in sources:
                 if not isinstance(source, str):
                     raise ImportError("Invalid source image URL")
                 cached = payload_cache.get(source)
@@ -500,8 +502,7 @@ def _materialize_diagnostics_assets(
                     cached = _source_image_payload(source, fetch_remote)
                     payload_cache[source] = cached
                 payload, extension = cached
-                suffix = "" if len(sources) == 1 else f"-{index}"
-                filename = f"{question_id}{suffix}{extension}"
+                filename = f"{question_id}{extension}"
                 destination = asset_directory / filename
                 if destination.is_symlink():
                     raise ImportError(f"Unsafe question asset destination: {destination}")
@@ -513,10 +514,7 @@ def _materialize_diagnostics_assets(
         destination.write_bytes(payload)
     for question, relative_paths in planned_questions:
         question.pop("_asset_sources", None)
-        if len(relative_paths) == 1:
-            question["asset"] = relative_paths[0]
-        else:
-            question["assets"] = relative_paths
+        question["asset"] = relative_paths[0]
 
 
 def _select_diagnostics(

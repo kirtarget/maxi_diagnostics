@@ -16,6 +16,16 @@ export function updateMatchingAnswer(
   return next;
 }
 
+export function updateCompactAnswer(
+  current: string, index: number, value: string,
+): string {
+  const selections = [...current];
+  if (index < 0 || index > selections.length) return current;
+  if (!value) return selections.slice(0, index).join("");
+  selections[index] = value;
+  return selections.join("");
+}
+
 export function updateNumericInputAnswer(
   current: AnswerMap, questionId: string, draft: string,
 ): AnswerMap {

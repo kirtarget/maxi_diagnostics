@@ -62,6 +62,14 @@ def build_completion(
     review_snapshot = build_review_snapshot(selected_questions, body.answers)
     public_review_snapshot = public_review_items({"review_snapshot": review_snapshot})
     report_snapshot = {
+        "provenance": {
+            "attempt_id": body.attempt_id,
+            "diagnostic_id": diagnostic.id,
+            "content_version": body.content_version,
+            "exam": diagnostic.exam,
+            "subject": diagnostic.subject,
+            "mode": body.mode,
+        },
         "diagnostic": {
             "id": diagnostic.id,
             "subject": diagnostic.subject,

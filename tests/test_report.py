@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -208,6 +209,116 @@ def test_premium_report_contains_both_answers_guidance_forecast_and_route():
     assert "Как решать" in text
     assert "Первый этап" in text
     assert "Персональный маршрут" in text
+
+
+def test_premium_report_renders_zero_summary_and_frozen_provenance_in_footer():
+    from diagnostic.report import build_report
+
+    school = load_school(SAMPLE_SCHOOL)
+    diagnostic = load_catalog(school).get("demo-math")
+    snapshot = make_review_report_snapshot(
+        school,
+        diagnostic,
+        [make_review(prompt="Условие", guidance="Решение")],
+    )
+    snapshot["provenance"] = {
+        "attempt_id": "attempt_zero",
+        "diagnostic_id": "demo-physics",
+        "content_version": "content-v0",
+        "exam": "ОГЭ",
+        "subject": "Физика",
+        "mode": "quick",
+    }
+    attempt = completed_attempt(
+        attempt_id="attempt_zero",
+        diagnostic_id="demo-physics",
+        content_version="content-v0",
+        exam="ОГЭ",
+        subject="Физика",
+        mode="quick",
+        completed_at=datetime(2026, 8, 11, 15, 30, tzinfo=timezone.utc),
+        question_count=4,
+        correct_count=0,
+        score=0,
+        max_score=100,
+        score_unit="баллов",
+        unassessed_part="Письменная часть не проверялась",
+        strong_topics=["Механика"],
+        growth_topics=["Оптика"],
+        result_snapshot={
+            "score": 0,
+            "max_score": 100,
+            "score_unit": "баллов",
+            "correct_count": 0,
+            "question_count": 4,
+            "unassessed_part": "Письменная часть не проверялась",
+            "strong_topics": [{"topic": "Механика"}],
+            "growth_topics": [{"topic": "Оптика"}],
+        },
+        report_snapshot=snapshot,
+    )
+
+    text = "\n".join(
+        page.extract_text() or "" for page in PdfReader(BytesIO(build_report(attempt, school))).pages
+    )
+
+    assert "Предмет: Физика" in text
+    assert "Режим: быстрая диагностика" in text
+    assert "Дата завершения: 11.08.2026" in text
+    assert "Текущий результат: 0 из 100 баллов" in text
+    assert "Верных ответов: 0 из 4" in text
+    assert "Границы проверки: Письменная часть не проверялась" in text
+    assert "Сильные темы: Механика" in text
+    assert "Точки роста: Оптика" in text
+    assert "ID результата: attempt_zero" in text
+    assert "Диагностика: demo-physics" in text
+    assert "Версия диагностики: content-v0" in text
+
+
+def test_premium_report_uses_legacy_snapshot_fallbacks_without_current_catalog():
+    from diagnostic.report import build_report
+
+    school = load_school(SAMPLE_SCHOOL)
+    diagnostic = load_catalog(school).get("demo-math")
+    snapshot = make_review_report_snapshot(
+        school,
+        diagnostic,
+        [make_review(prompt="Условие", guidance="Решение")],
+    )
+    snapshot["diagnostic"]["subject"] = "Сохранённый предмет"
+    attempt = completed_attempt(
+        subject="",
+        content_version="",
+        completed_at=None,
+        report_snapshot=snapshot,
+    )
+
+    text = "\n".join(
+        page.extract_text() or "" for page in PdfReader(BytesIO(build_report(attempt, school))).pages
+    )
+
+    assert "Предмет: Сохранённый предмет" in text
+    assert "Дата завершения: не сохранена" in text
+    assert "Версия диагностики: не сохранена" in text
+
+
+def test_report_theme_maps_distinct_semantic_school_colors():
+    from diagnostic.report import _report_theme
+
+    school = load_school(SAMPLE_SCHOOL)
+    school.brand.colors.primary = "#112233"
+    school.brand.colors.accent = "#DDEEFF"
+    school.brand.colors.background = "#010203"
+    school.brand.colors.signal = "#445566"
+    school.brand.colors.ink = "#778899"
+    school.brand.colors.paper = "#AABBCC"
+
+    theme = _report_theme(school)
+
+    assert theme.primary == colors.HexColor("#112233")
+    assert theme.signal == colors.HexColor("#445566")
+    assert theme.ink == colors.HexColor("#778899")
+    assert theme.paper == colors.HexColor("#AABBCC")
 
 
 def test_long_review_can_split_across_pages_without_blank_page():

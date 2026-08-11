@@ -28,6 +28,7 @@ import {
   RouteScreen,
 } from "./result-flow";
 import { forecastTrajectory, pdfStatusCopy, personalRoute } from "./result-flow-model";
+import { createReviewRequestGate } from "./review-request-gate";
 import { initializeTelegram } from "./telegram-webapp";
 import type {
   AnswerMap,
@@ -112,6 +113,11 @@ export default function Home() {
   const schoolIdRef = useRef<string | null>(null);
   const sessionScopeRef = useRef<string | null>(null);
   const attemptGeneration = useRef(0);
+  const reviewRequestGate = useRef<ReturnType<typeof createReviewRequestGate> | null>(null);
+  if (!reviewRequestGate.current) {
+    reviewRequestGate.current = createReviewRequestGate();
+    reviewRequestGate.current.activate({ attemptId, generation: attemptGeneration.current });
+  }
   const hydrateGeneration = useRef(0);
   const recoveryPromise = useRef<Promise<void> | null>(null);
   const recoverConflict = useRef<() => Promise<void>>(async () => undefined);
@@ -180,15 +186,20 @@ export default function Home() {
 
   const refreshReview = useCallback(async () => {
     if (!sessionScope || !initData.current) return null;
-    try {
-      const response = await loadReview(initData.current, attemptId, sessionScope);
-      setReview(response);
+    const identity = { attemptId, generation: attemptGeneration.current };
+    const outcome = await reviewRequestGate.current!.run(
+      identity,
+      () => loadReview(initData.current, attemptId, sessionScope),
+    );
+    if (outcome.status === "current") {
+      setReview(outcome.value);
       setReviewError(null);
-      return response;
-    } catch {
-      setReviewError("Не удалось загрузить разбор. Повторите запрос.");
-      return null;
+      return outcome.value;
     }
+    if (outcome.status === "error") {
+      setReviewError("Не удалось загрузить разбор. Повторите запрос.");
+    }
+    return null;
   }, [attemptId, sessionScope]);
 
   const hydrate = useCallback(async (preserveCurrentScreen = false) => {
@@ -221,6 +232,10 @@ export default function Home() {
       const session = restoreBootstrapSession(data);
       const savedDiagnostic = session && data.diagnostics.find((item) => item.id === session.diagnosticId);
       if (session && savedDiagnostic) {
+        reviewRequestGate.current!.activate({
+          attemptId: session.attemptId,
+          generation: attemptGeneration.current,
+        });
         activeAttemptId.current = session.attemptId;
         persistedAttemptId.current = data.attempt?.attempt_id ?? (
           session.revision > 0 ? session.attemptId : null
@@ -239,10 +254,20 @@ export default function Home() {
         setInputDrafts(Object.fromEntries(
           Object.entries(session.answers).filter(([, value]) => typeof value === "string"),
         ) as Record<string, string>);
+        setReview(null);
+        setReviewIndex(0);
+        setReviewError(null);
         setScreen("question");
       } else {
+        reviewRequestGate.current!.activate({
+          attemptId: activeAttemptId.current,
+          generation: attemptGeneration.current,
+        });
         persistedAttemptId.current = data.attempt?.attempt_id ?? null;
         supersedesAttemptId.current = undefined;
+        setReview(null);
+        setReviewIndex(0);
+        setReviewError(null);
         setScreen("welcome");
       }
       return true;
@@ -316,6 +341,10 @@ export default function Home() {
     progressQueue.current?.cancel();
     attemptGeneration.current += 1;
     const nextAttemptId = createAttemptId();
+    reviewRequestGate.current!.activate({
+      attemptId: nextAttemptId,
+      generation: attemptGeneration.current,
+    });
     activeAttemptId.current = nextAttemptId;
     supersedesAttemptId.current = persistedAttemptId.current ?? undefined;
     setAttemptId(nextAttemptId);

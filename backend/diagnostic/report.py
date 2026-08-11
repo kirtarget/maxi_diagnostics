@@ -41,6 +41,15 @@ def _register_fonts() -> None:
     register_report_fonts()
 
 
+def _report_theme(school: SchoolConfig) -> ReportTheme:
+    return ReportTheme(
+        primary=colors.HexColor(school.brand.colors.primary),
+        signal=colors.HexColor(school.brand.colors.signal),
+        ink=colors.HexColor(school.brand.colors.ink),
+        paper=colors.HexColor(school.brand.colors.paper),
+    )
+
+
 def _value(row: Mapping[str, Any], key: str, default: Any = None) -> Any:
     try:
         value = row[key]
@@ -396,12 +405,7 @@ def build_report(
             raise ValueError("report_snapshot_invalid")
 
     _register_fonts()
-    theme = ReportTheme(
-        primary=colors.HexColor(school.brand.colors.primary),
-        signal=colors.HexColor(school.brand.colors.accent),
-        ink=colors.HexColor("#222222"),
-        paper=colors.HexColor(school.brand.colors.background),
-    )
+    theme = _report_theme(school)
 
     output = BytesIO()
     document = SimpleDocTemplate(
@@ -427,7 +431,7 @@ def build_report(
             story.extend(review_story(review, premium_styles, images))
         story.append(PageBreak())
         story.extend(route_story(attempt, school, premium_styles))
-        page = draw_page(theme)
+        page = draw_page(theme, attempt)
     else:
         legacy_assets = (
             frozen_assets if frozen_assets is not None else {}

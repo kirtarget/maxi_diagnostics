@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   isValidNumericInput,
+  updateCompactAnswer,
   updateMatchingAnswer,
   updateNumericInputAnswer,
 } from "./answer-values";
@@ -24,5 +25,14 @@ describe("shared answer value helpers", () => {
   it("stores only complete valid numeric answers", () => {
     expect(updateNumericInputAnswer({ q1: "7" }, "q2", "-2,5")).toEqual({ q1: "7", q2: "-2,5" });
     expect(updateNumericInputAnswer({ q1: "7", q2: "4" }, "q2", "-")).toEqual({ q1: "7" });
+  });
+
+  it("truncates later compact selections when the middle is cleared, then allows refill", () => {
+    const cleared = updateCompactAnswer("123", 1, "");
+    expect(cleared).toBe("1");
+
+    const refilledMiddle = updateCompactAnswer(cleared, 1, "2");
+    expect(refilledMiddle).toBe("12");
+    expect(updateCompactAnswer(refilledMiddle, 2, "3")).toBe("123");
   });
 });
