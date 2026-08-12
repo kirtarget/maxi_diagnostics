@@ -15,13 +15,14 @@ export function parseSequenceMatchingPrompt(prompt: string): SequenceMatchingPro
     .filter((item) => /^\d$/u.test(item.marker))
     .map((item) => ({ marker: item.marker, label: item.text }));
 
-  if (left.length < 2 || options.length < left.length) return null;
+  if (left.length < 2 || options.length < 2) return null;
   if (new Set(left.map((item) => item.marker)).size !== left.length) return null;
   if (new Set(options.map((item) => item.marker)).size !== options.length) return null;
   return {
     left,
     options,
     allowReuse: /цифры\s+в\s+ответе\s+могут\s+повторяться/iu.test(prompt),
+    ...(options.length < left.length ? { allowReuse: true } : {}),
   };
 }
 
@@ -33,5 +34,9 @@ export function isCompleteSequenceMatchingAnswer(
   const allowed = new Set(matching.options.map((item) => item.marker));
   const values = [...answer];
   return values.every((value) => allowed.has(value))
-    && (matching.allowReuse || new Set(values).size === values.length);
+    && (
+      matching.allowReuse
+      || matching.options.length < matching.left.length
+      || new Set(values).size === values.length
+    );
 }
