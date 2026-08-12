@@ -7,10 +7,12 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "predev": "node scripts/sync-school-assets.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/sync-school-assets.mjs",
     "build": "next build",
     "start": "next start",
-    "test:unit": "vitest run --config vitest.config.ts",
+    "test:unit": "node --test tests/sync-school-assets.test.mjs && vitest run --config vitest.config.ts",
     "test": "npm run build && node --test tests/rendered-html.test.mjs"
   },
   "dependencies": {

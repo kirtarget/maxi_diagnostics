@@ -13,7 +13,7 @@ WORKDIR /app
 COPY --from=dependencies /app/miniapp/node_modules /app/miniapp/node_modules
 COPY miniapp /app/miniapp
 COPY school/brand.json /app/school/brand.json
-COPY school/assets /app/miniapp/public/assets
+COPY school/assets /app/school/assets
 WORKDIR /app/miniapp
 RUN npm run build
 
