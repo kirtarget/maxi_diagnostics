@@ -22,6 +22,7 @@ import {
   parseTableGapPrompt,
   type TableGapPrompt,
 } from "./table-gap-matching";
+import { Fragment } from "react";
 import type {
   AnswerValue,
   Brand,
@@ -121,6 +122,21 @@ export function QuestionView({
   const tableGap = question.type === "input"
     ? parseTableGapPrompt(question.prompt)
     : null;
+  const questionMedia = imagePaths.length > 0 && (
+    <div className="question-media">
+      {imagePaths.map((imagePath, imageIndex) => (
+        // School assets are mounted by the deployment image, never copied from a source school.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imagePath}
+          alt={imagePaths.length > 1
+            ? `${labels.illustration_alt} ${imageIndex + 1}`
+            : labels.illustration_alt}
+          key={imagePath}
+        />
+      ))}
+    </div>
+  );
 
   return (
     <section className="screen question-screen" aria-labelledby="question-title">
@@ -148,9 +164,12 @@ export function QuestionView({
           ) return null;
           if (block.kind === "stem") {
             return (
-              <h1 id="question-title" className={questionTitleClassName(block.text)} key={blockIndex}>
-                <FormattedStem text={block.text} />
-              </h1>
+              <Fragment key={blockIndex}>
+                <h1 id="question-title" className={questionTitleClassName(block.text)}>
+                  <FormattedStem text={block.text} />
+                </h1>
+                {questionMedia}
+              </Fragment>
             );
           }
           if (block.kind === "heading") {
@@ -170,21 +189,6 @@ export function QuestionView({
           return <p className="question-paragraph" key={blockIndex}><FormattedMathText text={block.text} /></p>;
         })}
       </div>
-      {imagePaths.length > 0 && (
-        <div className="question-media">
-          {imagePaths.map((imagePath, imageIndex) => (
-            // School assets are mounted by the deployment image, never copied from a source school.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={imagePath}
-              alt={imagePaths.length > 1
-                ? `${labels.illustration_alt} ${imageIndex + 1}`
-                : labels.illustration_alt}
-              key={imagePath}
-            />
-          ))}
-        </div>
-      )}
 
       {question.type === "single" && (
         <div className="answer-list" role="radiogroup" aria-label="Выберите один вариант">
