@@ -196,6 +196,7 @@ export type ReviewItem = {
   expected_answer: string;
   guidance: string;
   guidance_kind: "individual" | "fallback";
+  learning_material_text?: string | null;
 };
 
 export type ReviewResponse = {

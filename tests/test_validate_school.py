@@ -34,10 +34,10 @@ def expected_summary(root: Path) -> str:
     catalog = load_catalog(school)
     assets = {school.brand.logo}
     assets.update(
-        question.asset
+        asset
         for diagnostic in catalog.diagnostics
         for question in diagnostic.questions
-        if question.asset
+        for asset in question.asset_paths
     )
     return (
         f"OK school={school.brand.school_id} diagnostics={len(catalog.diagnostics)} "
@@ -179,6 +179,25 @@ def test_validator_rejects_unknown_brand_links_and_catalog_fields(tmp_path: Path
         "ERROR diagnostics_not_found",
         "ERROR links_invalid: links.json field=unexpected reason=extra_forbidden",
     ]
+
+
+def test_validator_rejects_a_broad_subject_name_as_question_topic(
+    tmp_path: Path, capsys
+):
+    root = sample_root(tmp_path)
+    diagnostic_path = root / "school/diagnostics/demo-math.json"
+    diagnostic = json.loads(diagnostic_path.read_text(encoding="utf-8"))
+    diagnostic["questions"][0]["topic"] = "Математика"
+    diagnostic_path.write_text(json.dumps(diagnostic, ensure_ascii=False), encoding="utf-8")
+
+    result = load_tool().main([], root=root)
+
+    assert result == 1
+    assert capsys.readouterr().out == (
+        "ERROR catalog_invalid: diagnostics/demo-math.json "
+        "field=questions.0.single.topic reason=value_error\n"
+        "ERROR diagnostics_not_found\n"
+    )
 
 
 def test_validator_rejects_unsupported_directory_and_oversized_assets(

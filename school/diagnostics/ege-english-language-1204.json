@@ -1,0 +1,221 @@
+{
+  "id": "ege-english-language-1204",
+  "exam": "ЕГЭ",
+  "subject": "Английский язык",
+  "mark": "Диагностика",
+  "quick_count": 3,
+  "scoring": {
+    "max_score": 100,
+    "score_unit": "accuracy_percent"
+  },
+  "questions": [
+    {
+      "id": "q9842",
+      "type": "single",
+      "topic": "Лексико-грамматические навыки",
+      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 30",
+      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "30) healthy"
+        },
+        {
+          "id": "o2",
+          "label": "30) wholesome"
+        },
+        {
+          "id": "o3",
+          "label": "30) useful"
+        },
+        {
+          "id": "o4",
+          "label": "30) health"
+        }
+      ],
+      "correct": "o1"
+    },
+    {
+      "id": "q9843",
+      "type": "single",
+      "topic": "Лексико-грамматические навыки",
+      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 31",
+      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "31) for"
+        },
+        {
+          "id": "o2",
+          "label": "31) to"
+        },
+        {
+          "id": "o3",
+          "label": "31) on"
+        },
+        {
+          "id": "o4",
+          "label": "31) in"
+        }
+      ],
+      "correct": "o4"
+    },
+    {
+      "id": "q9844",
+      "type": "single",
+      "topic": "Лексико-грамматические навыки",
+      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 31",
+      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "32) connected"
+        },
+        {
+          "id": "o2",
+          "label": "32) linked"
+        },
+        {
+          "id": "o3",
+          "label": "32) led"
+        },
+        {
+          "id": "o4",
+          "label": "32) related"
+        }
+      ],
+      "correct": "o2"
+    },
+    {
+      "id": "q9845",
+      "type": "single",
+      "topic": "Лексико-грамматические навыки",
+      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 31",
+      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "33) just"
+        },
+        {
+          "id": "o2",
+          "label": "33) still"
+        },
+        {
+          "id": "o3",
+          "label": "33) even"
+        },
+        {
+          "id": "o4",
+          "label": "33) yet"
+        }
+      ],
+      "correct": "o4"
+    },
+    {
+      "id": "q9846",
+      "type": "single",
+      "topic": "Лексико-грамматические навыки",
+      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 34",
+      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "34) in"
+        },
+        {
+          "id": "o2",
+          "label": "34) of"
+        },
+        {
+          "id": "o3",
+          "label": "34) for"
+        },
+        {
+          "id": "o4",
+          "label": "34) on"
+        }
+      ],
+      "correct": "o1"
+    },
+    {
+      "id": "q9847",
+      "type": "single",
+      "topic": "Лексико-грамматические навыки",
+      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 35",
+      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "35) much"
+        },
+        {
+          "id": "o2",
+          "label": "35) many"
+        },
+        {
+          "id": "o3",
+          "label": "35) little"
+        },
+        {
+          "id": "o4",
+          "label": "35) few"
+        }
+      ],
+      "correct": "o1"
+    },
+    {
+      "id": "q9848",
+      "type": "single",
+      "topic": "Лексико-грамматические навыки",
+      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 36",
+      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "36) miss"
+        },
+        {
+          "id": "o2",
+          "label": "36) lack"
+        },
+        {
+          "id": "o3",
+          "label": "36) ignore"
+        },
+        {
+          "id": "o4",
+          "label": "36) run out of"
+        }
+      ],
+      "correct": "o2"
+    },
+    {
+      "id": "q9849",
+      "type": "input",
+      "topic": "Структурно-смысловые связи в тексте",
+      "learning_material_text": "Прочитайте предложения до и после пропуска и определите связь: причина, следствие, противопоставление, уточнение или ссылка на предыдущее слово. Выбирайте фрагмент, который грамматически и логически связывает оба контекста.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 11",
+      "prompt": "Прочитайте текст и заполните пропуски A–F частями предложений, обозначенными цифрами 1–7. Одна из частей в списке 1–7 лишняя. Занесите цифру, обозначающую соответствующую часть предложения, в таблицу.\nDo jellyfish sleep?\nWorms and fish do it. Birds and bees do it. But do jellyfish fall asleep? It was after midnight A _______________________ where the jellyfish were kept. They left the lights off and walked through the room by the glow of their cellphones. The students did not tell anyone that they were doing this. The secret they were keeping was a “totally crazy” experiment aimed at finding out whether jellyfish sleep. A few weeks before, B _______________________ whether jellyfish needed to sleep. “Of course not,” said one of them. “Sleep helps C _______________________. Jellyfish are so simple they don’t even have brains. How could they possibly share the need to sleep?” The others weren’t so sure, but they wanted to find out. The three students designed an experiment to test different behaviors and see if the jellyfish were asleep. They watched the animals to see how they moved, and D _______________________ when they were resting. It turned out that the jellyfish moved about 30 percent less at night. It was also harder to get their attention. Months of late-night studying led to amazing results. Young scientists reported E _______________________ sleeplike behavior. This made it the first animal without a brain known to do so. The results suggest F _______________________ life, as the jellyfish group of animals first arose about 700 million years ago, and has stuck with us ever since.\n1. how talkative they were in a situation close to\n2. that sleep evolved early in the history of animal\n3. that the upside-down jellyfish Cassiopea showed\n4. strengthen memory and keep the brain healthy\n5. the students were having coffee and started debating\n6. when three science students crept into the lab\n7. if they could get the jellies’ attention\nA\nB\nC\nD\nE\nF\nВведите последовательность цифр без пробелов.",
+      "correct": [
+        "654732"
+      ]
+    }
+  ]
+}

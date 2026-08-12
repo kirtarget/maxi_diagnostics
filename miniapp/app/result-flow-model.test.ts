@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { forecastTrajectory, personalRoute, pdfStatusCopy } from "./result-flow-model";
+import { forecastTrajectory, personalRoute, pdfStatusCopy, topicRecommendation } from "./result-flow-model";
 
 describe("result flow model", () => {
   it("uses the current score plus at most two persisted forecast points", () => {
@@ -43,6 +43,13 @@ describe("result flow model", () => {
       "Укрепить тему «Информация»",
       "Проверить рост",
     ]);
+  });
+
+  it("calls one wrong answer a recommendation rather than a diagnosed gap", () => {
+    expect(topicRecommendation([{ topic: "Орфоэпия", question_count: 1, correct_count: 0 }])).toEqual({
+      heading: "Стоит повторить",
+      topics: ["Орфоэпия"],
+    });
   });
 
   it("distinguishes every PDF delivery state without claiming unsent delivery", () => {

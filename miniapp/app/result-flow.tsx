@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 
 import { safeAssetPath } from "./question-assets";
-import { pdfStatusCopy, type PdfStatusCopy, type PersonalRouteAction } from "./result-flow-model";
+import { pdfStatusCopy, topicRecommendation, type PdfStatusCopy, type PersonalRouteAction } from "./result-flow-model";
 import type {
   ForecastPoint,
   PublicDiagnostic,
@@ -47,6 +47,7 @@ export function ResultScreen({
   onForecast: () => void;
 }): ReactNode {
   const pdf = pdfStatusCopy(pdfStatus);
+  const recommendation = topicRecommendation(result.growth_topics);
   return (
     <section className="screen result-screen" aria-labelledby="result-title">
       <span className="state-code">03 / Точка старта</span>
@@ -78,10 +79,10 @@ export function ResultScreen({
                 <ul>{result.strong_topics.map((topic) => <li key={topicName(topic)}>{topicName(topic)}</li>)}</ul>
               </div>
             )}
-            {result.growth_topics.length > 0 && (
+            {recommendation && (
               <div className="topic-group topic-group-growth">
-                <span><b aria-hidden="true">↗</b> Точки роста</span>
-                <ul>{result.growth_topics.map((topic) => <li key={topicName(topic)}>{topicName(topic)}</li>)}</ul>
+                <span><b aria-hidden="true">↗</b> {recommendation.heading}</span>
+                <ul>{recommendation.topics.map((topic) => <li key={topic}>{topic}</li>)}</ul>
               </div>
             )}
           </div>
@@ -89,7 +90,7 @@ export function ResultScreen({
       )}
       {result.unassessed_part && (
         <div className="scope-note">
-          <strong>Границы проверки</strong>
+          <strong>Что вошло в диагностику</strong>
           <span>{result.unassessed_part}</span>
         </div>
       )}
@@ -218,9 +219,9 @@ export function ReviewScreen({
         </div>
       </dl>
       <section className="guidance" aria-labelledby="guidance-title">
-        <span>{item.guidance_kind === "fallback" ? "Общий алгоритм" : "Как решать"}</span>
+        <span>Как решать</span>
         <h2 id="guidance-title">Разберите ход решения</h2>
-        <p>{item.guidance}</p>
+        <p>{item.learning_material_text || item.guidance}</p>
       </section>
       <button className="primary-button" onClick={isLast ? onForecast : onNext} type="button">
         {isLast ? "Перейти к прогнозу" : "Следующая ошибка"} <span aria-hidden="true">→</span>

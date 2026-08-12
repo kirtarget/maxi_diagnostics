@@ -8,6 +8,7 @@ import json
 import re
 import unicodedata
 from typing import Annotated, Any, Literal
+from urllib.parse import urlsplit
 
 from pydantic import (
     BaseModel, ConfigDict, Field, PrivateAttr, ValidationError,
@@ -29,6 +30,20 @@ _MAX_DIAGNOSTICS = 20
 _MAX_QUESTIONS = 200
 _MAX_TOTAL_QUESTIONS = 200
 _MAX_OPTIONS = 50
+_BROAD_QUESTION_TOPICS = frozenset(
+    {
+        "Английский язык",
+        "Биология",
+        "Информатика",
+        "История",
+        "Литература",
+        "Математика",
+        "Обществознание",
+        "Русский язык",
+        "Физика",
+        "Химия",
+    }
+)
 _CATALOG_FILENAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,119}\.[Jj][Ss][Oo][Nn]\Z")
 _WINDOWS_RESERVED_BASENAMES = frozenset(
     {"con", "prn", "aux", "nul"}
@@ -47,6 +62,23 @@ def _validate_display_text(value: str) -> str:
     ):
         raise ValueError("unsafe_text")
     return validate_report_text(value)
+
+
+def _validate_prompt_text(value: str) -> str:
+    if not value.strip():
+        raise ValueError("blank_text")
+    if any(
+        character != "\n"
+        and (
+            unicodedata.category(character).startswith("C")
+            or unicodedata.category(character) in {"Zl", "Zp"}
+        )
+        for character in value
+    ):
+        raise ValueError("unsafe_text")
+    for line in value.split("\n"):
+        validate_report_text(line)
+    return value
 
 
 class QuestionOption(BaseModel):
@@ -77,7 +109,12 @@ class QuestionBase(BaseModel):
     title: str = Field(min_length=1, max_length=128)
     prompt: str = Field(min_length=1, max_length=4000)
     explanation: str | None = Field(default=None, min_length=1, max_length=2000)
+    learning_material_text: str | None = Field(default=None, min_length=1, max_length=1200)
+    learning_material_url: str | None = Field(default=None, max_length=255)
     asset: str | None = Field(default=None, max_length=255)
+    assets: tuple[str, ...] | None = Field(
+        default=None, min_length=1, max_length=5
+    )
 
     @field_validator("id")
     @classmethod
@@ -86,10 +123,22 @@ class QuestionBase(BaseModel):
             raise ValueError("invalid_identifier")
         return value
 
-    @field_validator("topic", "title", "prompt")
+    @field_validator("topic", "title")
     @classmethod
     def validate_text(cls, value: str) -> str:
         return _validate_display_text(value)
+
+    @field_validator("topic")
+    @classmethod
+    def reject_broad_subject_topic(cls, value: str) -> str:
+        if value in _BROAD_QUESTION_TOPICS:
+            raise ValueError("question_topic_too_broad")
+        return value
+
+    @field_validator("prompt")
+    @classmethod
+    def validate_prompt(cls, value: str) -> str:
+        return _validate_prompt_text(value)
 
     @field_validator("explanation")
     @classmethod
@@ -111,11 +160,47 @@ class QuestionBase(BaseModel):
             validate_report_text(line)
         return value
 
+    @field_validator("learning_material_text")
+    @classmethod
+    def validate_learning_material_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return cls.validate_explanation(value)
+
+    @field_validator("learning_material_url")
+    @classmethod
+    def validate_learning_material_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        parsed = urlsplit(value)
+        if (
+            parsed.scheme != "https"
+            or parsed.netloc != "maximumtest.ru"
+            or not parsed.path.startswith("/uchebnik/")
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError("invalid_learning_material_url")
+        return value
+
     @model_validator(mode="after")
     def validate_optional_asset(self) -> "QuestionBase":
+        if self.asset and self.assets:
+            raise ValueError("multiple_asset_fields")
         if self.asset:
             validate_asset_path(self.asset)
+        if self.assets:
+            if len(set(self.assets)) != len(self.assets):
+                raise ValueError("duplicate_question_asset")
+            for asset in self.assets:
+                validate_asset_path(asset)
         return self
+
+    @property
+    def asset_paths(self) -> tuple[str, ...]:
+        if self.assets:
+            return self.assets
+        return (self.asset,) if self.asset else ()
 
 
 class SingleQuestion(QuestionBase):
@@ -235,7 +320,9 @@ def _public_diagnostic(diagnostic: Diagnostic, content_version: str) -> dict[str
                 for key, value in question.model_dump(
                     mode="json", exclude_none=True
                 ).items()
-                if key not in {"correct", "explanation"}
+                if key not in {
+                    "correct", "explanation", "learning_material_text", "learning_material_url"
+                }
             }
             for question in diagnostic.questions
         ],
@@ -299,9 +386,9 @@ class DiagnosticCatalog(BaseModel):
         private_payload = {
             "diagnostic": diagnostic.model_dump(mode="json"),
             "assets": {
-                question.asset: self._asset_digests.get(question.asset, "")
+                asset: self._asset_digests.get(asset, "")
                 for question in diagnostic.questions
-                if question.asset
+                for asset in question.asset_paths
             },
         }
         encoded = json.dumps(
@@ -320,7 +407,9 @@ def public_question(question: Question) -> dict[str, Any]:
     return {
         key: value
         for key, value in question.model_dump(mode="json", exclude_none=True).items()
-        if key not in {"correct", "explanation"}
+        if key not in {
+            "correct", "explanation", "learning_material_text", "learning_material_url"
+        }
     }
 
 
@@ -373,18 +462,19 @@ def load_catalog(school: SchoolConfig) -> DiagnosticCatalog:
         except ValidationError:
             raise ValueError(f"catalog_invalid:{path.name}") from None
         for question in diagnostic.questions:
-            if question.asset and not school.resolve_asset(question.asset).is_file():
-                raise ValueError("question_asset_not_found")
+            for asset in question.asset_paths:
+                if not school.resolve_asset(asset).is_file():
+                    raise ValueError("question_asset_not_found")
         diagnostics.append(diagnostic)
     if not diagnostics:
         raise ValueError("diagnostics_not_found")
     catalog = DiagnosticCatalog(diagnostics=tuple(diagnostics))
     references = [school.brand.logo]
     references.extend(
-        question.asset
+        asset
         for diagnostic in catalog.diagnostics
         for question in diagnostic.questions
-        if question.asset
+        for asset in question.asset_paths
     )
     validate_asset_inventory(school.root, references)
     catalog._asset_digests = {

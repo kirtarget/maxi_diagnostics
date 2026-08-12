@@ -34,7 +34,9 @@ differ only by case. Each file contains one object with every field below:
 IDs use 1–64 ASCII letters, digits, `_`, or `-`, begin with a letter or digit, and a
 diagnostic ID has at least 3 characters. `exam` is at most 32 characters; `subject`,
 `mark`, `topic`, and `title` are at most 128; prompts are at most 4,000; option labels
-are at most 500. Text cannot be blank. `quick_count` is a strict integer from 1
+are at most 500. Prompts may contain LF line breaks for paragraphs and enumerated
+task parts; other control characters remain forbidden. Text cannot be blank.
+`quick_count` is a strict integer from 1
 through the question count. Percentage accuracy is the only score unit, so
 `max_score` is exactly `100`.
 
@@ -50,11 +52,14 @@ bootstrap payload at most 2 MiB.
 
 ## Answer-review boundary
 
-- `explanation` is optional, server-owned, UTF-8, and at most 2,000 characters.
-- It is excluded from bootstrap and public assets.
+- `explanation`, `learning_material_text` and `learning_material_url` are optional,
+  server-owned UTF-8 fields. `learning_material_text` is at most 1,200 characters;
+  the URL may point only to a canonical article in the MAXIMUM study book.
+  - They are excluded from bootstrap and public assets.
 - After an authenticated completed attempt, the Mini App may receive display-only
   `expected_answer` and resolved guidance for that attempt.
-- A missing explanation uses a visibly labeled general algorithm.
+- A missing verified study-book text is shown as an explicit "разбор пока не
+  добавлен" message; the system does not fabricate a general algorithm.
 - Existing attempts without `review_snapshot` remain legacy reports.
 
 ## Brand and links
@@ -189,6 +194,12 @@ external `url(...)`. Internal `#fragment` references are allowed. Raster files m
 fully decode. SVGs have at most 10,000 XML/CSS nodes or tokens, 65,536 characters
 per attribute/text node, and 262,144 characters of aggregate markup complexity.
 Never put correct answers, credentials, exports, or learner data in an asset.
+
+A question may reference one illustration with `"asset": "assets/questions/task.png"`
+or an ordered set of one to five illustrations with
+`"assets": ["assets/questions/task-1.png", "assets/questions/task-2.png"]`.
+Do not set both fields on the same question. Every referenced image is included in the
+completion snapshot and the frozen PDF asset bundle.
 
 ## Single choice
 

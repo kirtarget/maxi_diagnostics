@@ -31,6 +31,7 @@ _PUBLIC_REVIEW_FIELDS = frozenset(
         "expected_answer",
         "guidance",
         "guidance_kind",
+        "learning_material_text",
     }
 )
 
@@ -42,7 +43,7 @@ def format_answer(question: Question, answer: Any) -> str:
     if isinstance(question, SingleQuestion):
         return options.get(str(answer), str(answer))
     if isinstance(question, MultipleQuestion):
-        values = answer if isinstance(answer, list) else []
+        values = answer if isinstance(answer, (list, tuple, set, frozenset)) else []
         return ", ".join(options.get(str(value), str(value)) for value in values) or "Не отвечено"
     if isinstance(question, MatchingQuestion):
         values = answer if isinstance(answer, Mapping) else {}
@@ -60,25 +61,13 @@ def expected_value(question: Question) -> Any:
 
 
 def fallback_guidance(question: Question, expected_answer: str) -> str:
-    if isinstance(question, MultipleQuestion):
-        return (
-            f"Проверьте каждый вариант по теме «{question.topic}» отдельно и "
-            f"перенесите весь набор: {expected_answer}."
-        )
-    if isinstance(question, MatchingQuestion):
-        return (
-            "Сопоставляйте строки по одной и сохраняйте исходный порядок. "
-            f"Правильная схема: {expected_answer}."
-        )
-    if isinstance(question, SingleQuestion):
-        return (
-            f"Примените правило темы «{question.topic}», исключите противоречащие "
-            f"условию варианты и выберите: {expected_answer}."
-        )
-    return (
-        f"Решите задание по алгоритму темы «{question.topic}» и перенесите только "
-        f"итоговое значение: {expected_answer}."
-    )
+    """Return an honest placeholder until a verified study-book text is stored.
+
+    A generic algorithm based on question type looks useful, but it is not a
+    source-backed explanation for this particular task.  Do not fabricate one.
+    """
+    del question, expected_answer
+    return "Подтверждённый разбор в учебнике MAXIMUM для этого задания пока не добавлен."
 
 
 def build_review_snapshot(
@@ -117,6 +106,8 @@ def build_review_snapshot(
                 "guidance": individual_guidance
                 or fallback_guidance(question, expected_answer),
                 "guidance_kind": "individual" if individual_guidance else "fallback",
+                "learning_material_text": question.learning_material_text,
+                "learning_material_url": question.learning_material_url,
             }
         )
     return snapshot
@@ -126,12 +117,17 @@ def public_review_items(report_snapshot: Mapping[str, Any]) -> list[dict[str, An
     review_snapshot = report_snapshot.get("review_snapshot")
     if not isinstance(review_snapshot, list):
         return None
-    return [
-        {
-            key: value
-            for key, value in item.items()
-            if key in _PUBLIC_REVIEW_FIELDS
+    public_items: list[dict[str, Any]] = []
+    for item in review_snapshot:
+        if not isinstance(item, Mapping):
+            continue
+        public_item = {
+            key: value for key, value in item.items() if key in _PUBLIC_REVIEW_FIELDS
         }
-        for item in review_snapshot
-        if isinstance(item, Mapping)
-    ]
+        if (
+            public_item.get("expected_answer") == "Не отвечено"
+            and not item.get("expected_value")
+        ):
+            public_item["expected_answer"] = "Эталонный ответ не сохранён"
+        public_items.append(public_item)
+    return public_items

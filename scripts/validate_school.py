@@ -28,6 +28,20 @@ from diagnostic.school import (  # noqa: E402
 _SUPPORTED_ASSET_SUFFIXES = frozenset({".svg", ".png", ".jpg", ".jpeg"})
 _MAX_ASSET_BYTES = 5 * 1024 * 1024
 _MAX_CATALOG_BYTES = 1024 * 1024
+_BROAD_QUESTION_TOPICS = frozenset(
+    {
+        "Английский язык",
+        "Биология",
+        "Информатика",
+        "История",
+        "Литература",
+        "Математика",
+        "Обществознание",
+        "Русский язык",
+        "Физика",
+        "Химия",
+    }
+)
 
 
 def _load_json(path: Path):
@@ -185,6 +199,13 @@ def validate_repository(root: Path) -> tuple[list[str], dict[str, int | str]]:
                         if isinstance(question, dict) and isinstance(question.get("asset"), str):
                             declared_assets.add(question["asset"])
                 diagnostics.append(Diagnostic.model_validate(raw_diagnostic))
+                diagnostic = diagnostics[-1]
+                for question in diagnostic.questions:
+                    if question.topic in _BROAD_QUESTION_TOPICS:
+                        errors.append(
+                            "ERROR topic_too_broad: "
+                            f"{relative} question={question.id}"
+                        )
             except ValidationError as exc:
                 errors.append(_validation_error("catalog", relative, exc))
             except (OSError, UnicodeError, ValueError):
@@ -208,7 +229,11 @@ def validate_repository(root: Path) -> tuple[list[str], dict[str, int | str]]:
     if brand is not None:
         assets.add(brand.logo)
     for diagnostic in diagnostics:
-        assets.update(question.asset for question in diagnostic.questions if question.asset)
+        assets.update(
+            asset
+            for question in diagnostic.questions
+            for asset in question.asset_paths
+        )
     for relative_path in sorted(assets):
         error = _asset_error(school_root, relative_path)
         if error:

@@ -21,6 +21,7 @@ def test_review_snapshot_formats_every_question_type():
     assert [item["question_id"] for item in snapshot] == ["q1", "q2", "q3", "q4"]
     assert snapshot[0]["user_answer"] == "3"
     assert snapshot[0]["expected_answer"] == "4"
+    assert snapshot[1]["expected_answer"] == "2/4, 3/6"
     assert snapshot[2]["expected_answer"] == "2 + 2: 4; 3 + 3: 6"
     assert snapshot[3]["expected_answer"] == "42"
     assert all(item["is_correct"] is False for item in snapshot)
@@ -71,3 +72,49 @@ def test_review_snapshot_freezes_question_options_and_matching_items():
 
     assert questions[0].options[0].label == "3"
     assert questions[2].items[0].label == "2 + 2"
+
+
+def test_review_snapshot_keeps_a_verified_learning_material_text():
+    catalog = load_catalog(load_school(SAMPLE_SCHOOL))
+    question = catalog.get("demo-math").questions[0].model_copy(
+        update={
+            "learning_material_text": "Найдите грамматическую основу: подлежащее и сказуемое."
+        }
+    )
+
+    snapshot = build_review_snapshot((question,), {})
+
+    assert snapshot[0]["learning_material_text"] == (
+        "Найдите грамматическую основу: подлежащее и сказуемое."
+    )
+
+
+def test_review_snapshot_does_not_invent_guidance_without_a_source():
+    catalog = load_catalog(load_school(SAMPLE_SCHOOL))
+
+    question = catalog.get("demo-math").questions[0].model_copy(
+        update={"explanation": None}
+    )
+    snapshot = build_review_snapshot((question,), {})
+
+    assert snapshot[0]["guidance"] == (
+        "Подтверждённый разбор в учебнике MAXIMUM для этого задания пока не добавлен."
+    )
+
+
+def test_public_review_never_exposes_unanswered_as_the_expected_answer():
+    public = public_review_items(
+        {
+            "review_snapshot": [
+                {
+                    "question_id": "q1",
+                    "expected_answer": "Не отвечено",
+                    "expected_value": None,
+                }
+            ]
+        }
+    )
+
+    assert public == [
+        {"question_id": "q1", "expected_answer": "Эталонный ответ не сохранён"}
+    ]

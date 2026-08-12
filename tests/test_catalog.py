@@ -17,8 +17,18 @@ def test_public_catalog_omits_explanation_and_correct():
 
     assert '"correct"' not in json.dumps(payload, ensure_ascii=False)
     assert '"explanation"' not in json.dumps(payload, ensure_ascii=False)
+    assert '"learning_material_text"' not in json.dumps(payload, ensure_ascii=False)
+    assert '"learning_material_url"' not in json.dumps(payload, ensure_ascii=False)
     assert '"scoring"' not in json.dumps(payload, ensure_ascii=False)
     assert payload != catalog.public_payload("other-secret")
+
+
+def test_catalog_rejects_a_broad_subject_as_a_question_topic():
+    data = sample_diagnostic_data()
+    data["questions"][0]["topic"] = "Математика"
+
+    with pytest.raises(ValueError, match="question_topic_too_broad"):
+        Diagnostic.model_validate(data)
 
 
 def test_sample_catalog_covers_all_question_types():
@@ -108,6 +118,13 @@ def test_catalog_accepts_large_but_lexically_submitable_decimal():
     assert Diagnostic.model_validate(data).questions[3].correct == ("1e999",)
 
 
+def test_catalog_accepts_structured_prompt_line_breaks():
+    data = sample_diagnostic_data()
+    data["questions"][0]["prompt"] = "Choose the answer.\nA) First option\nB) Second option"
+
+    assert Diagnostic.model_validate(data).questions[0].prompt.count("\n") == 2
+
+
 @pytest.mark.parametrize(
     ("mutation", "error"),
     [
@@ -118,6 +135,7 @@ def test_catalog_accepts_large_but_lexically_submitable_decimal():
         (lambda data: data.update(subject="School \u5b66"), "unsupported_report_character"),
         (lambda data: data["questions"][0].update(prompt="x" * 4001), "string_too_long"),
         (lambda data: data["questions"][0].update(prompt=" "), "blank_text"),
+        (lambda data: data["questions"][0].update(prompt="Bad\tPrompt"), "unsafe_text"),
         (
             lambda data: data["questions"][0].update(prompt="Ready \U0001f600"),
             "unsupported_report_character",
@@ -285,3 +303,36 @@ def test_content_version_changes_when_a_referenced_question_asset_changes(tmp_pa
     )
 
     assert first != second
+
+
+def test_catalog_loads_and_publishes_multiple_question_assets(tmp_path: Path):
+    school_root = tmp_path / "school"
+    shutil.copytree(SAMPLE_SCHOOL, school_root)
+    for name, color in (("question-1.svg", "#111111"), ("question-2.svg", "#222222")):
+        (school_root / "assets" / name).write_text(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="10">'
+            f'<rect width="20" height="10" fill="{color}"/></svg>',
+            encoding="utf-8",
+        )
+    diagnostic_path = school_root / "diagnostics/demo-math.json"
+    data = json.loads(diagnostic_path.read_text(encoding="utf-8"))
+    data["questions"][0]["assets"] = [
+        "assets/question-1.svg",
+        "assets/question-2.svg",
+    ]
+    diagnostic_path.write_text(json.dumps(data), encoding="utf-8")
+
+    catalog = load_catalog(load_school(school_root))
+    question = catalog.get("demo-math").questions[0]
+
+    assert question.asset_paths == (
+        "assets/question-1.svg",
+        "assets/question-2.svg",
+    )
+    public_question = catalog.public_payload("test-secret")["diagnostics"][0][
+        "questions"
+    ][0]
+    assert public_question["assets"] == [
+        "assets/question-1.svg",
+        "assets/question-2.svg",
+    ]

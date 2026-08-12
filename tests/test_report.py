@@ -62,6 +62,65 @@ def make_review(*, prompt: str, guidance: str) -> dict[str, object]:
     }
 
 
+def test_premium_report_never_calls_a_missing_expected_answer_unanswered():
+    from diagnostic.report import build_report
+
+    school = load_school(SAMPLE_SCHOOL)
+    diagnostic = load_catalog(school).get("demo-math")
+    review = make_review(prompt="Условие", guidance="Разбор")
+    review["user_answer"] = "Не отвечено"
+    review["expected_answer"] = ""
+    attempt = completed_attempt(
+        report_snapshot=make_review_report_snapshot(school, diagnostic, [review])
+    )
+
+    text = "\n".join(
+        page.extract_text() or "" for page in PdfReader(BytesIO(build_report(attempt, school))).pages
+    )
+
+    assert "Эталонный ответ не сохранён" in text
+    assert "\n-\n" not in text
+
+
+def test_premium_report_does_not_repeat_unanswered_as_the_expected_answer():
+    from diagnostic.report import build_report
+
+    school = load_school(SAMPLE_SCHOOL)
+    diagnostic = load_catalog(school).get("demo-math")
+    review = make_review(prompt="Условие", guidance="Разбор")
+    review["user_answer"] = "Не отвечено"
+    review["expected_answer"] = "Не отвечено"
+    review.pop("expected_value", None)
+    attempt = completed_attempt(
+        report_snapshot=make_review_report_snapshot(school, diagnostic, [review])
+    )
+
+    text = "\n".join(
+        page.extract_text() or "" for page in PdfReader(BytesIO(build_report(attempt, school))).pages
+    )
+
+    assert "Эталонный ответ не сохранён" in text
+
+
+def test_premium_report_includes_verified_learning_material_text():
+    from diagnostic.report import build_report
+
+    school = load_school(SAMPLE_SCHOOL)
+    diagnostic = load_catalog(school).get("demo-math")
+    review = make_review(prompt="Условие", guidance="Разбор")
+    review["learning_material_text"] = "Сначала найдите подлежащее и сказуемое в каждой части предложения."
+    attempt = completed_attempt(
+        report_snapshot=make_review_report_snapshot(school, diagnostic, [review])
+    )
+
+    text = "\n".join(
+        page.extract_text() or "" for page in PdfReader(BytesIO(build_report(attempt, school))).pages
+    )
+
+    assert "Как решать" in text
+    assert "Сначала найдите подлежащее и сказуемое в каждой части предложения." in text
+
+
 def make_review_report_snapshot(school, diagnostic, review_snapshot):
     return {
         "diagnostic": {
@@ -494,6 +553,45 @@ def test_premium_report_rejects_missing_frozen_school():
             completed_attempt(question_count=1, report_snapshot=snapshot),
             school,
         )
+
+
+def test_build_report_renders_every_image_from_completion_snapshot(monkeypatch):
+    from diagnostic import report
+
+    school = load_school(SAMPLE_SCHOOL)
+    diagnostic = load_catalog(school).get("demo-math")
+    questions = [
+        question.model_dump(mode="json", exclude={"correct"})
+        for question in diagnostic.questions
+    ]
+    questions[0]["asset"] = None
+    questions[0]["assets"] = [
+        "assets/question-1.svg",
+        "assets/question-2.svg",
+    ]
+    report_snapshot = {
+        "diagnostic": {
+            "id": diagnostic.id,
+            "subject": diagnostic.subject,
+            "scoring": diagnostic.scoring.model_dump(mode="json"),
+            "questions": questions,
+        },
+        "mode": "full",
+    }
+    rendered: list[str | None] = []
+
+    def record_image(_school, relative_path, *_args):
+        rendered.append(relative_path)
+        return None
+
+    monkeypatch.setattr(report, "_optional_image", record_image)
+
+    report.build_report(completed_attempt(report_snapshot=report_snapshot), school)
+
+    assert rendered[1:3] == [
+        "assets/question-1.svg",
+        "assets/question-2.svg",
+    ]
 
 
 def test_build_report_uses_frozen_safe_internal_svg_without_live_assets(tmp_path: Path):

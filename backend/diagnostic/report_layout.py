@@ -394,8 +394,18 @@ def review_story(
             ),
         ]
     )
-    user_answer = str(review.get("user_answer") or "Нет ответа")
-    expected_answer = str(review.get("expected_answer") or "-")
+    user_answer = str(review.get("user_answer") or "Не отвечено")
+    expected_raw = review.get("expected_answer")
+    expected_answer = (
+        str(expected_raw)
+        if expected_raw is not None
+        and str(expected_raw).strip()
+        and not (
+            str(expected_raw).strip() == "Не отвечено"
+            and not review.get("expected_value")
+        )
+        else "Эталонный ответ не сохранён"
+    )
     story: list[Any] = [
         header,
         Paragraph(escape(str(review.get("prompt") or "")), styles["body"]),
@@ -404,17 +414,22 @@ def review_story(
         *_answer_story(user_answer, expected_answer, styles),
         Spacer(1, 5 * mm),
         Paragraph("Как решать", styles["label"]),
-        Paragraph(
-            escape(
-                str(
-                    review.get("guidance")
-                    or "Сверьте ход решения с правилом по теме задания."
-                )
-            ),
-            styles["body"],
-        ),
-        Spacer(1, 8 * mm),
     ]
+    learning_material_text = review.get("learning_material_text")
+    if isinstance(learning_material_text, str) and learning_material_text:
+        story.extend(
+            [
+                Paragraph(escape(learning_material_text), styles["body"]),
+            ]
+        )
+    else:
+        story.append(
+            Paragraph(
+                "Подтверждённый разбор в учебнике MAXIMUM для этого задания пока не добавлен.",
+                styles["body"],
+            )
+        )
+    story.append(Spacer(1, 8 * mm))
     return story
 
 
