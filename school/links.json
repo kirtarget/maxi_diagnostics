@@ -1,14 +1,14 @@
 {
-  "website": "https://school.example",
-  "support": "https://school.example/support",
-  "privacy": "https://school.example/privacy",
+  "website": "https://maximumtest.ru/",
+  "support": "https://maximumtest.ru/contacts",
+  "privacy": "https://maximumtest.ru/about?page=1",
   "offers": [
     {
-      "id": "intensive",
-      "label": "Интенсив",
-      "button": "Начать подготовку",
-      "url": "https://school.example/intensive",
-      "forecast_delta": 14
+      "id": "exam-preparation",
+      "label": "Подготовка к ОГЭ и ЕГЭ",
+      "button": "Узнать больше",
+      "url": "https://maximumtest.ru/promo/diagnostika-znanij",
+      "forecast_delta": 30
     }
   ]
 }

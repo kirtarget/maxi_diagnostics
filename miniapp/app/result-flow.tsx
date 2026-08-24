@@ -1,6 +1,7 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { safeAssetPath } from "./question-assets";
+import { shouldShowResultMetrics } from "./result-display";
 import { pdfStatusCopy, topicRecommendation, type PdfStatusCopy, type PersonalRouteAction } from "./result-flow-model";
 import type {
   ForecastPoint,
@@ -13,13 +14,6 @@ import type {
 } from "./types";
 
 export type RouteItem = PersonalRouteAction;
-
-function shouldShowResultMetrics(result: Pick<ServerResult, "correct_count" | "score">): boolean {
-  return Number.isFinite(result.score)
-    && result.score >= 0
-    && Number.isFinite(result.correct_count)
-    && result.correct_count >= 0;
-}
 
 function topicName(topic: ServerTopic | string): string {
   return typeof topic === "string" ? topic : topic.topic;
@@ -235,32 +229,40 @@ export function ForecastScreen({ points, onBack, onRoute }: {
   onBack: () => void;
   onRoute: () => void;
 }): ReactNode {
+  const current = points.find((point) => point.id === "current");
+  const next = points.find((point) => point.id !== "current");
   const ariaLabel = points.length > 0
-    ? `Ориентировочная траектория: ${points.map((point) => `${point.label} — ${point.value}`).join(", ")}`
-    : "Ориентировочная траектория пока без числовых точек";
+    ? `Ориентир по результату: ${points.map((point) => `${point.label} — ${point.value}`).join(", ")}`
+    : "Ориентир по результату пока без числовых точек";
   return (
     <section className="screen forecast-screen radar-screen" aria-labelledby="forecast-title">
       <button className="text-back" onClick={onBack} type="button">Назад</button>
-      <span className="state-code">05 / Прогноз баллов</span>
-      <h1 id="forecast-title">Вижу цель. <em>Вижу рост.</em></h1>
-      <p className="lead">Это ориентир при системной подготовке, а не обещание результата.</p>
-      <div className="forecast-radar" role="img" aria-label={ariaLabel}>
-        <span className="radar-ring radar-ring-one" />
-        <span className="radar-ring radar-ring-two" />
-        <span className="radar-axis radar-axis-horizontal" />
-        <span className="radar-axis radar-axis-vertical" />
-        <span className="radar-sweep" />
-        {points.map((point, index) => (
-          <span
-            className={`forecast-point forecast-point-${index + 1}`}
-            key={point.id}
-            style={{ "--forecast-index": index } as CSSProperties}
-          >
-            <small>{point.label}</small><strong>{point.value}</strong>
-          </span>
-        ))}
+      <span className="state-code">05 / Ориентир роста</span>
+      <h1 id="forecast-title">Рост — это <em>система.</em></h1>
+      <p className="lead">Понятный маршрут, регулярная работа и проверка прогресса дают измеримый результат.</p>
+      <div className="forecast-proof" aria-label="Статистика результатов учеников MAXIMUM">
+        <p><strong>+30</strong><span>средний прирост<br />учеников MAXIMUM</span></p>
+        <p><strong>+42</strong><span>средний прирост у тех,<br />кто сдал на 100 баллов</span></p>
       </div>
-      {points.length === 0 && <p className="forecast-empty">Числовой прогноз не настроен. Маршрут всё равно собран по зонам роста.</p>}
+      <div className="forecast-path" role="img" aria-label={ariaLabel}>
+        {current && (
+          <div className="forecast-step forecast-step-current">
+            <span className="forecast-step-marker" aria-hidden="true" />
+            <div><small>Сейчас</small><strong>{current.value}</strong><span>баллов</span></div>
+          </div>
+        )}
+        {next && (
+          <>
+            <div className="forecast-path-line" aria-hidden="true"><span>+{next.value - (current?.value ?? 0)}</span></div>
+            <div className="forecast-step forecast-step-goal">
+              <span className="forecast-step-marker" aria-hidden="true" />
+              <div><small>Ваш ориентир</small><strong>{next.value}</strong><span>баллов</span></div>
+            </div>
+          </>
+        )}
+      </div>
+      {next && <p className="forecast-explainer">Это ориентир на основе среднего прироста, а не личная гарантия. Он достижим при системной подготовке по вашему маршруту.</p>}
+      {points.length === 0 && <p className="forecast-empty">Пока нет числового ориентира. Откройте маршрут: он уже собран по вашим темам.</p>}
       <button className="primary-button" onClick={onRoute} type="button">Открыть маршрут <span aria-hidden="true">→</span></button>
     </section>
   );

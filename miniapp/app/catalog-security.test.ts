@@ -17,6 +17,8 @@ describe("public catalog boundary", () => {
     );
     expect(publicQuestionBlock).not.toContain("correct");
     expect(publicQuestionBlock).not.toContain("explanation");
+    expect(publicQuestionBlock).not.toContain("learning_material_text");
+    expect(publicQuestionBlock).not.toContain("learning_material_url");
     expect(publicQuestionBlock).not.toContain("expected_answer");
     expect(types).toContain("export type ReviewItem");
     expect(types).toContain("expected_answer: string");

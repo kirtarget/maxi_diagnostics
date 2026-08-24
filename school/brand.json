@@ -1,7 +1,7 @@
 {
-  "school_id": "demo-school",
-  "name": "«Демо-школа»",
-  "short_name": "«Демо»",
+  "school_id": "maximum",
+  "name": "MAXIMUM Education",
+  "short_name": "MAXIMUM",
   "colors": {
     "primary": "#FD7E14",
     "accent": "#FF9341",
@@ -10,7 +10,7 @@
     "ink": "#101517",
     "paper": "#F5F5F0"
   },
-  "logo": "assets/logo.svg",
+  "logo": "assets/logo.png",
   "pdf": {
     "header": "ДИАГНОСТИКА ЗНАНИЙ",
     "score_label": "Результат",
