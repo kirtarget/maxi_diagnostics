@@ -19,7 +19,7 @@ def test_readme_documents_the_exact_safe_first_run_sequence():
         "Use this template", "private repository", "scripts/init_school.py",
         "school/brand.json", "school/links.json", "school/diagnostics",
         "scripts/validate_school.py", "scripts/check_brand_isolation.py",
-        ".env.example", "BotFather", "docker compose up -d --build",
+        ".env.example", "BotFather", "docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml up -d --build",
     ]
     positions = [text.index(value) for value in ordered]
     assert positions == sorted(positions)
@@ -31,14 +31,14 @@ def test_operator_documents_cover_deploy_operations_and_handoff_contracts():
     operations = read("docs/OPERATIONS.md")
     handoff = read("docs/HANDOFF.md")
 
-    for value in ("DNS", "HTTPS", "Nginx", "BotFather", "Mini App", "/healthz", "127.0.0.1:18080"):
+    for value in ("DNS", "HTTPS", "Nginx", "BotFather", "Mini App", "/healthz", "127.0.0.1:18082"):
         assert value in deployment
     assert "APPLICATION_SECRET" in deployment
     assert "secrets.token_urlsafe(32)" in deployment
-    assert "docker compose config --quiet" in deployment
+    assert "docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml config --quiet" in deployment
     assert "docker compose config\n" not in deployment
     for value in (
-        "docker compose logs", "one polling", "scripts/backup_db.ps1",
+        "docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml logs", "one polling", "scripts/backup_db.ps1",
         "-ConfirmRestore", "rollback", "abandoned", "docker compose down",
     ):
         assert value.casefold() in operations.casefold()
@@ -83,13 +83,14 @@ def test_content_format_documents_the_post_completion_review_boundary():
 def test_nginx_example_is_fixed_host_same_origin_and_has_no_open_proxy():
     config = read("deploy/nginx/diagnostic.conf.example")
 
-    assert "server_name app.example.com;" in config
-    assert "return 301 https://app.example.com$request_uri;" in config
+    assert "server_name maxi.kirtarget.ru;" in config
+    assert "return 301 https://maxi.kirtarget.ru$request_uri;" in config
     assert "proxy_pass http://127.0.0.1:18080" in config
     assert "proxy_pass http://127.0.0.1:13000" in config
     for route in ("/api/", "/admin/", "/admin/static/", "/healthz"):
         assert route in config
-    assert "proxy_set_header Host $host" in config
+    assert config.count("include proxy_params;") == 6
+    assert "proxy_set_header Host" not in config
     assert "Strict-Transport-Security \"max-age=31536000\" always" in config
     assert "limit_req_zone $binary_remote_addr zone=diagnostic_api:" in config
     assert "limit_req_zone $binary_remote_addr zone=diagnostic_admin:" in config

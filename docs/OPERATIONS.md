@@ -2,20 +2,32 @@
 
 ## Routine checks and logs
 
-Use `docker compose ps` and request `/healthz` through HTTPS. Review bounded recent
-logs with `docker compose logs --since 30m api miniapp bot db`; do not paste secrets,
-raw answers, or Telegram initialization data into tickets.
+Use the production Compose pair and request `/healthz` through HTTPS:
+
+```sh
+docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml ps
+docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml logs --since 30m api miniapp bot db
+```
+
+Do not paste secrets, raw answers, or Telegram initialization data into tickets.
 Compose rotates each service's local JSON logs at 10 MiB and retains five files.
 Monitor the database/backup filesystem separately and alert before it fills.
 
-Run exactly **one polling** bot copy for a token. Before starting or moving the bot,
-stop the old polling service and verify it has exited.
+Run exactly **one polling** bot copy for the `maxi.kirtarget.ru` token. Its production
+`.env` sets `BOT_POLLING_ENABLED=true`. Before starting or moving the bot, stop the
+old polling service and verify it has exited.
+If another controlled deployment must remain the single polling owner while this
+installation processes its own PDF queue, set `BOT_POLLING_ENABLED=false`. The bot
+service then runs only the bounded delivery scheduler and does not call
+`getUpdates`. Do not use this mode unless the polling owner points users to this
+installation's Mini App.
 
 ## Update
 
 1. Create a backup with the platform-specific command in the next section.
 2. Fetch the reviewed revision and run the validation/isolation/tests used by CI.
-3. Run `docker compose up -d --build` and then `docker compose ps`.
+3. Run the production Compose pair with `up -d --build`, then check its status with
+   `ps`.
 4. Check API health, Mini App load, admin authentication, and bot commands.
 
 ## Backup and guarded restore

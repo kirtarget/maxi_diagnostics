@@ -27,11 +27,11 @@ Each school operates its own repository, bot, domain, database, and secrets.
 3. Run `scripts/init_school.py` once with public brand values only:
 
    ```powershell
-   .\.venv\Scripts\python.exe scripts\init_school.py --name "Example School" --short-name "Example" --school-id example-school --domain app.example.com --bot-username example_diagnostic_bot --primary-color "#123456" --accent-color "#ABCDEF"
+   .\.venv\Scripts\python.exe scripts\init_school.py --name "MAXIMUM Education" --short-name "MAXIMUM" --school-id maximum-diagnostic --domain maxi.kirtarget.ru --bot-username maxi_diagnostics_bot --primary-color "#FF7A00" --accent-color "#D4FF35"
    ```
 
    ```sh
-   .venv/bin/python scripts/init_school.py --name "Example School" --short-name "Example" --school-id example-school --domain app.example.com --bot-username example_diagnostic_bot --primary-color "#123456" --accent-color "#ABCDEF"
+   .venv/bin/python scripts/init_school.py --name "MAXIMUM Education" --short-name "MAXIMUM" --school-id maximum-diagnostic --domain maxi.kirtarget.ru --bot-username maxi_diagnostics_bot --primary-color "#FF7A00" --accent-color "#D4FF35"
    ```
 
 4. Review `school/brand.json` and `school/links.json`, then replace or add files in
@@ -53,7 +53,7 @@ Each school operates its own repository, bot, domain, database, and secrets.
 8. Start the installation from the repository root:
 
    ```text
-   docker compose up -d --build
+   docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml up -d --build
    ```
 
 Next, follow [deployment](docs/DEPLOYMENT.md), [operations](docs/OPERATIONS.md), and

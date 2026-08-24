@@ -57,7 +57,9 @@ services:
 
   bot:
     <<: *backend
-    environment: *backend-environment
+    environment:
+      <<: *backend-environment
+      BOT_POLLING_ENABLED: ${BOT_POLLING_ENABLED:-true}
     command: ["python", "-m", "diagnostic.bot.main"]
     healthcheck:
       disable: true

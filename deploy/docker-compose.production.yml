@@ -1,0 +1,8 @@
+services:
+  api:
+    ports: !override
+      - "127.0.0.1:18082:8080"
+
+  miniapp:
+    ports: !override
+      - "127.0.0.1:13002:3000"
