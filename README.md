@@ -1,14 +1,15 @@
-# White-label diagnostic bot starter
+# MAXIMUM Education diagnostic bot
 
-This repository packages one independent school diagnostic: a Telegram bot, Mini
-App, API/admin service, PostgreSQL database, PDF delivery, and scheduled follow-ups.
-Each school operates its own repository, bot, domain, database, and secrets.
+This repository is configured for MAXIMUM Education. It contains the school catalog,
+brand, domain, and public links for `maxi.kirtarget.ru`.
 
-## First setup
+## Deployment setup
 
-1. Select **Use this template** in the Git host and create a new **private repository**
-   owned by the school. Clone that repository.
-2. Create a Python 3.11 environment and install the tooling:
+1. Clone a clean reviewed revision of this repository.
+2. Do not run `scripts/init_school.py` in this repository. It initializes a pristine
+   white-label template. This configured archive would refuse the operation without
+   `--force`. Do not use `--force` to repurpose live MAXIMUM public configuration.
+3. Create a Python 3.11 environment and install the tooling:
 
    ```powershell
    py -3.11 -m venv .venv
@@ -24,17 +25,7 @@ Each school operates its own repository, bot, domain, database, and secrets.
    used when deliberately regenerating the complete lock files; normal setup,
    CI, and container builds install only from the lock files.
 
-3. Run `scripts/init_school.py` once with public brand values only:
-
-   ```powershell
-   .\.venv\Scripts\python.exe scripts\init_school.py --name "MAXIMUM Education" --short-name "MAXIMUM" --school-id maximum-diagnostic --domain maxi.kirtarget.ru --bot-username maxi_diagnostics_bot --primary-color "#FF7A00" --accent-color "#D4FF35"
-   ```
-
-   ```sh
-   .venv/bin/python scripts/init_school.py --name "MAXIMUM Education" --short-name "MAXIMUM" --school-id maximum-diagnostic --domain maxi.kirtarget.ru --bot-username maxi_diagnostics_bot --primary-color "#FF7A00" --accent-color "#D4FF35"
-   ```
-
-4. Review `school/brand.json` and `school/links.json`, then replace or add files in
+4. Review `school/brand.json` and `school/links.json`. Add or replace files in
    `school/diagnostics/` and `school/assets/`. Content schemas are documented in
    [docs/CONTENT_FORMAT.md](docs/CONTENT_FORMAT.md).
 5. Validate content and isolation before adding secrets. Run
@@ -46,8 +37,9 @@ Each school operates its own repository, bot, domain, database, and secrets.
    ```
 
    Use `.venv/bin/python` for the same commands on Linux or macOS.
-6. Copy `.env.example` to `.env`, generate unique database and admin passwords, and
-   fill every required blank. Do not commit `.env`.
+6. Copy `.env.example` to `.env`. Replace the all-zero `INSTALLATION_ID` with a new
+   UUID. Generate unique database and admin passwords and fill every required blank.
+   Do not commit `.env`.
 7. Create a school-owned bot in **BotFather**, connect the verified HTTPS **domain**
    as its Mini App URL, and place the bot token only in `.env`.
 8. Start the installation from the repository root:
@@ -59,3 +51,11 @@ Each school operates its own repository, bot, domain, database, and secrets.
 Next, follow [deployment](docs/DEPLOYMENT.md), [operations](docs/OPERATIONS.md), and
 [handoff](docs/HANDOFF.md). The admin page is `/admin/diagnostics` and uses the Basic
 credentials stored only in `.env`.
+
+## Creating a separate white-label repository
+
+For another school, select **Use this template** in the Git host and create a new
+private repository. Run `scripts/init_school.py` once with that school's public
+values only while the new repository still has pristine template configuration. Do
+not use `--force` against an existing school repository. The initializer rewrites
+public brand, links, and `.env.example` configuration.

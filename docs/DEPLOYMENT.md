@@ -14,11 +14,14 @@ the server. Provision an HTTPS certificate with the host's normal ACME client. T
 provisioning is intentionally provider-neutral; use the school infrastructure
 policy and enable renewal monitoring.
 
-Use `deploy/nginx/maxi.kirtarget.ru.http.conf` only while obtaining the first
-certificate. Then install `deploy/nginx/maxi.kirtarget.ru.conf`, validate with
-`nginx -t`, and reload Nginx. Both files serve only `maxi.kirtarget.ru` and
-same-origin routes. `deploy/nginx/diagnostic.conf.example` is the matching
-single-installation reference configuration.
+Create `/var/www/certbot` for the ACME webroot. Use
+`deploy/nginx/maxi.kirtarget.ru.http.conf` only while obtaining the first
+certificate. It serves only `/.well-known/acme-challenge/` from that webroot and
+redirects every other request to HTTPS. Then install
+`deploy/nginx/maxi.kirtarget.ru.conf`, validate with `nginx -t`, and reload Nginx.
+The HTTPS file serves only `maxi.kirtarget.ru` and same-origin routes.
+`deploy/nginx/diagnostic.conf.example` is the matching single-installation reference
+configuration.
 
 - `/` goes to the Mini App at `127.0.0.1:13002`;
 - `/api/`, `/admin/`, `/admin/static/`, and `/healthz` go to the API at
@@ -35,13 +38,14 @@ permanently HTTPS-ready.
 
 ## Environment and containers
 
-Run the initializer from README before copying `.env.example`; it generates a unique
-stable `INSTALLATION_ID` and a Docker-daemon-unique `IMAGE_NAMESPACE`. Never deploy
-the all-zero template installation ID. Keep both values stable across updates and
-restore drills. `IMAGE_NAMESPACE` must also differ between production, staging, and
-another school on the same Docker daemon.
+This repository already contains MAXIMUM public configuration. Do not run
+`scripts/init_school.py` or use `--force` during deployment. Copy `.env.example` to
+`.env`, replace the all-zero `INSTALLATION_ID` with a generated UUID, and retain it
+across updates and restore drills. Keep `IMAGE_NAMESPACE` Docker-daemon-unique. It
+must differ between production, staging, and another school on the same Docker daemon.
 
-Copy `.env.example` to `.env`. Generate URL-safe secrets with
+Generate the installation UUID with `python -c "import uuid; print(uuid.uuid4())"`.
+Generate URL-safe secrets with
 `python -c "import secrets; print(secrets.token_urlsafe(32))"`. Use different output
 for `POSTGRES_PASSWORD`, `APPLICATION_SECRET`, and `ADMIN_PASSWORD`. Set
 `POSTGRES_PASSWORD` and `ADMIN_PASSWORD`,

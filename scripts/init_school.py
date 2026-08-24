@@ -315,6 +315,7 @@ def initialize_school(
         "POSTGRES_PASSWORD=\n"
         "DATABASE_URL=\n"
         "BOT_TOKEN=\n"
+        "BOT_POLLING_ENABLED=true\n"
         "APPLICATION_SECRET=\n"
         f"BOT_USERNAME={bot_username}\n"
         f"MINIAPP_URL={origin}\n"

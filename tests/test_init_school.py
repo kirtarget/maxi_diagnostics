@@ -82,6 +82,7 @@ def test_initializer_writes_valid_non_secret_configuration_and_preserves_content
         "POSTGRES_PASSWORD=\n"
         "DATABASE_URL=\n"
         "BOT_TOKEN=\n"
+        "BOT_POLLING_ENABLED=true\n"
         "APPLICATION_SECRET=\n"
         "BOT_USERNAME=new_school_bot\n"
         "MINIAPP_URL=https://diagnostic.new-school.example\n"
@@ -106,6 +107,33 @@ def test_initializer_writes_valid_non_secret_configuration_and_preserves_content
     )
     school = load_school(root / "school")
     assert len(load_catalog(school).diagnostics) == 1
+
+
+def test_initializer_generates_a_single_polling_owner_setting(tmp_path: Path, capsys):
+    root = sample_root(tmp_path)
+
+    assert load_tool().main(arguments(), root=root) == 0
+    capsys.readouterr()
+
+    values = dict(
+        line.split("=", 1)
+        for line in (root / ".env.example").read_text(encoding="utf-8").splitlines()
+        if line
+    )
+    assert values["BOT_POLLING_ENABLED"] == "true"
+
+
+def test_configured_repository_refuses_unforced_initializer(capsys):
+    tracked_paths = (
+        ROOT / ".env.example",
+        ROOT / "school/brand.json",
+        ROOT / "school/links.json",
+    )
+    original = {path: path.read_bytes() for path in tracked_paths}
+
+    assert load_tool().main(arguments(), root=ROOT) == 1
+    assert capsys.readouterr().out == "ERROR school_not_pristine_use_force\n"
+    assert {path: path.read_bytes() for path in tracked_paths} == original
 
 
 def test_initializer_refuses_real_brand_without_force_and_force_only_updates_config(

@@ -16,7 +16,7 @@ def read(relative: str) -> str:
 def test_readme_documents_the_exact_safe_first_run_sequence():
     text = read("README.md")
     ordered = [
-        "Use this template", "private repository", "scripts/init_school.py",
+        "clean reviewed revision", "Do not run `scripts/init_school.py`",
         "school/brand.json", "school/links.json", "school/diagnostics",
         "scripts/validate_school.py", "scripts/check_brand_isolation.py",
         ".env.example", "BotFather", "docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml up -d --build",
@@ -24,6 +24,8 @@ def test_readme_documents_the_exact_safe_first_run_sequence():
     positions = [text.index(value) for value in ordered]
     assert positions == sorted(positions)
     assert "Do not commit `.env`" in text
+    assert text.index("Creating a separate white-label repository") < text.index("Use this template")
+    assert "Do not use `--force` to repurpose live MAXIMUM public configuration." in text
 
 
 def test_operator_documents_cover_deploy_operations_and_handoff_contracts():
@@ -37,6 +39,8 @@ def test_operator_documents_cover_deploy_operations_and_handoff_contracts():
     assert "secrets.token_urlsafe(32)" in deployment
     assert "docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml config --quiet" in deployment
     assert "docker compose config\n" not in deployment
+    assert "Do not run\n`scripts/init_school.py` or use `--force` during deployment." in deployment
+    assert "/.well-known/acme-challenge/" in deployment
     for value in (
         "docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml logs", "one polling", "scripts/backup_db.ps1",
         "-ConfirmRestore", "rollback", "abandoned", "docker compose down",
