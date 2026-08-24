@@ -75,6 +75,10 @@ def _script_repo(tmp_path: Path) -> tuple[Path, Path]:
     scripts.mkdir(parents=True, exist_ok=True)
     for name in ("backup_db.ps1", "restore_db.ps1"):
         shutil.copy2(ROOT / "scripts" / name, scripts / name)
+    (repo / "docker-compose.yml").write_text("services: {}\n", encoding="utf-8")
+    production = repo / "deploy" / "docker-compose.production.yml"
+    production.parent.mkdir(exist_ok=True)
+    production.write_text("services: {}\n", encoding="utf-8")
     fake_bin = tmp_path / "fake-bin"
     fake_bin.mkdir(exist_ok=True)
     (fake_bin / "docker.ps1").write_text(FAKE_DOCKER, encoding="utf-8")
@@ -203,6 +207,26 @@ def test_restore_uses_container_database_identity_and_displays_only_database(tmp
     assert "stop\tapi" in log
     assert "stop\tbot" in log
     assert "up\t-d\t--wait\tapi" in log
+    production_restart = "\t".join(
+        (
+            "compose",
+            "--project-directory",
+            str(repo),
+            "-f",
+            str(repo / "docker-compose.yml"),
+            "-f",
+            str(repo / "deploy" / "docker-compose.production.yml"),
+            "up",
+            "-d",
+            "--wait",
+            "api",
+        )
+    )
+    base_only_restart = "\t".join(
+        ("compose", "--project-directory", str(repo), "up", "-d", "--wait", "api")
+    )
+    assert production_restart in log
+    assert base_only_restart not in log
     assert "up\t-d\tbot" in log
     assert log.index("pg_restore\t--list") < log.index("stop\tapi")
     restore_command = "sh\t-ceu\tpsql --single-transaction --set=ON_ERROR_STOP=1"

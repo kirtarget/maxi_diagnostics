@@ -62,7 +62,16 @@ if (-not $ConfirmRestore) {
 }
 
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
+$composeFiles = [Collections.Generic.List[string]]::new()
+$composeFiles.Add((Join-Path $repoRoot "docker-compose.yml"))
+$productionComposePath = Join-Path $repoRoot "deploy/docker-compose.production.yml"
+if (Test-Path -LiteralPath $productionComposePath -PathType Leaf) {
+    $composeFiles.Add($productionComposePath)
+}
 $composePrefix = @("compose", "--project-directory", $repoRoot)
+foreach ($composeFile in $composeFiles) {
+    $composePrefix += @("-f", $composeFile)
+}
 $backupsPath = Join-Path $repoRoot "backups"
 if (-not (Test-Path -LiteralPath $backupsPath -PathType Container)) {
     throw "backups_path_not_found"
