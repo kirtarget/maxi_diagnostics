@@ -941,10 +941,6 @@ select:focus-visible,
 .status-symbol-success { color: var(--brand-signal); border-color: var(--brand-signal); }
 
 .forecast-screen > h1 { max-width: 12ch; }
-.forecast-proof { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin: 24px 0 0; background: color-mix(in srgb, var(--brand-paper) 22%, transparent); border: 1px solid color-mix(in srgb, var(--brand-paper) 22%, transparent); }
-.forecast-proof p { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; min-height: 76px; margin: 0; padding: 12px 10px; background: var(--brand-ink); }
-.forecast-proof strong { color: var(--brand-signal); font-family: "Golos Text", sans-serif; font-size: 34px; line-height: .85; letter-spacing: -.06em; }
-.forecast-proof span { color: color-mix(in srgb, var(--brand-paper) 75%, transparent); font-size: 11px; font-weight: 750; line-height: 1.25; }
 .forecast-path { display: grid; grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr); align-items: center; gap: 8px; margin: 30px 0 18px; padding: 22px 14px; border-top: 1px solid color-mix(in srgb, var(--brand-paper) 24%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--brand-paper) 24%, transparent); }
 .forecast-step { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 9px; align-items: center; }
 .forecast-step-marker { width: 12px; height: 12px; border: 3px solid var(--brand-paper); border-radius: 50%; background: var(--brand-ink); box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-paper) 10%, transparent); }
@@ -989,7 +985,6 @@ select:focus-visible,
   .topic-grid { grid-template-columns: 1fr; }
   .answer-review { grid-template-columns: 1fr; }
   .forecast-path { grid-template-columns: 1fr; gap: 16px; padding: 20px 8px; }
-  .forecast-proof { grid-template-columns: 1fr; }
   .forecast-path-line { width: 2px; height: 28px; margin-left: 5px; }
   .forecast-path-line::after { top: auto; right: -3px; bottom: 0; transform: rotate(135deg); }
   .forecast-path-line span { top: 8px; left: 18px; transform: none; }

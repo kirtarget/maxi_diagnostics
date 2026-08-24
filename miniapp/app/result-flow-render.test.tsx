@@ -43,25 +43,25 @@ describe("result flow screens", () => {
     expect(html).not.toContain("Годовой курс");
   });
 
-  it("shows the average growth evidence alongside an honest personal orientation", () => {
+  it("uses the persisted forecast labels and values without school-specific claims", () => {
     const html = renderToStaticMarkup(
       <ForecastScreen
         points={[
-          { id: "current", label: "Сейчас", value: 15 },
-          { id: "exam-preparation", label: "Подготовка к ОГЭ и ЕГЭ", value: 45 },
+          { id: "current", label: "Текущий результат", value: 15 },
+          { id: "custom-program", label: "Настраиваемая программа", value: 47 },
         ]}
         onBack={() => undefined}
         onRoute={() => undefined}
       />,
     );
 
-    expect(html).toContain("<small>Сейчас</small><strong>15</strong><span>баллов</span>");
-    expect(html).toContain("<small>Ваш ориентир</small><strong>45</strong><span>баллов</span>");
-    expect(html).toContain("средний прирост");
-    expect(html).toContain("+30");
-    expect(html).toContain("+42");
+    expect(html).toContain("<small>Текущий результат</small><strong>15</strong><span>баллов</span>");
+    expect(html).toContain("<small>Настраиваемая программа</small><strong>47</strong><span>баллов</span>");
+    expect(html).toContain("+32");
     expect(html).toContain("не личная гарантия");
-    expect(html).not.toContain("Интенсив");
+    expect(html).not.toContain("MAXIMUM");
+    expect(html).not.toContain("средний прирост");
+    expect(html).not.toContain("+42");
   });
 
   it("renders zero metrics so a truthy score gate cannot hide a valid server result", () => {

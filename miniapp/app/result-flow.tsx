@@ -240,15 +240,11 @@ export function ForecastScreen({ points, onBack, onRoute }: {
       <span className="state-code">05 / Ориентир роста</span>
       <h1 id="forecast-title">Рост — это <em>система.</em></h1>
       <p className="lead">Понятный маршрут, регулярная работа и проверка прогресса дают измеримый результат.</p>
-      <div className="forecast-proof" aria-label="Статистика результатов учеников MAXIMUM">
-        <p><strong>+30</strong><span>средний прирост<br />учеников MAXIMUM</span></p>
-        <p><strong>+42</strong><span>средний прирост у тех,<br />кто сдал на 100 баллов</span></p>
-      </div>
       <div className="forecast-path" role="img" aria-label={ariaLabel}>
         {current && (
           <div className="forecast-step forecast-step-current">
             <span className="forecast-step-marker" aria-hidden="true" />
-            <div><small>Сейчас</small><strong>{current.value}</strong><span>баллов</span></div>
+            <div><small>{current.label}</small><strong>{current.value}</strong><span>баллов</span></div>
           </div>
         )}
         {next && (
@@ -256,7 +252,7 @@ export function ForecastScreen({ points, onBack, onRoute }: {
             <div className="forecast-path-line" aria-hidden="true"><span>+{next.value - (current?.value ?? 0)}</span></div>
             <div className="forecast-step forecast-step-goal">
               <span className="forecast-step-marker" aria-hidden="true" />
-              <div><small>Ваш ориентир</small><strong>{next.value}</strong><span>баллов</span></div>
+              <div><small>{next.label}</small><strong>{next.value}</strong><span>баллов</span></div>
             </div>
           </>
         )}
