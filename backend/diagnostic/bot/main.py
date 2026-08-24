@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import signal
 from collections.abc import Awaitable
 
 from aiogram import Bot, Dispatcher
@@ -53,6 +54,22 @@ async def configure_bot_safely(bot: Bot, school: SchoolConfig) -> None:
         raise RuntimeError("telegram_delete_webhook_failed") from None
 
 
+async def wait_for_worker_shutdown() -> None:
+    stopped = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    registered = False
+    for signum in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(signum, stopped.set)
+            registered = True
+        except NotImplementedError:
+            continue
+    if registered:
+        await stopped.wait()
+    else:
+        await asyncio.Future()
+
+
 async def main() -> None:
     settings = Settings.from_env(require_admin=False)
     school = load_school()
@@ -65,15 +82,20 @@ async def main() -> None:
         bundle_id, bundle = prepare_report_assets(school, catalog)
         await store_report_asset_bundle(bundle_id, bundle)
         bot = Bot(token=settings.bot_token)
-        dispatcher = Dispatcher()
-        dispatcher.include_router(build_router(settings, school, catalog))
+        dispatcher = None
+        if settings.bot_polling_enabled:
+            dispatcher = Dispatcher()
+            dispatcher.include_router(build_router(settings, school, catalog))
         scheduler = build_worker_scheduler(bot, settings, school, catalog)
         scheduler.start()
-        await configure_bot_safely(bot, school)
-        await dispatcher.start_polling(
-            bot,
-            allowed_updates=dispatcher.resolve_used_update_types(),
-        )
+        if dispatcher is None:
+            await wait_for_worker_shutdown()
+        else:
+            await configure_bot_safely(bot, school)
+            await dispatcher.start_polling(
+                bot,
+                allowed_updates=dispatcher.resolve_used_update_types(),
+            )
     finally:
         try:
             try:

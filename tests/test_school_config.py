@@ -460,6 +460,7 @@ def test_settings_normalizes_urls_and_optional_webhook(monkeypatch: pytest.Monke
         "APPLICATION_SECRET": "stable-installation-secret-1234567890",
         "ANALYTICS_WEBHOOK_URL": "",
         "TIMEZONE": "Europe/Moscow",
+        "BOT_POLLING_ENABLED": "false",
     }
     for key, value in values.items():
         monkeypatch.setenv(key, value)
@@ -472,6 +473,18 @@ def test_settings_normalizes_urls_and_optional_webhook(monkeypatch: pytest.Monke
     assert settings.timezone == "Europe/Moscow"
     assert settings.diagnostic_retention_days == 365
     assert settings.in_progress_retention_days == 30
+    assert settings.bot_polling_enabled is False
+
+
+@pytest.mark.parametrize("configured", ["0", "yes", "FALSE ", "enabled"])
+def test_settings_rejects_invalid_bot_polling_flag(
+    monkeypatch: pytest.MonkeyPatch, configured: str,
+):
+    _set_required_settings(monkeypatch, "https://app.example")
+    monkeypatch.setenv("BOT_POLLING_ENABLED", configured)
+
+    with pytest.raises(RuntimeError, match="invalid_settings:BOT_POLLING_ENABLED"):
+        Settings.from_env()
 
 
 @pytest.mark.parametrize(

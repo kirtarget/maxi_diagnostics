@@ -140,6 +140,14 @@ def _question_value(question: Mapping[str, Any] | object, key: str, default: Any
     return getattr(question, key, default)
 
 
+def _question_asset_paths(question: Mapping[str, Any] | object) -> tuple[str, ...]:
+    assets = _question_value(question, "assets")
+    if isinstance(assets, (list, tuple)):
+        return tuple(asset for asset in assets if isinstance(asset, str))
+    asset = _question_value(question, "asset")
+    return (asset,) if isinstance(asset, str) and asset else ()
+
+
 def _review_asset_paths(review: Mapping[str, Any]) -> tuple[str, ...]:
     assets = review.get("assets")
     if isinstance(assets, (list, tuple)):
@@ -308,15 +316,12 @@ def _legacy_story(
                 Paragraph(_text(_question_value(question, "prompt", "")), styles["body"]),
             ]
         )
-        image = _optional_image(
-            school,
-            _question_value(question, "asset"),
-            120 * mm,
-            70 * mm,
-            frozen_assets,
-        )
-        if image is not None:
-            story.append(image)
+        for asset in _question_asset_paths(question):
+            image = _optional_image(
+                school, asset, 120 * mm, 70 * mm, frozen_assets,
+            )
+            if image is not None:
+                story.append(image)
         story.append(
             Paragraph(
                 f"{_text(school.brand.pdf.answer_label)}: "

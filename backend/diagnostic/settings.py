@@ -207,6 +207,15 @@ def _retention_days(name: str, default: int, minimum: int, maximum: int) -> int:
     return value
 
 
+def _boolean_setting(name: str, default: bool) -> bool:
+    raw = os.getenv(name, "true" if default else "false")
+    if raw == "true":
+        return True
+    if raw == "false":
+        return False
+    raise RuntimeError(f"invalid_settings:{name}")
+
+
 @dataclass(frozen=True)
 class Settings:
     database_url: str
@@ -220,6 +229,7 @@ class Settings:
     timezone: str = "Europe/Moscow"
     diagnostic_retention_days: int = 365
     in_progress_retention_days: int = 30
+    bot_polling_enabled: bool = True
 
     @classmethod
     def from_env(cls, *, require_admin: bool = True) -> "Settings":
@@ -281,4 +291,5 @@ class Settings:
             in_progress_retention_days=_retention_days(
                 "IN_PROGRESS_RETENTION_DAYS", 30, 1, 365
             ),
+            bot_polling_enabled=_boolean_setting("BOT_POLLING_ENABLED", True),
         )

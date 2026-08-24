@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import shutil
 import time
 from pathlib import Path
 from urllib.parse import urlencode
@@ -132,6 +133,38 @@ def test_report_asset_bundle_is_deterministic_across_restarts():
 
     with ZipFile(BytesIO(payload)) as archive:
         assert {item.date_time for item in archive.infolist()} == {(1980, 1, 1, 0, 0, 0)}
+
+
+def test_report_asset_bundle_includes_every_question_image(tmp_path: Path):
+    school_root = tmp_path / "school"
+    shutil.copytree(SAMPLE_SCHOOL, school_root)
+    for name, color in (("question-1.svg", "#111111"), ("question-2.svg", "#222222")):
+        (school_root / "assets" / name).write_text(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="10">'
+            f'<rect width="20" height="10" fill="{color}"/></svg>',
+            encoding="utf-8",
+        )
+    diagnostic_path = school_root / "diagnostics/demo-math.json"
+    data = json.loads(diagnostic_path.read_text(encoding="utf-8"))
+    data["questions"][0]["assets"] = [
+        "assets/question-1.svg",
+        "assets/question-2.svg",
+    ]
+    diagnostic_path.write_text(json.dumps(data), encoding="utf-8")
+    school = load_school(school_root)
+    catalog = load_catalog(school)
+
+    from diagnostic.api.sessions import prepare_report_assets
+    from io import BytesIO
+    from zipfile import ZipFile
+
+    _, payload = prepare_report_assets(school, catalog)
+
+    with ZipFile(BytesIO(payload)) as archive:
+        assert {
+            "assets/question-1.svg",
+            "assets/question-2.svg",
+        }.issubset(archive.namelist())
 
 
 def test_progress_rejects_unknown_question_id(monkeypatch):

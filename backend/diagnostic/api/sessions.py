@@ -119,7 +119,11 @@ def _build_report_assets(
     school: SchoolConfig, questions: tuple[Any, ...]
 ) -> bytes:
     references = {school.brand.logo}
-    references.update(question.asset for question in questions if question.asset)
+    references.update(
+        asset
+        for question in questions
+        for asset in question.asset_paths
+    )
     if len(references) > 201:
         raise ValueError("too_many_report_assets")
     output = BytesIO()

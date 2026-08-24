@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -218,4 +219,65 @@ async def test_polling_failure_closes_bot_session_and_database(monkeypatch):
         "scheduler_stopped",
         "bot_closed",
         "database_closed",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_delivery_only_mode_runs_scheduler_without_starting_polling(monkeypatch):
+    from diagnostic.bot import main as bot_main
+
+    events: list[str] = []
+    settings = replace(_settings(), bot_polling_enabled=False)
+    school = load_school()
+    catalog = load_catalog(school)
+
+    class FakeBot:
+        def __init__(self, *, token: str):
+            assert token == settings.bot_token
+            self.session = SimpleNamespace(
+                close=AsyncMock(side_effect=lambda: events.append("bot_closed"))
+            )
+
+    class FakeScheduler:
+        running = False
+
+        def start(self):
+            self.running = True
+            events.append("scheduler_started")
+
+        def shutdown(self, *, wait):
+            assert wait is False
+            self.running = False
+            events.append("scheduler_stopped")
+
+    monkeypatch.setattr(bot_main.Settings, "from_env", lambda **_: settings)
+    monkeypatch.setattr(bot_main, "load_school", lambda: school)
+    monkeypatch.setattr(bot_main, "load_catalog", lambda actual: catalog)
+    monkeypatch.setattr(bot_main, "init_db", AsyncMock())
+    monkeypatch.setattr(bot_main, "close_db", AsyncMock())
+    monkeypatch.setattr(bot_main, "store_report_asset_bundle", AsyncMock())
+    monkeypatch.setattr(bot_main, "Bot", FakeBot)
+    monkeypatch.setattr(
+        bot_main,
+        "Dispatcher",
+        Mock(side_effect=AssertionError("polling dispatcher must not start")),
+    )
+    monkeypatch.setattr(
+        bot_main,
+        "build_worker_scheduler",
+        lambda actual_bot, actual_settings, actual_school, actual_catalog: FakeScheduler(),
+    )
+    monkeypatch.setattr(
+        bot_main,
+        "wait_for_worker_shutdown",
+        AsyncMock(side_effect=lambda: events.append("worker_wait")),
+    )
+
+    await bot_main.main()
+
+    assert events == [
+        "scheduler_started",
+        "worker_wait",
+        "scheduler_stopped",
+        "bot_closed",
     ]
