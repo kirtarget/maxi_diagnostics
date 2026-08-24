@@ -7,6 +7,25 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+function Get-Sha256Hex {
+    param([Parameter(Mandatory)][string]$Path)
+    $stream = $null
+    $algorithm = $null
+    try {
+        $stream = [IO.File]::Open(
+            $Path,
+            [IO.FileMode]::Open,
+            [IO.FileAccess]::Read,
+            [IO.FileShare]::Read
+        )
+        $algorithm = [Security.Cryptography.SHA256]::Create()
+        return [BitConverter]::ToString($algorithm.ComputeHash($stream)).Replace("-", "").ToLowerInvariant()
+    } finally {
+        if ($null -ne $algorithm) { $algorithm.Dispose() }
+        if ($null -ne $stream) { $stream.Dispose() }
+    }
+}
+
 function Invoke-DockerCommand {
     param([Parameter(Mandatory)][string[]]$Arguments)
     & docker @Arguments
@@ -142,7 +161,7 @@ if (
 ) {
     throw "backup_manifest_invalid"
 }
-$actualChecksum = (Get-FileHash -Algorithm SHA256 -LiteralPath $resolvedBackup).Hash.ToLowerInvariant()
+$actualChecksum = Get-Sha256Hex -Path $resolvedBackup
 if ($sidecarChecksum -cne $manifest.sha256 -or $actualChecksum -cne $manifest.sha256) {
     throw "backup_checksum_mismatch"
 }

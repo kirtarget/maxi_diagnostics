@@ -47,6 +47,8 @@ def test_operator_documents_cover_deploy_operations_and_handoff_contracts():
     ):
         assert value.casefold() in operations.casefold()
     assert "docker compose down -v" not in operations
+    assert "Local automated checks prove" in operations
+    assert "protected\nstorage is reachable" in operations
     for value in (
         "repository", "domain", "DNS", "server", "BotFather", "protected channel",
         "admin", "restore drill", "remove developer access",

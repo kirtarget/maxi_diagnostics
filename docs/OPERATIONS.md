@@ -35,6 +35,10 @@ installation's Mini App.
 The backup script writes a binary custom archive plus `.sha256` and
 `.manifest.json` sidecars beneath repository `backups/`. Keep all three files
 together in protected off-server storage and test a restore drill regularly.
+Local automated checks prove the scripts' guarded workflow, not that protected
+storage is reachable or that an off-server archive restores in the receiving
+school's environment. The school operator must perform and record that drill in
+an approved maintenance window.
 
 On Windows, the scripts support Windows PowerShell 5.1:
 

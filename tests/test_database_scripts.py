@@ -14,6 +14,15 @@ ROOT = Path(__file__).resolve().parents[1]
 POWERSHELL = shutil.which("powershell.exe")
 
 
+@pytest.mark.parametrize("script_name", ("backup_db.ps1", "restore_db.ps1"))
+def test_backup_scripts_use_portable_sha256(script_name: str):
+    script = (ROOT / "scripts" / script_name).read_text(encoding="utf-8")
+
+    assert "Get-FileHash" not in script
+    assert "function Get-Sha256Hex" in script
+    assert "[Security.Cryptography.SHA256]::Create()" in script
+
+
 def test_schema_migration_retires_legacy_unversioned_work():
     from diagnostic.db.schema import DDL
 
