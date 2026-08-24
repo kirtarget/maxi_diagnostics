@@ -104,6 +104,27 @@ def test_nginx_example_is_fixed_host_same_origin_and_has_no_open_proxy():
     assert "proxy_pass $" not in config
 
 
+def test_production_configuration_has_one_canonical_host_and_private_ports():
+    paths = (
+        ".env.example", "README.md", "docker-compose.yml",
+        "deploy/docker-compose.production.yml", "deploy/nginx/diagnostic.conf.example",
+        "deploy/nginx/maxi.kirtarget.ru.conf", "deploy/nginx/maxi.kirtarget.ru.http.conf",
+        "docs/DEPLOYMENT.md", "docs/OPERATIONS.md",
+    )
+    configuration = "\n".join(read(path) for path in paths)
+
+    assert "maximumtest.ru" not in configuration
+    assert "https://maxi.kirtarget.ru" in configuration
+    assert 'BOT_POLLING_ENABLED=true' in read(".env.example")
+    assert '"127.0.0.1:18082:8080"' in read("deploy/docker-compose.production.yml")
+    assert '"127.0.0.1:13002:3000"' in read("deploy/docker-compose.production.yml")
+    for path in (
+        "deploy/nginx/diagnostic.conf.example", "deploy/nginx/maxi.kirtarget.ru.conf",
+        "deploy/nginx/maxi.kirtarget.ru.http.conf",
+    ):
+        assert "server_name maxi.kirtarget.ru;" in read(path)
+
+
 def test_backup_and_restore_are_binary_safe_guarded_and_contained():
     backup = read("scripts/backup_db.ps1")
     restore = read("scripts/restore_db.ps1")
