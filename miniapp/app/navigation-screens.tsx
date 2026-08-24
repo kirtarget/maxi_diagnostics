@@ -29,9 +29,9 @@ export function WelcomeScreen({
   return (
     <section className="screen welcome-screen radar-screen" aria-labelledby="welcome-title">
       <div className="welcome-copy">
-        <span className="state-code">Персональная диагностика</span>
-        <h1 id="welcome-title">Сканируем знания. <em>Строим маршрут.</em></h1>
-        <p className="hero-copy">Узнайте точку старта, разберите ошибки и получите ориентир роста.</p>
+        <span className="state-code">Подготовка к экзаменам</span>
+        <h1 id="welcome-title">Ваш путь к успеху <em>на ОГЭ и ЕГЭ</em></h1>
+        <p className="hero-copy">Выберите предмет, чтобы получить карту знаний, зоны роста, PDF-отчёт и план подготовки.</p>
       </div>
       <div className="radar" role="img" aria-label={radarLabel}>
         <span className="radar-ring radar-ring-one" />
