@@ -42,6 +42,27 @@ export type QuestionScreenProps = {
   onNext: () => void;
 };
 
+export type QuestionProgress = {
+  current: number;
+  total: number;
+  percent: number;
+  message: string;
+};
+
+export function questionProgress(index: number, total: number): QuestionProgress {
+  const current = index + 1;
+  const percent = Math.round((current / total) * 100);
+  const message = current === total
+    ? "Последний рывок"
+    : index === 0
+      ? "Стартуем спокойно"
+      : current <= total / 2
+        ? "Набираем темп"
+        : "Финиш рядом";
+
+  return { current, total, percent, message };
+}
+
 function isAnswered(question: Question, answer: AnswerValue | undefined): boolean {
   if (question.type === "single") return typeof answer === "string" && answer.length > 0;
   if (question.type === "multiple") {
@@ -113,7 +134,7 @@ export function QuestionView({
   onBack,
   onNext,
 }: QuestionScreenProps) {
-  const progress = Math.round(((index + 1) / total) * 100);
+  const progress = questionProgress(index, total);
   const imagePaths = questionAssetPaths(question);
   const promptBlocks = parseQuestionPrompt(question.prompt);
   const sequenceMatching = question.type === "input"
@@ -143,13 +164,34 @@ export function QuestionView({
       <div className="question-topline">
         <button className="back-button" onClick={onBack} type="button" aria-label={labels.back}>{labels.back}</button>
         <div className="question-progress-copy" aria-live="polite">
-          <span>{labels.task_label} {index + 1} {labels.of_label} {total}</span>
-          <strong>{progress}%</strong>
+          <span>{labels.task_label} {progress.current} {labels.of_label} {progress.total}</span>
+          <strong>{progress.message}</strong>
         </div>
       </div>
-      <div className="progress-track" role="progressbar" aria-label="Прогресс диагностики" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
-        <span style={{ width: `${progress}%` }} />
+      <div
+        className="question-progress-rail"
+        role="progressbar"
+        aria-label="Прогресс диагностики"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={progress.percent}
+        aria-valuetext={`${labels.task_label} ${progress.current} ${labels.of_label} ${progress.total}. ${progress.message}`}
+      >
+        <span className="question-progress-fill" style={{ width: `${progress.percent}%` }} />
+        <span className="question-progress-nodes" aria-hidden="true">
+          {Array.from({ length: progress.total }, (_, nodeIndex) => (
+            <span
+              className={nodeIndex < index
+                ? "question-progress-node is-complete"
+                : nodeIndex === index
+                  ? "question-progress-node is-current"
+                  : "question-progress-node"}
+              key={nodeIndex}
+            />
+          ))}
+        </span>
       </div>
+      <p className="question-progress-motivation" aria-live="polite">{progress.message}</p>
       <div className="question-meta"><span>{question.title}</span><span>{question.topic}</span></div>
       <div className="question-copy">
         {promptBlocks.map((block, blockIndex) => {
