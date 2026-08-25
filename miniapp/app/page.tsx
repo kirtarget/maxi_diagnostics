@@ -13,6 +13,7 @@ import {
   isConflictError,
   loadBootstrap,
   loadReview,
+  loadWeeklyLeague,
   markResultViewed,
   restoreBootstrapSession,
   saveLocalSession,
@@ -37,6 +38,8 @@ import { initializeTelegram } from "./telegram-webapp";
 import { gameplayProfileView } from "./gameplay-profile-model";
 import { TrainerScreen } from "./trainer-screen";
 import { trainerInitialState, trainerReducer } from "./trainer-model";
+import { LeagueScreen } from "./league-screen";
+import type { LeagueScreenState } from "./league-model";
 import type {
   AnswerMap,
   AnswerValue,
@@ -49,7 +52,7 @@ import type {
   ServerResult,
 } from "./types";
 
-type Screen = "loading" | "welcome" | "home" | "profile" | "mode" | "subjects" | "question" | "submitting" | "result" | "review" | "forecast" | "route" | "trainer";
+type Screen = "loading" | "welcome" | "home" | "profile" | "league" | "mode" | "subjects" | "question" | "submitting" | "result" | "review" | "forecast" | "route" | "trainer";
 
 type DisplayBrand = Pick<Brand, "name" | "short_name" | "logo"> & {
   resultStatus: string;
@@ -125,6 +128,7 @@ export default function Home() {
   const [reviewIndex, setReviewIndex] = useState(0);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [trainerState, dispatchTrainer] = useReducer(trainerReducer, trainerInitialState);
+  const [leagueState, setLeagueState] = useState<LeagueScreenState>({ kind: "loading" });
   const initData = useRef("");
   const progressRevision = useRef(0);
   const syncedQuestionIndex = useRef(0);
@@ -476,6 +480,18 @@ export default function Home() {
     if (!review) void refreshReview();
   };
 
+  const openLeague = useCallback(async () => {
+    if (!sessionScope || !initData.current) return;
+    setLeagueState({ kind: "loading" });
+    setScreen("league");
+    try {
+      const data = await loadWeeklyLeague(initData.current, sessionScope);
+      setLeagueState({ kind: "ready", data });
+    } catch {
+      setLeagueState({ kind: "error", message: "Не удалось загрузить рейтинг. Повтори попытку." });
+    }
+  }, [sessionScope]);
+
   const runTrainerStart = useCallback(async (selectedId: string, requestedMode: "normal" | "mistakes" = "normal", sourceAttemptId?: string) => {
     if (!sessionScope || !initData.current) return;
     const selected = bootstrap?.diagnostics.find((item) => item.id === selectedId);
@@ -643,6 +659,7 @@ export default function Home() {
           onStart={() => setScreen("mode")}
           onStartTrainer={() => void runTrainerStart(bootstrap.diagnostics[0]?.id ?? "")}
           onOpenProfile={() => setScreen("profile")}
+          onOpenLeague={() => void openLeague()}
         />
       )}
 
@@ -651,6 +668,14 @@ export default function Home() {
           profile={gameplayProfile}
           onBack={() => setScreen("home")}
           onStart={() => setScreen("mode")}
+        />
+      )}
+
+      {screen === "league" && (
+        <LeagueScreen
+          state={leagueState}
+          onRetry={() => void openLeague()}
+          onHome={() => setScreen(bootstrap?.diagnostics.length ? "home" : "welcome")}
         />
       )}
 

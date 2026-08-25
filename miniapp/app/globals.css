@@ -1019,6 +1019,7 @@ select:focus-visible,
 .gameplay-quest strong { font-size: 13px; }
 .gameplay-home-cta { margin-top: 2px; }
 .gameplay-trainer-cta { justify-content: center; min-height: 48px; border-color: color-mix(in srgb, var(--brand-signal) 55%, transparent); color: var(--brand-paper); background: color-mix(in srgb, var(--brand-signal) 12%, transparent); }
+.gameplay-league-cta { justify-content: center; min-height: 48px; border-color: color-mix(in srgb, var(--brand-paper) 24%, transparent); color: var(--brand-paper); background: color-mix(in srgb, var(--brand-paper) 8%, transparent); }
 .trainer-screen { gap: 18px; padding: 16px 14px 28px; color: var(--brand-paper); }
 .trainer-screen .question-topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: color-mix(in srgb, var(--brand-paper) 76%, transparent); font-size: 13px; font-weight: 800; }
 .trainer-screen .question-topline strong { color: var(--brand-signal); font-size: 16px; }
@@ -1086,6 +1087,28 @@ select:focus-visible,
 .gameplay-achievement strong,
 .gameplay-achievement small { display: block; }
 .gameplay-achievement small { margin-top: 4px; color: color-mix(in srgb, var(--brand-paper) 62%, transparent); font-size: 11px; line-height: 1.4; }
+.league-back { margin: 16px 0 0; }
+.league-screen { display: grid; gap: 14px; padding: 18px 0 28px; color: var(--brand-paper); }
+.league-header { display: flex; align-items: center; gap: 12px; padding: 18px; border-radius: 20px; background: linear-gradient(145deg, color-mix(in srgb, var(--brand-primary) 32%, var(--brand-ink)), var(--brand-ink)); }
+.league-trophy { font-size: 34px; }
+.league-header h1 { margin: 2px 0 0; font-size: clamp(28px, 8vw, 42px); letter-spacing: -.05em; }
+.league-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.league-row { display: grid; grid-template-columns: 32px 32px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 52px; padding: 9px 12px; border-radius: 14px; color: var(--brand-ink); background: var(--brand-paper); }
+.league-row-me { color: var(--brand-paper); background: var(--brand-primary); box-shadow: 0 6px 14px rgb(0 0 0 / 16%); }
+.league-rank { text-align: center; font-weight: 900; }
+.league-avatar { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 9px; color: var(--brand-paper); background: var(--brand-primary); font-weight: 900; }
+.league-row-me .league-avatar { color: var(--brand-ink); background: var(--brand-signal); }
+.league-label { min-width: 0; overflow: hidden; font-size: 13px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.league-xp { color: var(--brand-primary); font-size: 12px; font-weight: 900; white-space: nowrap; }
+.league-row-me .league-xp { color: var(--brand-signal); }
+.league-dates { margin: 0; color: color-mix(in srgb, var(--brand-paper) 62%, transparent); font-size: 12px; }
+.league-empty { margin: 0; padding: 20px; border-radius: 16px; color: color-mix(in srgb, var(--brand-paper) 78%, transparent); background: color-mix(in srgb, var(--brand-paper) 8%, transparent); line-height: 1.45; }
+.league-state { min-height: 240px; place-content: center; text-align: center; }
+.league-state .text-back { justify-self: center; }
+.league-me-summary { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 13px 14px; border: 1px solid color-mix(in srgb, var(--brand-signal) 48%, transparent); border-radius: 14px; color: var(--brand-paper); background: color-mix(in srgb, var(--brand-signal) 10%, transparent); }
+.league-me-summary span { color: color-mix(in srgb, var(--brand-paper) 70%, transparent); font-size: 12px; }
+.league-me-summary strong,
+.league-me-summary b { color: var(--brand-signal); font-size: 13px; }
 
 @media (max-width: 370px) {
   .screen { padding-inline: 14px; }

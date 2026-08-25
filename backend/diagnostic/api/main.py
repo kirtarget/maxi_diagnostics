@@ -18,6 +18,7 @@ from diagnostic.school import SchoolConfig, load_school
 from diagnostic.settings import Settings
 
 from .sessions import create_router, prepare_report_assets
+from .league import create_league_router
 from .trainer import create_trainer_router
 
 
@@ -77,6 +78,7 @@ def create_app(
         return {"ok": True}
 
     app.include_router(create_router(catalog))
+    app.include_router(create_league_router())
     app.include_router(create_trainer_router(catalog))
     install_admin(app)
     return app

@@ -21,6 +21,7 @@ export type GameplayHomeScreenProps = {
   onStart: () => void;
   onStartTrainer?: () => void;
   onOpenProfile: () => void;
+  onOpenLeague?: () => void;
 };
 
 export function GameplayHomeScreen({
@@ -30,6 +31,7 @@ export function GameplayHomeScreen({
   onStart,
   onStartTrainer,
   onOpenProfile,
+  onOpenLeague,
 }: GameplayHomeScreenProps) {
   const subjects = [...new Set(diagnostics.map((item) => item.subject))];
   const pathItems = diagnostics.slice(0, 3);
@@ -68,6 +70,11 @@ export function GameplayHomeScreen({
         <button className="secondary-button gameplay-trainer-cta" onClick={onStartTrainer ?? onStart} type="button">
           Тренировка <span aria-hidden="true">⚡</span>
         </button>
+        {onOpenLeague && (
+          <button className="secondary-button gameplay-league-cta" onClick={onOpenLeague} type="button">
+            Лига недели <span aria-hidden="true">🏆</span>
+          </button>
+        )}
       </div>
 
       <div className="gameplay-section-heading">
