@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { forecastTrajectory, personalRoute, pdfStatusCopy, topicRecommendation } from "./result-flow-model";
+import { forecastTrajectory, personalRoute, pdfStatusCopy, resultGameSummary, topicRecommendation } from "./result-flow-model";
 
 describe("result flow model", () => {
   it("uses the current score plus at most two persisted forecast points", () => {
@@ -58,5 +58,29 @@ describe("result flow model", () => {
     expect(pdfStatusCopy("sent").title).toBe("PDF отправлен в Telegram");
     expect(pdfStatusCopy("failed").action).toBe("Проверить статус");
     expect(pdfStatusCopy("abandoned").title).toBe("PDF не удалось отправить");
+  });
+
+  it("builds bounded local game progress from a single result", () => {
+    expect(resultGameSummary({
+      score: 80,
+      max_score: 100,
+      correct_count: 4,
+      question_count: 5,
+      strong_topics: ["Алгоритмы"],
+      growth_topics: [{ topic: "Информация" }],
+    })).toMatchObject({
+      points: 80,
+      level: 4,
+      levelProgress: 20,
+      pointsToNextLevel: 20,
+    });
+    expect(resultGameSummary({
+      score: 999,
+      max_score: 0,
+      correct_count: -2,
+      question_count: -1,
+      strong_topics: [],
+      growth_topics: [],
+    })).toMatchObject({ points: 0, level: 1, levelProgress: 0, pointsToNextLevel: 25 });
   });
 });

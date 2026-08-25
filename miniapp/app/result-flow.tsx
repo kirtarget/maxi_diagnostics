@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { safeAssetPath } from "./question-assets";
 import { shouldShowResultMetrics } from "./result-display";
-import { pdfStatusCopy, topicRecommendation, type PdfStatusCopy, type PersonalRouteAction } from "./result-flow-model";
+import { pdfStatusCopy, resultGameSummary, topicRecommendation, type PdfStatusCopy, type PersonalRouteAction } from "./result-flow-model";
 import type {
   ForecastPoint,
   PublicDiagnostic,
@@ -41,6 +41,7 @@ export function ResultScreen({
   onForecast: () => void;
 }): ReactNode {
   const pdf = pdfStatusCopy(pdfStatus);
+  const game = resultGameSummary(result);
   const recommendation = topicRecommendation(result.growth_topics);
   return (
     <section className="screen result-screen" aria-labelledby="result-title">
@@ -63,6 +64,33 @@ export function ResultScreen({
           </div>
         </div>
       )}
+      <section className="result-game-card" aria-labelledby="result-game-title">
+        <div className="result-game-heading">
+          <div>
+            <span className="result-game-kicker">MAXIMUM · эта диагностика</span>
+            <h2 id="result-game-title">Очки за этот результат</h2>
+          </div>
+          <strong className="result-game-points">{game.points}</strong>
+        </div>
+        <div className="result-game-level">
+          <div>
+            <span>Уровень {game.level}</span>
+            <strong>{game.levelTitle}</strong>
+          </div>
+          <span>{game.pointsToNextLevel > 0 ? `Ещё ${game.pointsToNextLevel} очков до следующего` : "Максимум для этой попытки"}</span>
+        </div>
+        <div className="result-game-progress" role="progressbar" aria-label={`Прогресс уровня: ${game.levelProgress}%`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={game.levelProgress}>
+          <span style={{ width: `${game.levelProgress}%` }} />
+        </div>
+        <div className="result-achievements" aria-label="Локальные достижения этой диагностики">
+          {game.achievements.map((achievement) => (
+            <div className={`result-achievement${achievement.earned ? " is-earned" : ""}`} key={achievement.id}>
+              <span aria-hidden="true">{achievement.earned ? "✓" : "·"}</span>
+              <div><strong>{achievement.title}</strong><small>{achievement.description}</small></div>
+            </div>
+          ))}
+        </div>
+      </section>
       {(result.strong_topics.length > 0 || result.growth_topics.length > 0) && (
         <section className="topic-section" aria-labelledby="topic-heading">
           <h2 id="topic-heading">Карта тем</h2>

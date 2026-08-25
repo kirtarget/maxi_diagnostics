@@ -88,5 +88,9 @@ describe("result flow screens", () => {
     expect(html).toContain("<strong>0</strong>");
     expect(html).toContain("0 из 4");
     expect(html).toContain("из 100 баллов");
+    expect(html).toContain("Очки за этот результат");
+    expect(html).toContain("MAXIMUM · эта диагностика");
+    expect(html).toContain("Первый шаг");
+    expect(html).toContain("Уровень 1");
   });
 });
