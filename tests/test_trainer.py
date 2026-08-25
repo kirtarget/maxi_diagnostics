@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import asyncio
+import json
 import os
 from uuid import uuid4
 
@@ -21,7 +22,7 @@ async def database():
     async with pool.acquire() as connection:
         await connection.execute(
             """
-            TRUNCATE diagnostic_trainer_answers, diagnostic_trainer_sessions,
+            TRUNCATE diagnostic_mistakes, diagnostic_trainer_answers, diagnostic_trainer_sessions,
                      diagnostic_progress_events, diagnostic_progress_profiles,
                      diagnostic_erased_users, diagnostic_session_generations
             RESTART IDENTITY CASCADE
@@ -49,6 +50,9 @@ def test_trainer_schema_has_separate_session_and_answer_ownership():
     assert "CREATE TABLE IF NOT EXISTS diagnostic_trainer_answers" in DDL
     assert "UNIQUE (session_id, question_id)" in DDL
     assert "ON DELETE CASCADE" in DDL
+    assert "CREATE TABLE IF NOT EXISTS diagnostic_mistakes" in DDL
+    assert "PRIMARY KEY (user_id, diagnostic_id, question_id)" in DDL
+    assert "source_attempt_id" in DDL
 
 
 def test_trainer_event_is_server_scoped_and_deterministic():
@@ -73,6 +77,21 @@ async def _start(user_id: int, *, count: int = 1):
         mode="normal",
         selected_question_ids=[f"q{index}" for index in range(count)],
     )
+
+
+async def _source_attempt(user_id: int, attempt_id: str, *, snapshot: dict):
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute(
+            """
+            INSERT INTO diagnostic_attempts (
+                attempt_id, user_id, diagnostic_id, content_version,
+                exam, subject, mode, status, question_count, completed_at,
+                report_snapshot
+            ) VALUES ($1,$2,'math-10',$3,'ege','math','full','completed',1,now(),$4::jsonb)
+            """,
+            attempt_id, user_id, "a" * 64, json.dumps(snapshot, ensure_ascii=False),
+        )
 
 
 @pytest.mark.asyncio
@@ -188,3 +207,136 @@ async def test_user_erasure_cascades_trainer_rows(database):
         assert await connection.fetchval(
             "SELECT count(*) FROM diagnostic_trainer_answers WHERE session_id=$1", session_id
         ) == 0
+
+
+@pytest.mark.asyncio
+async def test_mistakes_are_seeded_from_owned_private_snapshot_and_sanitized(database):
+    user_id = 9_840_000_000 + uuid4().int % 100_000_000
+    attempt_id = f"attempt-{uuid4()}"
+    await _source_attempt(user_id, attempt_id, snapshot={
+        "review_snapshot": [
+            {"question_id": "q1", "is_correct": False, "user_value": "B", "expected_value": "A"},
+            {"question_id": "q2", "is_correct": True, "user_value": "A", "expected_value": "A"},
+        ],
+        "public_review_snapshot": [{"question_id": "q1", "is_correct": False}],
+    })
+
+    ids = await trainer.seed_and_list_mistakes(
+        user_id=user_id, diagnostic_id="math-10", source_attempt_id=attempt_id,
+        content_version="a" * 64,
+    )
+    assert ids == ["q1"]
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        row = await connection.fetchrow(
+            "SELECT source_attempt_id, source_content_version, resolved_at FROM diagnostic_mistakes WHERE user_id=$1 AND question_id='q1'",
+            user_id,
+        )
+    assert row["source_attempt_id"] == attempt_id
+    assert row["source_content_version"] == "a" * 64
+    assert row["resolved_at"] is None
+
+    with pytest.raises(ValueError, match="trainer_mistakes_source_not_found"):
+        await trainer.seed_and_list_mistakes(
+            user_id=user_id + 1, diagnostic_id="math-10", source_attempt_id=attempt_id,
+            content_version="a" * 64,
+        )
+
+
+@pytest.mark.asyncio
+async def test_mistake_replay_wrong_and_correct_are_idempotent_without_life_loss(database):
+    user_id = 9_850_000_000 + uuid4().int % 100_000_000
+    attempt_id = f"attempt-{uuid4()}"
+    await _source_attempt(user_id, attempt_id, snapshot={
+        "review_snapshot": [{"question_id": "q1", "is_correct": False, "user_value": "B", "expected_value": "A"}],
+    })
+    await trainer.seed_and_list_mistakes(
+        user_id=user_id, diagnostic_id="math-10", source_attempt_id=attempt_id,
+        content_version="a" * 64,
+    )
+    session_id = f"trainer_{uuid4().hex}"
+    await trainer.start_session(
+        session_id=session_id, user_id=user_id, diagnostic_id="math-10",
+        content_version="a" * 64, mode="mistakes", source_attempt_id=attempt_id,
+        selected_question_ids=["q1"],
+    )
+    key = "mistake-answer"
+    fingerprint = trainer.answer_fingerprint(
+        session_id=session_id, question_id="q1", answer="B", revision=1,
+        idempotency_key=key,
+    )
+    wrong = await trainer.answer_question(
+        session_id=session_id, user_id=user_id, question_id="q1", answer="B",
+        revision=1, idempotency_key=key, fingerprint=fingerprint, is_correct=False,
+        public_feedback={"correct_answer": "A", "explanation": "retry"},
+    )
+    assert wrong["life_delta"] == 0
+    assert wrong["lives_remaining"] == 5
+    assert await trainer.answer_question(
+        session_id=session_id, user_id=user_id, question_id="q1", answer="B",
+        revision=1, idempotency_key=key, fingerprint=fingerprint, is_correct=False,
+        public_feedback={"correct_answer": "A", "explanation": "retry"},
+    ) == wrong
+
+    pool = await get_pool()
+    second_session = f"trainer_{uuid4().hex}"
+    await trainer.start_session(
+        session_id=second_session, user_id=user_id, diagnostic_id="math-10",
+        content_version="a" * 64, mode="mistakes", source_attempt_id=attempt_id,
+        selected_question_ids=["q1"],
+    )
+    correct_key = "mistake-correct"
+    correct_fingerprint = trainer.answer_fingerprint(
+        session_id=second_session, question_id="q1", answer="A", revision=1,
+        idempotency_key=correct_key,
+    )
+    correct = await trainer.answer_question(
+        session_id=second_session, user_id=user_id, question_id="q1", answer="A",
+        revision=1, idempotency_key=correct_key, fingerprint=correct_fingerprint,
+        is_correct=True, public_feedback={"correct_answer": "A", "explanation": "ok"},
+    )
+    assert correct["life_delta"] == 0
+    assert correct["xp_delta"] == 0
+    async with pool.acquire() as connection:
+        assert await connection.fetchval(
+            "SELECT xp_total FROM diagnostic_progress_profiles WHERE user_id=$1", user_id
+        ) == 0
+    async with pool.acquire() as connection:
+        assert await connection.fetchval(
+            "SELECT resolved_at IS NOT NULL FROM diagnostic_mistakes WHERE user_id=$1 AND question_id='q1'",
+            user_id,
+        ) is True
+
+
+@pytest.mark.asyncio
+async def test_new_source_reopens_resolved_mistake_but_same_source_does_not(database):
+    user_id = 9_860_000_000 + uuid4().int % 100_000_000
+    first_attempt = f"attempt-{uuid4()}"
+    second_attempt = f"attempt-{uuid4()}"
+    snapshot = {
+        "review_snapshot": [{
+            "question_id": "q1", "is_correct": False,
+            "user_value": "B", "expected_value": "A",
+        }],
+    }
+    await _source_attempt(user_id, first_attempt, snapshot=snapshot)
+    assert await trainer.seed_and_list_mistakes(
+        user_id=user_id, diagnostic_id="math-10", source_attempt_id=first_attempt,
+        content_version="a" * 64,
+    ) == ["q1"]
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute(
+            "UPDATE diagnostic_mistakes SET resolved_at=now() WHERE user_id=$1 AND question_id='q1'",
+            user_id,
+        )
+
+    assert await trainer.seed_and_list_mistakes(
+        user_id=user_id, diagnostic_id="math-10", source_attempt_id=first_attempt,
+        content_version="a" * 64,
+    ) == []
+    await _source_attempt(user_id, second_attempt, snapshot=snapshot)
+    assert await trainer.seed_and_list_mistakes(
+        user_id=user_id, diagnostic_id="math-10", source_attempt_id=second_attempt,
+        content_version="a" * 64,
+    ) == ["q1"]

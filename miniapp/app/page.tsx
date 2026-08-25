@@ -145,6 +145,8 @@ export default function Home() {
   const hydrateGeneration = useRef(0);
   const recoveryPromise = useRef<Promise<void> | null>(null);
   const trainerDiagnosticId = useRef<string | null>(null);
+  const trainerMode = useRef<"normal" | "mistakes">("normal");
+  const trainerSourceAttemptId = useRef<string | null>(null);
   const trainerRecoveryMode = useRef<"retry" | "restart">("retry");
   const recoverConflict = useRef<() => Promise<void>>(async () => undefined);
   const progressQueue = useRef<ProgressSaveQueue<ProgressPayload> | null>(null);
@@ -474,7 +476,7 @@ export default function Home() {
     if (!review) void refreshReview();
   };
 
-  const runTrainerStart = useCallback(async (selectedId: string) => {
+  const runTrainerStart = useCallback(async (selectedId: string, requestedMode: "normal" | "mistakes" = "normal", sourceAttemptId?: string) => {
     if (!sessionScope || !initData.current) return;
     const selected = bootstrap?.diagnostics.find((item) => item.id === selectedId);
     if (!selected) {
@@ -482,16 +484,27 @@ export default function Home() {
       return;
     }
     trainerDiagnosticId.current = selected.id;
+    trainerMode.current = requestedMode;
+    trainerSourceAttemptId.current = requestedMode === "mistakes" ? (sourceAttemptId ?? null) : null;
     trainerRecoveryMode.current = "retry";
     dispatchTrainer({ type: "reset" });
     setScreen("trainer");
     try {
-      const response = await startTrainer(initData.current, {
-        session_scope: sessionScope,
-        diagnostic_id: selected.id,
-        count: Math.min(5, selected.questions.length),
-        mode: "normal",
-      });
+      const payload = requestedMode === "mistakes" && sourceAttemptId
+        ? {
+          session_scope: sessionScope,
+          diagnostic_id: selected.id,
+          count: Math.min(5, selected.questions.length),
+          mode: "mistakes" as const,
+          source_attempt_id: sourceAttemptId,
+        }
+        : {
+          session_scope: sessionScope,
+          diagnostic_id: selected.id,
+          count: Math.min(5, selected.questions.length),
+          mode: "normal" as const,
+      };
+      const response = await startTrainer(initData.current, payload);
       dispatchTrainer({ type: "start", response });
     } catch (startError) {
       dispatchTrainer({ type: "error", message: trainerErrorMessage(startError) });
@@ -539,11 +552,11 @@ export default function Home() {
 
   const retryTrainer = useCallback(() => {
     if (trainerRecoveryMode.current === "restart" && trainerDiagnosticId.current) {
-      void runTrainerStart(trainerDiagnosticId.current);
+      void runTrainerStart(trainerDiagnosticId.current, trainerMode.current, trainerSourceAttemptId.current ?? undefined);
       return;
     }
     if (trainerState.retryPhase === "idle" && trainerDiagnosticId.current) {
-      void runTrainerStart(trainerDiagnosticId.current);
+      void runTrainerStart(trainerDiagnosticId.current, trainerMode.current, trainerSourceAttemptId.current ?? undefined);
       return;
     }
     if (trainerState.retryPhase === "finishing") {
@@ -555,7 +568,7 @@ export default function Home() {
     const answer = trainerState.submittedAnswer;
     const questionId = questionIndex === null ? null : session?.question_ids[questionIndex];
     if (!session || !questionId || answer === undefined) {
-      if (trainerDiagnosticId.current) void runTrainerStart(trainerDiagnosticId.current);
+      if (trainerDiagnosticId.current) void runTrainerStart(trainerDiagnosticId.current, trainerMode.current, trainerSourceAttemptId.current ?? undefined);
       return;
     }
     void submitTrainerAnswer(questionId, answer);
@@ -710,6 +723,7 @@ export default function Home() {
             result={result}
             onReview={openReview}
             onForecast={() => setScreen("forecast")}
+            onReplayMistakes={persistedAttemptId.current ? () => void runTrainerStart(diagnostic.id, "mistakes", persistedAttemptId.current ?? undefined) : undefined}
           />
         )
       )}

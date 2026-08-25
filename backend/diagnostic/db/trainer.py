@@ -37,6 +37,7 @@ def _session_payload(row: Mapping[str, Any]) -> dict[str, Any]:
         "diagnostic_id": row["diagnostic_id"],
         "content_version": row["content_version"],
         "mode": row["mode"],
+        "source_attempt_id": row["source_attempt_id"],
         "question_ids": list(selected),
         "current_index": int(row["current_index"]),
         "revision": int(row["revision"]),
@@ -68,6 +69,7 @@ async def _locked_session(connection, session_id: str, user_id: int):
     return await connection.fetchrow(
         """
         SELECT session_id, user_id, diagnostic_id, content_version, mode,
+               source_attempt_id,
                selected_question_ids, current_index, revision, status,
                started_at, updated_at, completed_at
           FROM diagnostic_trainer_sessions
@@ -85,6 +87,7 @@ async def get_session(session_id: str, user_id: int):
         return await connection.fetchrow(
             """
             SELECT session_id, user_id, diagnostic_id, content_version, mode,
+                   source_attempt_id,
                    selected_question_ids, current_index, revision, status,
                    started_at, updated_at, completed_at
               FROM diagnostic_trainer_sessions
@@ -95,9 +98,83 @@ async def get_session(session_id: str, user_id: int):
         )
 
 
+async def seed_and_list_mistakes(
+    *, user_id: int, diagnostic_id: str, source_attempt_id: str,
+    content_version: str,
+) -> list[str]:
+    """Materialize unresolved questions from the owner's immutable private snapshot."""
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        async with connection.transaction():
+            await connection.execute("SELECT pg_advisory_xact_lock($1)", user_id)
+            await _raise_if_erased(connection, user_id)
+            await gameplay.get_reconciled_profile(connection, user_id)
+            source = await connection.fetchrow(
+                """
+                SELECT attempt_id, diagnostic_id, content_version, status, report_snapshot
+                  FROM diagnostic_attempts
+                 WHERE attempt_id=$1 AND user_id=$2
+                """,
+                source_attempt_id,
+                user_id,
+            )
+            if source is None or source["status"] != "completed":
+                raise ValueError("trainer_mistakes_source_not_found")
+            if source["diagnostic_id"] != diagnostic_id:
+                raise ValueError("trainer_mistakes_source_conflict")
+            if source["content_version"] != content_version:
+                raise ValueError("trainer_content_changed")
+            snapshot = source["report_snapshot"] or {}
+            if isinstance(snapshot, str):
+                try:
+                    snapshot = json.loads(snapshot)
+                except (TypeError, ValueError) as exc:
+                    raise ValueError("trainer_mistakes_source_not_found") from exc
+            private_items = snapshot.get("review_snapshot") if isinstance(snapshot, dict) else None
+            if not isinstance(private_items, list):
+                return []
+            for item in private_items:
+                if not isinstance(item, dict):
+                    continue
+                question_id = item.get("question_id")
+                if (
+                    item.get("is_correct") is False
+                    and isinstance(question_id, str)
+                    and item.get("user_value") is not None
+                    and item.get("expected_value") is not None
+                ):
+                    await connection.execute(
+                        """
+                        INSERT INTO diagnostic_mistakes (
+                            user_id, diagnostic_id, question_id,
+                            source_attempt_id, source_content_version
+                        ) VALUES ($1,$2,$3,$4,$5)
+                        ON CONFLICT (user_id, diagnostic_id, question_id) DO UPDATE
+                           SET source_attempt_id=EXCLUDED.source_attempt_id,
+                               source_content_version=EXCLUDED.source_content_version,
+                               created_at=EXCLUDED.created_at,
+                               resolved_at=NULL
+                         WHERE diagnostic_mistakes.source_attempt_id IS DISTINCT FROM EXCLUDED.source_attempt_id
+                        """,
+                        user_id, diagnostic_id, question_id,
+                        source_attempt_id, content_version,
+                    )
+            rows = await connection.fetch(
+                """
+                SELECT question_id
+                  FROM diagnostic_mistakes
+                 WHERE user_id=$1 AND diagnostic_id=$2 AND resolved_at IS NULL
+                 ORDER BY created_at, question_id
+                """,
+                user_id,
+                diagnostic_id,
+            )
+    return [row["question_id"] for row in rows]
+
+
 async def start_session(
     *, session_id: str, user_id: int, diagnostic_id: str, content_version: str,
-    mode: str, selected_question_ids: list[str],
+    mode: str, selected_question_ids: list[str], source_attempt_id: str | None = None,
 ) -> tuple[dict[str, Any], Mapping[str, Any]]:
     pool = await get_pool()
     async with pool.acquire() as connection:
@@ -109,9 +186,11 @@ async def start_session(
                 """
                 INSERT INTO diagnostic_trainer_sessions (
                     session_id, user_id, diagnostic_id, content_version, mode,
+                    source_attempt_id,
                     selected_question_ids
-                ) VALUES ($1,$2,$3,$4,$5,$6::jsonb)
+                ) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb)
                 RETURNING session_id, diagnostic_id, content_version, mode,
+                          source_attempt_id,
                           selected_question_ids, current_index, revision, status,
                           started_at, updated_at, completed_at
                 """,
@@ -120,6 +199,7 @@ async def start_session(
                 diagnostic_id,
                 content_version,
                 mode,
+                source_attempt_id,
                 selected_question_ids,
             )
     return _session_payload(row), profile
@@ -178,11 +258,15 @@ async def answer_question(
             current_index = int(session["current_index"])
             if current_index >= len(selected) or selected[current_index] != question_id:
                 raise ValueError("trainer_question_out_of_order")
-            if not is_correct and int(profile["lives_remaining"]) <= 0:
+            if (
+                session["mode"] == "normal"
+                and not is_correct
+                and int(profile["lives_remaining"]) <= 0
+            ):
                 raise ValueError("trainer_no_lives")
 
-            xp_delta = 10 if is_correct else 0
-            life_delta = 0 if is_correct else -1
+            xp_delta = 10 if is_correct and session["mode"] == "normal" else 0
+            life_delta = 0 if is_correct or session["mode"] == "mistakes" else -1
             answer_row = await connection.fetchrow(
                 """
                 INSERT INTO diagnostic_trainer_answers (
@@ -205,7 +289,7 @@ async def answer_question(
                 xp_delta,
                 life_delta,
             )
-            if is_correct:
+            if is_correct and session["mode"] == "normal":
                 await gameplay.apply_gameplay_event(
                     connection,
                     gameplay.build_trainer_answer_event(
@@ -215,7 +299,7 @@ async def answer_question(
                         timezone_name=timezone_name,
                     ),
                 )
-            else:
+            elif session["mode"] != "mistakes":
                 now = datetime.now(timezone.utc)
                 await connection.execute(
                     """
@@ -230,6 +314,17 @@ async def answer_question(
                 )
                 profile = await gameplay.get_reconciled_profile(connection, user_id)
 
+            if session["mode"] == "mistakes" and is_correct:
+                await connection.execute(
+                    """
+                    UPDATE diagnostic_mistakes
+                       SET resolved_at=COALESCE(resolved_at, now())
+                     WHERE user_id=$1 AND diagnostic_id=$2 AND question_id=$3
+                       AND resolved_at IS NULL
+                    """,
+                    user_id, session["diagnostic_id"], question_id,
+                )
+
             next_index = current_index + 1
             next_status = "exhausted" if next_index >= len(selected) else "active"
             session = await connection.fetchrow(
@@ -238,6 +333,7 @@ async def answer_question(
                    SET current_index=$2, revision=$3, status=$4, updated_at=now()
                  WHERE session_id=$1
                  RETURNING session_id, diagnostic_id, content_version, mode,
+                           source_attempt_id,
                            selected_question_ids, current_index, revision, status,
                            started_at, updated_at, completed_at
                 """,
@@ -271,6 +367,7 @@ async def finish_session(*, session_id: str, user_id: int, revision: int) -> dic
                        SET status='completed', completed_at=now(), updated_at=now()
                      WHERE session_id=$1
                      RETURNING session_id, diagnostic_id, content_version, mode,
+                               source_attempt_id,
                                selected_question_ids, current_index, revision, status,
                                started_at, updated_at, completed_at
                     """,

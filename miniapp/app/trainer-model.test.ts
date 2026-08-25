@@ -54,4 +54,12 @@ describe("trainer model", () => {
     state = trainerReducer(state, { type: "set_answer", answer: "a" });
     expect(trainerReducer(state, { type: "submit_answer" }).phase).toBe("answering");
   });
+
+  it("allows mistake replay to continue without spending lives", () => {
+    const mistakes: TrainerStartResponse = { ...start, mode: "mistakes", source_attempt_id: "attempt-1", lives_remaining: 0 };
+    let state = trainerReducer(trainerInitialState, { type: "start", response: mistakes });
+    state = trainerReducer(state, { type: "set_answer", answer: "a" });
+    state = trainerReducer(state, { type: "submit_answer" });
+    expect(state.phase).toBe("awaiting_result");
+  });
 });

@@ -132,14 +132,50 @@ def test_start_uses_authenticated_user_and_returns_public_questions(monkeypatch)
     assert start_session.await_args.kwargs["user_id"] == 42
 
 
-def test_mistakes_mode_is_explicitly_unavailable(monkeypatch):
+def test_mistakes_mode_requires_an_authenticated_source_attempt(monkeypatch):
     client = make_client(monkeypatch)
     response = client.post(
         "/api/diagnostics/trainer/start", json=start_body(mode="mistakes")
     )
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "trainer_mode_not_available"}
+    assert response.json() == {"detail": "trainer_mistakes_source_required"}
+
+
+def test_mistakes_start_uses_only_seeded_private_snapshot_and_public_questions(monkeypatch):
+    from diagnostic.api import trainer
+
+    seed = AsyncMock(return_value=["q1"])
+    start_session = AsyncMock(return_value=(
+        {
+            "trainer_session_id": "A" * 32,
+            "diagnostic_id": "demo-math",
+            "content_version": "a" * 64,
+            "mode": "mistakes",
+            "source_attempt_id": "attempt-1",
+            "question_ids": ["q1"],
+            "current_index": 0,
+            "revision": 1,
+            "status": "active",
+        },
+        {"lives_remaining": 0},
+    ))
+    monkeypatch.setattr(trainer.trainer, "seed_and_list_mistakes", seed)
+    monkeypatch.setattr(trainer.trainer, "start_session", start_session)
+    client = make_client(monkeypatch)
+
+    response = client.post(
+        "/api/diagnostics/trainer/start",
+        json=start_body(mode="mistakes", source_attempt_id="attempt-1"),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source_attempt_id"] == "attempt-1"
+    assert payload["lives_remaining"] == 0
+    assert "correct" not in json.dumps(payload, ensure_ascii=False)
+    assert seed.await_args.kwargs["user_id"] == 42
+    assert start_session.await_args.kwargs["source_attempt_id"] == "attempt-1"
 
 
 @pytest.mark.parametrize(

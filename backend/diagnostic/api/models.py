@@ -60,6 +60,9 @@ class TrainerStartRequest(ApiRequest):
     count: int = Field(ge=1, le=200, strict=True)
     topic: str | None = Field(default=None, min_length=1, max_length=128)
     mode: Literal["normal", "mistakes"] = "normal"
+    source_attempt_id: str | None = Field(
+        default=None, pattern=r"^[A-Za-z0-9_-]{8,48}$"
+    )
 
 
 class TrainerAnswerRequest(ApiRequest):

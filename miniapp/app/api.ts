@@ -542,9 +542,13 @@ export const loadReview = (initData: string, attemptId: string, sessionScope: st
     session_scope: sessionScope,
   });
 
+export type TrainerStartPayload =
+  | { session_scope: string; diagnostic_id: string; count: number; mode: "normal" }
+  | { session_scope: string; diagnostic_id: string; count: number; mode: "mistakes"; source_attempt_id: string };
+
 export const startTrainer = (
   initData: string,
-  payload: { session_scope: string; diagnostic_id: string; count: number; mode: "normal" },
+  payload: TrainerStartPayload,
   fetcher: FetchLike = fetch,
 ) => postDiagnostic<TrainerStartResponse>("/api/diagnostics/trainer/start", initData, payload, fetcher);
 

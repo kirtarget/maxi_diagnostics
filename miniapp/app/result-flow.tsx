@@ -33,12 +33,14 @@ export function ResultScreen({
   pdfStatus,
   onReview,
   onForecast,
+  onReplayMistakes,
 }: {
   result: ServerResult;
   diagnostic: PublicDiagnostic;
   pdfStatus: ReviewResponse["pdf_status"];
   onReview: () => void;
   onForecast: () => void;
+  onReplayMistakes?: () => void;
 }): ReactNode {
   const pdf = pdfStatusCopy(pdfStatus);
   const game = resultGameSummary(result);
@@ -122,6 +124,7 @@ export function ResultScreen({
       </div>
       <div className="result-actions">
         <button className="primary-button" onClick={onReview} type="button">Разобрать ошибки <span aria-hidden="true">→</span></button>
+        {onReplayMistakes && <button className="secondary-button" onClick={onReplayMistakes} type="button">Повторить ошибки</button>}
         <button className="secondary-button" onClick={onForecast} type="button">Прогноз баллов</button>
       </div>
     </section>

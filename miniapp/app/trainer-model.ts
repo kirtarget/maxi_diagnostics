@@ -5,7 +5,8 @@ export type TrainerStartResponse = {
   trainer_session_id: string;
   diagnostic_id: string;
   content_version: string;
-  mode: "normal";
+  mode: TrainerMode;
+  source_attempt_id?: string | null;
   question_ids: string[];
   current_index: number;
   revision: number;
@@ -13,6 +14,8 @@ export type TrainerStartResponse = {
   questions: Question[];
   lives_remaining: number;
 };
+
+export type TrainerMode = "normal" | "mistakes";
 
 export type TrainerAnswerResponse = {
   trainer_session_id: string;
@@ -111,7 +114,7 @@ export function trainerReducer(state: TrainerState, action: TrainerAction): Trai
       return state.phase === "answering" ? { ...state, draftAnswer: action.answer } : state;
     case "submit_answer":
       return state.phase === "answering" && state.session
-        && state.session.lives_remaining > 0
+        && (state.session.mode === "mistakes" || state.session.lives_remaining > 0)
         && isTrainerAnswerComplete(currentQuestion(state)!, state.draftAnswer)
         ? {
           ...state,

@@ -9,6 +9,7 @@ import {
 } from "./api";
 import { gameplayProfileView } from "./gameplay-profile-model";
 import { GameplayHomeScreen } from "./navigation-screens";
+import { ResultScreen } from "./result-flow";
 import { TrainerScreen } from "./trainer-screen";
 import { trainerInitialState, trainerReducer, type TrainerState } from "./trainer-model";
 import type { Question } from "./types";
@@ -66,6 +67,33 @@ describe("trainer integration contracts", () => {
     });
   });
 
+  it("starts mistake replay with the owned attempt id", async () => {
+    const fetcher = fetcherWith({
+      trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
+      mode: "mistakes", source_attempt_id: "attempt-1", question_ids: ["q1"], current_index: 0,
+      revision: 1, status: "active", questions: [question], lives_remaining: 0,
+    });
+    await startTrainer("signed-init-data", {
+      session_scope: "a".repeat(24), diagnostic_id: "math", count: 5,
+      mode: "mistakes", source_attempt_id: "attempt-1",
+    }, fetcher);
+    expect(JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body))).toMatchObject({
+      mode: "mistakes", source_attempt_id: "attempt-1",
+    });
+  });
+
+  it("shows replay errors only when a completed attempt is available", () => {
+    const html = renderToStaticMarkup(<ResultScreen
+      diagnostic={{ exam: "ОГЭ", subject: "Математика" } as never}
+      pdfStatus="sent"
+      result={{ score: 4, max_score: 10, score_unit: "баллов", correct_count: 2, question_count: 4, strong_topics: [], growth_topics: [], unassessed_part: null } as never}
+      onReview={() => undefined}
+      onForecast={() => undefined}
+      onReplayMistakes={() => undefined}
+    />);
+    expect(html).toContain("Повторить ошибки");
+  });
+
   it("exposes safe server conflict details for visible recovery", async () => {
     const fetcher = fetcherWith({ detail: "trainer_content_changed" }, 409);
     await expect(finishTrainer("signed", {
@@ -116,5 +144,21 @@ describe("trainer integration contracts", () => {
     expect(html).toContain("Почти");
     expect(html).toContain("Проверь сложение.");
     expect(html).toContain("Завершить тренировку");
+  });
+
+  it("keeps mistake replay available when the normal life pool is empty", () => {
+    const state = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
+        mode: "mistakes", source_attempt_id: "attempt-1", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [question], lives_remaining: 0,
+      },
+    });
+    const html = renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />);
+    expect(html).toContain("Повтор ошибок");
+    expect(html).not.toContain("Жизни закончились");
+    expect(html).not.toContain("⚡");
+    expect(html).not.toContain('class="answer-option" disabled');
   });
 });

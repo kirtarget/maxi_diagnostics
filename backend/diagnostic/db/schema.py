@@ -190,6 +190,7 @@ CREATE TABLE IF NOT EXISTS diagnostic_trainer_sessions (
     diagnostic_id TEXT NOT NULL,
     content_version TEXT NOT NULL,
     mode TEXT NOT NULL DEFAULT 'normal',
+    source_attempt_id TEXT REFERENCES diagnostic_attempts(attempt_id) ON DELETE CASCADE,
     selected_question_ids JSONB NOT NULL,
     current_index INTEGER NOT NULL DEFAULT 0 CHECK (current_index >= 0),
     revision BIGINT NOT NULL DEFAULT 1 CHECK (revision >= 1),
@@ -200,11 +201,14 @@ CREATE TABLE IF NOT EXISTS diagnostic_trainer_sessions (
     CHECK (session_id ~ '^[A-Za-z0-9_-]{32,64}$'),
     CHECK (content_version ~ '^[0-9a-f]{64}$'),
     CHECK (mode IN ('normal', 'mistakes')),
+    CHECK ((mode = 'mistakes') = (source_attempt_id IS NOT NULL)),
     CHECK (status IN ('active', 'completed', 'exhausted')),
     CHECK (jsonb_typeof(selected_question_ids) = 'array'),
     CHECK (jsonb_array_length(selected_question_ids) BETWEEN 1 AND 200),
     CHECK (status <> 'completed' OR completed_at IS NOT NULL)
 );
+ALTER TABLE diagnostic_trainer_sessions
+    ADD COLUMN IF NOT EXISTS source_attempt_id TEXT REFERENCES diagnostic_attempts(attempt_id) ON DELETE CASCADE;
 CREATE INDEX IF NOT EXISTS idx_diagnostic_trainer_sessions_user_updated
     ON diagnostic_trainer_sessions(user_id, updated_at DESC);
 
@@ -231,6 +235,20 @@ CREATE TABLE IF NOT EXISTS diagnostic_trainer_answers (
 );
 CREATE INDEX IF NOT EXISTS idx_diagnostic_trainer_answers_session_revision
     ON diagnostic_trainer_answers(session_id, revision);
+
+CREATE TABLE IF NOT EXISTS diagnostic_mistakes (
+    user_id BIGINT NOT NULL REFERENCES diagnostic_progress_profiles(user_id) ON DELETE CASCADE,
+    diagnostic_id TEXT NOT NULL,
+    question_id TEXT NOT NULL,
+    source_attempt_id TEXT NOT NULL REFERENCES diagnostic_attempts(attempt_id) ON DELETE CASCADE,
+    source_content_version TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    resolved_at TIMESTAMPTZ,
+    PRIMARY KEY (user_id, diagnostic_id, question_id),
+    CHECK (source_content_version ~ '^[0-9a-f]{64}$')
+);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_mistakes_unresolved
+    ON diagnostic_mistakes(user_id, diagnostic_id, resolved_at, created_at);
 
 CREATE TABLE IF NOT EXISTS diagnostic_progress_events (
     event_id BIGSERIAL PRIMARY KEY,
@@ -360,6 +378,25 @@ BEGIN
             ));
         INSERT INTO diagnostic_schema_migrations(version)
         VALUES ('2026-08-25-kir-92-trainer-v1');
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM diagnostic_schema_migrations
+         WHERE version='2026-08-25-kir-92-mistakes-v1'
+    ) THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+             WHERE conname='diagnostic_trainer_sessions_mode_source_check'
+        ) THEN
+            ALTER TABLE diagnostic_trainer_sessions
+                ADD CONSTRAINT diagnostic_trainer_sessions_mode_source_check
+                CHECK ((mode='mistakes')=(source_attempt_id IS NOT NULL));
+        END IF;
+        INSERT INTO diagnostic_schema_migrations(version)
+        VALUES ('2026-08-25-kir-92-mistakes-v1');
     END IF;
 END $$;
 

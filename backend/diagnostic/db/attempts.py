@@ -194,6 +194,39 @@ async def _record_completion_progress(
         )
 
 
+async def _materialize_mistakes(connection, completion: AttemptCompletion) -> None:
+    """Persist only incorrect entries from the private immutable completion snapshot."""
+    private_items = completion.report_snapshot.get("review_snapshot")
+    if not isinstance(private_items, list):
+        return
+    for item in private_items:
+        if not isinstance(item, dict):
+            continue
+        question_id = item.get("question_id")
+        if (
+            item.get("is_correct") is False
+            and isinstance(question_id, str)
+            and item.get("user_value") is not None
+            and item.get("expected_value") is not None
+        ):
+            await connection.execute(
+                """
+                INSERT INTO diagnostic_mistakes (
+                    user_id, diagnostic_id, question_id,
+                    source_attempt_id, source_content_version
+                ) VALUES ($1,$2,$3,$4,$5)
+                ON CONFLICT (user_id, diagnostic_id, question_id) DO UPDATE
+                   SET source_attempt_id=EXCLUDED.source_attempt_id,
+                       source_content_version=EXCLUDED.source_content_version,
+                       created_at=EXCLUDED.created_at,
+                       resolved_at=NULL
+                 WHERE diagnostic_mistakes.source_attempt_id IS DISTINCT FROM EXCLUDED.source_attempt_id
+                """,
+                completion.user_id, completion.diagnostic_id, question_id,
+                completion.attempt_id, completion.content_version,
+            )
+
+
 async def mark_opened(user_id: int) -> bool:
     pool = await get_pool()
     async with pool.acquire() as connection:
@@ -586,6 +619,11 @@ async def complete_attempt(completion: AttemptCompletion):
                     row["mode"],
                     completion.activity_timezone,
                 )
+                if (
+                    "completed_transition" in set(row.keys())
+                    and row["completed_transition"] is True
+                ):
+                    await _materialize_mistakes(connection, completion)
             stored_mode = row["mode"]
             stored_subject = row["subject"]
             if stored_mode == "full":

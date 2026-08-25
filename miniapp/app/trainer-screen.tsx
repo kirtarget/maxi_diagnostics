@@ -92,18 +92,18 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
   if (!question || !state.session) return null;
   const locked = state.phase !== "answering";
   const livesZero = state.session.lives_remaining <= 0;
-  const canSubmit = isTrainerAnswerComplete(question, state.draftAnswer) && !livesZero;
+  const canSubmit = isTrainerAnswerComplete(question, state.draftAnswer) && (state.session.mode === "mistakes" || !livesZero);
   const isLast = state.currentIndex >= state.session.questions.length;
   const submit = () => {
     dispatch({ type: "submit_answer" });
     if (state.draftAnswer) onAnswer?.(question.id, state.draftAnswer);
   };
   return <section className="screen trainer-screen" aria-labelledby="trainer-title">
-    <div className="question-topline"><span aria-label="Прогресс">{Math.min(questionIndex + 1, state.session.questions.length)} / {state.session.questions.length}</span><strong>⚡ {state.session.lives_remaining}</strong></div>
+    <div className="question-topline"><span aria-label="Прогресс">{Math.min(questionIndex + 1, state.session.questions.length)} / {state.session.questions.length}</span>{state.session.mode === "normal" && <strong>⚡ {state.session.lives_remaining}</strong>}{state.session.mode === "mistakes" && <strong>Повтор ошибок</strong>}</div>
     <div className="question-progress-rail" role="progressbar" aria-valuemin={0} aria-valuemax={state.session.questions.length} aria-valuenow={Math.min(questionIndex + 1, state.session.questions.length)}><span className="question-progress-fill" style={{ width: `${(Math.min(questionIndex + 1, state.session.questions.length) / state.session.questions.length) * 100}%` }} /></div>
     <QuestionPrompt question={question} />
-    <AnswerEditor question={question} value={state.draftAnswer} disabled={locked || livesZero} onChange={(answer) => dispatch({ type: "set_answer", answer })} />
-    {livesZero && state.phase === "answering" && <p role="status">Жизни закончились. Вернись позже.</p>}
+    <AnswerEditor question={question} value={state.draftAnswer} disabled={locked || (state.session.mode === "normal" && livesZero)} onChange={(answer) => dispatch({ type: "set_answer", answer })} />
+    {state.session.mode === "normal" && livesZero && state.phase === "answering" && <p role="status">Жизни закончились. Вернись позже.</p>}
     {state.phase === "feedback" ? <><Feedback state={state} />{isLast ? <button className="primary-button question-next" type="button" onClick={() => { dispatch({ type: "finish_requested" }); onFinish?.(); }}>Завершить тренировку <span aria-hidden="true">→</span></button> : <button className="primary-button question-next" type="button" onClick={() => dispatch({ type: "next_question" })}>Следующий вопрос <span aria-hidden="true">→</span></button>}</> : <button className="primary-button question-next" type="button" disabled={!canSubmit || state.phase === "awaiting_result" || state.phase === "finishing"} onClick={submit}>{state.phase === "awaiting_result" ? "Проверяем…" : "Проверить ответ"}<span aria-hidden="true">→</span></button>}
   </section>;
 }

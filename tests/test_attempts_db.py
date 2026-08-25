@@ -96,6 +96,39 @@ async def test_completion_is_idempotent_and_notification_dedupe_is_unique():
 
 
 @pytest.mark.asyncio
+async def test_idempotent_completion_does_not_materialize_from_retry_snapshot():
+    attempt_id = f"attempt-{uuid4()}"
+    first_snapshot = {
+        "review_snapshot": [{
+            "question_id": "q1", "is_correct": False,
+            "user_value": "B", "expected_value": "A",
+        }]
+    }
+    retry_snapshot = {
+        "review_snapshot": [{
+            "question_id": "q2", "is_correct": False,
+            "user_value": "B", "expected_value": "A",
+        }]
+    }
+    await attempts.complete_attempt(completion(
+        attempt_id, answers={"q1": "B"}, report_snapshot=first_snapshot,
+    ))
+    await attempts.complete_attempt(completion(
+        attempt_id, answers={"q2": "B"}, report_snapshot=retry_snapshot,
+    ))
+
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        mistakes = await connection.fetch(
+            "SELECT question_id FROM diagnostic_mistakes WHERE source_attempt_id=$1",
+            attempt_id,
+        )
+    stored = await attempts.get_review_attempt(attempt_id, 101)
+    assert [row["question_id"] for row in mistakes] == ["q1"]
+    assert stored["report_snapshot"] == first_snapshot
+
+
+@pytest.mark.asyncio
 async def test_completion_progress_profile_is_idempotent_and_accumulates_achievements():
     user_id = 8_050_000_000 + uuid4().int % 100_000_000
     first_attempt = f"attempt-{uuid4()}"

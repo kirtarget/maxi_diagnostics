@@ -73,6 +73,9 @@ def _error(exc: ValueError) -> HTTPException:
         "trainer_revision_stale": 409,
         "trainer_question_out_of_order": 409,
         "trainer_session_not_active": 409,
+        "trainer_mistakes_source_not_found": 404,
+        "trainer_mistakes_source_conflict": 409,
+        "trainer_no_mistakes": 409,
     }.get(str(exc), 409)
     return HTTPException(status_code=status, detail=str(exc))
 
@@ -84,8 +87,6 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
     async def start(body: TrainerStartRequest, request: Request) -> dict[str, Any]:
         user = telegram_user(request, body.init_data)
         await _require_current_session(request, user["id"], body.session_scope)
-        if body.mode != "normal":
-            raise HTTPException(status_code=409, detail="trainer_mode_not_available")
         try:
             diagnostic = catalog.get(body.diagnostic_id)
         except ValueError as exc:
@@ -93,7 +94,26 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
         content_version = catalog.content_version(
             diagnostic.id, request.app.state.settings.application_secret
         )
-        questions = diagnostic.questions
+        source_attempt_id = None
+        if body.mode == "mistakes":
+            if body.source_attempt_id is None:
+                raise HTTPException(status_code=409, detail="trainer_mistakes_source_required")
+            try:
+                question_ids = await trainer.seed_and_list_mistakes(
+                    user_id=user["id"], diagnostic_id=diagnostic.id,
+                    source_attempt_id=body.source_attempt_id,
+                    content_version=content_version,
+                )
+            except ValueError as exc:
+                raise _error(exc) from exc
+            source_attempt_id = body.source_attempt_id
+            questions = tuple(
+                question for question in diagnostic.questions if question.id in question_ids
+            )
+            if not questions:
+                raise HTTPException(status_code=409, detail="trainer_no_mistakes")
+        else:
+            questions = diagnostic.questions
         if body.topic is not None:
             questions = tuple(question for question in questions if question.topic == body.topic)
         if body.count > len(questions):
@@ -108,6 +128,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
                 content_version=content_version,
                 mode=body.mode,
                 selected_question_ids=[question.id for question in selected],
+                source_attempt_id=source_attempt_id,
             )
         except ValueError as exc:
             raise _error(exc) from exc
