@@ -277,6 +277,7 @@ async def test_mistake_replay_wrong_and_correct_are_idempotent_without_life_loss
         revision=1, idempotency_key=key, fingerprint=fingerprint, is_correct=False,
         public_feedback={"correct_answer": "A", "explanation": "retry"},
     ) == wrong
+    await trainer.finish_session(session_id=session_id, user_id=user_id, revision=2)
 
     pool = await get_pool()
     second_session = f"trainer_{uuid4().hex}"
@@ -340,3 +341,93 @@ async def test_new_source_reopens_resolved_mistake_but_same_source_does_not(data
         user_id=user_id, diagnostic_id="math-10", source_attempt_id=second_attempt,
         content_version="a" * 64,
     ) == ["q1"]
+
+
+@pytest.mark.asyncio
+async def test_start_resumes_normal_session_without_mutating_selection(database):
+    user_id = 9_870_000_000 + uuid4().int % 100_000_000
+    first_id, (first, _) = await _start(user_id, count=2)
+
+    resumed, _ = await trainer.start_session(
+        session_id=f"trainer_{uuid4().hex}", user_id=user_id,
+        diagnostic_id="math-10", content_version="a" * 64, mode="normal",
+        selected_question_ids=["different-question"],
+    )
+
+    assert resumed["trainer_session_id"] == first_id
+    assert resumed == first
+
+
+@pytest.mark.asyncio
+async def test_completed_session_is_not_resumed(database):
+    user_id = 9_880_000_000 + uuid4().int % 100_000_000
+    first_id, _ = await _start(user_id)
+    key = "complete-answer"
+    fingerprint = trainer.answer_fingerprint(
+        session_id=first_id, question_id="q0", answer="A", revision=1,
+        idempotency_key=key,
+    )
+    await trainer.answer_question(
+        session_id=first_id, user_id=user_id, question_id="q0", answer="A",
+        revision=1, idempotency_key=key, fingerprint=fingerprint, is_correct=True,
+        public_feedback={"correct_answer": "A", "explanation": "ok"},
+    )
+    await trainer.finish_session(session_id=first_id, user_id=user_id, revision=2)
+
+    second_id, (second, _) = await _start(user_id)
+
+    assert second_id != first_id
+    assert second["status"] == "active"
+
+
+@pytest.mark.asyncio
+async def test_concurrent_matching_starts_create_one_resumable_session(database):
+    user_id = 9_890_000_000 + uuid4().int % 100_000_000
+
+    async def start(index: int):
+        return await trainer.start_session(
+            session_id=f"trainer_{uuid4().hex}", user_id=user_id,
+            diagnostic_id="math-10", content_version="a" * 64, mode="normal",
+            selected_question_ids=[f"q{index}"],
+        )
+
+    first, second = await asyncio.gather(start(0), start(1))
+    assert first[0] == second[0]
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        assert await connection.fetchval(
+            """
+            SELECT count(*) FROM diagnostic_trainer_sessions
+             WHERE user_id=$1 AND diagnostic_id='math-10'
+               AND content_version=$2 AND mode='normal'
+               AND status IN ('active', 'exhausted')
+            """,
+            user_id, "a" * 64,
+        ) == 1
+
+
+@pytest.mark.asyncio
+async def test_matching_mistake_start_resumes_without_reseeding(database):
+    user_id = 9_895_000_000 + uuid4().int % 100_000_000
+    attempt_id = f"attempt-{uuid4()}"
+    await _source_attempt(user_id, attempt_id, snapshot={
+        "review_snapshot": [{
+            "question_id": "q1", "is_correct": False,
+            "user_value": "B", "expected_value": "A",
+        }],
+    })
+    await trainer.seed_and_list_mistakes(
+        user_id=user_id, diagnostic_id="math-10", source_attempt_id=attempt_id,
+        content_version="a" * 64,
+    )
+    first, _ = await trainer.start_session(
+        session_id=f"trainer_{uuid4().hex}", user_id=user_id,
+        diagnostic_id="math-10", content_version="a" * 64, mode="mistakes",
+        source_attempt_id=attempt_id, selected_question_ids=["q1"],
+    )
+    second, _ = await trainer.start_session(
+        session_id=f"trainer_{uuid4().hex}", user_id=user_id,
+        diagnostic_id="math-10", content_version="a" * 64, mode="mistakes",
+        source_attempt_id=attempt_id, selected_question_ids=["q2"],
+    )
+    assert second["trainer_session_id"] == first["trainer_session_id"]

@@ -37,10 +37,17 @@ def signed_init_data(user_id: int = 42, *, valid: bool = True) -> str:
 
 def make_client(monkeypatch, *, generation: str = SESSION_GENERATION) -> TestClient:
     from diagnostic.api import sessions
+    from diagnostic.api import trainer
     from diagnostic.api.main import create_app
 
     monkeypatch.setattr(
         sessions, "get_session_generation", AsyncMock(return_value=generation)
+    )
+    monkeypatch.setattr(
+        trainer.trainer, "get_resumable_session", AsyncMock(return_value=None)
+    )
+    monkeypatch.setattr(
+        trainer.trainer, "validate_mistakes_source", AsyncMock()
     )
     settings = Settings(
         "postgresql://unused", "token", "https://app.example",
@@ -132,6 +139,40 @@ def test_start_uses_authenticated_user_and_returns_public_questions(monkeypatch)
     assert start_session.await_args.kwargs["user_id"] == 42
 
 
+def test_start_resumes_for_authenticated_owner_and_ignores_new_selection(monkeypatch):
+    from diagnostic.api import trainer
+
+    resumable = AsyncMock(return_value=(
+        {
+            "trainer_session_id": "A" * 32,
+            "diagnostic_id": "demo-math",
+            "content_version": "a" * 64,
+            "mode": "normal",
+            "question_ids": ["q1"],
+            "current_index": 1,
+            "revision": 2,
+            "status": "exhausted",
+        },
+        {"lives_remaining": 4},
+    ))
+    start_session = AsyncMock()
+    client = make_client(monkeypatch)
+    monkeypatch.setattr(trainer.trainer, "get_resumable_session", resumable)
+    monkeypatch.setattr(trainer.trainer, "start_session", start_session)
+
+    response = client.post(
+        "/api/diagnostics/trainer/start",
+        json=start_body(count=5, topic="missing-topic"),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["trainer_session_id"] == "A" * 32
+    assert response.json()["current_index"] == 1
+    assert response.json()["status"] == "exhausted"
+    assert not start_session.await_args_list
+    assert resumable.await_args.kwargs["user_id"] == 42
+
+
 def test_mistakes_mode_requires_an_authenticated_source_attempt(monkeypatch):
     client = make_client(monkeypatch)
     response = client.post(
@@ -176,6 +217,41 @@ def test_mistakes_start_uses_only_seeded_private_snapshot_and_public_questions(m
     assert "correct" not in json.dumps(payload, ensure_ascii=False)
     assert seed.await_args.kwargs["user_id"] == 42
     assert start_session.await_args.kwargs["source_attempt_id"] == "attempt-1"
+
+
+def test_mistakes_resume_validates_source_without_reseeding(monkeypatch):
+    from diagnostic.api import trainer
+
+    validate = AsyncMock()
+    resumable = AsyncMock(return_value=(
+        {
+            "trainer_session_id": "A" * 32,
+            "diagnostic_id": "demo-math",
+            "content_version": "a" * 64,
+            "mode": "mistakes",
+            "source_attempt_id": "attempt-1",
+            "question_ids": ["q1"],
+            "current_index": 0,
+            "revision": 1,
+            "status": "active",
+        },
+        {"lives_remaining": 5},
+    ))
+    seed = AsyncMock()
+    client = make_client(monkeypatch)
+    monkeypatch.setattr(trainer.trainer, "validate_mistakes_source", validate)
+    monkeypatch.setattr(trainer.trainer, "get_resumable_session", resumable)
+    monkeypatch.setattr(trainer.trainer, "seed_and_list_mistakes", seed)
+
+    response = client.post(
+        "/api/diagnostics/trainer/start",
+        json=start_body(mode="mistakes", source_attempt_id="attempt-1"),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["trainer_session_id"] == "A" * 32
+    assert validate.await_args.kwargs["user_id"] == 42
+    assert not seed.await_args_list
 
 
 @pytest.mark.parametrize(

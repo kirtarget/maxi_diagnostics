@@ -105,7 +105,7 @@ export function trainerReducer(state: TrainerState, action: TrainerAction): Trai
     case "start":
       return {
         ...trainerInitialState,
-        phase: action.response.status === "completed" ? "completed" : "answering",
+        phase: action.response.status === "completed" ? "completed" : action.response.status === "exhausted" ? "finishing" : "answering",
         session: action.response,
         currentIndex: action.response.current_index,
         answeredQuestionIndex: null,

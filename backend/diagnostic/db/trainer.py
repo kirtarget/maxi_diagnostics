@@ -172,6 +172,84 @@ async def seed_and_list_mistakes(
     return [row["question_id"] for row in rows]
 
 
+async def validate_mistakes_source(
+    *, user_id: int, diagnostic_id: str, source_attempt_id: str,
+    content_version: str,
+) -> None:
+    """Check mistake source ownership without changing the mistake ledger."""
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        async with connection.transaction():
+            await connection.execute("SELECT pg_advisory_xact_lock($1)", user_id)
+            await _raise_if_erased(connection, user_id)
+            source = await connection.fetchrow(
+                """
+                SELECT diagnostic_id, content_version, status
+                  FROM diagnostic_attempts
+                 WHERE attempt_id=$1 AND user_id=$2
+                """,
+                source_attempt_id,
+                user_id,
+            )
+            if source is None or source["status"] != "completed":
+                raise ValueError("trainer_mistakes_source_not_found")
+            if source["diagnostic_id"] != diagnostic_id:
+                raise ValueError("trainer_mistakes_source_conflict")
+            if source["content_version"] != content_version:
+                raise ValueError("trainer_content_changed")
+
+
+async def _find_resumable_session(
+    connection, *, user_id: int, diagnostic_id: str, content_version: str,
+    mode: str, source_attempt_id: str | None,
+):
+    return await connection.fetchrow(
+        """
+        SELECT session_id, diagnostic_id, content_version, mode,
+               source_attempt_id,
+               selected_question_ids, current_index, revision, status,
+               started_at, updated_at, completed_at
+          FROM diagnostic_trainer_sessions
+         WHERE user_id=$1 AND diagnostic_id=$2 AND content_version=$3
+           AND mode=$4
+           AND source_attempt_id IS NOT DISTINCT FROM $5
+           AND status IN ('active', 'exhausted')
+         ORDER BY updated_at DESC, started_at DESC
+         LIMIT 1
+         FOR UPDATE
+        """,
+        user_id,
+        diagnostic_id,
+        content_version,
+        mode,
+        source_attempt_id,
+    )
+
+
+async def get_resumable_session(
+    *, user_id: int, diagnostic_id: str, content_version: str,
+    mode: str, source_attempt_id: str | None = None,
+) -> tuple[dict[str, Any], Mapping[str, Any]] | None:
+    """Return the owner's active or exhausted session for this stable scope."""
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        async with connection.transaction():
+            await connection.execute("SELECT pg_advisory_xact_lock($1)", user_id)
+            await _raise_if_erased(connection, user_id)
+            profile = await gameplay.get_reconciled_profile(connection, user_id)
+            row = await _find_resumable_session(
+                connection,
+                user_id=user_id,
+                diagnostic_id=diagnostic_id,
+                content_version=content_version,
+                mode=mode,
+                source_attempt_id=source_attempt_id,
+            )
+    if row is None:
+        return None
+    return _session_payload(row), profile
+
+
 async def start_session(
     *, session_id: str, user_id: int, diagnostic_id: str, content_version: str,
     mode: str, selected_question_ids: list[str], source_attempt_id: str | None = None,
@@ -182,6 +260,16 @@ async def start_session(
             await connection.execute("SELECT pg_advisory_xact_lock($1)", user_id)
             await _raise_if_erased(connection, user_id)
             profile = await gameplay.get_reconciled_profile(connection, user_id)
+            existing = await _find_resumable_session(
+                connection,
+                user_id=user_id,
+                diagnostic_id=diagnostic_id,
+                content_version=content_version,
+                mode=mode,
+                source_attempt_id=source_attempt_id,
+            )
+            if existing is not None:
+                return _session_payload(existing), profile
             row = await connection.fetchrow(
                 """
                 INSERT INTO diagnostic_trainer_sessions (

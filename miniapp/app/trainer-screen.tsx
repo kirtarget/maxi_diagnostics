@@ -1,6 +1,6 @@
 "use client";
 
-import type { Dispatch, ReactNode } from "react";
+import { useEffect, useRef, type Dispatch, type ReactNode } from "react";
 import type { AnswerValue, InputQuestion, MatchingQuestion, MultipleQuestion, Question } from "./types";
 import {
   isTrainerAnswerComplete,
@@ -79,8 +79,16 @@ function Feedback({ state }: { state: TrainerState }) {
 }
 
 export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onRetry }: TrainerScreenProps) {
+  const autoFinishKey = `${state.session?.trainer_session_id ?? ""}:${state.session?.revision ?? ""}`;
+  const autoFinishedKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (state.phase !== "finishing" || !state.session || autoFinishedKey.current === autoFinishKey) return;
+    autoFinishedKey.current = autoFinishKey;
+    onFinish?.();
+  }, [autoFinishKey, onFinish, state.phase, state.session]);
   if (state.phase === "idle") return <section className="screen trainer-screen"><p>Тренажёр готовится.</p></section>;
   if (state.phase === "error") return <section className="screen trainer-screen" role="alert"><h1>Не удалось продолжить</h1><p>{state.error}</p><button className="primary-button" type="button" onClick={() => { dispatch({ type: "retry" }); onRetry?.(); }}>Повторить</button></section>;
+  if (state.phase === "finishing") return <section className="screen trainer-screen" aria-live="polite"><p>Завершаем тренировку…</p></section>;
   if (state.phase === "completed") {
     const result = state.finishResult;
     return <section className="screen trainer-screen trainer-complete" aria-labelledby="trainer-complete-title"><span className="state-code">Готово</span><h1 id="trainer-complete-title">Тренировка завершена</h1>{result && <p>{result.correct_count} из {result.question_count} верно · +{result.xp_earned} XP</p>}<p>Результат сохранён на сервере.</p><button className="primary-button" type="button" onClick={onHome}>На главную <span aria-hidden="true">→</span></button></section>;
@@ -104,7 +112,7 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
     <QuestionPrompt question={question} />
     <AnswerEditor question={question} value={state.draftAnswer} disabled={locked || (state.session.mode === "normal" && livesZero)} onChange={(answer) => dispatch({ type: "set_answer", answer })} />
     {state.session.mode === "normal" && livesZero && state.phase === "answering" && <p role="status">Жизни закончились. Вернись позже.</p>}
-    {state.phase === "feedback" ? <><Feedback state={state} />{isLast ? <button className="primary-button question-next" type="button" onClick={() => { dispatch({ type: "finish_requested" }); onFinish?.(); }}>Завершить тренировку <span aria-hidden="true">→</span></button> : <button className="primary-button question-next" type="button" onClick={() => dispatch({ type: "next_question" })}>Следующий вопрос <span aria-hidden="true">→</span></button>}</> : <button className="primary-button question-next" type="button" disabled={!canSubmit || state.phase === "awaiting_result" || state.phase === "finishing"} onClick={submit}>{state.phase === "awaiting_result" ? "Проверяем…" : "Проверить ответ"}<span aria-hidden="true">→</span></button>}
+    {state.phase === "feedback" ? <><Feedback state={state} />{isLast ? <button className="primary-button question-next" type="button" onClick={() => { dispatch({ type: "finish_requested" }); onFinish?.(); }}>Завершить тренировку <span aria-hidden="true">→</span></button> : <button className="primary-button question-next" type="button" onClick={() => dispatch({ type: "next_question" })}>Следующий вопрос <span aria-hidden="true">→</span></button>}</> : <button className="primary-button question-next" type="button" disabled={!canSubmit || state.phase === "awaiting_result"} onClick={submit}>{state.phase === "awaiting_result" ? "Проверяем…" : "Проверить ответ"}<span aria-hidden="true">→</span></button>}
   </section>;
 }
 

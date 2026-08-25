@@ -95,43 +95,88 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
             diagnostic.id, request.app.state.settings.application_secret
         )
         source_attempt_id = None
+        resumable = None
         if body.mode == "mistakes":
             if body.source_attempt_id is None:
                 raise HTTPException(status_code=409, detail="trainer_mistakes_source_required")
+            source_attempt_id = body.source_attempt_id
             try:
-                question_ids = await trainer.seed_and_list_mistakes(
+                await trainer.validate_mistakes_source(
                     user_id=user["id"], diagnostic_id=diagnostic.id,
-                    source_attempt_id=body.source_attempt_id,
+                    source_attempt_id=source_attempt_id,
                     content_version=content_version,
+                )
+                resumable = await trainer.get_resumable_session(
+                    user_id=user["id"], diagnostic_id=diagnostic.id,
+                    content_version=content_version, mode=body.mode,
+                    source_attempt_id=source_attempt_id,
                 )
             except ValueError as exc:
                 raise _error(exc) from exc
-            source_attempt_id = body.source_attempt_id
-            questions = tuple(
-                question for question in diagnostic.questions if question.id in question_ids
-            )
-            if not questions:
-                raise HTTPException(status_code=409, detail="trainer_no_mistakes")
+            if resumable is None:
+                try:
+                    question_ids = await trainer.seed_and_list_mistakes(
+                        user_id=user["id"], diagnostic_id=diagnostic.id,
+                        source_attempt_id=source_attempt_id,
+                        content_version=content_version,
+                    )
+                except ValueError as exc:
+                    raise _error(exc) from exc
+                questions = tuple(
+                    question for question in diagnostic.questions if question.id in question_ids
+                )
+                if not questions:
+                    raise HTTPException(status_code=409, detail="trainer_no_mistakes")
+            else:
+                questions = tuple(
+                    question for question in diagnostic.questions
+                    if question.id in resumable[0]["question_ids"]
+                )
         else:
-            questions = diagnostic.questions
-        if body.topic is not None:
-            questions = tuple(question for question in questions if question.topic == body.topic)
-        if body.count > len(questions):
-            raise HTTPException(status_code=422, detail="trainer_not_enough_questions")
-        selected = list(questions[: body.count])
+            try:
+                resumable = await trainer.get_resumable_session(
+                    user_id=user["id"], diagnostic_id=diagnostic.id,
+                    content_version=content_version, mode=body.mode,
+                )
+            except ValueError as exc:
+                raise _error(exc) from exc
+            if resumable is not None:
+                questions = tuple(
+                    question for question in diagnostic.questions
+                    if question.id in resumable[0]["question_ids"]
+                )
+            else:
+                questions = diagnostic.questions
+                if body.topic is not None:
+                    questions = tuple(question for question in questions if question.topic == body.topic)
+                if body.count > len(questions):
+                    raise HTTPException(status_code=422, detail="trainer_not_enough_questions")
+        selected = list(questions if resumable is not None else questions[: body.count])
+        if not selected:
+            raise HTTPException(status_code=409, detail="trainer_content_changed")
         session_id = secrets.token_urlsafe(24)
-        try:
-            session, profile = await trainer.start_session(
-                session_id=session_id,
-                user_id=user["id"],
-                diagnostic_id=diagnostic.id,
-                content_version=content_version,
-                mode=body.mode,
-                selected_question_ids=[question.id for question in selected],
-                source_attempt_id=source_attempt_id,
-            )
-        except ValueError as exc:
-            raise _error(exc) from exc
+        if resumable is None:
+            try:
+                session, profile = await trainer.start_session(
+                    session_id=session_id,
+                    user_id=user["id"],
+                    diagnostic_id=diagnostic.id,
+                    content_version=content_version,
+                    mode=body.mode,
+                    selected_question_ids=[question.id for question in selected],
+                    source_attempt_id=source_attempt_id,
+                )
+            except ValueError as exc:
+                raise _error(exc) from exc
+        else:
+            session, profile = resumable
+        session_question_ids = set(session.get("question_ids", ()))
+        selected = [
+            question for question in diagnostic.questions
+            if question.id in session_question_ids
+        ]
+        if not selected:
+            raise HTTPException(status_code=409, detail="trainer_content_changed")
         return {
             "ok": True,
             **session,

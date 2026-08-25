@@ -82,6 +82,35 @@ describe("trainer integration contracts", () => {
     });
   });
 
+  it("finishes an exhausted resume and exposes the completed summary", async () => {
+    const fetcher = vi.fn<typeof fetch>();
+    fetcher.mockResolvedValueOnce(new Response(JSON.stringify({
+      trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
+      mode: "normal", question_ids: [], current_index: 0, revision: 7,
+      status: "exhausted", questions: [], lives_remaining: 3,
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    fetcher.mockResolvedValueOnce(new Response(JSON.stringify({
+      trainer_session_id: "s".repeat(32), status: "completed", revision: 8, current_index: 0,
+      question_count: 0, answered_count: 0, correct_count: 0, xp_earned: 0, lives_spent: 0, lives_remaining: 3,
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const started = await startTrainer("signed", {
+      session_scope: "r".repeat(24), diagnostic_id: "math", count: 5, mode: "normal",
+    }, fetcher);
+    let state = trainerReducer(trainerInitialState, { type: "start", response: started });
+    expect(state.phase).toBe("finishing");
+    expect(renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />)).toContain("Завершаем тренировку");
+    const finished = await finishTrainer("signed", {
+      session_scope: "r".repeat(24), trainer_session_id: started.trainer_session_id, revision: started.revision,
+    }, fetcher);
+    state = trainerReducer(state, { type: "finish_result", response: finished });
+
+    expect(state.phase).toBe("completed");
+    expect(state.finishResult).toMatchObject({ question_count: 0, answered_count: 0, correct_count: 0 });
+    expect(JSON.parse(String(fetcher.mock.calls[1]?.[1]?.body))).toMatchObject({
+      trainer_session_id: started.trainer_session_id, revision: 7,
+    });
+  });
+
   it("shows replay errors only when a completed attempt is available", () => {
     const html = renderToStaticMarkup(<ResultScreen
       diagnostic={{ exam: "ОГЭ", subject: "Математика" } as never}
