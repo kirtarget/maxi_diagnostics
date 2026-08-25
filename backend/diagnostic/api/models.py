@@ -95,6 +95,26 @@ class TrainerFinishRequest(ApiRequest):
     revision: int = Field(ge=1, le=100000, strict=True)
 
 
+class OfferEventRequest(ApiRequest):
+    session_scope: str = Field(pattern=r"^[0-9a-f]{24}$")
+    event_id: str = Field(
+        min_length=16,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9_-]{16,128}$",
+    )
+    placement: str = Field(
+        min_length=1,
+        max_length=32,
+        pattern=r"^[a-z][a-z0-9_-]{0,31}$",
+    )
+    offer_id: str = Field(
+        min_length=1,
+        max_length=32,
+        pattern=r"^[a-z0-9][a-z0-9_-]{0,31}$",
+    )
+    event_type: Literal["impression", "click", "dismiss"]
+
+
 def _validate_answers_size(answers: dict[str, Any]) -> None:
     try:
         encoded = json.dumps(answers, ensure_ascii=False, separators=(",", ":")).encode("utf-8")

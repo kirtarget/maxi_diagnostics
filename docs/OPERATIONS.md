@@ -102,3 +102,13 @@ purges. Keep backup directories private, copy complete dump/checksum/manifest se
 protected off-server storage, and delete expired sets according to the school's
 approved retention policy. A practical default is 30 daily copies plus 12 monthly
 copies, subject to the school's legal and recovery requirements.
+
+Offer telemetry is a bounded, best-effort internal signal. The Mini App sends only a
+client event identifier, a configured placement, an offer identifier, and one of
+`impression`, `click`, or `dismiss`. The API validates the offer against the current
+`school/links.json`, timestamps the event on the server, and never stores `initData`,
+Telegram profile data, URLs, answers, correct answers, reports, or arbitrary metadata.
+Event identifiers are idempotent. Reusing one with different content is rejected.
+Events are rate-limited per installation-local pseudonymous subject and purged after
+90 days. User erasure removes events for that subject hash in the same transaction.
+Delivery is best effort and no business decision may depend on an event arriving.

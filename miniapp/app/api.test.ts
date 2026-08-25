@@ -6,6 +6,7 @@ import {
   loadReview,
   loadLocalSession,
   postDiagnostic,
+  recordOfferEvent,
   reconcileRestoredSession,
   restoreBootstrapSession,
   saveLocalSession,
@@ -270,6 +271,36 @@ describe("diagnostic API payloads", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it("records only the allowlisted offer event fields", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+
+    await recordOfferEvent("signed-init-data", {
+      session_scope: "scope",
+      event_id: "event-1",
+      placement: "home",
+      offer_id: "exam-preparation",
+      event_type: "impression",
+    }, fetcher);
+
+    expect(fetcher).toHaveBeenCalledWith("/api/diagnostics/offer-events", expect.objectContaining({
+      body: JSON.stringify({
+        init_data: "signed-init-data",
+        session_scope: "scope",
+        event_id: "event-1",
+        placement: "home",
+        offer_id: "exam-preparation",
+        event_type: "impression",
+      }),
+    }));
+    const body = JSON.parse(String(fetcher.mock.calls[0][1]?.body));
+    expect(body).not.toHaveProperty("url");
+    expect(body).not.toHaveProperty("answers");
+    expect(body).not.toHaveProperty("results");
   });
 
   it("honors Retry-After before retrying a shared-NAT rate limit", async () => {

@@ -19,6 +19,7 @@ from diagnostic.settings import Settings
 
 from .sessions import create_router, prepare_report_assets
 from .league import create_league_router
+from .offer_events import create_offer_events_router
 from .trainer import create_trainer_router
 
 
@@ -79,6 +80,7 @@ def create_app(
 
     app.include_router(create_router(catalog))
     app.include_router(create_league_router())
+    app.include_router(create_offer_events_router())
     app.include_router(create_trainer_router(catalog))
     install_admin(app)
     return app

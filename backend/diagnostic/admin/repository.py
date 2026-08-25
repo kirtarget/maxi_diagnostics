@@ -167,6 +167,10 @@ async def delete_diagnostic_user(
             await connection.execute(
                 "DELETE FROM diagnostic_progress_events WHERE user_id=$1", user_id
             )
+            offer_events = await connection.execute(
+                "DELETE FROM diagnostic_offer_events WHERE subject_hash=$1",
+                session_subject_key,
+            )
             await connection.execute(
                 # Trainer sessions reference the profile with ON DELETE CASCADE.
                 # Deleting the profile here therefore erases trainer answers and
@@ -177,4 +181,5 @@ async def delete_diagnostic_user(
         "notifications": _delete_count(notifications),
         "attempts": _delete_count(attempts),
         "engagements": _delete_count(engagements),
+        "offer_events": _delete_count(offer_events),
     }

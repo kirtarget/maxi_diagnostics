@@ -1066,6 +1066,15 @@ select:focus-visible,
 .gameplay-path-arrow { color: var(--brand-signal); font-size: 20px; }
 .gameplay-path-note { margin: -8px 0 0; color: color-mix(in srgb, var(--brand-paper) 58%, transparent); font-size: 12px; }
 .gameplay-profile-card { display: grid; grid-template-columns: 38px minmax(0, 1fr) 22px; align-items: center; gap: 10px; min-height: 68px; padding: 12px; border: 1px solid color-mix(in srgb, var(--brand-primary) 44%, transparent); border-radius: 14px; color: var(--brand-paper); background: color-mix(in srgb, var(--brand-primary) 18%, transparent); text-align: left; cursor: pointer; }
+.offer-surface { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; margin-top: 14px; padding: 16px; border: 1px solid color-mix(in srgb, var(--brand-signal) 42%, transparent); border-radius: 18px; color: var(--brand-paper); background: linear-gradient(145deg, color-mix(in srgb, var(--brand-primary) 34%, var(--brand-ink)), color-mix(in srgb, var(--brand-ink) 92%, #000)); box-shadow: 0 12px 28px rgb(0 0 0 / 16%); }
+.offer-surface-close { position: absolute; top: 8px; right: 8px; display: grid; width: 34px; height: 34px; place-items: center; border: 0; border-radius: 50%; color: color-mix(in srgb, var(--brand-paper) 78%, transparent); background: color-mix(in srgb, var(--brand-paper) 10%, transparent); font-size: 22px; line-height: 1; cursor: pointer; }
+.offer-surface-close:focus-visible, .offer-surface a:focus-visible { outline: 3px solid var(--brand-signal); outline-offset: 3px; }
+.offer-surface-image { width: 64px; height: 64px; border-radius: 14px; object-fit: cover; }
+.offer-surface-copy { display: grid; gap: 6px; padding-right: 24px; }
+.offer-surface-label { color: var(--brand-signal); font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.offer-surface h2 { margin: 0; font-size: 18px; line-height: 1.08; }
+.offer-surface p { margin: 0; color: color-mix(in srgb, var(--brand-paper) 72%, transparent); font-size: 12px; line-height: 1.4; }
+.offer-surface a { justify-self: start; min-height: 40px; padding: 10px 0; color: var(--brand-signal); font-size: 13px; font-weight: 900; text-decoration: none; }
 .gameplay-profile-card strong,
 .gameplay-profile-card small { display: block; }
 .gameplay-profile-card small { margin-top: 4px; color: color-mix(in srgb, var(--brand-paper) 62%, transparent); font-size: 11px; line-height: 1.35; }

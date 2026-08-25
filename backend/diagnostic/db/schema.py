@@ -305,6 +305,32 @@ CREATE TABLE IF NOT EXISTS diagnostic_engagements (
 CREATE INDEX IF NOT EXISTS idx_diagnostic_engagements_retention
     ON diagnostic_engagements(last_opened_at);
 
+CREATE TABLE IF NOT EXISTS diagnostic_offer_events (
+    event_id TEXT PRIMARY KEY,
+    subject_hash TEXT NOT NULL,
+    placement TEXT NOT NULL,
+    offer_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    fingerprint TEXT NOT NULL,
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT diagnostic_offer_events_id_length
+        CHECK (length(event_id) BETWEEN 16 AND 128),
+    CONSTRAINT diagnostic_offer_events_subject_hash_shape
+        CHECK (subject_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT diagnostic_offer_events_placement_shape
+        CHECK (placement ~ '^[a-z][a-z0-9_-]{0,31}$'),
+    CONSTRAINT diagnostic_offer_events_offer_id_shape
+        CHECK (offer_id ~ '^[a-z0-9][a-z0-9_-]{0,31}$'),
+    CONSTRAINT diagnostic_offer_events_type_check
+        CHECK (event_type IN ('impression', 'click', 'dismiss')),
+    CONSTRAINT diagnostic_offer_events_fingerprint_shape
+        CHECK (fingerprint ~ '^[0-9a-f]{64}$')
+);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_offer_events_subject_time
+    ON diagnostic_offer_events(subject_hash, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_offer_events_retention
+    ON diagnostic_offer_events(occurred_at);
+
 CREATE TABLE IF NOT EXISTS diagnostic_notifications (
     id BIGSERIAL PRIMARY KEY,
     dedupe_key TEXT NOT NULL UNIQUE,

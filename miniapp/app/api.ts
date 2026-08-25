@@ -582,3 +582,17 @@ export const finishTrainer = (
   payload: { session_scope: string; trainer_session_id: string; revision: number },
   fetcher: FetchLike = fetch,
 ) => postDiagnostic<TrainerFinishResponse>("/api/diagnostics/trainer/finish", initData, payload, fetcher);
+
+export type OfferEventPayload = {
+  session_scope: string;
+  event_id: string;
+  placement: "home" | "diagnostic_result" | "trainer";
+  offer_id: string;
+  event_type: "impression" | "click" | "dismiss";
+};
+
+export const recordOfferEvent = (
+  initData: string,
+  payload: OfferEventPayload,
+  fetcher: FetchLike = fetch,
+) => postDiagnostic<{ ok: true }>("/api/diagnostics/offer-events", initData, payload, fetcher);

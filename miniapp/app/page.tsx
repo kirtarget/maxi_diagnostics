@@ -15,6 +15,7 @@ import {
   loadReview,
   loadWeeklyLeague,
   markResultViewed,
+  recordOfferEvent,
   restoreBootstrapSession,
   saveLocalSession,
   updateNumericInputAnswer,
@@ -40,6 +41,7 @@ import { TrainerScreen } from "./trainer-screen";
 import { trainerInitialState, trainerReducer } from "./trainer-model";
 import { LeagueScreen } from "./league-screen";
 import type { LeagueScreenState } from "./league-model";
+import type { OfferTelemetryEvent } from "./offer-ux";
 import type {
   AnswerMap,
   AnswerValue,
@@ -129,6 +131,7 @@ export default function Home() {
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [trainerState, dispatchTrainer] = useReducer(trainerReducer, trainerInitialState);
   const [leagueState, setLeagueState] = useState<LeagueScreenState>({ kind: "loading" });
+  const [offerDismissed, setOfferDismissed] = useState(false);
   const initData = useRef("");
   const progressRevision = useRef(0);
   const syncedQuestionIndex = useRef(0);
@@ -215,6 +218,16 @@ export default function Home() {
   );
   const brand = bootstrap?.school.brand;
   const sessionScope = bootstrap?.session_scope;
+  const handleOfferEvent = useCallback((event: OfferTelemetryEvent) => {
+    if (!sessionScope || !initData.current) return;
+    void recordOfferEvent(initData.current, {
+      session_scope: sessionScope,
+      event_id: event.event_id,
+      placement: event.placement,
+      offer_id: event.offer_id,
+      event_type: event.action,
+    }).catch(() => undefined);
+  }, [sessionScope]);
 
   const refreshReview = useCallback(async () => {
     if (!sessionScope || !initData.current) return null;
@@ -660,6 +673,10 @@ export default function Home() {
           onStartTrainer={() => void runTrainerStart(bootstrap.diagnostics[0]?.id ?? "")}
           onOpenProfile={() => setScreen("profile")}
           onOpenLeague={() => void openLeague()}
+          offers={bootstrap.school.links.offers}
+          onOfferEvent={handleOfferEvent}
+          offerDismissed={offerDismissed}
+          onOfferDismiss={() => setOfferDismissed(true)}
         />
       )}
 

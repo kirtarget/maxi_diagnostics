@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { normalizeOffer, OfferSurface, type OfferTelemetryEvent } from "./offer-ux";
 import { subjectIconKind, type SubjectIconKind } from "./subject-illustration";
 import type { GameplayProfileView } from "./gameplay-profile-model";
 import type {
@@ -22,6 +24,10 @@ export type GameplayHomeScreenProps = {
   onStartTrainer?: () => void;
   onOpenProfile: () => void;
   onOpenLeague?: () => void;
+  offers?: SchoolLinks["offers"];
+  onOfferEvent?: (event: OfferTelemetryEvent) => void;
+  offerDismissed?: boolean;
+  onOfferDismiss?: () => void;
 };
 
 export function GameplayHomeScreen({
@@ -32,7 +38,12 @@ export function GameplayHomeScreen({
   onStartTrainer,
   onOpenProfile,
   onOpenLeague,
+  offers = [],
+  onOfferEvent,
+  offerDismissed = false,
+  onOfferDismiss,
 }: GameplayHomeScreenProps) {
+  const offer = useMemo(() => normalizeOffer(offers[0] ?? {}), [offers]);
   const subjects = [...new Set(diagnostics.map((item) => item.subject))];
   const pathItems = diagnostics.slice(0, 3);
   const firstSubject = subjects[0] ?? "предмет";
@@ -74,6 +85,14 @@ export function GameplayHomeScreen({
           <button className="secondary-button gameplay-league-cta" onClick={onOpenLeague} type="button">
             Лига недели <span aria-hidden="true">🏆</span>
           </button>
+        )}
+        {offer && !offerDismissed && (
+          <OfferSurface
+            offer={offer}
+            placement="home"
+            onClose={onOfferDismiss ?? (() => undefined)}
+            onEvent={onOfferEvent}
+          />
         )}
       </div>
 

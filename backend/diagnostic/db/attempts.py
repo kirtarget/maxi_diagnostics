@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import Any, Literal
 
 from diagnostic.db.core import get_pool
-from diagnostic.db import gameplay
+from diagnostic.db import gameplay, offer_events
 from diagnostic.session_identity import new_session_generation, session_subject_key
 
 
@@ -1016,6 +1016,7 @@ async def purge_retained_diagnostic_data(
                 diagnostic_retention_days,
             )
             counts["deleted_bundles"] = int(status.rsplit(" ", 1)[-1])
+            await offer_events.purge_offer_events(connection)
     return counts
 
 
