@@ -168,6 +168,9 @@ async def delete_diagnostic_user(
                 "DELETE FROM diagnostic_progress_events WHERE user_id=$1", user_id
             )
             await connection.execute(
+                # Trainer sessions reference the profile with ON DELETE CASCADE.
+                # Deleting the profile here therefore erases trainer answers and
+                # sessions in the same transaction without leaving private payloads.
                 "DELETE FROM diagnostic_progress_profiles WHERE user_id=$1", user_id
             )
     return {

@@ -1,5 +1,6 @@
 import type {
   AnswerMap,
+  AnswerValue,
   BootstrapResponse,
   CompletionResponse,
   DiagnosticMode,
@@ -8,6 +9,11 @@ import type {
   SavedSession,
   ServerAttempt,
 } from "./types";
+import type {
+  TrainerAnswerResponse,
+  TrainerFinishResponse,
+  TrainerStartResponse,
+} from "./trainer-model";
 import {
   isValidNumericInput,
   updateMatchingAnswer,
@@ -29,6 +35,12 @@ type ProgressSaveState = "saving" | "saved" | "error";
 
 export function isConflictError(error: unknown): boolean {
   return error instanceof Error && error.message === "diagnostic_api_409";
+}
+
+export function apiErrorDetail(error: unknown): string | null {
+  if (!(error instanceof Error)) return null;
+  const detail = (error as Error & { detail?: unknown }).detail;
+  return typeof detail === "string" ? detail : null;
 }
 
 export type ProgressPayload = {
@@ -470,6 +482,14 @@ export async function postDiagnostic<T>(
       });
       if (!response.ok) {
         const error = new Error(`diagnostic_api_${response.status}`);
+        try {
+          const body = await response.clone().json() as { detail?: unknown };
+          if (typeof body.detail === "string") {
+            (error as Error & { detail?: string }).detail = body.detail;
+          }
+        } catch {
+          // Keep the stable status error when the response has no JSON body.
+        }
         if (response.status < 500 && response.status !== 429) throw error;
         lastError = error;
         if (response.status === 429) {
@@ -521,3 +541,28 @@ export const loadReview = (initData: string, attemptId: string, sessionScope: st
     attempt_id: attemptId,
     session_scope: sessionScope,
   });
+
+export const startTrainer = (
+  initData: string,
+  payload: { session_scope: string; diagnostic_id: string; count: number; mode: "normal" },
+  fetcher: FetchLike = fetch,
+) => postDiagnostic<TrainerStartResponse>("/api/diagnostics/trainer/start", initData, payload, fetcher);
+
+export const answerTrainer = (
+  initData: string,
+  payload: {
+    session_scope: string;
+    trainer_session_id: string;
+    question_id: string;
+    answer: AnswerValue;
+    revision: number;
+    idempotency_key: string;
+  },
+  fetcher: FetchLike = fetch,
+) => postDiagnostic<TrainerAnswerResponse>("/api/diagnostics/trainer/answer", initData, payload, fetcher);
+
+export const finishTrainer = (
+  initData: string,
+  payload: { session_scope: string; trainer_session_id: string; revision: number },
+  fetcher: FetchLike = fetch,
+) => postDiagnostic<TrainerFinishResponse>("/api/diagnostics/trainer/finish", initData, payload, fetcher);

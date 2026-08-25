@@ -106,6 +106,7 @@ CREATE TABLE IF NOT EXISTS diagnostic_progress_profiles (
     streak_days INTEGER NOT NULL DEFAULT 0 CHECK (streak_days >= 0),
     streak_last_date DATE,
     lives_remaining SMALLINT NOT NULL DEFAULT 5 CHECK (lives_remaining BETWEEN 0 AND 5),
+    lives_refill_at TIMESTAMPTZ,
     daily_goal_target SMALLINT NOT NULL DEFAULT 1 CHECK (daily_goal_target BETWEEN 1 AND 100),
     daily_goal_progress SMALLINT NOT NULL DEFAULT 0 CHECK (daily_goal_progress >= 0),
     daily_goal_date DATE,
@@ -132,6 +133,8 @@ ALTER TABLE diagnostic_progress_profiles
     ADD COLUMN IF NOT EXISTS streak_last_date DATE;
 ALTER TABLE diagnostic_progress_profiles
     ADD COLUMN IF NOT EXISTS lives_remaining SMALLINT NOT NULL DEFAULT 5;
+ALTER TABLE diagnostic_progress_profiles
+    ADD COLUMN IF NOT EXISTS lives_refill_at TIMESTAMPTZ;
 ALTER TABLE diagnostic_progress_profiles
     ADD COLUMN IF NOT EXISTS daily_goal_target SMALLINT NOT NULL DEFAULT 1;
 ALTER TABLE diagnostic_progress_profiles
@@ -181,6 +184,54 @@ BEGIN
     END IF;
 END $$;
 
+CREATE TABLE IF NOT EXISTS diagnostic_trainer_sessions (
+    session_id TEXT PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES diagnostic_progress_profiles(user_id) ON DELETE CASCADE,
+    diagnostic_id TEXT NOT NULL,
+    content_version TEXT NOT NULL,
+    mode TEXT NOT NULL DEFAULT 'normal',
+    selected_question_ids JSONB NOT NULL,
+    current_index INTEGER NOT NULL DEFAULT 0 CHECK (current_index >= 0),
+    revision BIGINT NOT NULL DEFAULT 1 CHECK (revision >= 1),
+    status TEXT NOT NULL DEFAULT 'active',
+    started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    completed_at TIMESTAMPTZ,
+    CHECK (session_id ~ '^[A-Za-z0-9_-]{32,64}$'),
+    CHECK (content_version ~ '^[0-9a-f]{64}$'),
+    CHECK (mode IN ('normal', 'mistakes')),
+    CHECK (status IN ('active', 'completed', 'exhausted')),
+    CHECK (jsonb_typeof(selected_question_ids) = 'array'),
+    CHECK (jsonb_array_length(selected_question_ids) BETWEEN 1 AND 200),
+    CHECK (status <> 'completed' OR completed_at IS NOT NULL)
+);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_trainer_sessions_user_updated
+    ON diagnostic_trainer_sessions(user_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS diagnostic_trainer_answers (
+    answer_id BIGSERIAL PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES diagnostic_trainer_sessions(session_id) ON DELETE CASCADE,
+    question_id TEXT NOT NULL,
+    answer JSONB NOT NULL,
+    revision BIGINT NOT NULL CHECK (revision >= 1),
+    next_revision BIGINT NOT NULL CHECK (next_revision > revision),
+    idempotency_key TEXT NOT NULL,
+    fingerprint TEXT NOT NULL,
+    is_correct BOOLEAN NOT NULL,
+    public_feedback JSONB NOT NULL DEFAULT '{}'::jsonb,
+    xp_delta INTEGER NOT NULL DEFAULT 0 CHECK (xp_delta BETWEEN 0 AND 10),
+    life_delta SMALLINT NOT NULL DEFAULT 0 CHECK (life_delta BETWEEN -1 AND 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (session_id, question_id),
+    UNIQUE (session_id, idempotency_key),
+    CHECK (length(idempotency_key) BETWEEN 1 AND 128),
+    CHECK (fingerprint ~ '^[0-9a-f]{64}$'),
+    CHECK (octet_length(convert_to(answer::text, 'UTF8')) <= 16384),
+    CHECK (octet_length(convert_to(public_feedback::text, 'UTF8')) <= 8192)
+);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_trainer_answers_session_revision
+    ON diagnostic_trainer_answers(session_id, revision);
+
 CREATE TABLE IF NOT EXISTS diagnostic_progress_events (
     event_id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
@@ -199,10 +250,10 @@ CREATE TABLE IF NOT EXISTS diagnostic_progress_events (
     CONSTRAINT diagnostic_progress_events_event_type_check
         CHECK (event_type IN (
             'diagnostic_quick_completed', 'diagnostic_full_completed',
-            'trainer_session_completed', 'quest_rewarded'
+            'trainer_answer_correct', 'trainer_session_completed', 'quest_rewarded'
         )),
     CONSTRAINT diagnostic_progress_events_source_type_check
-        CHECK (source_type IN ('diagnostic_completion', 'trainer_session', 'quest_reward')),
+        CHECK (source_type IN ('diagnostic_completion', 'trainer_answer', 'trainer_session', 'quest_reward')),
     CONSTRAINT diagnostic_progress_events_source_id_length
         CHECK (length(source_id) BETWEEN 1 AND 256),
     CONSTRAINT diagnostic_progress_events_xp_delta_check
@@ -283,6 +334,32 @@ BEGIN
            );
         INSERT INTO diagnostic_schema_migrations(version)
         VALUES ('2026-08-11-retire-unversioned-attempts');
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM diagnostic_schema_migrations
+         WHERE version='2026-08-25-kir-92-trainer-v1'
+    ) THEN
+        ALTER TABLE diagnostic_progress_events
+            DROP CONSTRAINT IF EXISTS diagnostic_progress_events_event_type_check;
+        ALTER TABLE diagnostic_progress_events
+            ADD CONSTRAINT diagnostic_progress_events_event_type_check
+            CHECK (event_type IN (
+                'diagnostic_quick_completed', 'diagnostic_full_completed',
+                'trainer_answer_correct', 'trainer_session_completed', 'quest_rewarded'
+            ));
+        ALTER TABLE diagnostic_progress_events
+            DROP CONSTRAINT IF EXISTS diagnostic_progress_events_source_type_check;
+        ALTER TABLE diagnostic_progress_events
+            ADD CONSTRAINT diagnostic_progress_events_source_type_check
+            CHECK (source_type IN (
+                'diagnostic_completion', 'trainer_answer', 'trainer_session', 'quest_reward'
+            ));
+        INSERT INTO diagnostic_schema_migrations(version)
+        VALUES ('2026-08-25-kir-92-trainer-v1');
     END IF;
 END $$;
 

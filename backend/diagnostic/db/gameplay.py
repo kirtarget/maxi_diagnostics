@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 import hashlib
 import json
 from typing import Any
@@ -31,12 +31,13 @@ class GameplayEvent:
 
 
 def _event_fingerprint(
-    *, event_type: str, source_type: str, source_id: str, activity_date: date, xp_delta: int
+    *, event_type: str, source_type: str, source_id: str, activity_date: date,
+    xp_delta: int, policy: str = "diagnostic-completion-v1"
 ) -> str:
     payload = {
         "activity_date": activity_date.isoformat(),
         "event_type": event_type,
-        "policy": "diagnostic-completion-v1",
+        "policy": policy,
         "source_id": source_id,
         "source_type": source_type,
         "xp_delta": xp_delta,
@@ -80,6 +81,35 @@ def build_diagnostic_completion_event(
         source_id=attempt_id,
         activity_date=activity_date,
         xp_delta=xp_delta,
+    )
+
+
+def build_trainer_answer_event(
+    *, user_id: int, session_id: str, question_id: str,
+    timezone_name: str = "Europe/Moscow", now: datetime | None = None,
+) -> GameplayEvent:
+    """Build the exactly-once XP event for one correct trainer answer."""
+    instant = now or datetime.now(timezone.utc)
+    if instant.tzinfo is None:
+        instant = instant.replace(tzinfo=timezone.utc)
+    activity_date = instant.astimezone(ZoneInfo(timezone_name)).date()
+    source_id = f"{session_id}/{question_id}"
+    return GameplayEvent(
+        user_id=user_id,
+        idempotency_key=f"trainer-answer/{source_id}",
+        fingerprint=_event_fingerprint(
+            event_type="trainer_answer_correct",
+            source_type="trainer_answer",
+            source_id=source_id,
+            activity_date=activity_date,
+            xp_delta=10,
+            policy="trainer-answer-v1",
+        ),
+        event_type="trainer_answer_correct",
+        source_type="trainer_answer",
+        source_id=source_id,
+        activity_date=activity_date,
+        xp_delta=10,
     )
 
 
@@ -210,6 +240,7 @@ async def get_gameplay_profile(connection, user_id: int):
     return await connection.fetchrow(
         """
         SELECT xp_total, streak_days, streak_last_date, lives_remaining,
+               lives_refill_at,
                daily_goal_target, daily_goal_progress, daily_goal_date,
                quest_key, quest_progress, quest_target, quest_date
           FROM diagnostic_progress_profiles
@@ -217,6 +248,75 @@ async def get_gameplay_profile(connection, user_id: int):
         """,
         user_id,
     )
+
+
+def reconcile_lives(
+    lives_remaining: int,
+    lives_refill_at: datetime | None,
+    *,
+    now: datetime | None = None,
+    max_lives: int = 5,
+    refill_interval: timedelta = timedelta(hours=4),
+) -> tuple[int, datetime | None]:
+    """Pure lazy four-hour refill calculation for the profile projection."""
+    instant = now or datetime.now(timezone.utc)
+    if instant.tzinfo is None:
+        instant = instant.replace(tzinfo=timezone.utc)
+    lives = min(max(int(lives_remaining), 0), max_lives)
+    if lives >= max_lives:
+        return max_lives, None
+    if lives_refill_at is None:
+        return lives, instant
+    refill_at = lives_refill_at
+    if refill_at.tzinfo is None:
+        refill_at = refill_at.replace(tzinfo=timezone.utc)
+    elapsed = instant - refill_at
+    if elapsed < refill_interval:
+        return lives, refill_at
+    refills = int(elapsed.total_seconds() // refill_interval.total_seconds())
+    lives = min(max_lives, lives + refills)
+    if lives >= max_lives:
+        return max_lives, None
+    return lives, refill_at + (refill_interval * refills)
+
+
+async def get_reconciled_profile(connection, user_id: int, *, now: datetime | None = None):
+    """Lock and lazily reconcile one user's lives before a trainer mutation."""
+    await connection.execute(
+        """
+        INSERT INTO diagnostic_progress_profiles (user_id)
+        VALUES ($1)
+        ON CONFLICT (user_id) DO NOTHING
+        """,
+        user_id,
+    )
+    row = await connection.fetchrow(
+        """
+        SELECT xp_total, streak_days, streak_last_date, lives_remaining,
+               lives_refill_at, daily_goal_target, daily_goal_progress,
+               daily_goal_date, quest_key, quest_progress, quest_target, quest_date
+          FROM diagnostic_progress_profiles
+         WHERE user_id=$1
+         FOR UPDATE
+        """,
+        user_id,
+    )
+    lives, refill_at = reconcile_lives(
+        row["lives_remaining"], row["lives_refill_at"], now=now
+    )
+    if lives != row["lives_remaining"] or refill_at != row["lives_refill_at"]:
+        row = await connection.fetchrow(
+            """
+            UPDATE diagnostic_progress_profiles
+               SET lives_remaining=$2, lives_refill_at=$3, updated_at=now()
+             WHERE user_id=$1
+             RETURNING xp_total, streak_days, streak_last_date, lives_remaining,
+                       lives_refill_at, daily_goal_target, daily_goal_progress,
+                       daily_goal_date, quest_key, quest_progress, quest_target, quest_date
+            """,
+            user_id, lives, refill_at,
+        )
+    return row
 
 
 def serialize_gameplay_profile(row: Any | None) -> dict[str, Any]:

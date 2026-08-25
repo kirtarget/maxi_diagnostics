@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import {
   buildCompletionPayload,
+  answerTrainer,
+  apiErrorDetail,
   clearLocalSession,
   completeDiagnostic,
   createAttemptId,
@@ -14,8 +16,10 @@ import {
   markResultViewed,
   restoreBootstrapSession,
   saveLocalSession,
-updateNumericInputAnswer,
-saveProgress,
+  updateNumericInputAnswer,
+  saveProgress,
+  finishTrainer,
+  startTrainer,
 } from "./api";
 import type { ProgressPayload, ProgressSaveQueue } from "./api";
 import { GameplayHomeScreen, GameplayProfileScreen, ModeScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
@@ -31,6 +35,8 @@ import { forecastTrajectory, pdfStatusCopy, personalRoute } from "./result-flow-
 import { createReviewRequestGate } from "./review-request-gate";
 import { initializeTelegram } from "./telegram-webapp";
 import { gameplayProfileView } from "./gameplay-profile-model";
+import { TrainerScreen } from "./trainer-screen";
+import { trainerInitialState, trainerReducer } from "./trainer-model";
 import type {
   AnswerMap,
   AnswerValue,
@@ -43,7 +49,7 @@ import type {
   ServerResult,
 } from "./types";
 
-type Screen = "loading" | "welcome" | "home" | "profile" | "mode" | "subjects" | "question" | "submitting" | "result" | "review" | "forecast" | "route";
+type Screen = "loading" | "welcome" | "home" | "profile" | "mode" | "subjects" | "question" | "submitting" | "result" | "review" | "forecast" | "route" | "trainer";
 
 type DisplayBrand = Pick<Brand, "name" | "short_name" | "logo"> & {
   resultStatus: string;
@@ -58,6 +64,22 @@ const BUILD_BRAND: DisplayBrand = {
 
 function questionsFor(diagnostic: PublicDiagnostic, mode: DiagnosticMode): Question[] {
   return mode === "quick" ? diagnostic.questions.slice(0, diagnostic.quick_count) : diagnostic.questions;
+}
+
+function trainerErrorMessage(error: unknown): string {
+  switch (apiErrorDetail(error)) {
+    case "trainer_no_lives": return "Жизни закончились. Ответить сейчас нельзя, попробуй позже.";
+    case "trainer_revision_stale":
+    case "trainer_answer_conflict":
+    case "trainer_question_out_of_order": return "Сессия устарела. Запусти тренировку заново.";
+    case "trainer_content_changed": return "Материалы обновились. Запусти новую тренировку.";
+    case "trainer_session_not_found":
+    case "trainer_session_not_active": return "Эта тренировка больше недоступна. Запусти новую.";
+    case "trainer_session_incomplete": return "Сначала ответь на все вопросы.";
+    case "session_expired": return "Сессия Telegram устарела. Перезагрузи приложение.";
+    case "trainer_not_enough_questions": return "Для тренировки пока недостаточно заданий.";
+    default: return "Не удалось связаться с сервером. Повтори попытку.";
+  }
 }
 
 function BrandHeader({
@@ -102,6 +124,7 @@ export default function Home() {
   const [review, setReview] = useState<ReviewResponse | null>(null);
   const [reviewIndex, setReviewIndex] = useState(0);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [trainerState, dispatchTrainer] = useReducer(trainerReducer, trainerInitialState);
   const initData = useRef("");
   const progressRevision = useRef(0);
   const syncedQuestionIndex = useRef(0);
@@ -121,6 +144,8 @@ export default function Home() {
   }
   const hydrateGeneration = useRef(0);
   const recoveryPromise = useRef<Promise<void> | null>(null);
+  const trainerDiagnosticId = useRef<string | null>(null);
+  const trainerRecoveryMode = useRef<"retry" | "restart">("retry");
   const recoverConflict = useRef<() => Promise<void>>(async () => undefined);
   const progressQueue = useRef<ProgressSaveQueue<ProgressPayload> | null>(null);
   if (!progressQueue.current) {
@@ -449,6 +474,93 @@ export default function Home() {
     if (!review) void refreshReview();
   };
 
+  const runTrainerStart = useCallback(async (selectedId: string) => {
+    if (!sessionScope || !initData.current) return;
+    const selected = bootstrap?.diagnostics.find((item) => item.id === selectedId);
+    if (!selected) {
+      dispatchTrainer({ type: "error", message: "Диагностика для тренировки не найдена." });
+      return;
+    }
+    trainerDiagnosticId.current = selected.id;
+    trainerRecoveryMode.current = "retry";
+    dispatchTrainer({ type: "reset" });
+    setScreen("trainer");
+    try {
+      const response = await startTrainer(initData.current, {
+        session_scope: sessionScope,
+        diagnostic_id: selected.id,
+        count: Math.min(5, selected.questions.length),
+        mode: "normal",
+      });
+      dispatchTrainer({ type: "start", response });
+    } catch (startError) {
+      dispatchTrainer({ type: "error", message: trainerErrorMessage(startError) });
+    }
+  }, [bootstrap, sessionScope]);
+
+  const submitTrainerAnswer = useCallback(async (questionId: string, answer: AnswerValue) => {
+    const session = trainerState.session;
+    if (!session || !sessionScope || !initData.current) return;
+    try {
+      const response = await answerTrainer(initData.current, {
+        session_scope: sessionScope,
+        trainer_session_id: session.trainer_session_id,
+        question_id: questionId,
+        answer,
+        revision: session.revision,
+        idempotency_key: `trainer-answer-${session.trainer_session_id}-${questionId}-${session.revision}`,
+      });
+      dispatchTrainer({ type: "answer_result", response });
+    } catch (answerError) {
+      if (["trainer_revision_stale", "trainer_answer_conflict", "trainer_question_out_of_order", "trainer_content_changed", "trainer_session_not_found", "trainer_session_not_active"].includes(apiErrorDetail(answerError) ?? "")) {
+        trainerRecoveryMode.current = "restart";
+      }
+      dispatchTrainer({ type: "error", message: trainerErrorMessage(answerError) });
+    }
+  }, [sessionScope, trainerState.session]);
+
+  const finishTrainerSession = useCallback(async () => {
+    const session = trainerState.session;
+    if (!session || !sessionScope || !initData.current) return;
+    try {
+      const response = await finishTrainer(initData.current, {
+        session_scope: sessionScope,
+        trainer_session_id: session.trainer_session_id,
+        revision: session.revision,
+      });
+      dispatchTrainer({ type: "finish_result", response });
+    } catch (finishError) {
+      if (["trainer_revision_stale", "trainer_session_not_found", "trainer_content_changed"].includes(apiErrorDetail(finishError) ?? "")) {
+        trainerRecoveryMode.current = "restart";
+      }
+      dispatchTrainer({ type: "error", message: trainerErrorMessage(finishError) });
+    }
+  }, [sessionScope, trainerState.session]);
+
+  const retryTrainer = useCallback(() => {
+    if (trainerRecoveryMode.current === "restart" && trainerDiagnosticId.current) {
+      void runTrainerStart(trainerDiagnosticId.current);
+      return;
+    }
+    if (trainerState.retryPhase === "idle" && trainerDiagnosticId.current) {
+      void runTrainerStart(trainerDiagnosticId.current);
+      return;
+    }
+    if (trainerState.retryPhase === "finishing") {
+      void finishTrainerSession();
+      return;
+    }
+    const session = trainerState.session;
+    const questionIndex = trainerState.answeredQuestionIndex;
+    const answer = trainerState.submittedAnswer;
+    const questionId = questionIndex === null ? null : session?.question_ids[questionIndex];
+    if (!session || !questionId || answer === undefined) {
+      if (trainerDiagnosticId.current) void runTrainerStart(trainerDiagnosticId.current);
+      return;
+    }
+    void submitTrainerAnswer(questionId, answer);
+  }, [finishTrainerSession, runTrainerStart, submitTrainerAnswer, trainerState]);
+
   const style = brand ? {
     "--brand-primary": brand.colors.primary,
     "--brand-accent": brand.colors.accent,
@@ -516,6 +628,7 @@ export default function Home() {
           labels={bootstrap.school.brand.interface}
           profile={gameplayProfile}
           onStart={() => setScreen("mode")}
+          onStartTrainer={() => void runTrainerStart(bootstrap.diagnostics[0]?.id ?? "")}
           onOpenProfile={() => setScreen("profile")}
         />
       )}
@@ -599,6 +712,17 @@ export default function Home() {
             onForecast={() => setScreen("forecast")}
           />
         )
+      )}
+
+      {screen === "trainer" && (
+        <TrainerScreen
+          state={trainerState}
+          dispatch={dispatchTrainer}
+          onAnswer={(questionId, answer) => void submitTrainerAnswer(questionId, answer)}
+          onFinish={() => void finishTrainerSession()}
+          onHome={() => setScreen(bootstrap?.diagnostics.length ? "home" : "welcome")}
+          onRetry={retryTrainer}
+        />
       )}
 
       {screen === "review" && result && (

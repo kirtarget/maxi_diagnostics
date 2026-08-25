@@ -1,0 +1,57 @@
+import { describe, expect, it } from "vitest";
+import {
+  isTrainerAnswerComplete,
+  trainerInitialState,
+  trainerReducer,
+  type TrainerStartResponse,
+} from "./trainer-model";
+import type { Question } from "./types";
+
+const questions: Question[] = [
+  { id: "single", type: "single", topic: "t", title: "1", prompt: "p", options: [{ id: "a", label: "A" }] },
+  { id: "multiple", type: "multiple", topic: "t", title: "2", prompt: "p", selection_limit: 2, options: [{ id: "a", label: "A" }, { id: "b", label: "B" }] },
+  { id: "matching", type: "matching", topic: "t", title: "3", prompt: "p", items: [{ id: "i", label: "I" }], options: [{ id: "a", label: "A" }] },
+  { id: "input", type: "input", topic: "t", title: "4", prompt: "p" },
+];
+const start: TrainerStartResponse = { trainer_session_id: "s1", diagnostic_id: "d1", content_version: "v1", mode: "normal", question_ids: questions.map(({ id }) => id), current_index: 0, revision: 1, status: "in_progress", questions, lives_remaining: 3 };
+
+describe("trainer model", () => {
+  it("accepts complete answers for every public question kind", () => {
+    expect(isTrainerAnswerComplete(questions[0], "a")).toBe(true);
+    expect(isTrainerAnswerComplete(questions[1], ["a", "b"])).toBe(true);
+    expect(isTrainerAnswerComplete(questions[2], { i: "a" })).toBe(true);
+    expect(isTrainerAnswerComplete(questions[3], "42")).toBe(true);
+  });
+
+  it("keeps correctness out of the start payload", () => {
+    expect(start).not.toHaveProperty("is_correct");
+    expect(JSON.stringify(start)).not.toContain('"is_correct"');
+  });
+
+  it("waits for the server result and locks the answer", () => {
+    let state = trainerReducer(trainerInitialState, { type: "start", response: start });
+    state = trainerReducer(state, { type: "set_answer", answer: "a" });
+    state = trainerReducer(state, { type: "submit_answer" });
+    expect(state.phase).toBe("awaiting_result");
+    const unchanged = trainerReducer(state, { type: "set_answer", answer: "other" });
+    expect(unchanged.draftAnswer).toBe("a");
+    state = trainerReducer(state, { type: "answer_result", response: { trainer_session_id: "s1", question_id: "single", is_correct: true, correct_answer: "a", explanation: "Good", xp_delta: 10, life_delta: 0, current_index: 1, revision: 2, status: "in_progress", lives_remaining: 3 } });
+    expect(state.phase).toBe("feedback");
+  });
+
+  it("retries without losing the submitted answer", () => {
+    let state = trainerReducer(trainerReducer(trainerInitialState, { type: "start", response: start }), { type: "set_answer", answer: "a" });
+    state = trainerReducer(state, { type: "submit_answer" });
+    state = trainerReducer(state, { type: "error", message: "offline" });
+    state = trainerReducer(state, { type: "retry" });
+    expect(state.phase).toBe("awaiting_result");
+    expect(state.submittedAnswer).toBe("a");
+  });
+
+  it("does not allow a zero-life session to submit", () => {
+    const zeroLives = { ...start, lives_remaining: 0 };
+    let state = trainerReducer(trainerInitialState, { type: "start", response: zeroLives });
+    state = trainerReducer(state, { type: "set_answer", answer: "a" });
+    expect(trainerReducer(state, { type: "submit_answer" }).phase).toBe("answering");
+  });
+});

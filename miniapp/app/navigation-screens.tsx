@@ -19,6 +19,7 @@ export type GameplayHomeScreenProps = {
   labels: Brand["interface"];
   profile: GameplayProfileView;
   onStart: () => void;
+  onStartTrainer?: () => void;
   onOpenProfile: () => void;
 };
 
@@ -27,6 +28,7 @@ export function GameplayHomeScreen({
   labels,
   profile,
   onStart,
+  onStartTrainer,
   onOpenProfile,
 }: GameplayHomeScreenProps) {
   const subjects = [...new Set(diagnostics.map((item) => item.subject))];
@@ -62,6 +64,9 @@ export function GameplayHomeScreen({
         )}
         <button className="primary-button gameplay-home-cta" onClick={onStart} type="button">
           {profile.completionCount > 0 ? "Продолжить диагностику" : labels.start_diagnostic} <span aria-hidden="true">→</span>
+        </button>
+        <button className="secondary-button gameplay-trainer-cta" onClick={onStartTrainer ?? onStart} type="button">
+          Тренировка <span aria-hidden="true">⚡</span>
         </button>
       </div>
 
