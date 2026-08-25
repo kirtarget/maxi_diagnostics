@@ -1,4 +1,5 @@
 import { subjectIconKind, type SubjectIconKind } from "./subject-illustration";
+import type { GameplayProfileView } from "./gameplay-profile-model";
 import type {
   Brand,
   DiagnosticMode,
@@ -12,6 +13,84 @@ export type WelcomeScreenProps = {
   links: SchoolLinks;
   onStart: () => void;
 };
+
+export type GameplayHomeScreenProps = {
+  diagnostics: PublicDiagnostic[];
+  labels: Brand["interface"];
+  profile: GameplayProfileView;
+  onStart: () => void;
+  onOpenProfile: () => void;
+};
+
+export function GameplayHomeScreen({
+  diagnostics,
+  labels,
+  profile,
+  onStart,
+  onOpenProfile,
+}: GameplayHomeScreenProps) {
+  const subjects = [...new Set(diagnostics.map((item) => item.subject))];
+  const pathItems = diagnostics.slice(0, 3);
+  const firstSubject = subjects[0] ?? "предмет";
+
+  return (
+    <section className="screen gameplay-home" aria-labelledby="gameplay-home-title">
+      <div className="gameplay-home-hero">
+        <span className="state-code">Твой маршрут</span>
+        <h1 id="gameplay-home-title">Продолжай расти <em>шаг за шагом</em></h1>
+        <p className="hero-copy">{profile.onboardingLabel}. Проверь знания и получи понятный план подготовки.</p>
+        <div className="gameplay-level-card">
+          <div className="gameplay-level-row">
+            <span>Уровень {profile.level}</span>
+            <strong>{profile.levelLabel}</strong>
+          </div>
+          <div className="gameplay-progress" role="progressbar" aria-label="Прогресс уровня" aria-valuenow={profile.levelProgress} aria-valuemin={0} aria-valuemax={100}>
+            <span style={{ width: `${profile.levelProgress}%` }} />
+          </div>
+          <small>{profile.completionCount} {profile.completionCount === 1 ? "диагностика завершена" : "диагностик завершено"}</small>
+        </div>
+        <button className="primary-button gameplay-home-cta" onClick={onStart} type="button">
+          {profile.completionCount > 0 ? "Продолжить диагностику" : labels.start_diagnostic} <span aria-hidden="true">→</span>
+        </button>
+      </div>
+
+      <div className="gameplay-section-heading">
+        <div><span className="state-code">Доступный путь</span><h2>Выбери следующий шаг</h2></div>
+        <span className="gameplay-count">{diagnostics.length}</span>
+      </div>
+      <div className="gameplay-path" aria-label="Доступные диагностики">
+        {pathItems.map((item, index) => (
+          <button className="gameplay-path-item" key={item.id} onClick={onStart} type="button">
+            <span className={`gameplay-path-node ${index === 0 ? "is-current" : ""}`}>{index + 1}</span>
+            <div><strong>{item.subject}</strong><small>{item.exam} · {item.quick_count} заданий</small></div>
+            <span className="gameplay-path-arrow" aria-hidden="true">→</span>
+          </button>
+        ))}
+      </div>
+      <p className="gameplay-path-note">Сейчас доступны {subjects.length || 1} {subjects.length === 1 ? "предмет" : "предмета"}, включая {firstSubject}.</p>
+
+      <button className="gameplay-profile-card" onClick={onOpenProfile} type="button">
+        <span className="gameplay-profile-icon" aria-hidden="true">✦</span>
+        <span><strong>Твой профиль</strong><small>{profile.unlockedAchievements.length > 0 ? `${profile.unlockedAchievements.length} достижение открыто` : "Заверши первую диагностику, чтобы открыть достижение"}</small></span>
+        <span aria-hidden="true">→</span>
+      </button>
+    </section>
+  );
+}
+
+export function GameplayProfileScreen({ profile, onBack, onStart }: { profile: GameplayProfileView; onBack: () => void; onStart: () => void }) {
+  return (
+    <section className="screen gameplay-profile" aria-labelledby="gameplay-profile-title">
+      <button className="text-back" onClick={onBack} type="button">Назад</button>
+      <span className="state-code">Профиль</span>
+      <h1 id="gameplay-profile-title">Твой прогресс</h1>
+      <div className="gameplay-profile-summary"><strong>Уровень {profile.level}</strong><span>{profile.levelLabel}</span><div className="gameplay-progress" role="progressbar" aria-label="Прогресс уровня" aria-valuenow={profile.levelProgress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${profile.levelProgress}%` }} /></div></div>
+      <div className="gameplay-stat-grid"><div><strong>{profile.completionCount}</strong><span>завершено</span></div><div><strong>{profile.unlockedAchievements.length}</strong><span>достижения</span></div></div>
+      <div className="gameplay-achievements"><h2>Достижения</h2>{profile.unlockedAchievements.length > 0 ? profile.unlockedAchievements.map((achievement) => <div className="gameplay-achievement" key={achievement.key}><span aria-hidden="true">✓</span><span><strong>{achievement.title}</strong><small>{achievement.description}</small></span></div>) : <p>Первые достижения появятся после завершённой диагностики.</p>}</div>
+      <button className="primary-button" onClick={onStart} type="button">Начать диагностику <span aria-hidden="true">→</span></button>
+    </section>
+  );
+}
 
 export function WelcomeScreen({
   diagnostics,

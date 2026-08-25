@@ -18,7 +18,7 @@ updateNumericInputAnswer,
 saveProgress,
 } from "./api";
 import type { ProgressPayload, ProgressSaveQueue } from "./api";
-import { ModeScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
+import { GameplayHomeScreen, GameplayProfileScreen, ModeScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
 import { safeAssetPath } from "./question-assets";
 import { QuestionView as TrainingQuestionView } from "./question-screen";
 import {
@@ -30,6 +30,7 @@ import {
 import { forecastTrajectory, pdfStatusCopy, personalRoute } from "./result-flow-model";
 import { createReviewRequestGate } from "./review-request-gate";
 import { initializeTelegram } from "./telegram-webapp";
+import { gameplayProfileView } from "./gameplay-profile-model";
 import type {
   AnswerMap,
   AnswerValue,
@@ -42,7 +43,7 @@ import type {
   ServerResult,
 } from "./types";
 
-type Screen = "loading" | "welcome" | "mode" | "subjects" | "question" | "submitting" | "result" | "review" | "forecast" | "route";
+type Screen = "loading" | "welcome" | "home" | "profile" | "mode" | "subjects" | "question" | "submitting" | "result" | "review" | "forecast" | "route";
 
 type DisplayBrand = Pick<Brand, "name" | "short_name" | "logo"> & {
   resultStatus: string;
@@ -268,7 +269,7 @@ export default function Home() {
         setReview(null);
         setReviewIndex(0);
         setReviewError(null);
-        setScreen("welcome");
+        setScreen(data.progress_profile?.completion_count ? "home" : "welcome");
       }
       return true;
     } catch {
@@ -435,6 +436,7 @@ export default function Home() {
     logo: brand.logo,
     resultStatus: brand.interface.result_in_telegram,
   } : BUILD_BRAND;
+  const gameplayProfile = gameplayProfileView(bootstrap?.progress_profile);
   const mistakeCount = review?.items.filter((item) => !item.is_correct).length ?? 0;
   const forecastPoints = result ? forecastTrajectory(result) : [];
   const routeItems = result ? personalRoute(result.growth_topics) : [];
@@ -477,7 +479,7 @@ export default function Home() {
       <BrandHeader
         brand={displayBrand}
         disabled={!brand || screen === "submitting"}
-        onHome={() => setScreen("welcome")}
+        onHome={() => setScreen(bootstrap?.diagnostics.length ? "home" : "welcome")}
       />
 
       {screen === "loading" && (
@@ -503,7 +505,25 @@ export default function Home() {
         <WelcomeScreen
           diagnostics={bootstrap.diagnostics}
           labels={bootstrap.school.brand.interface}
+          onStart={() => setScreen("home")}
           links={bootstrap.school.links}
+        />
+      )}
+
+      {screen === "home" && bootstrap && bootstrap.diagnostics.length > 0 && (
+        <GameplayHomeScreen
+          diagnostics={bootstrap.diagnostics}
+          labels={bootstrap.school.brand.interface}
+          profile={gameplayProfile}
+          onStart={() => setScreen("mode")}
+          onOpenProfile={() => setScreen("profile")}
+        />
+      )}
+
+      {screen === "profile" && bootstrap && (
+        <GameplayProfileScreen
+          profile={gameplayProfile}
+          onBack={() => setScreen("home")}
           onStart={() => setScreen("mode")}
         />
       )}
@@ -511,7 +531,7 @@ export default function Home() {
       {screen === "mode" && bootstrap && (
         <ModeScreen
           labels={bootstrap.school.brand.interface}
-          onBack={() => setScreen("welcome")}
+          onBack={() => setScreen("home")}
           onSelect={(selectedMode) => {
             setMode(selectedMode);
             setExam(bootstrap.diagnostics[0]?.exam ?? "");

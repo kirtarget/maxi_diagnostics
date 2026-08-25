@@ -177,6 +177,21 @@ def serialize_result(row: Mapping[str, Any], fallback: ScoreResult | None) -> di
     return persisted or (fallback.model_dump(mode="json") if fallback is not None else {})
 
 
+def serialize_progress_profile(row: Mapping[str, Any] | None) -> dict[str, Any]:
+    if row is None:
+        return {"completion_count": 0, "achievement_keys": []}
+    completion_count = row.get("completion_count", 0)
+    if isinstance(completion_count, bool) or not isinstance(completion_count, int):
+        completion_count = 0
+    achievement_keys = row.get("achievement_keys", [])
+    if not isinstance(achievement_keys, list):
+        achievement_keys = []
+    return {
+        "completion_count": max(completion_count, 0),
+        "achievement_keys": [key for key in achievement_keys if isinstance(key, str)],
+    }
+
+
 def _transitioned(row: Mapping[str, Any] | None, key: str) -> bool:
     return row is not None and key in set(row.keys()) and row[key] is True
 
@@ -246,6 +261,10 @@ async def get_latest_attempt_id(user_id: int) -> str | None:
     return await attempts.get_latest_attempt_id(user_id)
 
 
+async def get_progress_profile(user_id: int):
+    return await attempts.get_progress_profile(user_id)
+
+
 def create_router(catalog: DiagnosticCatalog) -> APIRouter:
     router = APIRouter(prefix="/api/diagnostics")
 
@@ -285,6 +304,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
                 resumable = None
         completed = await list_completed_attempts(user["id"])
         latest_attempt_id = await get_latest_attempt_id(user["id"])
+        progress_profile = await get_progress_profile(user["id"])
         school = request.app.state.school
         secret = request.app.state.settings.application_secret
         generation = await get_or_create_session_generation(
@@ -295,6 +315,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
                 secret, user["id"], generation
             ),
             "latest_attempt_id": latest_attempt_id,
+            "progress_profile": serialize_progress_profile(progress_profile),
             "school": public_school_payload(school),
             "diagnostics": catalog.public_payload(
                 request.app.state.settings.application_secret

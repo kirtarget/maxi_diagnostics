@@ -43,10 +43,14 @@ def make_client(monkeypatch) -> TestClient:
     async def get_latest_attempt_id(_: int):
         return None
 
+    async def get_progress_profile(_: int):
+        return None
+
     monkeypatch.setattr(sessions.attempts, "mark_opened", mark_opened)
     monkeypatch.setattr(sessions, "get_resumable_attempt", get_resumable_attempt)
     monkeypatch.setattr(sessions, "list_completed_attempts", list_completed_attempts)
     monkeypatch.setattr(sessions, "get_latest_attempt_id", get_latest_attempt_id)
+    monkeypatch.setattr(sessions, "get_progress_profile", get_progress_profile)
     monkeypatch.setattr(
         sessions, "get_or_create_session_generation", AsyncMock(return_value="1" * 32)
     )
@@ -69,8 +73,37 @@ def test_bootstrap_returns_brand_and_sanitized_catalog(monkeypatch):
     assert response.status_code == 200
     body = response.json()
     assert body["latest_attempt_id"] == "attempt-latest"
+    assert body["progress_profile"] == {
+        "completion_count": 0,
+        "achievement_keys": [],
+    }
     assert body["school"]["brand"]["name"] == configured_school.brand.name
     assert '"correct"' not in json.dumps(body["diagnostics"], ensure_ascii=False)
+
+
+def test_bootstrap_returns_only_public_progress_profile_fields(monkeypatch):
+    from diagnostic.api import sessions
+
+    client = make_client(monkeypatch)
+    monkeypatch.setattr(
+        sessions,
+        "get_progress_profile",
+        AsyncMock(return_value={
+            "user_id": 42,
+            "completion_count": 3,
+            "achievement_keys": ["first_diagnostic_completed", 99],
+            "updated_at": "private",
+        }),
+    )
+
+    response = client.post("/api/diagnostics/bootstrap", json={"init_data": signed_init_data()})
+
+    assert response.status_code == 200
+    assert response.json()["progress_profile"] == {
+        "completion_count": 3,
+        "achievement_keys": ["first_diagnostic_completed"],
+    }
+    assert "user_id" not in response.json()["progress_profile"]
 
 
 def test_bootstrap_rejects_invalid_telegram_signature(monkeypatch):

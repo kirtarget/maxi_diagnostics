@@ -23,7 +23,8 @@ async def database():
     async with pool.acquire() as connection:
         await connection.execute(
             """
-            TRUNCATE diagnostic_notifications, diagnostic_attempts,
+            TRUNCATE diagnostic_completion_ledger, diagnostic_progress_profiles,
+                     diagnostic_notifications, diagnostic_attempts,
                      diagnostic_engagements, diagnostic_erased_users,
                      diagnostic_session_generations,
                      diagnostic_report_asset_bundles
@@ -91,6 +92,22 @@ async def test_completion_is_idempotent_and_notification_dedupe_is_unique():
         "month_retest",
     }
     assert len({row["dedupe_key"] for row in notifications}) == 4
+
+
+@pytest.mark.asyncio
+async def test_completion_progress_profile_is_idempotent_and_accumulates_achievements():
+    user_id = 8_050_000_000 + uuid4().int % 100_000_000
+    first_attempt = f"attempt-{uuid4()}"
+    await attempts.complete_attempt(
+        completion(first_attempt, answers={"q1": "A"}, user_id=user_id)
+    )
+    await attempts.complete_attempt(
+        completion(first_attempt, answers={"q1": "B"}, user_id=user_id)
+    )
+    profile = await attempts.get_progress_profile(user_id)
+
+    assert profile["completion_count"] == 1
+    assert profile["achievement_keys"] == ["first_diagnostic_completed"]
 
 
 @pytest.mark.asyncio

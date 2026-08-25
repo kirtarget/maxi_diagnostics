@@ -164,6 +164,11 @@ export type ServerAttempt = {
   answers: AnswerMap;
 };
 
+export type ProgressProfile = {
+  completion_count: number;
+  achievement_keys: string[];
+};
+
 export type BootstrapResponse = {
   session_scope: string;
   latest_attempt_id: string | null;
@@ -172,6 +177,7 @@ export type BootstrapResponse = {
     links: SchoolLinks;
   };
   diagnostics: PublicDiagnostic[];
+  progress_profile?: ProgressProfile;
   attempt: ServerAttempt | null;
   results: ServerAttempt[];
 };

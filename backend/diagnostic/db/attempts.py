@@ -660,6 +660,19 @@ async def get_latest_attempt_id(user_id: int) -> str | None:
         )
 
 
+async def get_progress_profile(user_id: int):
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        return await connection.fetchrow(
+            """
+            SELECT completion_count, achievement_keys
+              FROM diagnostic_progress_profiles
+             WHERE user_id=$1
+            """,
+            user_id,
+        )
+
+
 async def list_completed_attempts(user_id: int) -> list:
     pool = await get_pool()
     async with pool.acquire() as connection:
