@@ -98,6 +98,17 @@ BEGIN
         VALUES ('2026-08-11-minimize-attempt-data');
     END IF;
 END $$;
+CREATE TABLE IF NOT EXISTS diagnostic_progress_profiles (
+    user_id BIGINT PRIMARY KEY,
+    completion_count INTEGER NOT NULL DEFAULT 0 CHECK (completion_count >= 0),
+    achievement_keys JSONB NOT NULL DEFAULT '[]'::jsonb,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS diagnostic_completion_ledger (
+    attempt_id TEXT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    completed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 CREATE INDEX IF NOT EXISTS idx_diagnostic_attempts_user_updated
     ON diagnostic_attempts(user_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_diagnostic_attempts_user_started

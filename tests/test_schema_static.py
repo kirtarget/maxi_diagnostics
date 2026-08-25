@@ -4,6 +4,8 @@ from diagnostic.db.schema import DDL
 def test_schema_contains_only_starter_tables():
     for table in (
         "diagnostic_attempts",
+        "diagnostic_progress_profiles",
+        "diagnostic_completion_ledger",
         "diagnostic_engagements",
         "diagnostic_notifications",
         "message_templates",

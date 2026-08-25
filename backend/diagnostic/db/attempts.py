@@ -154,6 +154,32 @@ async def _cancel_quick_to_full(connection, user_id: int, diagnostic_id: str) ->
     )
 
 
+async def _record_completion_progress(connection, attempt_id, user_id) -> None:
+    await connection.execute(
+        """
+        WITH inserted AS (
+            INSERT INTO diagnostic_completion_ledger (attempt_id, user_id)
+            VALUES ($1, $2)
+            ON CONFLICT (attempt_id) DO NOTHING
+            RETURNING attempt_id, user_id
+        )
+        INSERT INTO diagnostic_progress_profiles (user_id, completion_count, achievement_keys)
+        SELECT user_id, 1, jsonb_build_array('first_diagnostic_completed')
+        FROM inserted
+        ON CONFLICT (user_id) DO UPDATE
+        SET completion_count = diagnostic_progress_profiles.completion_count + 1,
+            achievement_keys = CASE
+                WHEN diagnostic_progress_profiles.achievement_keys @> jsonb_build_array('first_diagnostic_completed')
+                THEN diagnostic_progress_profiles.achievement_keys
+                ELSE diagnostic_progress_profiles.achievement_keys || jsonb_build_array('first_diagnostic_completed')
+            END,
+            updated_at = now()
+        """,
+        attempt_id,
+        user_id,
+    )
+
+
 async def mark_opened(user_id: int) -> bool:
     pool = await get_pool()
     async with pool.acquire() as connection:
@@ -538,6 +564,10 @@ async def complete_attempt(completion: AttemptCompletion):
                 )
             if row is None:
                 raise ValueError("diagnostic_attempt_conflict")
+            if row["status"] == "completed":
+                await _record_completion_progress(
+                    connection, completion.attempt_id, completion.user_id
+                )
             stored_mode = row["mode"]
             stored_subject = row["subject"]
             if stored_mode == "full":
