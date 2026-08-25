@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import Any, Literal
 
 from diagnostic.db.core import get_pool
+from diagnostic.db import gameplay
 from diagnostic.session_identity import new_session_generation, session_subject_key
 
 
@@ -89,6 +90,7 @@ class AttemptCompletion:
     report_assets: bytes | None = None
     pdf_document: bytes | None = None
     supersedes_attempt_id: str | None = None
+    activity_timezone: str = "Europe/Moscow"
 
 
 async def _raise_if_erased(connection, user_id: int) -> None:
@@ -154,30 +156,42 @@ async def _cancel_quick_to_full(connection, user_id: int, diagnostic_id: str) ->
     )
 
 
-async def _record_completion_progress(connection, attempt_id, user_id) -> None:
-    await connection.execute(
+async def _record_completion_progress(
+    connection, attempt_id, user_id, mode, activity_timezone
+) -> None:
+    ledger = await connection.fetchrow(
         """
-        WITH inserted AS (
-            INSERT INTO diagnostic_completion_ledger (attempt_id, user_id)
-            VALUES ($1, $2)
-            ON CONFLICT (attempt_id) DO NOTHING
-            RETURNING attempt_id, user_id
-        )
-        INSERT INTO diagnostic_progress_profiles (user_id, completion_count, achievement_keys)
-        SELECT user_id, 1, jsonb_build_array('first_diagnostic_completed')
-        FROM inserted
-        ON CONFLICT (user_id) DO UPDATE
-        SET completion_count = diagnostic_progress_profiles.completion_count + 1,
-            achievement_keys = CASE
-                WHEN diagnostic_progress_profiles.achievement_keys @> jsonb_build_array('first_diagnostic_completed')
-                THEN diagnostic_progress_profiles.achievement_keys
-                ELSE diagnostic_progress_profiles.achievement_keys || jsonb_build_array('first_diagnostic_completed')
-            END,
-            updated_at = now()
+        INSERT INTO diagnostic_completion_ledger (attempt_id, user_id)
+        VALUES ($1, $2)
+        ON CONFLICT (attempt_id) DO NOTHING
+        RETURNING attempt_id
         """,
         attempt_id,
         user_id,
     )
+    await gameplay.record_diagnostic_completion(
+        connection,
+        user_id=user_id,
+        attempt_id=attempt_id,
+        mode=mode,
+        timezone_name=activity_timezone,
+    )
+    if ledger is not None:
+        await connection.execute(
+            """
+            INSERT INTO diagnostic_progress_profiles (user_id, completion_count, achievement_keys)
+            VALUES ($1, 1, jsonb_build_array('first_diagnostic_completed'))
+            ON CONFLICT (user_id) DO UPDATE
+            SET completion_count = diagnostic_progress_profiles.completion_count + 1,
+                achievement_keys = CASE
+                    WHEN diagnostic_progress_profiles.achievement_keys @> jsonb_build_array('first_diagnostic_completed')
+                    THEN diagnostic_progress_profiles.achievement_keys
+                    ELSE diagnostic_progress_profiles.achievement_keys || jsonb_build_array('first_diagnostic_completed')
+                END,
+                updated_at = now()
+            """,
+            user_id,
+        )
 
 
 async def mark_opened(user_id: int) -> bool:
@@ -566,7 +580,11 @@ async def complete_attempt(completion: AttemptCompletion):
                 raise ValueError("diagnostic_attempt_conflict")
             if row["status"] == "completed":
                 await _record_completion_progress(
-                    connection, completion.attempt_id, completion.user_id
+                    connection,
+                    completion.attempt_id,
+                    completion.user_id,
+                    row["mode"],
+                    completion.activity_timezone,
                 )
             stored_mode = row["mode"]
             stored_subject = row["subject"]
@@ -671,6 +689,12 @@ async def get_progress_profile(user_id: int):
             """,
             user_id,
         )
+
+
+async def get_gameplay_profile(user_id: int):
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        return await gameplay.get_gameplay_profile(connection, user_id)
 
 
 async def list_completed_attempts(user_id: int) -> list:

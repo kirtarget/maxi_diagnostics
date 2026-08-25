@@ -436,7 +436,7 @@ export default function Home() {
     logo: brand.logo,
     resultStatus: brand.interface.result_in_telegram,
   } : BUILD_BRAND;
-  const gameplayProfile = gameplayProfileView(bootstrap?.progress_profile);
+  const gameplayProfile = gameplayProfileView({ ...bootstrap?.progress_profile, ...bootstrap?.gameplay_profile });
   const mistakeCount = review?.items.filter((item) => !item.is_correct).length ?? 0;
   const forecastPoints = result ? forecastTrajectory(result) : [];
   const routeItems = result ? personalRoute(result.growth_topics) : [];

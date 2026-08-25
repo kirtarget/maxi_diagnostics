@@ -49,6 +49,17 @@ export function GameplayHomeScreen({
           </div>
           <small>{profile.completionCount} {profile.completionCount === 1 ? "диагностика завершена" : "диагностик завершено"}</small>
         </div>
+        {profile.serverBacked && (
+          <div className="gameplay-dashboard" aria-label="Игровой прогресс">
+            <div><strong>{profile.xpTotal} XP</strong><small>опыт</small></div>
+            <div><strong>{profile.streakDays}</strong><small>дней подряд</small></div>
+            <div><strong>{"♥".repeat(profile.livesRemaining ?? 0)}</strong><small>жизни</small></div>
+            <div><strong>{profile.dailyGoal?.progress}/{profile.dailyGoal?.target}</strong><small>цель дня</small></div>
+          </div>
+        )}
+        {profile.serverBacked && profile.quest && (
+          <div className="gameplay-quest"><small>Квест</small><strong>{profile.quest.progress}/{profile.quest.target} активностей</strong></div>
+        )}
         <button className="primary-button gameplay-home-cta" onClick={onStart} type="button">
           {profile.completionCount > 0 ? "Продолжить диагностику" : labels.start_diagnostic} <span aria-hidden="true">→</span>
         </button>
@@ -86,6 +97,15 @@ export function GameplayProfileScreen({ profile, onBack, onStart }: { profile: G
       <h1 id="gameplay-profile-title">Твой прогресс</h1>
       <div className="gameplay-profile-summary"><strong>Уровень {profile.level}</strong><span>{profile.levelLabel}</span><div className="gameplay-progress" role="progressbar" aria-label="Прогресс уровня" aria-valuenow={profile.levelProgress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${profile.levelProgress}%` }} /></div></div>
       <div className="gameplay-stat-grid"><div><strong>{profile.completionCount}</strong><span>завершено</span></div><div><strong>{profile.unlockedAchievements.length}</strong><span>достижения</span></div></div>
+      {profile.serverBacked && (
+        <div className="gameplay-dashboard gameplay-dashboard-profile" aria-label="Игровой прогресс">
+          <div><strong>{profile.xpTotal} XP</strong><small>опыт</small></div>
+          <div><strong>{profile.streakDays}</strong><small>дней подряд</small></div>
+          <div><strong>{"♥".repeat(profile.livesRemaining ?? 0)}</strong><small>жизни</small></div>
+          <div><strong>{profile.dailyGoal?.progress}/{profile.dailyGoal?.target}</strong><small>цель дня</small></div>
+        </div>
+      )}
+      {profile.serverBacked && profile.quest && <div className="gameplay-quest"><small>Квест</small><strong>{profile.quest.progress}/{profile.quest.target} активностей</strong></div>}
       <div className="gameplay-achievements"><h2>Достижения</h2>{profile.unlockedAchievements.length > 0 ? profile.unlockedAchievements.map((achievement) => <div className="gameplay-achievement" key={achievement.key}><span aria-hidden="true">✓</span><span><strong>{achievement.title}</strong><small>{achievement.description}</small></span></div>) : <p>Первые достижения появятся после завершённой диагностики.</p>}</div>
       <button className="primary-button" onClick={onStart} type="button">Начать диагностику <span aria-hidden="true">→</span></button>
     </section>

@@ -169,6 +169,30 @@ export type ProgressProfile = {
   achievement_keys: string[];
 };
 
+export type GameplayDailyGoal = {
+  date: string | null;
+  target: number;
+  progress: number;
+  complete: boolean;
+};
+
+export type GameplayQuest = {
+  key: string;
+  date: string | null;
+  target: number;
+  progress: number;
+};
+
+export type GameplayProfile = {
+  xp_total: number;
+  level: number;
+  level_progress: number;
+  streak_days: number;
+  lives_remaining: number;
+  daily_goal: GameplayDailyGoal;
+  quest: GameplayQuest | null;
+};
+
 export type BootstrapResponse = {
   session_scope: string;
   latest_attempt_id: string | null;
@@ -178,6 +202,7 @@ export type BootstrapResponse = {
   };
   diagnostics: PublicDiagnostic[];
   progress_profile?: ProgressProfile;
+  gameplay_profile?: GameplayProfile;
   attempt: ServerAttempt | null;
   results: ServerAttempt[];
 };

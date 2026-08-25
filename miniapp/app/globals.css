@@ -1009,6 +1009,14 @@ select:focus-visible,
 .gameplay-progress { height: 8px; overflow: hidden; border-radius: 99px; background: color-mix(in srgb, var(--brand-paper) 18%, transparent); }
 .gameplay-progress span { display: block; height: 100%; border-radius: inherit; background: var(--brand-signal); transition: width .35s ease; }
 .gameplay-level-card small { color: color-mix(in srgb, var(--brand-paper) 62%, transparent); font-size: 11px; }
+.gameplay-dashboard { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.gameplay-dashboard > div { display: grid; gap: 3px; min-width: 0; padding: 9px 7px; border-radius: 10px; background: color-mix(in srgb, var(--brand-paper) 8%, transparent); }
+.gameplay-dashboard strong { overflow: hidden; color: var(--brand-signal); font-size: 14px; letter-spacing: -.03em; text-overflow: ellipsis; white-space: nowrap; }
+.gameplay-dashboard small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gameplay-dashboard-profile { margin-top: 8px; }
+.gameplay-quest { display: grid; gap: 4px; padding: 12px 14px; border-left: 3px solid var(--brand-signal); color: var(--brand-paper); background: color-mix(in srgb, var(--brand-signal) 9%, transparent); }
+.gameplay-quest small { color: var(--brand-signal); font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.gameplay-quest strong { font-size: 13px; }
 .gameplay-home-cta { margin-top: 2px; }
 .gameplay-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
 .gameplay-section-heading h2 { margin: 6px 0 0; color: var(--brand-paper); font-size: 22px; letter-spacing: -.03em; }

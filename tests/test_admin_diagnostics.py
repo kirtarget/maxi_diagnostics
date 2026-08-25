@@ -256,7 +256,7 @@ class _DeleteConnection:
         if normalized.startswith("INSERT INTO diagnostic_session_generations"):
             return "INSERT 0 1"
         table = normalized.split("FROM", 1)[1].strip().split()[0]
-        return {"diagnostic_erased_users": "DELETE 0", "diagnostic_notifications": "DELETE 2", "diagnostic_attempts": "DELETE 1", "diagnostic_engagements": "DELETE 1"}[table]
+        return {"diagnostic_erased_users": "DELETE 0", "diagnostic_notifications": "DELETE 2", "diagnostic_attempts": "DELETE 1", "diagnostic_engagements": "DELETE 1", "diagnostic_progress_events": "DELETE 1", "diagnostic_progress_profiles": "DELETE 1"}[table]
 
 
 class _DeletePool:
@@ -286,6 +286,7 @@ async def test_delete_repository_is_atomic_parameterized_and_diagnostic_only(mon
     delete_queries = connection.queries[4:]
     assert [query[0].split("FROM ")[1].split()[0] for query in delete_queries] == [
         "diagnostic_notifications", "diagnostic_attempts", "diagnostic_engagements",
+        "diagnostic_progress_events", "diagnostic_progress_profiles",
     ]
     assert all(
         "WHERE user_id=$1" in query and arguments == (42,)

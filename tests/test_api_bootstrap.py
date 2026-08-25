@@ -77,6 +77,24 @@ def test_bootstrap_returns_brand_and_sanitized_catalog(monkeypatch):
         "completion_count": 0,
         "achievement_keys": [],
     }
+    assert body["gameplay_profile"] == {
+        "xp_total": 0,
+        "level": 1,
+        "level_progress": 0,
+        "streak_days": 0,
+        "lives_remaining": 5,
+        "daily_goal": {
+            "date": None,
+            "target": 1,
+            "progress": 0,
+            "complete": False,
+        },
+        "quest": None,
+    }
+    assert set(body["gameplay_profile"]) == {
+        "xp_total", "level", "level_progress", "streak_days",
+        "lives_remaining", "daily_goal", "quest",
+    }
     assert body["school"]["brand"]["name"] == configured_school.brand.name
     assert '"correct"' not in json.dumps(body["diagnostics"], ensure_ascii=False)
 

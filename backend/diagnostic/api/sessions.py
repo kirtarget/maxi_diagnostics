@@ -22,6 +22,7 @@ from diagnostic.catalog import (
 from diagnostic.analytics import emit_event
 from diagnostic.db import attempts
 from diagnostic.db.attempts import AttemptCompletion, AttemptProgress
+from diagnostic.db.gameplay import serialize_gameplay_profile
 from diagnostic.numeric import is_valid_numeric_answer
 from diagnostic.review import build_review_snapshot, public_review_items
 from diagnostic.scoring import ScoreResult, score_answers
@@ -40,6 +41,7 @@ def build_completion(
     user: dict[str, Any], body: CompletionRequest, diagnostic: Diagnostic, result: ScoreResult,
     school: SchoolConfig,
     report_asset_bundle_id: str,
+    timezone_name: str = "Europe/Moscow",
 ) -> AttemptCompletion:
     forecast = {
         "points": [
@@ -112,6 +114,7 @@ def build_completion(
         report_snapshot=report_snapshot,
         report_asset_bundle_id=report_asset_bundle_id,
         supersedes_attempt_id=body.supersedes_attempt_id,
+        activity_timezone=timezone_name,
     )
 
 
@@ -265,6 +268,10 @@ async def get_progress_profile(user_id: int):
     return await attempts.get_progress_profile(user_id)
 
 
+async def get_gameplay_profile(user_id: int):
+    return await attempts.get_gameplay_profile(user_id)
+
+
 def create_router(catalog: DiagnosticCatalog) -> APIRouter:
     router = APIRouter(prefix="/api/diagnostics")
 
@@ -305,6 +312,12 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
         completed = await list_completed_attempts(user["id"])
         latest_attempt_id = await get_latest_attempt_id(user["id"])
         progress_profile = await get_progress_profile(user["id"])
+        try:
+            gameplay_profile = await get_gameplay_profile(user["id"])
+        except RuntimeError as exc:
+            if str(exc) != "database_not_initialized":
+                raise
+            gameplay_profile = None
         school = request.app.state.school
         secret = request.app.state.settings.application_secret
         generation = await get_or_create_session_generation(
@@ -316,6 +329,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
             ),
             "latest_attempt_id": latest_attempt_id,
             "progress_profile": serialize_progress_profile(progress_profile),
+            "gameplay_profile": serialize_gameplay_profile(gameplay_profile),
             "school": public_school_payload(school),
             "diagnostics": catalog.public_payload(
                 request.app.state.settings.application_secret
@@ -436,6 +450,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
                 result,
                 request.app.state.school,
                 request.app.state.report_asset_bundle_id,
+                request.app.state.settings.timezone,
             )
             row = await attempts.complete_attempt(completion)
         except ValueError as exc:

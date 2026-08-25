@@ -102,6 +102,17 @@ CREATE TABLE IF NOT EXISTS diagnostic_progress_profiles (
     user_id BIGINT PRIMARY KEY,
     completion_count INTEGER NOT NULL DEFAULT 0 CHECK (completion_count >= 0),
     achievement_keys JSONB NOT NULL DEFAULT '[]'::jsonb,
+    xp_total BIGINT NOT NULL DEFAULT 0 CHECK (xp_total >= 0),
+    streak_days INTEGER NOT NULL DEFAULT 0 CHECK (streak_days >= 0),
+    streak_last_date DATE,
+    lives_remaining SMALLINT NOT NULL DEFAULT 5 CHECK (lives_remaining BETWEEN 0 AND 5),
+    daily_goal_target SMALLINT NOT NULL DEFAULT 1 CHECK (daily_goal_target BETWEEN 1 AND 100),
+    daily_goal_progress SMALLINT NOT NULL DEFAULT 0 CHECK (daily_goal_progress >= 0),
+    daily_goal_date DATE,
+    quest_key TEXT,
+    quest_progress SMALLINT NOT NULL DEFAULT 0 CHECK (quest_progress >= 0),
+    quest_target SMALLINT CHECK (quest_target IS NULL OR quest_target BETWEEN 1 AND 100),
+    quest_date DATE,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE TABLE IF NOT EXISTS diagnostic_completion_ledger (
@@ -109,6 +120,100 @@ CREATE TABLE IF NOT EXISTS diagnostic_completion_ledger (
     user_id BIGINT NOT NULL,
     completed_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- KIR-91 intentionally starts a new gameplay ledger at deployment time. Historical
+-- completion rows are retained, but are not awarded retroactively without a validated
+-- deployment timezone and a transactional projection rebuild.
+ALTER TABLE diagnostic_progress_profiles
+    ADD COLUMN IF NOT EXISTS xp_total BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE diagnostic_progress_profiles
+    ADD COLUMN IF NOT EXISTS streak_days INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE diagnostic_progress_profiles
+    ADD COLUMN IF NOT EXISTS streak_last_date DATE;
+ALTER TABLE diagnostic_progress_profiles
+    ADD COLUMN IF NOT EXISTS lives_remaining SMALLINT NOT NULL DEFAULT 5;
+ALTER TABLE diagnostic_progress_profiles
+    ADD COLUMN IF NOT EXISTS daily_goal_target SMALLINT NOT NULL DEFAULT 1;
+ALTER TABLE diagnostic_progress_profiles
+    ADD COLUMN IF NOT EXISTS daily_goal_progress SMALLINT NOT NULL DEFAULT 0;
+ALTER TABLE diagnostic_progress_profiles
+    ADD COLUMN IF NOT EXISTS daily_goal_date DATE;
+ALTER TABLE diagnostic_progress_profiles
+    ADD COLUMN IF NOT EXISTS quest_key TEXT;
+ALTER TABLE diagnostic_progress_profiles
+    ADD COLUMN IF NOT EXISTS quest_progress SMALLINT NOT NULL DEFAULT 0;
+ALTER TABLE diagnostic_progress_profiles
+    ADD COLUMN IF NOT EXISTS quest_target SMALLINT;
+ALTER TABLE diagnostic_progress_profiles
+    ADD COLUMN IF NOT EXISTS quest_date DATE;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='diagnostic_progress_profiles_xp_total_check') THEN
+        ALTER TABLE diagnostic_progress_profiles
+            ADD CONSTRAINT diagnostic_progress_profiles_xp_total_check CHECK (xp_total >= 0);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='diagnostic_progress_profiles_streak_days_check') THEN
+        ALTER TABLE diagnostic_progress_profiles
+            ADD CONSTRAINT diagnostic_progress_profiles_streak_days_check CHECK (streak_days >= 0);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='diagnostic_progress_profiles_lives_remaining_check') THEN
+        ALTER TABLE diagnostic_progress_profiles
+            ADD CONSTRAINT diagnostic_progress_profiles_lives_remaining_check CHECK (lives_remaining BETWEEN 0 AND 5);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='diagnostic_progress_profiles_daily_goal_target_check') THEN
+        ALTER TABLE diagnostic_progress_profiles
+            ADD CONSTRAINT diagnostic_progress_profiles_daily_goal_target_check CHECK (daily_goal_target BETWEEN 1 AND 100);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='diagnostic_progress_profiles_daily_goal_progress_check') THEN
+        ALTER TABLE diagnostic_progress_profiles
+            ADD CONSTRAINT diagnostic_progress_profiles_daily_goal_progress_check CHECK (daily_goal_progress BETWEEN 0 AND daily_goal_target);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='diagnostic_progress_profiles_quest_progress_check') THEN
+        ALTER TABLE diagnostic_progress_profiles
+            ADD CONSTRAINT diagnostic_progress_profiles_quest_progress_check
+            CHECK (quest_progress >= 0 AND (quest_target IS NULL OR quest_progress <= quest_target));
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='diagnostic_progress_profiles_quest_target_check') THEN
+        ALTER TABLE diagnostic_progress_profiles
+            ADD CONSTRAINT diagnostic_progress_profiles_quest_target_check
+            CHECK (quest_target IS NULL OR quest_target BETWEEN 1 AND 100);
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS diagnostic_progress_events (
+    event_id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    fingerprint TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    source_type TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    activity_date DATE NOT NULL,
+    xp_delta INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT diagnostic_progress_events_key_length
+        CHECK (length(idempotency_key) BETWEEN 1 AND 128),
+    CONSTRAINT diagnostic_progress_events_fingerprint_shape
+        CHECK (fingerprint ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT diagnostic_progress_events_event_type_check
+        CHECK (event_type IN (
+            'diagnostic_quick_completed', 'diagnostic_full_completed',
+            'trainer_session_completed', 'quest_rewarded'
+        )),
+    CONSTRAINT diagnostic_progress_events_source_type_check
+        CHECK (source_type IN ('diagnostic_completion', 'trainer_session', 'quest_reward')),
+    CONSTRAINT diagnostic_progress_events_source_id_length
+        CHECK (length(source_id) BETWEEN 1 AND 256),
+    CONSTRAINT diagnostic_progress_events_xp_delta_check
+        CHECK (xp_delta BETWEEN -1000 AND 1000),
+    UNIQUE (user_id, idempotency_key)
+);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_progress_events_user_date
+    ON diagnostic_progress_events(user_id, activity_date DESC, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_progress_events_date_type
+    ON diagnostic_progress_events(activity_date, event_type, user_id);
+
 CREATE INDEX IF NOT EXISTS idx_diagnostic_attempts_user_updated
     ON diagnostic_attempts(user_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_diagnostic_attempts_user_started
@@ -187,4 +292,17 @@ CREATE TABLE IF NOT EXISTS message_templates (
     description TEXT NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM diagnostic_schema_migrations
+         WHERE version='2026-08-25-kir-91-gameplay-v1'
+    ) THEN
+        -- No historical backfill. Existing completion_count remains authoritative for
+        -- the legacy progress profile; new events begin at this migration boundary.
+        INSERT INTO diagnostic_schema_migrations(version)
+        VALUES ('2026-08-25-kir-91-gameplay-v1');
+    END IF;
+END $$;
 """

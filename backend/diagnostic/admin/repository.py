@@ -164,6 +164,12 @@ async def delete_diagnostic_user(
             engagements = await connection.execute(
                 "DELETE FROM diagnostic_engagements WHERE user_id=$1", user_id
             )
+            await connection.execute(
+                "DELETE FROM diagnostic_progress_events WHERE user_id=$1", user_id
+            )
+            await connection.execute(
+                "DELETE FROM diagnostic_progress_profiles WHERE user_id=$1", user_id
+            )
     return {
         "notifications": _delete_count(notifications),
         "attempts": _delete_count(attempts),

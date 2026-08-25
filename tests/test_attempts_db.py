@@ -23,7 +23,8 @@ async def database():
     async with pool.acquire() as connection:
         await connection.execute(
             """
-            TRUNCATE diagnostic_completion_ledger, diagnostic_progress_profiles,
+            TRUNCATE diagnostic_completion_ledger, diagnostic_progress_events,
+                     diagnostic_progress_profiles,
                      diagnostic_notifications, diagnostic_attempts,
                      diagnostic_engagements, diagnostic_erased_users,
                      diagnostic_session_generations,
@@ -233,6 +234,48 @@ async def test_erasure_tombstone_prevents_progress_completion_and_reopen():
         assert await connection.fetchval(
             "SELECT count(*) FROM diagnostic_erased_users WHERE user_id=$1", user_id
         ) == 0
+
+
+@pytest.mark.asyncio
+async def test_erasure_removes_gameplay_ledger_and_profile_but_keeps_tombstone():
+    from diagnostic.admin.repository import delete_diagnostic_user
+
+    user_id = 8_100_000_000 + uuid4().int % 1_000_000_000
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute(
+            """
+            INSERT INTO diagnostic_progress_profiles (user_id, xp_total)
+            VALUES ($1, 20)
+            """,
+            user_id,
+        )
+        await connection.execute(
+            """
+            INSERT INTO diagnostic_progress_events (
+                user_id, idempotency_key, fingerprint, event_type,
+                source_type, source_id, activity_date, xp_delta
+            ) VALUES ($1, $2, $3, 'diagnostic_quick_completed',
+                      'diagnostic_completion', $4, CURRENT_DATE, 20)
+            """,
+            user_id,
+            f"diagnostic-completion/{uuid4()}",
+            "a" * 64,
+            f"attempt-{uuid4()}",
+        )
+
+    await delete_diagnostic_user(user_id, "a" * 64, "b" * 32)
+
+    async with pool.acquire() as connection:
+        assert await connection.fetchval(
+            "SELECT count(*) FROM diagnostic_progress_events WHERE user_id=$1", user_id
+        ) == 0
+        assert await connection.fetchval(
+            "SELECT count(*) FROM diagnostic_progress_profiles WHERE user_id=$1", user_id
+        ) == 0
+        assert await connection.fetchval(
+            "SELECT count(*) FROM diagnostic_erased_users WHERE user_id=$1", user_id
+        ) == 1
 
 
 @pytest.mark.asyncio
