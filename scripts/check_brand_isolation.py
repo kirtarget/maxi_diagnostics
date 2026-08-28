@@ -16,6 +16,8 @@ DEFAULT_TERMS_PATH = Path(__file__).resolve().with_name("source_brand_terms.json
 _EXCLUDED_RELATIVE_DIRECTORIES = frozenset(
     {
         (".git",),
+        (".claude",),
+        (".superpowers",),
         (".venv",),
         (".venv312",),
         ("venv",),
