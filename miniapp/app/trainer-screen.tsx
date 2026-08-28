@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type Dispatch, type ReactNode } from "react";
+import { FormattedMathText, FormattedStem } from "./math-display";
+import { cleanAnswerLabel } from "./question-prompt";
 import type { AnswerValue, InputQuestion, MatchingQuestion, MultipleQuestion, Question } from "./types";
 import {
   isTrainerAnswerComplete,
@@ -24,7 +26,7 @@ export type TrainerScreenProps = {
 };
 
 function QuestionPrompt({ question }: { question: Question }) {
-  return <div className="trainer-prompt"><span>{question.title}</span><h1>{question.prompt}</h1><small>{question.topic}</small></div>;
+  return <div className="trainer-prompt"><span>{question.title}</span><h1><FormattedStem text={question.prompt} /></h1><small>{question.topic}</small></div>;
 }
 
 function AnswerEditor({ question, value, disabled, onChange }: {
@@ -45,7 +47,7 @@ function AnswerEditor({ question, value, disabled, onChange }: {
 
 function OptionButton({ label, marker, selected, disabled, onClick }: { label: string; marker: string; selected: boolean; disabled: boolean; onClick: () => void }) {
   return <button type="button" role="radio" aria-checked={selected} disabled={disabled} className={`answer-option${selected ? " selected" : ""}`} onClick={onClick}>
-    <span className="option-letter">{marker}</span><span>{label}</span><span className="selection-mark" aria-hidden="true" />
+    <span className="option-letter">{marker}</span><span><FormattedMathText text={cleanAnswerLabel(label)} /></span><span className="selection-mark" aria-hidden="true" />
   </button>;
 }
 
@@ -61,9 +63,9 @@ function MultipleEditor({ question, value, disabled, onChange }: { question: Mul
 function MatchingEditor({ question, value, disabled, onChange }: { question: MatchingQuestion; value: Record<string, string>; disabled: boolean; onChange: (answer: AnswerValue) => void }) {
   return <div className="matching-list">
     {question.items.map((item, index) => <label className="matching-row" key={item.id}>
-      <span className="matching-index">{index + 1}</span><span>{item.label}</span>
+      <span className="matching-index">{index + 1}</span><span><FormattedMathText text={cleanAnswerLabel(item.label)} /></span>
       <select disabled={disabled} value={value[item.id] ?? ""} aria-label={`Соответствие для ${item.label}`} onChange={(event) => onChange({ ...value, [item.id]: event.target.value })}>
-        <option value="">Выберите</option>{question.options.map((option) => <option value={option.id} key={option.id}>{option.label}</option>)}
+        <option value="">Выберите</option>{question.options.map((option) => <option value={option.id} key={option.id}>{cleanAnswerLabel(option.label)}</option>)}
       </select>
     </label>)}
   </div>;
@@ -138,7 +140,7 @@ function Feedback({ state }: { state: TrainerState }) {
   if (!result) return null;
   return <aside className={`trainer-feedback ${result.is_correct ? "is-correct" : "is-wrong"}`} aria-live="polite">
     <strong>{result.is_correct ? "Верно" : "Почти"}</strong>
-    {result.correct_answer && <p>Ответ: {result.correct_answer}</p>}
+    {result.correct_answer && <p>Ответ: <FormattedMathText text={result.correct_answer} /></p>}
     {result.explanation && <p>{result.explanation}</p>}
     {result.xp_delta > 0 && <small>+{result.xp_delta} XP</small>}
   </aside>;

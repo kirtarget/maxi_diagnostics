@@ -1,10 +1,53 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  answerTypeLabel,
   cleanAnswerLabel,
   parseQuestionPrompt,
   questionTitleClassName,
 } from "./question-prompt";
+import type { Question } from "./types";
+
+describe("answerTypeLabel", () => {
+  const base = { id: "q", topic: "t", title: "1", prompt: "Вопрос" };
+
+  it("names every answer kind the way the mock chips do", () => {
+    expect(answerTypeLabel({ ...base, type: "single", options: [] } as unknown as Question)).toBe("один ответ");
+    expect(answerTypeLabel({ ...base, type: "multiple", options: [], selection_limit: 2 } as unknown as Question)).toBe("несколько ответов");
+    expect(answerTypeLabel({ ...base, type: "matching", items: [], options: [] } as unknown as Question)).toBe("сопоставление");
+    expect(answerTypeLabel({ ...base, type: "input" } as Question)).toBe("короткий ответ");
+  });
+
+  it("recognizes matching and table prompts hidden inside input questions", () => {
+    const sequence = [
+      "Соотнеси событие и год.",
+      "СОБЫТИЕ",
+      "А) Куликовская битва",
+      "Б) Крещение Руси",
+      "1) 1380",
+      "2) 988",
+      "Ответ запишите в виде последовательности цифр.",
+    ].join("\n");
+    expect(answerTypeLabel({ ...base, type: "input", prompt: sequence } as Question)).toBe("сопоставление");
+
+    const table = [
+      "Заполните пропуски в таблице «Свойства веществ».",
+      "Вещество",
+      "Формула",
+      "Агрегатное состояние",
+      "Кислород",
+      "O2",
+      "(А)",
+      "(Б)",
+      "H2O",
+      "жидкость",
+      "Пропущенные элементы:",
+      "1) газ;",
+      "2) вода;",
+    ].join("\n");
+    expect(answerTypeLabel({ ...base, type: "input", prompt: table } as Question)).toBe("таблица с пропусками");
+  });
+});
 
 describe("parseQuestionPrompt", () => {
   it("preserves a readable stem, headings, enumerated items, and instructions", () => {

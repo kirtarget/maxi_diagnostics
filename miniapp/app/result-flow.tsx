@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { FormattedMathText, FormattedStem } from "./math-display";
 import { safeAssetPath } from "./question-assets";
 import { shouldShowResultMetrics } from "./result-display";
 import { pdfStatusCopy, resultGameSummary, topicRecommendation, type PdfStatusCopy, type PersonalRouteAction } from "./result-flow-model";
@@ -221,7 +222,7 @@ export function ReviewScreen({
         <span>{item.topic}</span>
       </div>
       <h1 id="review-title">{item.title}</h1>
-      <p className="review-prompt">{item.prompt}</p>
+      <p className="review-prompt"><FormattedStem text={item.prompt} /></p>
       {imagePaths.length > 0 && (
         <div className="review-media">
           {imagePaths.map((path, imageIndex) => (
@@ -234,11 +235,11 @@ export function ReviewScreen({
       <dl className="answer-review">
         <div className="answer-review-user">
           <dt>Ваш ответ</dt>
-          <dd>{item.user_answer}</dd>
+          <dd><FormattedMathText text={item.user_answer} /></dd>
         </div>
         <div className="answer-review-expected">
           <dt>Правильный ответ</dt>
-          <dd>{item.expected_answer}</dd>
+          <dd><FormattedMathText text={item.expected_answer} /></dd>
         </div>
       </dl>
       <section className="guidance" aria-labelledby="guidance-title">

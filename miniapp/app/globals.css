@@ -1194,11 +1194,6 @@ select:focus-visible,
   font-weight: 700;
 }
 
-.question-meta span:last-child {
-  color: var(--brand-primary);
-  background: var(--primary-tint);
-}
-
 .question-copy { display: flex; flex-direction: column; gap: 10px; }
 
 .question-screen h1,

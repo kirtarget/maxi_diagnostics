@@ -52,6 +52,70 @@ describe("QuestionView", () => {
     expect(html).toContain("Набираем темп");
   });
 
+  it("shows the subject-and-answer-type chip from the mock", () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        question={question}
+        subject="Химия"
+        index={0}
+        total={3}
+        answer={undefined}
+        labels={{
+          back: "Назад",
+          task_label: "Задание",
+          of_label: "из",
+          illustration_alt: "Иллюстрация к заданию",
+          answer_label: "Ваш ответ",
+        } as unknown as Brand["interface"]}
+        onAnswer={() => undefined}
+        onBack={() => undefined}
+        onNext={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("question-type-chip");
+    expect(html).toContain("Химия · короткий ответ");
+  });
+
+  it("labels the collected answer the way the mock does", () => {
+    const sequenceQuestion: Question = {
+      id: "q-seq",
+      type: "input",
+      topic: "История",
+      title: "Задание 7",
+      prompt: [
+        "Соотнеси событие и год.",
+        "СОБЫТИЕ",
+        "А) Куликовская битва",
+        "Б) Крещение Руси",
+        "1) 1380",
+        "2) 988",
+        "Ответ запишите в виде последовательности цифр.",
+      ].join("\n"),
+    };
+    const html = renderToStaticMarkup(
+      <QuestionView
+        question={sequenceQuestion}
+        index={0}
+        total={3}
+        answer="1"
+        labels={{
+          back: "Назад",
+          task_label: "Задание",
+          of_label: "из",
+          illustration_alt: "Иллюстрация к заданию",
+          answer_label: "Ваш ответ",
+        } as unknown as Brand["interface"]}
+        onAnswer={() => undefined}
+        onBack={() => undefined}
+        onNext={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("Твой ответ");
+    expect(html).not.toContain("Получившийся ответ");
+  });
+
   it("places an illustration directly after the task stem", () => {
     const html = renderToStaticMarkup(
       <QuestionView

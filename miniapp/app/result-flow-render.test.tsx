@@ -31,6 +31,33 @@ describe("result flow screens", () => {
     expect(html).toContain("Как решать");
   });
 
+  it("formats review question math like the worksheet", () => {
+    const html = renderToStaticMarkup(
+      <ReviewScreen
+        items={[{
+          question_id: "q8",
+          number: 8,
+          type: "single",
+          topic: "Квадратные уравнения",
+          title: "Задание 8",
+          prompt: "Решите уравнение x^(2) + 4x − 5 = 0. Укажите больший корень.",
+          is_correct: false,
+          user_answer: "−5",
+          expected_answer: "1",
+          guidance: "По теореме Виета корни: 1 и −5.",
+          guidance_kind: "fallback",
+        }]}
+        index={0}
+        onBack={() => undefined}
+        onNext={() => undefined}
+        onForecast={() => undefined}
+      />,
+    );
+    expect(html).toContain("math-expression");
+    expect(html).toContain("<sup>2</sup>");
+    expect(html).not.toContain("x^(2)");
+  });
+
   it("renders only the provided forecast points", () => {
     const html = renderToStaticMarkup(
       <ForecastScreen

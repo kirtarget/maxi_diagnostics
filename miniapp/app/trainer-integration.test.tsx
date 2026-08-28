@@ -175,6 +175,27 @@ describe("trainer integration contracts", () => {
     expect(html).toContain("Завершить тренировку");
   });
 
+  it("formats trainer question math the same way as the diagnostic sheet", () => {
+    const mathQuestion = {
+      ...question,
+      prompt: "Решите уравнение x^(2) − 5x + 6 = 0. Укажите меньший корень.",
+      options: [{ id: "a", label: "А) 2" }, { id: "b", label: "Б) 3" }],
+    };
+    const state = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [mathQuestion], lives_remaining: 5,
+      },
+    });
+    const html = renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />);
+    expect(html).toContain("math-expression");
+    expect(html).toContain("<sup>2</sup>");
+    expect(html).not.toContain("x^(2)");
+    expect(html).not.toContain("А) 2");
+  });
+
   it("shows the dedicated no-lives screen with a countdown and a Telegram reminder", () => {
     const state = trainerReducer(trainerInitialState, {
       type: "start",

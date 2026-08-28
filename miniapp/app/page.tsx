@@ -758,6 +758,7 @@ export default function Home() {
           {error && <p className="inline-error" role="alert">{error}</p>}
           <TrainingQuestionView
             question={questions[questionIndex]}
+            subject={diagnostic?.subject}
             index={questionIndex}
             total={questions.length}
             answer={questions[questionIndex].type === "input"
