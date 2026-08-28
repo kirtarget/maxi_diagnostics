@@ -31,10 +31,6 @@ The bundled Manrope Regular and Bold font files under
 License 1.1. The complete copyright notice and license are included beside
 them as `OFL-Manrope.txt`.
 
-The bundled Forum Regular font file under `backend/diagnostic/assets/fonts/`
-is distributed under the SIL Open Font License 1.1. The complete copyright
-notice and license are included beside it as `OFL-Forum.txt`.
-
 The self-hosted Golos Text variable webfonts under `miniapp/public/fonts/`
 are distributed under the SIL Open Font License 1.1. The complete copyright
 notice and license are included beside them as `OFL-Golos-Text.txt`.

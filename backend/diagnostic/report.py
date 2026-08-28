@@ -47,6 +47,8 @@ def _report_theme(school: SchoolConfig) -> ReportTheme:
         signal=colors.HexColor(school.brand.colors.signal),
         ink=colors.HexColor(school.brand.colors.ink),
         paper=colors.HexColor(school.brand.colors.paper),
+        accent=colors.HexColor(school.brand.colors.accent),
+        background=colors.HexColor(school.brand.colors.background),
     )
 
 
@@ -453,9 +455,9 @@ def build_report(
 
         def page(canvas, doc) -> None:
             canvas.saveState()
-            canvas.setFillColor(theme.paper)
+            canvas.setFillColor(theme.background)
             canvas.rect(0, 0, A4[0], 9 * mm, fill=1, stroke=0)
-            canvas.setFillColor(theme.signal)
+            canvas.setFillColor(theme.primary)
             canvas.rect(0, A4[1] - 4 * mm, A4[0], 4 * mm, fill=1, stroke=0)
             canvas.setFillColor(theme.primary)
             canvas.setFont(_FONT_REGULAR, 8)

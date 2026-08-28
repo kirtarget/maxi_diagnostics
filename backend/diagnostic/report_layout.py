@@ -28,7 +28,6 @@ from diagnostic.school import SchoolConfig
 
 
 _FONT_ROOT = Path(__file__).resolve().parent / "assets" / "fonts"
-_DISPLAY_FONT = "Forum"
 _BODY_FONT = "Manrope"
 _BODY_BOLD = "Manrope-Bold"
 _LEGACY_REGULAR = "DiagnosticLiberationSans"
@@ -46,12 +45,18 @@ class ReportTheme:
     signal: colors.Color
     ink: colors.Color
     paper: colors.Color
+    accent: colors.Color = colors.HexColor("#B8F14A")
+    background: colors.Color = colors.HexColor("#F4F1FB")
+
+
+def _tint(color: colors.Color, fraction: float) -> colors.Color:
+    """Blend a brand color toward white, mirroring the app's color-mix tints."""
+    return colors.linearlyInterpolatedColor(colors.white, color, 0.0, 1.0, fraction)
 
 
 def register_report_fonts() -> None:
     registered = set(pdfmetrics.getRegisteredFontNames())
     for name, filename, fallback in (
-        (_DISPLAY_FONT, "Forum-Regular.ttf", "LiberationSans-Regular.ttf"),
         (_BODY_FONT, "Manrope-Regular.ttf", "LiberationSans-Regular.ttf"),
         (_BODY_BOLD, "Manrope-Bold.ttf", "LiberationSans-Bold.ttf"),
         (_LEGACY_REGULAR, "LiberationSans-Regular.ttf", None),
@@ -77,22 +82,24 @@ def register_report_fonts() -> None:
 
 def make_styles(theme: ReportTheme) -> dict[str, ParagraphStyle]:
     base = getSampleStyleSheet()
+    muted = _tint(theme.ink, 0.62)
     return {
         "display": ParagraphStyle(
             "Display",
             parent=base["Title"],
-            fontName=_DISPLAY_FONT,
-            fontSize=30,
-            leading=33,
+            fontName=_BODY_BOLD,
+            fontSize=28,
+            leading=31,
             textColor=theme.ink,
+            alignment=0,
             spaceAfter=14,
         ),
         "heading": ParagraphStyle(
             "Heading",
             parent=base["Heading2"],
             fontName=_BODY_BOLD,
-            fontSize=15,
-            leading=19,
+            fontSize=14,
+            leading=18,
             textColor=theme.ink,
             spaceAfter=8,
         ),
@@ -105,12 +112,21 @@ def make_styles(theme: ReportTheme) -> dict[str, ParagraphStyle]:
             textColor=theme.ink,
             spaceAfter=7,
         ),
+        "muted": ParagraphStyle(
+            "Muted",
+            parent=base["BodyText"],
+            fontName=_BODY_FONT,
+            fontSize=10,
+            leading=15,
+            textColor=muted,
+            spaceAfter=7,
+        ),
         "label": ParagraphStyle(
             "Label",
             parent=base["BodyText"],
             fontName=_BODY_BOLD,
-            fontSize=8,
-            leading=10,
+            fontSize=8.5,
+            leading=11,
             textColor=theme.primary,
             spaceAfter=4,
         ),
@@ -121,7 +137,7 @@ def make_styles(theme: ReportTheme) -> dict[str, ParagraphStyle]:
             fontSize=9,
             leading=13,
             textColor=theme.ink,
-            backColor=theme.paper,
+            backColor=_tint(theme.signal, 0.13),
         ),
         "expected_answer": ParagraphStyle(
             "ExpectedAnswer",
@@ -130,7 +146,7 @@ def make_styles(theme: ReportTheme) -> dict[str, ParagraphStyle]:
             fontSize=9,
             leading=13,
             textColor=theme.ink,
-            backColor=theme.signal,
+            backColor=_tint(theme.accent, 0.28),
         ),
     }
 
@@ -262,8 +278,8 @@ def summary_story(
         Paragraph(escape(school.brand.name), styles["label"]),
         Paragraph("Ваша точка старта", styles["display"]),
         Paragraph(f"Предмет: <b>{escape(subject)}</b>", styles["heading"]),
-        Paragraph(f"Режим: {escape(mode)}", styles["body"]),
-        Paragraph(f"Дата завершения: {_completion_date(attempt)}", styles["body"]),
+        Paragraph(f"Режим: {escape(mode)}", styles["muted"]),
+        Paragraph(f"Дата завершения: {_completion_date(attempt)}", styles["muted"]),
         Paragraph(
             f"Текущий результат: <b>{escape(_display(score))} из "
             f"{escape(_display(max_score))} {escape(_display(score_unit))}</b>",
@@ -274,7 +290,7 @@ def summary_story(
             f"{escape(_display(question_count))}</b>",
             styles["body"],
         ),
-        Paragraph(f"Границы проверки: {escape(unassessed_part)}", styles["body"]),
+        Paragraph(f"Границы проверки: {escape(unassessed_part)}", styles["muted"]),
         Paragraph(
             f"Сильные темы: {escape(', '.join(strong_topics) if strong_topics else 'не выделены')}",
             styles["body"],
@@ -285,7 +301,7 @@ def summary_story(
         ),
         Paragraph(
             "Диагностика показывает, что уже получается и где быстрее всего вырастет балл.",
-            styles["body"],
+            styles["muted"],
         ),
     ]
     persisted_points = [
@@ -311,8 +327,9 @@ def summary_story(
         table.setStyle(
             TableStyle(
                 [
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, colors.HexColor("#E66A2C")),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, styles["label"].textColor),
                     ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 4),
                     ("LEFTPADDING", (0, 0), (-1, -1), 0),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 8),
                 ]
@@ -354,6 +371,7 @@ def _answer_story(
         hAlign="LEFT",
         splitByRow=0,
     )
+    line = _tint(styles["body"].textColor, 0.16)
     answer_table.setStyle(
         TableStyle(
             [
@@ -364,8 +382,9 @@ def _answer_story(
                     (1, 1),
                     styles["expected_answer"].backColor,
                 ),
-                ("BOX", (0, 1), (-1, 1), 0.5, colors.HexColor("#D7D4CB")),
-                ("INNERGRID", (0, 1), (-1, 1), 0.5, colors.HexColor("#D7D4CB")),
+                ("BOX", (0, 1), (-1, 1), 0.5, line),
+                ("INNERGRID", (0, 1), (-1, 1), 0.5, line),
+                ("ROUNDEDCORNERS", [4, 4, 4, 4]),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("TOPPADDING", (0, 1), (-1, 1), 8),
                 ("BOTTOMPADDING", (0, 1), (-1, 1), 8),
@@ -454,10 +473,12 @@ def route_story(
         Paragraph("Персональный маршрут", styles["display"]),
         Paragraph("Три ближайших действия", styles["label"]),
     ]
+    primary_hex = "#" + styles["label"].textColor.hexval()[2:]
     for index, action in enumerate(route[:3], start=1):
         story.append(
             Paragraph(
-                f"<b>{index:02d}</b>&nbsp;&nbsp;{escape(str(action))}",
+                f'<font color="{primary_hex}"><b>{index:02d}</b></font>'
+                f"&nbsp;&nbsp;{escape(str(action))}",
                 styles["heading"],
             )
         )
@@ -476,9 +497,10 @@ def draw_page(theme: ReportTheme, attempt: Mapping[str, Any]):
 
     def _draw(canvas: Canvas, document: BaseDocTemplate) -> None:
         canvas.saveState()
-        canvas.setStrokeColor(theme.primary)
-        canvas.setLineWidth(1)
-        canvas.line(18 * mm, 285 * mm, 192 * mm, 285 * mm)
+        canvas.setFillColor(theme.primary)
+        canvas.rect(0, 288 * mm, 210 * mm, 9 * mm, fill=1, stroke=0)
+        canvas.setFillColor(theme.accent)
+        canvas.roundRect(18 * mm, 290.5 * mm, 10 * mm, 4 * mm, 2 * mm, fill=1, stroke=0)
         canvas.setFillColor(theme.ink)
         canvas.setFont(_BODY_FONT, 8)
         canvas.drawString(18 * mm, 14.5 * mm, "Персональный отчёт")
