@@ -362,6 +362,7 @@ class MessageTemplates(BaseModel):
     day_followup: str
     quick_to_full: str
     month_retest: str
+    lives_refill: str = "Жизни в тренажёре восстановились — можно продолжать подготовку."
     generic: str
 
     @field_validator("*")
@@ -385,6 +386,7 @@ class MessageTemplates(BaseModel):
             "DAY_FOLLOWUP": self.day_followup,
             "QUICK_TO_FULL": self.quick_to_full,
             "MONTH_RETEST": self.month_retest,
+            "LIVES_REFILL": self.lives_refill,
         }
 
 
@@ -394,6 +396,9 @@ class BrandConfig(BaseModel):
     school_id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{1,62}$")
     name: str = Field(min_length=1, max_length=128)
     short_name: str = Field(min_length=1, max_length=64)
+    bot_username: str | None = Field(
+        default=None, pattern=r"^[A-Za-z][A-Za-z0-9_]{1,28}[Bb][Oo][Tt]$"
+    )
     colors: BrandColors
     logo: str
     pdf: PdfBrand

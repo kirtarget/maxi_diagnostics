@@ -175,6 +175,42 @@ describe("trainer integration contracts", () => {
     expect(html).toContain("Завершить тренировку");
   });
 
+  it("shows the dedicated no-lives screen with a countdown and a Telegram reminder", () => {
+    const state = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [question], lives_remaining: 0,
+        next_life_at: new Date(Date.now() + 42 * 60_000).toISOString(),
+      },
+    });
+    const html = renderToStaticMarkup(
+      <TrainerScreen state={state} dispatch={() => undefined} livesReminder={{ status: "idle" }} onRemindLives={() => undefined} />,
+    );
+    expect(html).toContain("Жизни закончились");
+    expect(html).toContain("Восстановление");
+    expect(html).toContain("Напомнить в Telegram");
+    expect(html).toContain("Пройти диагностику");
+    expect(html).not.toContain("Проверить ответ");
+  });
+
+  it("confirms a scheduled Telegram reminder instead of the button", () => {
+    const state = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [question], lives_remaining: 0,
+        next_life_at: new Date(Date.now() + 42 * 60_000).toISOString(),
+      },
+    });
+    const html = renderToStaticMarkup(
+      <TrainerScreen state={state} dispatch={() => undefined} livesReminder={{ status: "scheduled" }} onRemindLives={() => undefined} />,
+    );
+    expect(html).toContain("Напомним в Telegram");
+  });
+
   it("keeps mistake replay available when the normal life pool is empty", () => {
     const state = trainerReducer(trainerInitialState, {
       type: "start",

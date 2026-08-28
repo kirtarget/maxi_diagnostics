@@ -577,6 +577,14 @@ export const answerTrainer = (
   fetcher: FetchLike = fetch,
 ) => postDiagnostic<TrainerAnswerResponse>("/api/diagnostics/trainer/answer", initData, payload, fetcher);
 
+export const requestLivesReminder = (
+  initData: string,
+  sessionScope: string,
+  fetcher: FetchLike = fetch,
+) => postDiagnostic<{ ok: true; due_at: string | null }>(
+  "/api/diagnostics/trainer/lives-reminder", initData, { session_scope: sessionScope }, fetcher,
+);
+
 export const finishTrainer = (
   initData: string,
   payload: { session_scope: string; trainer_session_id: string; revision: number },

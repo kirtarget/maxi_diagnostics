@@ -89,6 +89,10 @@ class TrainerAnswerRequest(ApiRequest):
         return self
 
 
+class TrainerLivesReminderRequest(ApiRequest):
+    session_scope: str = Field(pattern=r"^[0-9a-f]{24}$")
+
+
 class TrainerFinishRequest(ApiRequest):
     session_scope: str = Field(pattern=r"^[0-9a-f]{24}$")
     trainer_session_id: str = Field(pattern=r"^[A-Za-z0-9_-]{32,64}$")

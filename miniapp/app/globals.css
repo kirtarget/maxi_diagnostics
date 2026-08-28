@@ -2507,6 +2507,97 @@ select:focus-visible,
   font-weight: 600;
 }
 
+.forecast-empty-screen .text-back { align-self: flex-start; }
+
+.forecast-empty-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.forecast-empty-dot {
+  width: 34px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--brand-ink) 12%, white);
+}
+
+.forecast-empty-dot.is-done { background: var(--brand-primary); }
+
+.forecast-empty-progress small {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.no-lives-screen .lives-row {
+  font-size: 34px;
+  letter-spacing: 4px;
+  color: color-mix(in srgb, var(--brand-ink) 12%, white);
+}
+
+.no-lives-screen .lives-row-lost { color: var(--brand-signal); }
+
+.no-lives-screen p b { color: var(--brand-ink); }
+
+.lives-recovery {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 18px;
+  border: 1.5px solid var(--line);
+  border-radius: 18px;
+  background: var(--brand-paper);
+  margin-top: 10px;
+}
+
+.lives-recovery-icon { font-size: 22px; }
+
+.lives-recovery-track { flex: 1; text-align: left; }
+
+.lives-recovery-track strong { font-size: 13px; font-weight: 700; }
+
+.lives-recovery-rail {
+  height: 7px;
+  margin-top: 6px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--brand-ink) 10%, var(--brand-background));
+  overflow: hidden;
+}
+
+.lives-recovery-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--brand-signal);
+  transition: width 1s linear;
+}
+
+.lives-recovery-timer {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--brand-signal);
+  font-variant-numeric: tabular-nums;
+}
+
+.link-button {
+  border: 0;
+  background: none;
+  padding: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand-primary);
+  cursor: pointer;
+}
+
+.link-button:disabled { color: var(--muted); cursor: default; }
+
+.lives-reminder-note { font-size: 13px; font-weight: 600; }
+
 .trainer-complete {
   align-items: center;
   justify-content: center;

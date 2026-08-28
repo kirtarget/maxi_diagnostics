@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { ForecastScreen, ResultScreen, ReviewScreen } from "./result-flow";
+import { ForecastEmptyScreen, ForecastScreen, ResultScreen, ReviewScreen } from "./result-flow";
 
 describe("result flow screens", () => {
   it("renders the persisted answers and honest fallback label", () => {
@@ -62,6 +62,19 @@ describe("result flow screens", () => {
     expect(html).not.toContain("MAXIMUM");
     expect(html).not.toContain("средний прирост");
     expect(html).not.toContain("+42");
+  });
+
+  it("shows the not-enough-data state with progress toward two diagnostics", () => {
+    const html = renderToStaticMarkup(
+      <ForecastEmptyScreen
+        completedCount={1}
+        onBack={() => undefined}
+        onStart={() => undefined}
+      />,
+    );
+    expect(html).toContain("Пока мало данных");
+    expect(html).toContain("1 из 2");
+    expect(html).toContain("Пройти диагностику");
   });
 
   it("renders zero metrics so a truthy score gate cannot hide a valid server result", () => {

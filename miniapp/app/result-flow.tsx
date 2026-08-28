@@ -253,6 +253,28 @@ export function ReviewScreen({
   );
 }
 
+export function ForecastEmptyScreen({ completedCount, onBack, onStart }: {
+  completedCount: number;
+  onBack: () => void;
+  onStart: () => void;
+}): ReactNode {
+  const done = Math.min(Math.max(completedCount, 0), 2);
+  return (
+    <section className="screen centered-state forecast-empty-screen" aria-labelledby="forecast-empty-title">
+      <button className="text-back" onClick={onBack} type="button">Назад</button>
+      <span className="state-icon" aria-hidden="true">📈</span>
+      <h1 id="forecast-empty-title">Пока мало данных</h1>
+      <p>Прогноз появится после 2 диагностик. Сейчас у тебя {done === 1 ? "одна" : String(done)} — пройди ещё, и посчитаем траекторию.</p>
+      <div className="forecast-empty-progress" aria-label={`Диагностик пройдено: ${done} из 2`}>
+        <span className={`forecast-empty-dot${done >= 1 ? " is-done" : ""}`} aria-hidden="true" />
+        <span className={`forecast-empty-dot${done >= 2 ? " is-done" : ""}`} aria-hidden="true" />
+        <small>{done} из 2</small>
+      </div>
+      <button className="primary-button" onClick={onStart} type="button">Пройти диагностику <span aria-hidden="true">→</span></button>
+    </section>
+  );
+}
+
 export function ForecastScreen({ points, onBack, onRoute }: {
   points: ForecastPoint[];
   onBack: () => void;

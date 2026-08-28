@@ -22,7 +22,12 @@ from diagnostic.review import fallback_guidance, format_answer
 from diagnostic.scoring import is_answer_correct
 
 from .dependencies import telegram_user
-from .models import TrainerAnswerRequest, TrainerFinishRequest, TrainerStartRequest
+from .models import (
+    TrainerAnswerRequest,
+    TrainerFinishRequest,
+    TrainerLivesReminderRequest,
+    TrainerStartRequest,
+)
 from .sessions import _require_current_session
 
 
@@ -177,11 +182,13 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
         ]
         if not selected:
             raise HTTPException(status_code=409, detail="trainer_content_changed")
+        profile_payload = serialize_gameplay_profile(profile)
         return {
             "ok": True,
             **session,
             "questions": [public_question(question) for question in selected],
-            "lives_remaining": serialize_gameplay_profile(profile)["lives_remaining"],
+            "lives_remaining": profile_payload["lives_remaining"],
+            "next_life_at": profile_payload["next_life_at"],
         }
 
     @router.post("/trainer/answer")
@@ -231,6 +238,18 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
             )
         except ValueError as exc:
             raise _error(exc) from exc
+
+    @router.post("/trainer/lives-reminder")
+    async def lives_reminder(
+        body: TrainerLivesReminderRequest, request: Request
+    ) -> dict[str, Any]:
+        user = telegram_user(request, body.init_data)
+        await _require_current_session(request, user["id"], body.session_scope)
+        try:
+            due_at = await trainer.schedule_lives_refill_reminder(user["id"])
+        except ValueError as exc:
+            raise _error(exc) from exc
+        return {"ok": True, "due_at": due_at}
 
     @router.post("/trainer/finish")
     async def finish(body: TrainerFinishRequest, request: Request) -> dict[str, Any]:

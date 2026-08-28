@@ -53,6 +53,33 @@ async def test_followup_sends_known_kind_and_finalizes_exact_lease(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_followup_sends_lives_refill_reminder_without_attempt(monkeypatch):
+    from diagnostic import followups
+
+    lease = claimed("lives_refill") | {"attempt_id": None}
+    context = lease | {"attempt_status": None, "result_viewed_at": None, "subject": "diagnostic", "mode": "full", "payload": {}}
+    monkeypatch.setattr(followups.attempts, "claim_due_notifications", AsyncMock(return_value=[lease]))
+    monkeypatch.setattr(followups.attempts, "get_claimed_notification", AsyncMock(return_value=context))
+    rendered = AsyncMock(return_value="safe")
+    monkeypatch.setattr(followups, "render_message", rendered)
+    monkeypatch.setattr(followups.attempts, "mark_notification_sent", AsyncMock(return_value=True))
+    bot = SimpleNamespace(send_message=AsyncMock(return_value=SimpleNamespace(message_id=3)))
+
+    assert await followups.dispatch_followups(bot, SimpleNamespace(miniapp_url="https://app.example"), load_school(ROOT / "school")) == 1
+    assert rendered.await_args.args[0] == "LIVES_REFILL"
+    bot.send_message.assert_awaited_once()
+
+
+def test_lives_refill_template_is_seeded_for_the_school():
+    school = load_school(ROOT / "school")
+    assert "LIVES_REFILL" in school.brand.messages.keyed()
+
+    from diagnostic.db.messages import MESSAGE_KEYS
+
+    assert "LIVES_REFILL" in MESSAGE_KEYS
+
+
+@pytest.mark.asyncio
 async def test_followup_deletes_sent_message_when_erasure_wins_finalization(monkeypatch):
     from diagnostic import followups
 

@@ -21,13 +21,15 @@ import {
   updateNumericInputAnswer,
   saveProgress,
   finishTrainer,
+  requestLivesReminder,
   startTrainer,
 } from "./api";
 import type { ProgressPayload, ProgressSaveQueue } from "./api";
-import { GameplayHomeScreen, GameplayProfileScreen, ModeScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
+import { GameplayHomeScreen, GameplayProfileScreen, ModeScreen, NotTelegramScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
 import { safeAssetPath } from "./question-assets";
 import { QuestionView as TrainingQuestionView } from "./question-screen";
 import {
+  ForecastEmptyScreen,
   ForecastScreen,
   ResultScreen,
   ReviewScreen,
@@ -37,7 +39,7 @@ import { forecastTrajectory, pdfStatusCopy, personalRoute } from "./result-flow-
 import { createReviewRequestGate } from "./review-request-gate";
 import { initializeTelegram } from "./telegram-webapp";
 import { gameplayProfileView } from "./gameplay-profile-model";
-import { TrainerScreen } from "./trainer-screen";
+import { TrainerScreen, type LivesReminderState } from "./trainer-screen";
 import { trainerInitialState, trainerReducer } from "./trainer-model";
 import { LeagueScreen } from "./league-screen";
 import type { LeagueScreenState } from "./league-model";
@@ -59,6 +61,11 @@ type Screen = "loading" | "welcome" | "home" | "profile" | "league" | "mode" | "
 type DisplayBrand = Pick<Brand, "name" | "short_name" | "logo"> & {
   resultStatus: string;
 };
+
+const BUILD_BOT_USERNAME = process.env.NEXT_PUBLIC_BUILD_BOT_USERNAME ?? "";
+const BUILD_BOT_URL = /^[A-Za-z][A-Za-z0-9_]{1,28}[Bb][Oo][Tt]$/.test(BUILD_BOT_USERNAME)
+  ? `https://t.me/${BUILD_BOT_USERNAME}`
+  : null;
 
 const BUILD_BRAND: DisplayBrand = {
   name: process.env.NEXT_PUBLIC_BUILD_SCHOOL_NAME ?? "School",
@@ -131,6 +138,9 @@ export default function Home() {
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [trainerState, dispatchTrainer] = useReducer(trainerReducer, trainerInitialState);
   const [leagueState, setLeagueState] = useState<LeagueScreenState>({ kind: "loading" });
+  const [livesReminder, setLivesReminder] = useState<LivesReminderState>({ status: "idle" });
+  const [sessionCompletions, setSessionCompletions] = useState(0);
+  const [outsideTelegram, setOutsideTelegram] = useState(false);
   const [offerDismissed, setOfferDismissed] = useState(false);
   const initData = useRef("");
   const progressRevision = useRef(0);
@@ -255,9 +265,10 @@ export default function Home() {
     const webApp = initializeTelegram();
     initData.current = webApp?.initData ?? "";
     if (!initData.current) {
-      setError("Откройте диагностику из Telegram-бота школы, чтобы подтвердить вход.");
+      setOutsideTelegram(true);
       return false;
     }
+    setOutsideTelegram(false);
     try {
       const data = await loadBootstrap(initData.current);
       if (generation !== hydrateGeneration.current) return false;
@@ -457,6 +468,7 @@ export default function Home() {
       progressRevision.current = response.attempt.progress_revision;
       supersedesAttemptId.current = undefined;
       setResult(response.result);
+      setSessionCompletions((count) => count + 1);
       setReview(null);
       setReviewIndex(0);
       setReviewError(null);
@@ -483,6 +495,7 @@ export default function Home() {
   const gameplayProfile = gameplayProfileView({ ...bootstrap?.progress_profile, ...bootstrap?.gameplay_profile });
   const mistakeCount = review?.items.filter((item) => !item.is_correct).length ?? 0;
   const forecastPoints = result ? forecastTrajectory(result) : [];
+  const completedDiagnostics = (bootstrap?.progress_profile?.completion_count ?? 0) + sessionCompletions;
   const routeItems = result ? personalRoute(result.growth_topics) : [];
   const currentPdfStatus = review?.pdf_status ?? "pending";
 
@@ -517,6 +530,7 @@ export default function Home() {
     trainerSourceAttemptId.current = requestedMode === "mistakes" ? (sourceAttemptId ?? null) : null;
     trainerRecoveryMode.current = "retry";
     dispatchTrainer({ type: "reset" });
+    setLivesReminder({ status: "idle" });
     setScreen("trainer");
     try {
       const payload = requestedMode === "mistakes" && sourceAttemptId
@@ -579,6 +593,17 @@ export default function Home() {
     }
   }, [sessionScope, trainerState.session]);
 
+  const remindAboutLives = useCallback(async () => {
+    if (!sessionScope || !initData.current) return;
+    setLivesReminder({ status: "pending" });
+    try {
+      await requestLivesReminder(initData.current, sessionScope);
+      setLivesReminder({ status: "scheduled" });
+    } catch {
+      setLivesReminder({ status: "error" });
+    }
+  }, [sessionScope]);
+
   const retryTrainer = useCallback(() => {
     if (trainerRecoveryMode.current === "restart" && trainerDiagnosticId.current) {
       void runTrainerStart(trainerDiagnosticId.current, trainerMode.current, trainerSourceAttemptId.current ?? undefined);
@@ -611,6 +636,15 @@ export default function Home() {
     "--brand-paper": brand.colors.paper,
     "--brand-background": brand.colors.background,
   } as React.CSSProperties : undefined;
+
+  if (outsideTelegram && !bootstrap) {
+    return (
+      <main className="app-shell" style={style}>
+        <BrandHeader brand={displayBrand} disabled onHome={() => undefined} />
+        <NotTelegramScreen botUrl={BUILD_BOT_URL} />
+      </main>
+    );
+  }
 
   if (error && !bootstrap) {
     return (
@@ -775,6 +809,8 @@ export default function Home() {
           onFinish={() => void finishTrainerSession()}
           onHome={() => setScreen(bootstrap?.diagnostics.length ? "home" : "welcome")}
           onRetry={retryTrainer}
+          livesReminder={livesReminder}
+          onRemindLives={() => void remindAboutLives()}
         />
       )}
 
@@ -798,11 +834,19 @@ export default function Home() {
       )}
 
       {screen === "forecast" && result && (
-        <ForecastScreen
-          points={forecastPoints}
-          onBack={() => setScreen(review ? "review" : "result")}
-          onRoute={() => setScreen("route")}
-        />
+        completedDiagnostics >= 2 ? (
+          <ForecastScreen
+            points={forecastPoints}
+            onBack={() => setScreen(review ? "review" : "result")}
+            onRoute={() => setScreen("route")}
+          />
+        ) : (
+          <ForecastEmptyScreen
+            completedCount={completedDiagnostics}
+            onBack={() => setScreen(review ? "review" : "result")}
+            onStart={() => setScreen("mode")}
+          />
+        )
       )}
 
       {screen === "route" && result && bootstrap && (

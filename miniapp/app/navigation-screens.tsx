@@ -9,6 +9,17 @@ import type {
   SchoolLinks,
 } from "./types";
 
+export function NotTelegramScreen({ botUrl }: { botUrl: string | null }) {
+  return (
+    <section className="screen centered-state not-telegram-screen" role="alert">
+      <span className="state-icon" aria-hidden="true">✈️</span>
+      <h1>Открой в Telegram</h1>
+      <p>Диагностика работает внутри бота твоей школы. Вернись в чат и нажми «Открыть диагностику».</p>
+      {botUrl && <a className="primary-button" href={botUrl}>Перейти в бота</a>}
+    </section>
+  );
+}
+
 export type WelcomeScreenProps = {
   diagnostics: PublicDiagnostic[];
   labels: Brand["interface"];

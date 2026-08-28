@@ -189,6 +189,7 @@ export type GameplayProfile = {
   level_progress: number;
   streak_days: number;
   lives_remaining: number;
+  next_life_at?: string | null;
   daily_goal: GameplayDailyGoal;
   quest: GameplayQuest | null;
 };

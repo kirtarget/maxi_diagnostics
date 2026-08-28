@@ -7,9 +7,9 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { GameplayHomeScreen, GameplayProfileScreen, ModeScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
+import { GameplayHomeScreen, GameplayProfileScreen, ModeScreen, NotTelegramScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
 import { QuestionView } from "./question-screen";
-import { ForecastScreen, ResultScreen, ReviewScreen, RouteScreen } from "./result-flow";
+import { ForecastEmptyScreen, ForecastScreen, ResultScreen, ReviewScreen, RouteScreen } from "./result-flow";
 import { TrainerScreen } from "./trainer-screen";
 import { LeagueScreen } from "./league-screen";
 import { gameplayProfileView } from "./gameplay-profile-model";
@@ -101,6 +101,20 @@ const screens: Array<[string, string]> = [
   ["review", renderToStaticMarkup(<ReviewScreen items={[{ question_id: "q8", number: 8, type: "single", topic: "Квадратные уравнения", title: "Задание 8", prompt: "Решите уравнение x² + 4x − 5 = 0. Укажите больший корень.", is_correct: false, user_answer: "−5", expected_answer: "1", guidance: "По теореме Виета: x₁ · x₂ = −5, x₁ + x₂ = −4. Корни: 1 и −5. Больший из них — 1.", guidance_kind: "fallback" }]} index={0} onBack={noop} onNext={noop} onForecast={noop} />)],
   ["review-clean", renderToStaticMarkup(<ReviewScreen items={[]} index={0} onBack={noop} onNext={noop} onForecast={noop} />)],
   ["forecast", renderToStaticMarkup(<ForecastScreen points={[{ id: "current", label: "Сейчас", value: 74 }, { id: "goal", label: "Цель", value: 85 }]} onBack={noop} onRoute={noop} />)],
+  ["forecast-empty", renderToStaticMarkup(<ForecastEmptyScreen completedCount={1} onBack={noop} onStart={noop} />)],
+  ["not-telegram", renderToStaticMarkup(<NotTelegramScreen botUrl="https://t.me/maxi_diagnostics_bot" />)],
+  ["trainer-no-lives", renderToStaticMarkup(<TrainerScreen state={{
+    phase: "answering",
+    session: { trainer_session_id: "t", revision: 1, mode: "normal", lives_remaining: 0, next_life_at: new Date(Date.now() + 42 * 60_000).toISOString(), question_ids: ["a"], questions: [q("a")] },
+    currentIndex: 0,
+    answeredQuestionIndex: null,
+    draftAnswer: undefined,
+    submittedAnswer: undefined,
+    answerResult: null,
+    finishResult: null,
+    error: null,
+    retryPhase: null,
+  } as never} dispatch={noop} livesReminder={{ status: "idle" }} onRemindLives={noop} />)],
   ["route", renderToStaticMarkup(<RouteScreen items={[{ id: "close-topic", title: "Квадратные уравнения", description: "Зона роста: начни с тренажёра по этой теме." }, { id: "strengthen-topic", title: "Геометрия · площади", description: "Повтори формулы площадей и реши подборку." }]} pdf={{ title: "PDF-отчёт готовится", description: "Пришлём в Telegram, когда будет готов." }} offers={links.offers} onRefreshPdf={noop} onSubjects={noop} />)],
   ["trainer-feedback", renderToStaticMarkup(<TrainerScreen state={{
     phase: "feedback",

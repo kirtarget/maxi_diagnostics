@@ -250,6 +250,22 @@ describe("diagnostic API payloads", () => {
     });
   });
 
+  it("requests a lives reminder with only authentication and session scope", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      ok: true, due_at: "2026-08-28T12:00:00+00:00",
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+
+    const { requestLivesReminder } = await import("./api");
+    await expect(requestLivesReminder("signed-init-data", "a".repeat(24), fetcher))
+      .resolves.toEqual({ ok: true, due_at: "2026-08-28T12:00:00+00:00" });
+
+    expect(String(fetcher.mock.calls[0][0])).toContain("/api/diagnostics/trainer/lives-reminder");
+    expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({
+      init_data: "signed-init-data",
+      session_scope: "a".repeat(24),
+    });
+  });
+
   it("posts only review authentication and session identifiers", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       ok: true, available: true, items: [], pdf_status: "pending",

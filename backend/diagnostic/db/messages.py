@@ -20,6 +20,7 @@ MESSAGE_DESCRIPTIONS: Final[dict[str, str]] = {
     "DAY_FOLLOWUP": "Day follow-up",
     "QUICK_TO_FULL": "Quick-to-full follow-up",
     "MONTH_RETEST": "Monthly retest",
+    "LIVES_REFILL": "Trainer lives refilled reminder",
 }
 MESSAGE_KEYS: Final[frozenset[str]] = frozenset(MESSAGE_DESCRIPTIONS)
 

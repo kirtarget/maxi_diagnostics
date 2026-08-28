@@ -2,6 +2,7 @@
   "school_id": "maximum",
   "name": "MAXIMUM Education",
   "short_name": "MAXIMUM",
+  "bot_username": "maxi_diagnostics_bot",
   "colors": {
     "primary": "#5A34E0",
     "accent": "#B8F14A",
@@ -75,6 +76,7 @@
     "day_followup": "Вернитесь к результату диагностики по предмету «{subject}».",
     "quick_to_full": "Пройдите полную диагностику и изучите предложение «{primary_offer_label}»: {primary_offer_url}",
     "month_retest": "Повторите диагностику по предмету «{subject}» через месяц.",
+    "lives_refill": "Жизни в тренажёре восстановились — можно продолжать подготовку.",
     "generic": "{school_name}: откройте меню диагностики, чтобы продолжить."
   }
 }

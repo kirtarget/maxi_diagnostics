@@ -319,7 +319,7 @@ async def get_reconciled_profile(connection, user_id: int, *, now: datetime | No
     return row
 
 
-def serialize_gameplay_profile(row: Any | None) -> dict[str, Any]:
+def serialize_gameplay_profile(row: Any | None, *, now: datetime | None = None) -> dict[str, Any]:
     """Allowlist only derived gameplay state for authenticated API responses."""
     def date_text(value: Any) -> str | None:
         if isinstance(value, str):
@@ -340,6 +340,7 @@ def serialize_gameplay_profile(row: Any | None) -> dict[str, Any]:
         xp_total = 0
         streak_days = 0
         lives_remaining = 5
+        next_life_at = None
         daily_target = 1
         daily_progress = 0
         daily_date = None
@@ -348,6 +349,17 @@ def serialize_gameplay_profile(row: Any | None) -> dict[str, Any]:
         xp_total = nonnegative_int(row.get("xp_total", 0), 0)
         streak_days = nonnegative_int(row.get("streak_days", 0), 0)
         lives_remaining = min(nonnegative_int(row.get("lives_remaining", 5), 5), 5)
+        refill_anchor = row.get("lives_refill_at")
+        lives_remaining, refill_anchor = reconcile_lives(
+            lives_remaining,
+            refill_anchor if isinstance(refill_anchor, datetime) else None,
+            now=now,
+        )
+        next_life_at = (
+            (refill_anchor + timedelta(hours=4)).isoformat()
+            if lives_remaining < 5 and refill_anchor is not None
+            else None
+        )
         daily_target = max(nonnegative_int(row.get("daily_goal_target", 1), 1), 1)
         daily_progress = min(nonnegative_int(row.get("daily_goal_progress", 0), 0), daily_target)
         daily_date = row.get("daily_goal_date")
@@ -373,6 +385,7 @@ def serialize_gameplay_profile(row: Any | None) -> dict[str, Any]:
         "level_progress": level_progress,
         "streak_days": streak_days,
         "lives_remaining": lives_remaining,
+        "next_life_at": next_life_at,
         "daily_goal": {
             "date": date_text(daily_date),
             "target": daily_target,
