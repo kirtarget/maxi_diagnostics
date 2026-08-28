@@ -47,25 +47,25 @@ export function ResultScreen({
   const recommendation = topicRecommendation(result.growth_topics);
   return (
     <section className="screen result-screen" aria-labelledby="result-title">
-      <span className="state-code">03 / Точка старта</span>
-      <div className="result-head">
+      <div className="result-hero">
         <p className="result-meta">{diagnostic.exam} · {diagnostic.subject}</p>
         <h1 id="result-title">Карта знаний готова</h1>
-        <p>{resultLevel(result)}. Посмотрите, что уже получается и что даст следующий прирост.</p>
+        {shouldShowResultMetrics(result) && (
+          <div className="result-overview" aria-label="Итог тестовой части">
+            <div className="result-score">
+              <span>Текущий балл</span>
+              <strong>{result.score}</strong>
+              <small>из {result.max_score} {result.score_unit}</small>
+            </div>
+            <div className="result-correct">
+              <span>Верные ответы</span>
+              <strong>{result.correct_count} из {result.question_count}</strong>
+            </div>
+          </div>
+        )}
+        <p>{resultLevel(result)}. Посмотри, что уже получается и что даст следующий прирост.</p>
       </div>
-      {shouldShowResultMetrics(result) && (
-        <div className="result-overview" aria-label="Итог тестовой части">
-          <div className="result-score">
-            <span>Текущий балл</span>
-            <strong>{result.score}</strong>
-            <small>из {result.max_score} {result.score_unit}</small>
-          </div>
-          <div className="result-correct">
-            <span>Верные ответы</span>
-            <strong>{result.correct_count} из {result.question_count}</strong>
-          </div>
-        </div>
-      )}
+      <div className="result-body">
       <section className="result-game-card" aria-labelledby="result-game-title">
         <div className="result-game-heading">
           <div>
@@ -127,6 +127,7 @@ export function ResultScreen({
         {onReplayMistakes && <button className="secondary-button" onClick={onReplayMistakes} type="button">Повторить ошибки</button>}
         <button className="secondary-button" onClick={onForecast} type="button">Прогноз баллов</button>
       </div>
+      </div>
     </section>
   );
 }
@@ -159,7 +160,7 @@ export function ReviewScreen({
   if (loading) {
     return (
       <section className="screen review-screen centered-state" aria-busy="true" aria-live="polite">
-        <span className="state-code">04 / Разбор</span>
+        <span className="state-code">Разбор ошибок</span>
         <h1>Загружаем разбор</h1>
         <p>Берём ответы из сохранённого результата.</p>
         <div className="skeleton skeleton-wide" />
@@ -171,7 +172,7 @@ export function ReviewScreen({
   if (error) {
     return (
       <section className="screen review-screen centered-state" role="alert">
-        <span className="state-code">04 / Разбор</span>
+        <span className="state-code">Разбор ошибок</span>
         <h1>Разбор не загрузился</h1>
         <p>{error}</p>
         {onRetry && <button className="primary-button" onClick={onRetry} type="button">Повторить запрос</button>}
@@ -183,7 +184,6 @@ export function ReviewScreen({
   if (legacy) {
     return (
       <section className="screen review-screen centered-state">
-        <span className="state-code">04 / Разбор</span>
         <span className="status-symbol" aria-hidden="true">i</span>
         <h1>Для этого результата нет полного разбора</h1>
         <p>Попытка была завершена до обновления. Мы не восстанавливаем правильные ответы из текущего каталога.</p>
@@ -196,11 +196,10 @@ export function ReviewScreen({
   if (!item) {
     return (
       <section className="screen review-screen centered-state">
-        <span className="state-code">04 / Разбор</span>
-        <span className="status-symbol status-symbol-success" aria-hidden="true">✓</span>
-        <h1>В проверенной части нет ошибок</h1>
-        <p>Все автоматически проверяемые задания решены верно. Зафиксируем точку старта и посмотрим траекторию.</p>
-        <button className="primary-button" onClick={onForecast} type="button">Перейти к прогнозу <span aria-hidden="true">→</span></button>
+        <span className="status-symbol status-symbol-success" aria-hidden="true">🎉</span>
+        <h1>Ни одной ошибки!</h1>
+        <p>Ты решил всё верно — разбирать нечего. Так держать!</p>
+        <button className="primary-button" onClick={onForecast} type="button">К прогнозу баллов <span aria-hidden="true">→</span></button>
         <button className="secondary-button" onClick={onBack} type="button">Вернуться к результату</button>
       </section>
     );
@@ -215,9 +214,8 @@ export function ReviewScreen({
     <section className="screen review-screen" aria-labelledby="review-title">
       <div className="review-topline">
         <button className="text-back" onClick={onBack} type="button">Назад</button>
-        <span aria-live="polite">Ошибка {activeIndex + 1} из {mistakes.length}</span>
+        <span aria-live="polite">Разбор ошибок · {activeIndex + 1} из {mistakes.length}</span>
       </div>
-      <span className="state-code">04 / Разбор ошибок</span>
       <div className="review-heading">
         <span className="mistake-status"><b aria-hidden="true">×</b> Неверно</span>
         <span>{item.topic}</span>
@@ -268,9 +266,8 @@ export function ForecastScreen({ points, onBack, onRoute }: {
   return (
     <section className="screen forecast-screen radar-screen" aria-labelledby="forecast-title">
       <button className="text-back" onClick={onBack} type="button">Назад</button>
-      <span className="state-code">05 / Ориентир роста</span>
-      <h1 id="forecast-title">Рост — это <em>система.</em></h1>
-      <p className="lead">Понятный маршрут, регулярная работа и проверка прогресса дают измеримый результат.</p>
+      <h1 id="forecast-title">Рост — это <em>система</em></h1>
+      <p className="lead">Занимайся по маршруту регулярно — и вот куда придёшь к экзамену.</p>
       <div className="forecast-path" role="img" aria-label={ariaLabel}>
         {current && (
           <div className="forecast-step forecast-step-current">
@@ -310,9 +307,9 @@ export function RouteScreen({
 }): ReactNode {
   return (
     <section className="screen route-screen" aria-labelledby="route-title">
-      <span className="state-code">06 / Следующий шаг</span>
-      <h1 id="route-title">Персональный маршрут</h1>
-      <p className="lead">Сначала учебные действия, затем подходящий формат поддержки школы.</p>
+      <span className="state-code">Персональный маршрут</span>
+      <h1 id="route-title">Твой маршрут</h1>
+      <p className="lead">Темы по порядку — от самых важных. Затем подходящий формат поддержки школы.</p>
       <ol className="route-list">
         {items.map((item, index) => (
           <li key={`${item.id}-${index}`}>

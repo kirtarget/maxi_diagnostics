@@ -161,37 +161,40 @@ export function QuestionView({
 
   return (
     <section className="screen question-screen" aria-labelledby="question-title">
-      <div className="question-topline">
-        <button className="back-button" onClick={onBack} type="button" aria-label={labels.back}>{labels.back}</button>
-        <div className="question-progress-copy" aria-live="polite">
-          <span>{labels.task_label} {progress.current} {labels.of_label} {progress.total}</span>
-          <strong>{progress.message}</strong>
+      <div className="question-shell">
+        <div className="question-topline">
+          <button className="back-button" onClick={onBack} type="button" aria-label={labels.back}>{labels.back}</button>
+          <div className="question-progress-copy" aria-live="polite">
+            <span>{labels.task_label} {progress.current} {labels.of_label} {progress.total}</span>
+            <strong>{progress.message}</strong>
+            <div
+              className="question-progress-rail"
+              role="progressbar"
+              aria-label="Прогресс диагностики"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progress.percent}
+              aria-valuetext={`${labels.task_label} ${progress.current} ${labels.of_label} ${progress.total}. ${progress.message}`}
+            >
+              <span className="question-progress-fill" style={{ width: `${progress.percent}%` }} />
+              <span className="question-progress-nodes" aria-hidden="true">
+                {Array.from({ length: progress.total }, (_, nodeIndex) => (
+                  <span
+                    className={nodeIndex < index
+                      ? "question-progress-node is-complete"
+                      : nodeIndex === index
+                        ? "question-progress-node is-current"
+                        : "question-progress-node"}
+                    key={nodeIndex}
+                  />
+                ))}
+              </span>
+            </div>
+          </div>
         </div>
+        <p className="question-progress-motivation" aria-live="polite">{progress.message}</p>
       </div>
-      <div
-        className="question-progress-rail"
-        role="progressbar"
-        aria-label="Прогресс диагностики"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={progress.percent}
-        aria-valuetext={`${labels.task_label} ${progress.current} ${labels.of_label} ${progress.total}. ${progress.message}`}
-      >
-        <span className="question-progress-fill" style={{ width: `${progress.percent}%` }} />
-        <span className="question-progress-nodes" aria-hidden="true">
-          {Array.from({ length: progress.total }, (_, nodeIndex) => (
-            <span
-              className={nodeIndex < index
-                ? "question-progress-node is-complete"
-                : nodeIndex === index
-                  ? "question-progress-node is-current"
-                  : "question-progress-node"}
-              key={nodeIndex}
-            />
-          ))}
-        </span>
-      </div>
-      <p className="question-progress-motivation" aria-live="polite">{progress.message}</p>
+      <div className="question-worksheet">
       <div className="question-meta"><span>{question.title}</span><span>{question.topic}</span></div>
       <div className="question-copy">
         {promptBlocks.map((block, blockIndex) => {
@@ -287,10 +290,12 @@ export function QuestionView({
         )
       )}
 
+      <p className="question-autosave">Прогресс сохраняется автоматически</p>
       <button className="primary-button question-next" disabled={!isAnswered(question, answer)} onClick={onNext} type="button">
         {index === total - 1 ? labels.get_result : labels.next_question}
         <span aria-hidden="true">→</span>
       </button>
+      </div>
     </section>
   );
 }
@@ -307,43 +312,57 @@ function TableGapAnswer({ matching, onChange, value }: {
     <section className="table-gap" aria-labelledby="table-gap-title">
       <div className="sequence-matching-intro">
         <span>Таблица с пропусками</span>
-        <h2 id="table-gap-title">Заполните ячейки</h2>
-        <p>Выберите подходящий элемент прямо в каждой ячейке. Ответ соберётся автоматически.</p>
+        <h2 id="table-gap-title">Заполни пропуски</h2>
+        <p>Каждая строка таблицы раскрыта в карточку. Ответ соберётся автоматически.</p>
       </div>
-      <div className="table-gap-grid" role="table" aria-label="Таблица с пропусками">
-        <div className="table-gap-header" role="row">
-          {matching.headers.map((header) => <strong role="columnheader" key={header}>{header}</strong>)}
-        </div>
-        {matching.rows.map((row, rowIndex) => (
-          <div className="table-gap-row" role="row" key={rowIndex}>
-            {row.map((cell, cellIndex) => {
-              if (!cell.marker) return <span className="table-gap-cell" role="cell" key={cellIndex}>{cell.text}</span>;
-              const currentIndex = markerIndex.get(cell.marker) ?? 0;
-              const used = new Set(selected.filter((choice, choiceIndex) => choiceIndex !== currentIndex));
-              const locked = currentIndex > selected.length;
-              return (
-                <label className={`table-gap-cell table-gap-select${locked ? " locked" : ""}`} role="cell" key={cell.marker}>
-                  <strong>{cell.marker}</strong>
-                  <select
-                    aria-label={`Элемент для ячейки ${cell.marker}`}
-                    disabled={locked}
-                    value={selected[currentIndex] ?? ""}
-                    onChange={(event) => onChange(
-                      updateCompactAnswer(value, currentIndex, event.target.value),
-                    )}
-                  >
-                    <option value="">Выберите</option>
-                    {matching.options.map((option) => (
-                      <option disabled={used.has(option.marker)} key={option.marker} value={option.marker}>
-                        {option.marker} — {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              );
-            })}
-          </div>
-        ))}
+      <div className="table-gap-rows" aria-label="Таблица с пропусками">
+        {matching.rows.map((row, rowIndex) => {
+          const [head, ...rest] = row;
+          const titleFromHead = head && !head.marker;
+          const fields = titleFromHead ? rest : row;
+          const fieldHeaders = titleFromHead ? matching.headers.slice(1) : matching.headers;
+          return (
+            <div className="table-gap-row" key={rowIndex}>
+              <div className="table-gap-row-title">Строка {rowIndex + 1}{titleFromHead ? ` · ${head.text}` : " · ?"}</div>
+              <div className="table-gap-fields">
+                {fields.map((cell, cellIndex) => {
+                  const header = fieldHeaders[cellIndex] ?? "";
+                  if (!cell.marker) {
+                    return (
+                      <span className="table-gap-field" key={cellIndex}>
+                        <small>{header}</small>
+                        <span className="table-gap-cell">{cell.text}</span>
+                      </span>
+                    );
+                  }
+                  const currentIndex = markerIndex.get(cell.marker) ?? 0;
+                  const used = new Set(selected.filter((choice, choiceIndex) => choiceIndex !== currentIndex));
+                  const locked = currentIndex > selected.length;
+                  return (
+                    <label className={`table-gap-field table-gap-select${locked ? " locked" : ""}`} key={cell.marker}>
+                      <small>{header}</small>
+                      <select
+                        aria-label={`${header || "Элемент"} для ячейки ${cell.marker}`}
+                        disabled={locked}
+                        value={selected[currentIndex] ?? ""}
+                        onChange={(event) => onChange(
+                          updateCompactAnswer(value, currentIndex, event.target.value),
+                        )}
+                      >
+                        <option value="">Выбери…</option>
+                        {matching.options.map((option) => (
+                          <option disabled={used.has(option.marker)} key={option.marker} value={option.marker}>
+                            {option.marker} — {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
       <AnswerPreview markers={matching.markers} selected={selected} />
     </section>

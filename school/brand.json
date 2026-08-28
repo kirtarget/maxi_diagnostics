@@ -3,12 +3,12 @@
   "name": "MAXIMUM Education",
   "short_name": "MAXIMUM",
   "colors": {
-    "primary": "#FD7E14",
-    "accent": "#FF9341",
-    "background": "#F5F5F5",
-    "signal": "#D8FF42",
-    "ink": "#101517",
-    "paper": "#F5F5F0"
+    "primary": "#5A34E0",
+    "accent": "#B8F14A",
+    "background": "#F4F1FB",
+    "signal": "#FF6B4A",
+    "ink": "#16121F",
+    "paper": "#FFFFFF"
   },
   "logo": "assets/logo.png",
   "pdf": {

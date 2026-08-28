@@ -51,7 +51,6 @@ export function GameplayHomeScreen({
   return (
     <section className="screen gameplay-home" aria-labelledby="gameplay-home-title">
       <div className="gameplay-home-hero">
-        <span className="state-code">Твой маршрут</span>
         <h1 id="gameplay-home-title">Продолжай расти <em>шаг за шагом</em></h1>
         <p className="hero-copy">{profile.onboardingLabel}. Проверь знания и получи понятный план подготовки.</p>
         <div className="gameplay-level-card">
@@ -64,28 +63,33 @@ export function GameplayHomeScreen({
           </div>
           <small>{profile.completionCount} {profile.completionCount === 1 ? "диагностика завершена" : "диагностик завершено"}</small>
         </div>
+      </div>
+
+      <div className="gameplay-home-body">
         {profile.serverBacked && (
           <div className="gameplay-dashboard" aria-label="Игровой прогресс">
             <div><strong>{profile.xpTotal} XP</strong><small>опыт</small></div>
             <div><strong>{profile.streakDays}</strong><small>дней подряд</small></div>
-            <div><strong>{"♥".repeat(profile.livesRemaining ?? 0)}</strong><small>жизни</small></div>
+            <div className="gameplay-dashboard-lives"><strong>{"♥".repeat(profile.livesRemaining ?? 0)}</strong><small>жизни</small></div>
             <div><strong>{profile.dailyGoal?.progress}/{profile.dailyGoal?.target}</strong><small>цель дня</small></div>
           </div>
         )}
         {profile.serverBacked && profile.quest && (
-          <div className="gameplay-quest"><small>Квест</small><strong>{profile.quest.progress}/{profile.quest.target} активностей</strong></div>
+          <div className="gameplay-quest"><div><small>Квест</small><strong>{profile.quest.progress}/{profile.quest.target} активностей</strong></div></div>
         )}
         <button className="primary-button gameplay-home-cta" onClick={onStart} type="button">
           {profile.completionCount > 0 ? "Продолжить диагностику" : labels.start_diagnostic} <span aria-hidden="true">→</span>
         </button>
-        <button className="secondary-button gameplay-trainer-cta" onClick={onStartTrainer ?? onStart} type="button">
-          Тренировка <span aria-hidden="true">⚡</span>
-        </button>
-        {onOpenLeague && (
-          <button className="secondary-button gameplay-league-cta" onClick={onOpenLeague} type="button">
-            Лига недели <span aria-hidden="true">🏆</span>
+        <div className="gameplay-cta-row">
+          <button className="secondary-button gameplay-trainer-cta" onClick={onStartTrainer ?? onStart} type="button">
+            Тренировка
           </button>
-        )}
+          {onOpenLeague && (
+            <button className="secondary-button gameplay-league-cta" onClick={onOpenLeague} type="button">
+              Лига недели
+            </button>
+          )}
+        </div>
         {offer && !offerDismissed && (
           <OfferSurface
             offer={offer}
@@ -94,28 +98,28 @@ export function GameplayHomeScreen({
             onEvent={onOfferEvent}
           />
         )}
-      </div>
 
-      <div className="gameplay-section-heading">
-        <div><span className="state-code">Доступный путь</span><h2>Выбери следующий шаг</h2></div>
-        <span className="gameplay-count">{diagnostics.length}</span>
-      </div>
-      <div className="gameplay-path" aria-label="Доступные диагностики">
-        {pathItems.map((item, index) => (
-          <button className="gameplay-path-item" key={item.id} onClick={onStart} type="button">
-            <span className={`gameplay-path-node ${index === 0 ? "is-current" : ""}`}>{index + 1}</span>
-            <div><strong>{item.subject}</strong><small>{item.exam} · {item.quick_count} заданий</small></div>
-            <span className="gameplay-path-arrow" aria-hidden="true">→</span>
-          </button>
-        ))}
-      </div>
-      <p className="gameplay-path-note">Сейчас доступны {subjects.length || 1} {subjects.length === 1 ? "предмет" : "предмета"}, включая {firstSubject}.</p>
+        <div className="gameplay-section-heading">
+          <div><h2>Ближайшие диагностики</h2></div>
+          <span className="gameplay-count">{diagnostics.length}</span>
+        </div>
+        <div className="gameplay-path" aria-label="Доступные диагностики">
+          {pathItems.map((item, index) => (
+            <button className="gameplay-path-item" key={item.id} onClick={onStart} type="button">
+              <span className={`gameplay-path-node ${index === 0 ? "is-current" : ""}`}>{index + 1}</span>
+              <div><strong>{item.subject}</strong><small>{item.exam} · {item.quick_count} заданий</small></div>
+              <span className="gameplay-path-arrow" aria-hidden="true">→</span>
+            </button>
+          ))}
+        </div>
+        <p className="gameplay-path-note">Сейчас доступны {subjects.length || 1} {subjects.length === 1 ? "предмет" : "предмета"}, включая {firstSubject}.</p>
 
-      <button className="gameplay-profile-card" onClick={onOpenProfile} type="button">
-        <span className="gameplay-profile-icon" aria-hidden="true">✦</span>
-        <span><strong>Твой профиль</strong><small>{profile.unlockedAchievements.length > 0 ? `${profile.unlockedAchievements.length} достижение открыто` : "Заверши первую диагностику, чтобы открыть достижение"}</small></span>
-        <span aria-hidden="true">→</span>
-      </button>
+        <button className="gameplay-profile-card" onClick={onOpenProfile} type="button">
+          <span className="gameplay-profile-icon" aria-hidden="true">✦</span>
+          <span><strong>Твой профиль</strong><small>{profile.unlockedAchievements.length > 0 ? `${profile.unlockedAchievements.length} достижение открыто` : "Заверши первую диагностику, чтобы открыть достижение"}</small></span>
+          <span aria-hidden="true">→</span>
+        </button>
+      </div>
     </section>
   );
 }
@@ -154,24 +158,22 @@ export function WelcomeScreen({
   const questionRange = minimumQuestions === maximumQuestions
     ? String(maximumQuestions)
     : `${minimumQuestions}–${maximumQuestions}`;
-  const radarLabel = "Радар результата: сильные темы, пробелы и персональный план";
 
   return (
-    <section className="screen welcome-screen radar-screen" aria-labelledby="welcome-title">
+    <section className="screen welcome-screen" aria-labelledby="welcome-title">
       <div className="welcome-copy">
         <span className="state-code">Подготовка к экзаменам</span>
-        <h1 id="welcome-title">Ваш путь к успеху <em>на ОГЭ и ЕГЭ</em></h1>
-        <p className="hero-copy">Выберите предмет, чтобы получить карту знаний, зоны роста, PDF-отчёт и план подготовки.</p>
+        <h1 id="welcome-title">Твой путь к успеху <em>на ОГЭ и ЕГЭ</em></h1>
+        <p className="hero-copy">Пройди диагностику — увидишь карту тем, разбор ошибок и прогноз баллов.</p>
       </div>
-      <div className="radar" role="img" aria-label={radarLabel}>
-        <span className="radar-ring radar-ring-one" />
-        <span className="radar-ring radar-ring-two" />
-        <span className="radar-axis radar-axis-horizontal" />
-        <span className="radar-axis radar-axis-vertical" />
-        <span className="radar-sweep" />
-        <span className="radar-point radar-point-strong">Сильные темы</span>
-        <span className="radar-point radar-point-gap">Пробелы</span>
-        <span className="radar-point radar-point-plan">План</span>
+      <div className="welcome-path" role="img" aria-label="Путь подготовки: от старта через шаги к цели">
+        <svg viewBox="0 0 390 150" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M60 120 C 120 80, 90 62, 160 62 S 250 40, 300 26" fill="none" stroke="rgba(255,255,255,.22)" strokeWidth="4" strokeDasharray="2 12" strokeLinecap="round" />
+        </svg>
+        <span className="welcome-path-node is-start" style={{ left: 44, top: 102, width: 34, height: 34 }} />
+        <span className="welcome-path-node" style={{ left: 146, top: 48, width: 28, height: 28 }} />
+        <span className="welcome-path-node is-faint" style={{ left: 238, top: 28, width: 24, height: 24 }} />
+        <span className="welcome-path-goal" style={{ right: 40, top: 8, width: 54, height: 54 }} aria-hidden="true">🏆</span>
       </div>
       <div className="welcome-facts" aria-label="Параметры диагностики">
         <div><strong>{questionRange}</strong><span>заданий</span></div>
@@ -199,21 +201,26 @@ export function ModeScreen({ labels, onBack, onSelect }: ModeScreenProps) {
   return (
     <section className="screen navigation-screen" aria-labelledby="mode-title">
       <button className="text-back" onClick={onBack} type="button">{labels.back}</button>
-      <span className="state-code">01 / Формат</span>
-      <h1 id="mode-title">Насколько подробно?</h1>
-      <p className="lead">Выберите глубину проверки. Полная диагностика даёт более точную карту и разбор каждого задания.</p>
+      <span className="step-label">Шаг 1 из 2</span>
+      <h1 id="mode-title">Как будем проверять знания?</h1>
+      <p className="lead">Выбери формат — переиграть можно всегда.</p>
       <div className="mode-list">
-        <button className="mode-card" onClick={() => onSelect("quick")} type="button">
-          <span className="mode-badge">Быстрый замер</span>
-          <strong>{labels.quick_result}</strong>
-          <span>Короткий ориентир по основным темам без обещания полной картины.</span>
-          <em>{labels.choose_label} →</em>
-        </button>
         <button className="mode-card featured" onClick={() => onSelect("full")} type="button">
-          <span className="mode-badge">Полная диагностика</span>
-          <strong>{labels.full_result}</strong>
-          <span>Все доступные задания, точная карта тем и полный разбор после результата.</span>
-          <em>{labels.choose_label} →</em>
+          <span className="mode-badge">Рекомендуем</span>
+          <div className="mode-card-head">
+            <span className="mode-card-icon" aria-hidden="true">🗺️</span>
+            <div><strong>Полная диагностика</strong><div className="mode-card-meta">{labels.full_result}</div></div>
+          </div>
+          <span>Полная карта тем, разбор ошибок, прогноз баллов и персональный маршрут.</span>
+          <em>{labels.choose_label}</em>
+        </button>
+        <button className="mode-card" onClick={() => onSelect("quick")} type="button">
+          <div className="mode-card-head">
+            <span className="mode-card-icon" aria-hidden="true">⚡</span>
+            <div><strong>Быстрый замер</strong><div className="mode-card-meta">{labels.quick_result}</div></div>
+          </div>
+          <span>Примерная оценка уровня без подробной карты. Хорош для первого раза.</span>
+          <em>{labels.choose_label}</em>
         </button>
       </div>
     </section>
@@ -246,9 +253,9 @@ export function SubjectsScreen({
   return (
     <section className="screen navigation-screen" aria-labelledby="subject-title">
       <button className="text-back" onClick={onBack} type="button">{labels.back}</button>
-      <span className="state-code">02 / Предмет</span>
-      <h1 id="subject-title">Что будем проверять?</h1>
-      <p className="lead">Выберите экзамен и предмет. У каждой диагностики есть сохранение прогресса и разбор результата.</p>
+      <span className="step-label">Шаг 2 из 2</span>
+      <h1 id="subject-title">Какой предмет?</h1>
+      <p className="lead">Прогресс сохраняется — можно вернуться в любой момент.</p>
       {exams.length > 1 && (
         <div className="exam-tabs" role="tablist" aria-label="Экзамен">
           {exams.map((item) => (

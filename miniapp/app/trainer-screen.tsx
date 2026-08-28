@@ -91,7 +91,7 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
   if (state.phase === "finishing") return <section className="screen trainer-screen" aria-live="polite"><p>Завершаем тренировку…</p></section>;
   if (state.phase === "completed") {
     const result = state.finishResult;
-    return <section className="screen trainer-screen trainer-complete" aria-labelledby="trainer-complete-title"><span className="state-code">Готово</span><h1 id="trainer-complete-title">Тренировка завершена</h1>{result && <p>{result.correct_count} из {result.question_count} верно · +{result.xp_earned} XP</p>}<p>Результат сохранён на сервере.</p><button className="primary-button" type="button" onClick={onHome}>На главную <span aria-hidden="true">→</span></button></section>;
+    return <section className="screen trainer-screen trainer-complete" aria-labelledby="trainer-complete-title"><span className="status-symbol status-symbol-success" aria-hidden="true">🎉</span><h1 id="trainer-complete-title">Тренировка завершена</h1>{result && <p>{result.correct_count} из {result.question_count} верно · +{result.xp_earned} XP</p>}<p>Результат сохранён на сервере.</p><button className="primary-button" type="button" onClick={onHome}>На главную <span aria-hidden="true">→</span></button></section>;
   }
   const questionIndex = state.phase === "feedback" && state.answeredQuestionIndex !== null
     ? state.answeredQuestionIndex
@@ -107,11 +107,11 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
     if (state.draftAnswer) onAnswer?.(question.id, state.draftAnswer);
   };
   return <section className="screen trainer-screen" aria-labelledby="trainer-title">
-    <div className="question-topline"><span aria-label="Прогресс">{Math.min(questionIndex + 1, state.session.questions.length)} / {state.session.questions.length}</span>{state.session.mode === "normal" && <strong>⚡ {state.session.lives_remaining}</strong>}{state.session.mode === "mistakes" && <strong>Повтор ошибок</strong>}</div>
+    <div className="question-topline"><span aria-label="Прогресс">Тренажёр · {Math.min(questionIndex + 1, state.session.questions.length)} из {state.session.questions.length}</span>{state.session.mode === "normal" && <strong className="trainer-lives" aria-label={`Жизни: ${state.session.lives_remaining}`}>{"♥".repeat(Math.min(5, Math.max(0, state.session.lives_remaining)))}<span className="trainer-lives-empty">{"♥".repeat(Math.max(0, 5 - state.session.lives_remaining))}</span></strong>}{state.session.mode === "mistakes" && <strong>Повтор ошибок</strong>}</div>
     <div className="question-progress-rail" role="progressbar" aria-valuemin={0} aria-valuemax={state.session.questions.length} aria-valuenow={Math.min(questionIndex + 1, state.session.questions.length)}><span className="question-progress-fill" style={{ width: `${(Math.min(questionIndex + 1, state.session.questions.length) / state.session.questions.length) * 100}%` }} /></div>
     <QuestionPrompt question={question} />
     <AnswerEditor question={question} value={state.draftAnswer} disabled={locked || (state.session.mode === "normal" && livesZero)} onChange={(answer) => dispatch({ type: "set_answer", answer })} />
-    {state.session.mode === "normal" && livesZero && state.phase === "answering" && <p role="status">Жизни закончились. Вернись позже.</p>}
+    {state.session.mode === "normal" && livesZero && state.phase === "answering" && <p className="trainer-notice" role="status">Жизни закончились. Вернись позже — а диагностику можно проходить без жизней.</p>}
     {state.phase === "feedback" ? <><Feedback state={state} />{isLast ? <button className="primary-button question-next" type="button" onClick={() => { dispatch({ type: "finish_requested" }); onFinish?.(); }}>Завершить тренировку <span aria-hidden="true">→</span></button> : <button className="primary-button question-next" type="button" onClick={() => dispatch({ type: "next_question" })}>Следующий вопрос <span aria-hidden="true">→</span></button>}</> : <button className="primary-button question-next" type="button" disabled={!canSubmit || state.phase === "awaiting_result"} onClick={submit}>{state.phase === "awaiting_result" ? "Проверяем…" : "Проверить ответ"}<span aria-hidden="true">→</span></button>}
   </section>;
 }

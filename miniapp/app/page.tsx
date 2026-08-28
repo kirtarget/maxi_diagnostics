@@ -615,10 +615,9 @@ export default function Home() {
   if (error && !bootstrap) {
     return (
       <main className="app-shell" style={style}>
-        <div className="ambient-grid" aria-hidden="true" />
         <BrandHeader brand={displayBrand} disabled onHome={() => undefined} />
         <section className="screen centered-state" role="alert">
-          <span className="state-code">Ошибка загрузки</span>
+          <span className="state-icon" aria-hidden="true">✈️</span>
           <h1>Диагностика пока недоступна</h1>
           <p>{error}</p>
           <button className="primary-button" onClick={() => void hydrate()} type="button">Повторить загрузку</button>
@@ -629,7 +628,6 @@ export default function Home() {
 
   return (
     <main className="app-shell" style={style}>
-      <div className="ambient-grid" aria-hidden="true" />
       <BrandHeader
         brand={displayBrand}
         disabled={!brand || screen === "submitting"}
@@ -638,19 +636,19 @@ export default function Home() {
 
       {screen === "loading" && (
         <section className="screen loading-screen" aria-busy="true" aria-live="polite">
-          <span className="state-code">Подготовка</span>
-          <h1>Загружаем диагностику</h1>
           <div className="skeleton skeleton-wide" />
           <div className="skeleton skeleton-short" />
           <div className="skeleton skeleton-card" />
+          <div className="loading-spinner" aria-hidden="true" />
+          <p className="loading-note">Загружаем диагностику…</p>
         </section>
       )}
 
       {screen === "welcome" && bootstrap && bootstrap.diagnostics.length === 0 && (
         <section className="screen centered-state">
-          <span className="state-code">Нет материалов</span>
-          <h1>Диагностики ещё готовятся</h1>
-          <p>Вернитесь позже или уточните дату запуска у школы.</p>
+          <span className="state-icon" aria-hidden="true">📚</span>
+          <h1>Диагностики готовятся</h1>
+          <p>Школа скоро добавит предметы. Пришлём уведомление в Telegram, как только всё будет готово.</p>
           <a className="secondary-button" href={bootstrap.school.links.support} target="_blank" rel="noreferrer">Связаться с поддержкой</a>
         </section>
       )}
@@ -748,12 +746,11 @@ export default function Home() {
       )}
 
       {screen === "submitting" && (
-        <section className="screen centered-state" aria-live="polite" aria-busy="true">
-          <div className="calculating-orbit" aria-hidden="true"><span>Σ</span></div>
-          <span className="state-code">Ответы отправлены</span>
-          <h1>Сервер считает результат</h1>
-          <p>Проверяем ответы и собираем карту тем.</p>
-          <div className="loading-line"><span /></div>
+        <section className="screen submit-screen" aria-live="polite" aria-busy="true">
+          <div className="submit-orbit" aria-hidden="true"><span>🧠</span></div>
+          <h1>Считаем результат</h1>
+          <p>Сервер проверяет ответы и собирает твою карту знаний. Обычно это меньше минуты.</p>
+          <span className="submit-note">Не закрывай приложение</span>
         </section>
       )}
 
