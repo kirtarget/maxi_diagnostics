@@ -165,6 +165,7 @@ def test_ci_supplies_stable_test_application_secret_without_printing_compose_sec
     assert "IMAGE_NAMESPACE:" in workflow
     assert "INSTALLATION_ID:" in workflow
     assert "python -m pip install --no-deps -r requirements-dev-lock.txt" in workflow
+    assert workflow.index("libcairo2-dev") < workflow.index("pip install --no-deps")
     assert "python -m pip install -r requirements-dev.txt" not in workflow
     assert "docker compose config --quiet" in workflow
     assert "run: docker compose config\n" not in workflow

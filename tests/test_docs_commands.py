@@ -181,7 +181,8 @@ def test_ci_matches_local_gates_and_uses_only_safe_test_services():
     for command in (
         "pip install --no-deps -r requirements-dev-lock.txt", "python scripts/validate_school.py",
         "python scripts/check_brand_isolation.py --history", "python -m pytest -q",
-        "npm ci", "npm run test:unit", "npm run build", "npm test",
+        "python -m ruff check backend scripts tests",
+        "npm ci", "npm run test:unit", "npm run typecheck", "npm run build", "npm test",
         "docker compose config --quiet", "docker compose build",
     ):
         assert command in rendered

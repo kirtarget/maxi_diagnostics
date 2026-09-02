@@ -2,7 +2,6 @@ import hashlib
 import json
 import os
 from datetime import date, datetime, timezone
-from uuid import uuid4
 
 import pytest
 import pytest_asyncio

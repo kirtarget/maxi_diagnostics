@@ -6,7 +6,6 @@ import argparse
 import hashlib
 import json
 import re
-import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any

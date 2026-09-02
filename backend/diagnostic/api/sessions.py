@@ -15,7 +15,6 @@ from diagnostic.catalog import (
     Diagnostic,
     DiagnosticCatalog,
     InputQuestion,
-    MatchingQuestion,
     MultipleQuestion,
     SingleQuestion,
 )

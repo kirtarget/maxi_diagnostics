@@ -10,7 +10,6 @@ from fastapi import APIRouter, HTTPException, Request
 from diagnostic.catalog import (
     DiagnosticCatalog,
     InputQuestion,
-    MatchingQuestion,
     MultipleQuestion,
     SingleQuestion,
     public_question,
