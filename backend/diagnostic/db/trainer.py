@@ -7,9 +7,14 @@ import hashlib
 import json
 from typing import Any, Mapping
 
-from diagnostic.db import gameplay
+from diagnostic.daily_plan import plan_date_for
+from diagnostic.db import daily_plan, gameplay
 from diagnostic.db.attempts import _raise_if_erased
 from diagnostic.db.core import get_pool
+
+
+#: Modes that spend lives and award XP. ``mistakes`` is a free review lane.
+SCORED_MODES = frozenset({"normal", "plan"})
 
 
 def answer_fingerprint(
@@ -156,7 +161,9 @@ async def seed_and_list_mistakes(
                            SET source_attempt_id=EXCLUDED.source_attempt_id,
                                source_content_version=EXCLUDED.source_content_version,
                                created_at=EXCLUDED.created_at,
-                               resolved_at=NULL
+                               resolved_at=NULL,
+                               review_count=0,
+                               next_review_on=CURRENT_DATE + 1
                          WHERE diagnostic_mistakes.source_attempt_id IS DISTINCT FROM EXCLUDED.source_attempt_id
                         """,
                         user_id, diagnostic_id, question_id,
@@ -350,13 +357,13 @@ async def answer_question(
             if current_index >= len(selected) or selected[current_index] != question_id:
                 raise ValueError("trainer_question_out_of_order")
             if (
-                session["mode"] == "normal"
+                session["mode"] in SCORED_MODES
                 and not is_correct
                 and int(profile["lives_remaining"]) <= 0
             ):
                 raise ValueError("trainer_no_lives")
 
-            xp_delta = 10 if is_correct and session["mode"] == "normal" else 0
+            xp_delta = 10 if is_correct and session["mode"] in SCORED_MODES else 0
             life_delta = 0 if is_correct or session["mode"] == "mistakes" else -1
             answer_row = await connection.fetchrow(
                 """
@@ -380,7 +387,7 @@ async def answer_question(
                 xp_delta,
                 life_delta,
             )
-            if is_correct and session["mode"] == "normal":
+            if is_correct and session["mode"] in SCORED_MODES:
                 await gameplay.apply_gameplay_event(
                     connection,
                     gameplay.build_trainer_answer_event(
@@ -414,6 +421,15 @@ async def answer_question(
                        AND resolved_at IS NULL
                     """,
                     user_id, session["diagnostic_id"], question_id,
+                )
+            if session["mode"] == "plan":
+                await daily_plan.record_plan_answer(
+                    connection,
+                    user_id=user_id,
+                    plan_date=plan_date_for(timezone_name),
+                    diagnostic_id=session["diagnostic_id"],
+                    question_id=question_id,
+                    is_correct=is_correct,
                 )
 
             next_index = current_index + 1

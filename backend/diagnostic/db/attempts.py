@@ -219,7 +219,9 @@ async def _materialize_mistakes(connection, completion: AttemptCompletion) -> No
                    SET source_attempt_id=EXCLUDED.source_attempt_id,
                        source_content_version=EXCLUDED.source_content_version,
                        created_at=EXCLUDED.created_at,
-                       resolved_at=NULL
+                       resolved_at=NULL,
+                       review_count=0,
+                       next_review_on=CURRENT_DATE + 1
                  WHERE diagnostic_mistakes.source_attempt_id IS DISTINCT FROM EXCLUDED.source_attempt_id
                 """,
                 completion.user_id, completion.diagnostic_id, question_id,

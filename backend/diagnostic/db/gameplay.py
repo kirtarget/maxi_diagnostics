@@ -170,7 +170,12 @@ async def apply_gameplay_event(connection, event: GameplayEvent) -> bool:
                    ELSE 1
                END,
                streak_last_date = $3::date,
+               -- On a day that has a plan, the plan owns target and progress.
                daily_goal_progress = CASE
+                   WHEN EXISTS (
+                       SELECT 1 FROM diagnostic_daily_plans plan
+                        WHERE plan.user_id = $1 AND plan.plan_date = $3::date
+                   ) THEN daily_goal_progress
                    WHEN daily_goal_date = $3::date
                    THEN LEAST(daily_goal_target, daily_goal_progress + 1)
                    ELSE 1

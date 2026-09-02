@@ -17,6 +17,7 @@ from diagnostic.catalog import (
     DiagnosticCatalog,
 )
 from diagnostic.analytics import emit_event
+from diagnostic.daily_plan import ensure_today_plan, plan_summary
 from diagnostic.db import attempts, funnel
 from diagnostic.db.attempts import AttemptCompletion, AttemptProgress
 from diagnostic.db.gameplay import serialize_gameplay_profile
@@ -363,6 +364,17 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
             gameplay_profile = None
         school = request.app.state.school
         secret = request.app.state.settings.application_secret
+        try:
+            daily_plan = await ensure_today_plan(
+                user_id=user["id"],
+                catalog=catalog,
+                application_secret=secret,
+                timezone_name=request.app.state.settings.timezone,
+            )
+        except RuntimeError as exc:
+            if str(exc) != "database_not_initialized":
+                raise
+            daily_plan = None
         generation = await get_or_create_session_generation(
             session_subject_key(secret, user["id"])
         )
@@ -374,6 +386,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
             "latest_attempt_id": latest_attempt_id,
             "progress_profile": serialize_progress_profile(progress_profile),
             "gameplay_profile": serialize_gameplay_profile(gameplay_profile),
+            "daily_plan": plan_summary(daily_plan, catalog),
             "school": public_school_payload(school),
             "diagnostics": catalog.public_summaries(secret),
             "attempt": serialize_attempt(resumable),

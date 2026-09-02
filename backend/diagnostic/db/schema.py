@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS diagnostic_trainer_sessions (
     completed_at TIMESTAMPTZ,
     CHECK (session_id ~ '^[A-Za-z0-9_-]{32,64}$'),
     CHECK (content_version ~ '^[0-9a-f]{64}$'),
-    CHECK (mode IN ('normal', 'mistakes')),
+    CHECK (mode IN ('normal', 'mistakes', 'plan')),
     CHECK ((mode = 'mistakes') = (source_attempt_id IS NOT NULL)),
     CHECK (status IN ('active', 'completed', 'exhausted')),
     CHECK (jsonb_typeof(selected_question_ids) = 'array'),
@@ -244,11 +244,40 @@ CREATE TABLE IF NOT EXISTS diagnostic_mistakes (
     source_content_version TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     resolved_at TIMESTAMPTZ,
+    review_count SMALLINT NOT NULL DEFAULT 0 CHECK (review_count >= 0),
+    next_review_on DATE NOT NULL DEFAULT (CURRENT_DATE + 1),
     PRIMARY KEY (user_id, diagnostic_id, question_id),
     CHECK (source_content_version ~ '^[0-9a-f]{64}$')
 );
+ALTER TABLE diagnostic_mistakes
+    ADD COLUMN IF NOT EXISTS review_count SMALLINT NOT NULL DEFAULT 0;
+ALTER TABLE diagnostic_mistakes
+    ADD COLUMN IF NOT EXISTS next_review_on DATE NOT NULL DEFAULT (CURRENT_DATE + 1);
 CREATE INDEX IF NOT EXISTS idx_diagnostic_mistakes_unresolved
     ON diagnostic_mistakes(user_id, diagnostic_id, resolved_at, created_at);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_mistakes_due
+    ON diagnostic_mistakes(user_id, diagnostic_id, next_review_on);
+
+CREATE TABLE IF NOT EXISTS diagnostic_daily_plans (
+    user_id BIGINT NOT NULL REFERENCES diagnostic_progress_profiles(user_id) ON DELETE CASCADE,
+    plan_date DATE NOT NULL,
+    diagnostic_id TEXT NOT NULL,
+    content_version TEXT NOT NULL,
+    source_attempt_id TEXT REFERENCES diagnostic_attempts(attempt_id) ON DELETE SET NULL,
+    question_ids JSONB NOT NULL,
+    reasons JSONB NOT NULL DEFAULT '{}'::jsonb,
+    completed_question_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, plan_date),
+    CHECK (content_version ~ '^[0-9a-f]{64}$'),
+    CHECK (jsonb_typeof(question_ids) = 'array'),
+    CHECK (jsonb_array_length(question_ids) BETWEEN 1 AND 10),
+    CHECK (jsonb_typeof(reasons) = 'object'),
+    CHECK (jsonb_typeof(completed_question_ids) = 'array'),
+    CHECK (jsonb_array_length(completed_question_ids) <= 10)
+);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_daily_plans_date
+    ON diagnostic_daily_plans(plan_date);
 
 CREATE TABLE IF NOT EXISTS diagnostic_progress_events (
     event_id BIGSERIAL PRIMARY KEY,
@@ -423,6 +452,28 @@ BEGIN
         END IF;
         INSERT INTO diagnostic_schema_migrations(version)
         VALUES ('2026-08-25-kir-92-mistakes-v1');
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM diagnostic_schema_migrations
+         WHERE version='2026-09-02-kir-173-daily-plan'
+    ) THEN
+        -- The inline mode CHECK predates the plan trainer mode. Installations created
+        -- before this migration carry the two-value version under a generated name.
+        ALTER TABLE diagnostic_trainer_sessions
+            DROP CONSTRAINT IF EXISTS diagnostic_trainer_sessions_mode_check;
+        ALTER TABLE diagnostic_trainer_sessions
+            ADD CONSTRAINT diagnostic_trainer_sessions_mode_check
+            CHECK (mode IN ('normal', 'mistakes', 'plan'));
+        -- Existing mistakes have never been reviewed. Tomorrow is the first interval.
+        UPDATE diagnostic_mistakes
+           SET next_review_on = CURRENT_DATE + 1
+         WHERE next_review_on IS NULL;
+        INSERT INTO diagnostic_schema_migrations(version)
+        VALUES ('2026-09-02-kir-173-daily-plan');
     END IF;
 END $$;
 
