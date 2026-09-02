@@ -102,14 +102,20 @@ checkout. Never run `git pull` there. Update it from a reviewed commit that has 
 green CI run:
 
 1. Create a backup (see operations).
-2. On the server, download the commit archive and unpack it over the directory.
-   `.env` is not part of the archive and survives the extraction:
+2. On the server, download the commit archive, unpack it into a fresh directory
+   and swap it in. Unpacking over the old directory leaves files the release
+   deleted in place, and the catalog refuses to start with unreferenced assets:
 
    ```sh
    SHA=<full-commit-sha>
    cd /root && wget -q "https://github.com/kirtarget/maxi_diagnostics/archive/${SHA}.tar.gz"
-   tar -xzf "${SHA}.tar.gz" --strip-components=1 -C /opt/maxi_diagnostics
+   rm -rf /opt/maxi_diagnostics.next && mkdir /opt/maxi_diagnostics.next
+   tar -xzf "${SHA}.tar.gz" --strip-components=1 -C /opt/maxi_diagnostics.next
+   cp -p /opt/maxi_diagnostics/.env /opt/maxi_diagnostics.next/.env
+   mv /opt/maxi_diagnostics /opt/maxi_diagnostics.prev && mv /opt/maxi_diagnostics.next /opt/maxi_diagnostics
    ```
+
+   Remove `/opt/maxi_diagnostics.prev` after the health checks pass.
 
 3. Record the release in `/opt/maxi_diagnostics/.release-revision` with `commit=`,
    `branch=` and `archive_sha256=` lines. The checksum comes from
