@@ -99,7 +99,7 @@
     {
       "diagnostic_id": "ege-biology-1207",
       "catalog_file": "ege-biology-1207.json",
-      "expected_catalog_sha256": "334474b310dcda0d2e4056a8732f18d18efeac3ea0db03f0999a2a737ee62c50",
+      "expected_catalog_sha256": "ac5c29c3f35fe86a2535b724daeb09fcd4aec6b6d03c71a77bba73fcdbcf2557",
       "expected_question_count": 6,
       "target_question_count": 15,
       "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/bi_11_2026.zip",
@@ -126,7 +126,7 @@
     {
       "diagnostic_id": "ege-chemistry-1208",
       "catalog_file": "ege-chemistry-1208.json",
-      "expected_catalog_sha256": "e079e20974f5d7c912540cd0cb9b3633cb178e744beda746ff3caf6ddbde459f",
+      "expected_catalog_sha256": "141f4403e71ca04ec3c8a41784ed43a1e26d204da61c85146fa6875c03a99d01",
       "expected_question_count": 6,
       "target_question_count": 15,
       "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/hi_11_2026.zip",
@@ -154,7 +154,7 @@
     {
       "diagnostic_id": "ege-english-language-1204",
       "catalog_file": "ege-english-language-1204.json",
-      "expected_catalog_sha256": "7796a691b563f32696f42cec78e17dee9f19cee6f9d7402468151d9ed1e29ae7",
+      "expected_catalog_sha256": "199d77ca3ded83f9ec21a458121158b14a23823eff0464f877b052bbf8aaffe3",
       "expected_question_count": 8,
       "target_question_count": 15,
       "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip",
@@ -180,7 +180,7 @@
     {
       "diagnostic_id": "ege-history-1211",
       "catalog_file": "ege-history-1211.json",
-      "expected_catalog_sha256": "4746502c234ce0abb78abd65437192c91e44c2116c4e72ab60002c9206988b6b",
+      "expected_catalog_sha256": "16aebef78a0e53375878d6a2ac5e989366dbce4a29319092122fa3e4edbccfe6",
       "expected_question_count": 5,
       "target_question_count": 15,
       "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/is_11_2026.zip",
@@ -208,7 +208,7 @@
     {
       "diagnostic_id": "ege-informatics-1205",
       "catalog_file": "ege-informatics-1205.json",
-      "expected_catalog_sha256": "bae671127f8fe3698e90933fba9ca28c28001704557c3fb31e157d42d6a052ed",
+      "expected_catalog_sha256": "1855db06f8d55999717652a8ad56b9e5c9e81b597ea4745193d4d7be0e885a31",
       "expected_question_count": 3,
       "target_question_count": 15,
       "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/inf_11_2026.zip",
@@ -236,7 +236,7 @@
     {
       "diagnostic_id": "ege-literature-1209",
       "catalog_file": "ege-literature-1209.json",
-      "expected_catalog_sha256": "2faa27c23e7af7cd8b33a6297ed75f5073fc94add99bc9870dc8bff8649824fe",
+      "expected_catalog_sha256": "b8f21e5fbd065ec80394cf58385a1d843466144dedea6fb63b812f03fca9ab0c",
       "expected_question_count": 3,
       "target_question_count": 15,
       "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/li_11_2026.zip",
@@ -263,7 +263,7 @@
     {
       "diagnostic_id": "ege-mathematics-1212",
       "catalog_file": "ege-mathematics-1212.json",
-      "expected_catalog_sha256": "75e71e46347c7488cf31dafd68c3de5785cadc6d2d4859a499ae248689059fd1",
+      "expected_catalog_sha256": "f19ad76aa9c645955cf1b9161fccb14067ee605465b24f57866c1868ff9992a9",
       "expected_question_count": 4,
       "target_question_count": 15,
       "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip",
@@ -291,7 +291,7 @@
     {
       "diagnostic_id": "ege-physics-1206",
       "catalog_file": "ege-physics-1206.json",
-      "expected_catalog_sha256": "c8b7d7c6a98a79ec8bad50c8933560d21e2e5cf53ddd5072671fc21462afdce5",
+      "expected_catalog_sha256": "b1559a5e4fb5583bede5493b98d162995476fad2cb77281a01a67be06ff82bcc",
       "expected_question_count": 6,
       "target_question_count": 15,
       "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/fi_11_2026.zip",
@@ -318,7 +318,7 @@
     {
       "diagnostic_id": "ege-russian-language-1213",
       "catalog_file": "ege-russian-language-1213.json",
-      "expected_catalog_sha256": "595bfde5e19b49c796a69dc4681918831f47d5594d2245ebb47da8bdfed22f36",
+      "expected_catalog_sha256": "231a024f6fa58fbeb672777dd27d132068ab9636e8c7dfb021d5ab8bd6d3b7e8",
       "expected_question_count": 5,
       "target_question_count": 15,
       "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ru_11_2026.zip",
@@ -346,7 +346,7 @@
     {
       "diagnostic_id": "ege-social-studies-1210",
       "catalog_file": "ege-social-studies-1210.json",
-      "expected_catalog_sha256": "562b5a22d7fda4318e9e3289a32845ddb41344dc954c3a39df5f1d4c8081479e",
+      "expected_catalog_sha256": "80c900bcda0df6b08ed2bbdbca1ed65ec444f75a92c74e07714ce1f5628f5fac",
       "expected_question_count": 5,
       "target_question_count": 15,
       "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ob_11_2026.zip",
@@ -374,7 +374,7 @@
     {
       "diagnostic_id": "oge-biology-699",
       "catalog_file": "oge-biology-699.json",
-      "expected_catalog_sha256": "4971da2251ba15a45342ba4d15d8c2d5d1bcec3d6579946b5d2d2d33f6a371e2",
+      "expected_catalog_sha256": "dac51f231e00e3026aca9d010847133321f1c69654b2cf85f6d4ecac2d56ff95",
       "expected_question_count": 20,
       "target_question_count": 20,
       "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/bi_9_2026.zip",
@@ -385,7 +385,7 @@
     {
       "diagnostic_id": "oge-chemistry-192",
       "catalog_file": "oge-chemistry-192.json",
-      "expected_catalog_sha256": "2ef31107cfab23de0bccf4f0435a478ac36a9be33e57d7470b37b3a071f27ca8",
+      "expected_catalog_sha256": "b1ba60b9c805502276445811f2bcf22e9a645e56bd38e281b9c8233bee67977d",
       "expected_question_count": 19,
       "target_question_count": 19,
       "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/hi_9_2026.zip",
@@ -396,7 +396,7 @@
     {
       "diagnostic_id": "oge-english-language-202",
       "catalog_file": "oge-english-language-202.json",
-      "expected_catalog_sha256": "938a7f8bc8f3fbe58593965843cbf7704d81c51391339030042b93a063527973",
+      "expected_catalog_sha256": "f532169d00e0c770274c575e94b52b72886c6e8a648ac0405d2fbfbbd0720770",
       "expected_question_count": 2,
       "target_question_count": 15,
       "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/aya_9_2026.zip",
@@ -424,7 +424,7 @@
     {
       "diagnostic_id": "oge-history-196",
       "catalog_file": "oge-history-196.json",
-      "expected_catalog_sha256": "b23d1240c614d16e1758e3ded28a7179cc2c61310f44b5c5aef82511ee79216c",
+      "expected_catalog_sha256": "d6c778f52ee8a4727771a9b994f5ec7ea353d82be709af9e5a9b2ec25f10e633",
       "expected_question_count": 14,
       "target_question_count": 15,
       "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/is_9_2026.zip",
@@ -439,7 +439,7 @@
     {
       "diagnostic_id": "oge-informatics-466",
       "catalog_file": "oge-informatics-466.json",
-      "expected_catalog_sha256": "2d73cc6f87e4bb7ab7da967ab62ee2be6aa8e53dd535a35938878ec871f6d14f",
+      "expected_catalog_sha256": "416c1e485018db8789f8addbb12f76b56303be4f42e0d5e1bd2fb759e751c5b7",
       "expected_question_count": 11,
       "target_question_count": 15,
       "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip",
@@ -460,7 +460,7 @@
     {
       "diagnostic_id": "oge-mathematics-198",
       "catalog_file": "oge-mathematics-198.json",
-      "expected_catalog_sha256": "b579a5b780cbdbcd87187d2aece1966ac080d91b233e765862e2bf13a98d59c7",
+      "expected_catalog_sha256": "5a4f1d3c5dc4f1de4fc09586f9c69c71bca621503b70035503a1c7f53ca5d261",
       "expected_question_count": 19,
       "target_question_count": 19,
       "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/ma_9_2026.zip",
@@ -471,7 +471,7 @@
     {
       "diagnostic_id": "oge-physics-197",
       "catalog_file": "oge-physics-197.json",
-      "expected_catalog_sha256": "1e5027d5be15457463277578a01f1e5fa1b2047f6ba28d730d8244309f30e08d",
+      "expected_catalog_sha256": "340116a76a85823d0472b918205561fb53a445321b8b9cdf56c29c96d72e2b5c",
       "expected_question_count": 18,
       "target_question_count": 18,
       "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/fi_9_2026.zip",
@@ -482,7 +482,7 @@
     {
       "diagnostic_id": "oge-russian-language-379",
       "catalog_file": "oge-russian-language-379.json",
-      "expected_catalog_sha256": "b1c0046e579b8815d50c6bbf4340ca30b74b63d821d753cb8f6e887b7a5b50b1",
+      "expected_catalog_sha256": "1062e9c672f79318f700f659345324535d6e1634d330173d6e487d0f1c1a557b",
       "expected_question_count": 9,
       "target_question_count": 15,
       "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/ru_9_2026.zip",
@@ -507,7 +507,7 @@
     {
       "diagnostic_id": "oge-social-studies-195",
       "catalog_file": "oge-social-studies-195.json",
-      "expected_catalog_sha256": "4032f04cef4d5f9a05be8e5a289f471037e25f8db2daac2339d74d14309ddddd",
+      "expected_catalog_sha256": "3875745477e0b670a848a70515b5aba9f6e1660a545127faab0a0fe2fc272b57",
       "expected_question_count": 15,
       "target_question_count": 15,
       "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/ob_9_2026.zip",

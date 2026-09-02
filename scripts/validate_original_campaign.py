@@ -43,7 +43,7 @@ def _strict_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 
 def _load_json(path: Path, *, label: str) -> tuple[dict[str, Any], bytes]:
     try:
-        payload = path.read_bytes()
+        payload = path.read_bytes().replace(b"\r\n", b"\n")
     except OSError:
         _fail(f"campaign.{label}.unreadable")
     if payload.startswith(b"\xef\xbb\xbf"):

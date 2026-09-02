@@ -48,6 +48,21 @@ def test_current_campaign_is_complete_deterministic_and_private_safe(capsys):
     assert "answer" not in first_output
 
 
+def test_catalog_hash_ignores_checkout_line_endings(tmp_path: Path):
+    tool = load_tool()
+    source = ROOT / "school" / "diagnostics" / "oge-mathematics-198.json"
+    lf = source.read_bytes().replace(b"\r\n", b"\n")
+    crlf_path = tmp_path / "crlf.json"
+    crlf_path.write_bytes(lf.replace(b"\n", b"\r\n"))
+    lf_path = tmp_path / "lf.json"
+    lf_path.write_bytes(lf)
+
+    _, crlf_payload = tool._load_json(crlf_path, label="catalog")
+    _, lf_payload = tool._load_json(lf_path, label="catalog")
+
+    assert crlf_payload == lf_payload == lf
+
+
 def test_manifest_records_every_catalog_and_exact_deficit():
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
 
