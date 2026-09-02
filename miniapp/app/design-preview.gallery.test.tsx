@@ -74,6 +74,7 @@ const result: ServerResult = {
   score_unit: "баллов",
   correct_count: 18,
   question_count: 24,
+  estimate: { kind: "test_score", value: 62, scaled_primary: 24, exam_max_primary: 32, sample_max_primary: 30, sample_size: 24, min_pass: 27 },
   strong_topics: ["Линейные уравнения", "Проценты", "Графики"],
   growth_topics: ["Квадратные уравнения", "Геометрия · площади"],
   unassessed_part: "",
