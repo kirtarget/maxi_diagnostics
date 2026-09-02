@@ -70,6 +70,94 @@ async def test_followup_sends_lives_refill_reminder_without_attempt(monkeypatch)
     bot.send_message.assert_awaited_once()
 
 
+@pytest.mark.asyncio
+async def test_streak_save_is_sent_while_the_streak_is_alive_and_today_is_idle(monkeypatch):
+    from diagnostic import followups
+
+    lease = claimed("streak_save") | {"attempt_id": None}
+    context = lease | {
+        "attempt_status": None, "result_viewed_at": None, "subject": "diagnostic",
+        "mode": "full", "payload": {}, "streak_days": 4, "streak_active_today": False,
+    }
+    monkeypatch.setattr(followups.attempts, "claim_due_notifications", AsyncMock(return_value=[lease]))
+    monkeypatch.setattr(followups.attempts, "get_claimed_notification", AsyncMock(return_value=context))
+    rendered = AsyncMock(return_value="safe")
+    monkeypatch.setattr(followups, "render_message", rendered)
+    monkeypatch.setattr(followups.attempts, "mark_notification_sent", AsyncMock(return_value=True))
+    bot = SimpleNamespace(send_message=AsyncMock(return_value=SimpleNamespace(message_id=3)))
+    school = load_school(ROOT / "school")
+
+    sent = await followups.dispatch_followups(
+        bot, SimpleNamespace(miniapp_url="https://app.example", timezone="Europe/Moscow"), school
+    )
+
+    assert sent == 1
+    assert rendered.await_args.args[0] == "STREAK_SAVE"
+    keyboard = bot.send_message.await_args.kwargs["reply_markup"]
+    assert keyboard.inline_keyboard[0][0].text == school.brand.interface.plan
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "profile",
+    [
+        {"streak_days": 4, "streak_active_today": True},
+        {"streak_days": 1, "streak_active_today": False},
+    ],
+)
+async def test_streak_save_is_cancelled_when_it_is_no_longer_needed(monkeypatch, profile):
+    from diagnostic import followups
+
+    lease = claimed("streak_save") | {"attempt_id": None}
+    context = lease | {"attempt_status": None, "payload": {}} | profile
+    monkeypatch.setattr(followups.attempts, "claim_due_notifications", AsyncMock(return_value=[lease]))
+    monkeypatch.setattr(followups.attempts, "get_claimed_notification", AsyncMock(return_value=context))
+    cancel = AsyncMock(return_value=True)
+    monkeypatch.setattr(followups.attempts, "cancel_notification", cancel)
+    bot = SimpleNamespace(send_message=AsyncMock())
+
+    assert await followups.dispatch_followups(
+        bot, SimpleNamespace(miniapp_url="https://app.example", timezone="Europe/Moscow"),
+        load_school(ROOT / "school"),
+    ) == 0
+    cancel.assert_awaited_once_with(9, lease["locked_at"])
+    bot.send_message.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_day_followup_keyboard_points_at_todays_plan(monkeypatch):
+    from diagnostic import followups
+
+    lease = claimed("day_followup")
+    context = lease | {
+        "attempt_status": "completed", "result_viewed_at": None,
+        "subject": "Математика", "mode": "full", "payload": {},
+    }
+    monkeypatch.setattr(followups.attempts, "claim_due_notifications", AsyncMock(return_value=[lease]))
+    monkeypatch.setattr(followups.attempts, "get_claimed_notification", AsyncMock(return_value=context))
+    monkeypatch.setattr(followups, "render_message", AsyncMock(return_value="safe"))
+    monkeypatch.setattr(followups.attempts, "mark_notification_sent", AsyncMock(return_value=True))
+    bot = SimpleNamespace(send_message=AsyncMock(return_value=SimpleNamespace(message_id=3)))
+    school = load_school(ROOT / "school")
+
+    assert await followups.dispatch_followups(
+        bot, SimpleNamespace(miniapp_url="https://app.example", timezone="Europe/Moscow"), school
+    ) == 1
+    keyboard = bot.send_message.await_args.kwargs["reply_markup"]
+    assert len(keyboard.inline_keyboard) == 1
+    assert keyboard.inline_keyboard[0][0].text == school.brand.interface.plan
+    assert keyboard.inline_keyboard[0][0].web_app is not None
+
+
+def test_streak_save_template_is_seeded_for_the_school():
+    school = load_school(ROOT / "school")
+    assert "STREAK_SAVE" in school.brand.messages.keyed()
+
+    from diagnostic.db.messages import MESSAGE_KEYS
+
+    assert "STREAK_SAVE" in MESSAGE_KEYS
+
+
 def test_lives_refill_template_is_seeded_for_the_school():
     school = load_school(ROOT / "school")
     assert "LIVES_REFILL" in school.brand.messages.keyed()

@@ -1144,6 +1144,47 @@ async def mark_pdf_failed(attempt_id: str, lease: datetime, error_text: str) -> 
         return row is not None
 
 
+async def schedule_streak_save_notifications(
+    *, timezone_name: str = "UTC", send_hour: int = 20, limit: int = 500
+) -> int:
+    """Queue one evening nudge per idle user whose streak is still worth saving.
+
+    Idempotent per user and school-local day through the dedupe key. Eligibility is
+    re-checked at send time, so a user who studies before 20:00 is skipped there.
+    """
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        rows = await connection.fetch(
+            """
+            INSERT INTO diagnostic_notifications (dedupe_key, user_id, kind, due_at)
+            SELECT 'streak_save:' || profile.user_id::text || ':'
+                       || to_char(local.today, 'YYYYMMDD'),
+                   profile.user_id, 'streak_save',
+                   (local.today + make_interval(hours => $2))
+                       AT TIME ZONE $1
+              FROM diagnostic_progress_profiles AS profile
+              CROSS JOIN LATERAL (
+                  SELECT (now() AT TIME ZONE $1)::date AS today
+              ) AS local
+             WHERE profile.streak_days >= 2
+               AND (profile.streak_last_date IS NULL
+                    OR profile.streak_last_date < local.today)
+               AND NOT EXISTS (
+                   SELECT 1 FROM diagnostic_erased_users erased
+                    WHERE erased.user_id=profile.user_id
+               )
+             ORDER BY profile.user_id
+             LIMIT $3
+            ON CONFLICT (dedupe_key) DO NOTHING
+            RETURNING id
+            """,
+            timezone_name,
+            send_hour,
+            max(1, min(limit, 500)),
+        )
+        return len(rows)
+
+
 async def claim_due_notifications(limit: int = 1) -> list:
     pool = await get_pool()
     async with pool.acquire() as connection:
@@ -1240,7 +1281,9 @@ async def mark_notification_failed(
         return row is not None
 
 
-async def get_claimed_notification(notification_id: int, lease: datetime):
+async def get_claimed_notification(
+    notification_id: int, lease: datetime, *, timezone_name: str = "UTC"
+):
     """Reload delivery eligibility only while the caller owns the exact lease."""
     pool = await get_pool()
     async with pool.acquire() as connection:
@@ -1248,6 +1291,9 @@ async def get_claimed_notification(notification_id: int, lease: datetime):
             """
             SELECT n.*, a.status AS attempt_status, a.result_viewed_at,
                    a.subject, a.mode, a.diagnostic_id,
+                   profile.streak_days,
+                   profile.streak_last_date
+                       = (now() AT TIME ZONE $3)::date AS streak_active_today,
                    EXISTS (
                        SELECT 1 FROM diagnostic_attempts AS later
                         WHERE later.user_id=n.user_id
@@ -1258,6 +1304,8 @@ async def get_claimed_notification(notification_id: int, lease: datetime):
                    ) AS has_later_full
               FROM diagnostic_notifications AS n
               LEFT JOIN diagnostic_attempts AS a ON a.attempt_id=n.attempt_id
+              LEFT JOIN diagnostic_progress_profiles AS profile
+                     ON profile.user_id=n.user_id
              WHERE n.id=$1 AND n.status='sending' AND n.locked_at=$2
                AND NOT EXISTS (
                    SELECT 1 FROM diagnostic_erased_users erased
@@ -1267,6 +1315,7 @@ async def get_claimed_notification(notification_id: int, lease: datetime):
             """,
             notification_id,
             lease,
+            timezone_name,
         )
 
 

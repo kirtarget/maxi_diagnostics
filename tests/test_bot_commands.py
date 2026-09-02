@@ -106,27 +106,55 @@ async def test_webhook_cleanup_failure_aborts_startup_so_restart_can_retry():
 
 
 @pytest.mark.asyncio
-async def test_plan_marks_displayed_result_viewed_and_emits_transition_event(monkeypatch):
+async def test_plan_shows_todays_plan_progress_and_opens_the_mini_app(monkeypatch):
     from diagnostic.bot import handlers
 
-    row = {
-        "attempt_id": "attempt-1", "diagnostic_id": "demo-math", "subject": "Математика",
-        "mode": "full", "strong_topics": ["Алгебра"], "growth_topics": ["Геометрия"],
-    }
-    monkeypatch.setattr(handlers.attempts, "list_completed_attempts", AsyncMock(return_value=[row]))
-    viewed = AsyncMock(return_value=row | {"viewed_transition": True})
-    monkeypatch.setattr(handlers.attempts, "mark_result_viewed", viewed)
-    fired = Mock()
-    monkeypatch.setattr(handlers, "fire_event", fired)
+    school = load_school()
+    catalog = load_catalog(school)
+    diagnostic = catalog.diagnostics[0]
+    monkeypatch.setattr(handlers, "ensure_today_plan", AsyncMock(return_value={
+        "plan_date": "2026-09-02",
+        "diagnostic_id": diagnostic.id,
+        "content_version": "a" * 64,
+        "source_attempt_id": "attempt-1",
+        "question_ids": ["q1", "q2", "q3", "q4", "q5"],
+        "reasons": {},
+        "completed_question_ids": ["q1", "q2"],
+        "total": 5,
+        "completed": 2,
+    }))
+    message = SimpleNamespace(from_user=SimpleNamespace(id=731), answer=AsyncMock())
+
+    await handlers.send_plan(message, _settings(), school, catalog)
+
+    text = message.answer.await_args.args[0]
+    assert school.brand.interface.plan_for in text
+    assert diagnostic.subject in text
+    assert "5 заданий, выполнено 2" in text
+    keyboard = message.answer.await_args.kwargs["reply_markup"]
+    assert keyboard.inline_keyboard[0][0].text == school.brand.interface.plan
+    assert keyboard.inline_keyboard[0][0].web_app is not None
+
+
+@pytest.mark.asyncio
+async def test_plan_falls_back_to_the_empty_message_without_a_diagnostic(monkeypatch):
+    from diagnostic.bot import handlers
+
+    monkeypatch.setattr(handlers, "ensure_today_plan", AsyncMock(return_value=None))
+    monkeypatch.setattr(handlers, "render_message", AsyncMock(return_value="Нет плана"))
     message = SimpleNamespace(from_user=SimpleNamespace(id=731), answer=AsyncMock())
 
     await handlers.send_plan(message, _settings(), load_school(), load_catalog(load_school()))
 
-    message.answer.assert_awaited_once()
-    viewed.assert_awaited_once_with("attempt-1", 731)
-    fired.assert_called_once_with(
-        "diagnostic_result_viewed", 731, {"attempt_id": "attempt-1"}
-    )
+    assert message.answer.await_args.args[0] == "Нет плана"
+
+
+def test_task_count_text_uses_russian_plurals():
+    from diagnostic.bot.handlers import task_count_text
+
+    assert [task_count_text(count) for count in (1, 2, 5, 11, 21)] == [
+        "1 задание", "2 задания", "5 заданий", "11 заданий", "21 задание",
+    ]
 
 
 @pytest.mark.asyncio
