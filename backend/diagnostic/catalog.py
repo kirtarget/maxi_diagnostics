@@ -492,6 +492,37 @@ def public_question(question: Question) -> dict[str, Any]:
     }
 
 
+def is_valid_answer_shape(question: Question, answer: Any, *, complete: bool) -> bool:
+    """Whether an answer has the right shape for the question.
+
+    Partial answers are allowed while a diagnostic is in progress; with
+    ``complete=True`` a multiple-choice answer must hit selection_limit and a
+    matching answer must cover every item. Correctness is not checked here.
+    """
+    if isinstance(question, SingleQuestion):
+        return isinstance(answer, str) and answer in {option.id for option in question.options}
+    if isinstance(question, InputQuestion):
+        return is_valid_numeric_answer(answer)
+    if isinstance(question, MultipleQuestion):
+        allowed = {option.id for option in question.options}
+        return (
+            isinstance(answer, list)
+            and all(isinstance(value, str) for value in answer)
+            and len(answer) == len(set(answer))
+            and set(answer) <= allowed
+            and len(answer) <= question.selection_limit
+            and (not complete or len(answer) == question.selection_limit)
+        )
+    item_ids = {item.id for item in question.items}
+    option_ids = {option.id for option in question.options}
+    return (
+        isinstance(answer, dict)
+        and set(answer) <= item_ids
+        and all(isinstance(value, str) and value in option_ids for value in answer.values())
+        and (not complete or set(answer) == item_ids)
+    )
+
+
 def _public_summary(diagnostic: Diagnostic, content_version: str) -> dict[str, Any]:
     return {
         "id": diagnostic.id,
