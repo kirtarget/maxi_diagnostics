@@ -19,7 +19,9 @@ def test_readme_documents_the_exact_safe_first_run_sequence():
         "clean reviewed revision", "Do not run `scripts/init_school.py`",
         "school/brand.json", "school/links.json", "school/diagnostics",
         "scripts/validate_school.py", "scripts/check_brand_isolation.py",
-        ".env.example", "BotFather", "docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml up -d --build",
+        ".env.example", "BotFather",
+        "docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml pull",
+        "docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml up -d",
     ]
     positions = [text.index(value) for value in ordered]
     assert positions == sorted(positions)
@@ -41,9 +43,14 @@ def test_operator_documents_cover_deploy_operations_and_handoff_contracts():
     assert "docker compose config\n" not in deployment
     assert "Do not run\n`scripts/init_school.py` or use `--force` during deployment." in deployment
     assert "/.well-known/acme-challenge/" in deployment
+    assert "IMAGE_TAG" in deployment
+    assert ".github/workflows/release.yml" in deployment
+    assert "ghcr.io/kirtarget/maxi_diagnostics/backend" in deployment
+    assert "ghcr.io/kirtarget/maxi_diagnostics/miniapp" in deployment
+    assert "First-time switch" in deployment
     for value in (
         "docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml logs", "one polling", "scripts/backup_db.ps1",
-        "-ConfirmRestore", "rollback", "abandoned", "docker compose down",
+        "-ConfirmRestore", "rollback", "abandoned", "docker compose down", "IMAGE_TAG",
     ):
         assert value.casefold() in operations.casefold()
     assert "docker compose down -v" not in operations
@@ -123,8 +130,10 @@ def test_production_configuration_has_one_canonical_host_and_private_ports():
     assert "maximumtest.ru" not in configuration
     assert "https://maxi.kirtarget.ru" in configuration
     assert 'BOT_POLLING_ENABLED=true' in read(".env.example")
+    assert "IMAGE_TAG=" in read(".env.example")
     assert '"127.0.0.1:18082:8080"' in read("deploy/docker-compose.production.yml")
     assert '"127.0.0.1:13002:3000"' in read("deploy/docker-compose.production.yml")
+    assert "ghcr.io/kirtarget/maxi_diagnostics/" in read("deploy/docker-compose.production.yml")
     for path in (
         "deploy/nginx/diagnostic.conf.example", "deploy/nginx/maxi.kirtarget.ru.conf",
         "deploy/nginx/maxi.kirtarget.ru.http.conf",
@@ -187,3 +196,33 @@ def test_ci_matches_local_gates_and_uses_only_safe_test_services():
     ):
         assert command in rendered
     assert "TEST_DATABASE_URL" in rendered
+    assert "workflow_call:" in read(".github/workflows/ci.yml")
+
+
+def test_release_workflow_reuses_ci_gates_and_publishes_pinned_ghcr_images():
+    workflow = yaml.safe_load(read(".github/workflows/release.yml"))
+    rendered = json.dumps(workflow, ensure_ascii=False)
+    text = read(".github/workflows/release.yml")
+
+    assert "branches:\n      - main" in text
+    assert workflow["permissions"] == {"contents": "read"}
+    assert workflow["jobs"]["verify"]["uses"] == "./.github/workflows/ci.yml"
+    release_job = workflow["jobs"]["release"]
+    assert release_job["needs"] == "verify"
+    assert release_job["permissions"] == {"contents": "read", "packages": "write"}
+    assert "ghcr.io/kirtarget/maxi_diagnostics/backend" in rendered
+    assert "ghcr.io/kirtarget/maxi_diagnostics/miniapp" in rendered
+    assert "backend/Dockerfile" in rendered and "miniapp/Dockerfile" in rendered
+    assert "${{ github.sha }}" in text
+    assert "ghcr.io/kirtarget/maxi_diagnostics/backend:main" in rendered
+    assert "ghcr.io/kirtarget/maxi_diagnostics/miniapp:main" in rendered
+    assert "type=gha" in rendered
+    for action in (
+        "actions/checkout", "docker/setup-buildx-action", "docker/login-action",
+        "docker/build-push-action",
+    ):
+        lines = [line.strip() for line in text.splitlines() if f"uses: {action}@" in line]
+        assert lines, f"missing pinned {action}"
+        for line in lines:
+            revision = line.split("@", 1)[1].split()[0]
+            assert len(revision) == 40 and all(character in "0123456789abcdef" for character in revision)
