@@ -4,9 +4,10 @@ import html
 from io import BytesIO
 from xml.etree import ElementTree
 from pathlib import Path
+from typing import Annotated, Literal
 
 from pydantic import (
-    BaseModel, ConfigDict, Field, HttpUrl, ValidationError,
+    BaseModel, ConfigDict, Field, HttpUrl, TypeAdapter, ValidationError,
     field_validator, model_validator,
 )
 from reportlab.lib.utils import ImageReader
@@ -22,7 +23,14 @@ _ASSET_PATH = re.compile(
     re.IGNORECASE,
 )
 _SCHOOL_ROOT_ENTRIES = frozenset(
-    {"brand.json", "links.json", "diagnostics", "assets", ".initialized.json"}
+    {
+        "brand.json",
+        "links.json",
+        "score_scales.json",
+        "diagnostics",
+        "assets",
+        ".initialized.json",
+    }
 )
 _WINDOWS_RESERVED_BASENAMES = frozenset(
     {"con", "prn", "aux", "nul"}
@@ -51,7 +59,9 @@ def validate_school_layout(root: Path) -> None:
             raise ValueError("school_unexpected_entry")
         if entry.is_symlink():
             raise ValueError("school_symlink_not_allowed")
-        if entry.name in {"brand.json", "links.json", ".initialized.json"}:
+        if entry.name in {
+            "brand.json", "links.json", "score_scales.json", ".initialized.json",
+        }:
             if not entry.is_file():
                 raise ValueError("school_config_not_file")
         elif entry.name in {"diagnostics", "assets"} and not entry.is_dir():
@@ -475,12 +485,156 @@ class LinksConfig(BaseModel):
         return self
 
 
+class ScoreScaleSource(BaseModel):
+    """Where a published scale came from and how much it can be trusted."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    title: str = Field(min_length=1, max_length=512)
+    url: HttpUrl
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    confidence: Literal["official", "secondary"]
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value: str) -> str:
+        if value != value.strip() or _contains_unsafe_text(value):
+            raise ValueError("invalid_score_scale_source")
+        return value
+
+    @field_validator("url")
+    @classmethod
+    def validate_source_url(cls, value: HttpUrl) -> HttpUrl:
+        if value.scheme != "https" or len(str(value)) > 2048:
+            raise ValueError("invalid_score_scale_source")
+        return value
+
+
+class ScoreScaleBase(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{1,62}$")
+    exam: str = Field(min_length=1, max_length=64)
+    subject: str = Field(min_length=1, max_length=128)
+    max_primary: int = Field(gt=0, le=1000, strict=True)
+    min_pass: int | None = Field(default=None, ge=0, le=1000, strict=True)
+    interpolated_primary: tuple[int, ...] = ()
+    notes: str = Field(default="", max_length=1024)
+    source: ScoreScaleSource
+
+    @field_validator("exam", "subject")
+    @classmethod
+    def validate_catalog_text(cls, value: str) -> str:
+        if value != value.strip() or _contains_unsafe_text(value):
+            raise ValueError("invalid_score_scale_text")
+        return value
+
+    @field_validator("notes")
+    @classmethod
+    def validate_notes(cls, value: str) -> str:
+        if _contains_unsafe_text(value):
+            raise ValueError("invalid_score_scale_text")
+        return value
+
+    @model_validator(mode="after")
+    def validate_interpolated(self) -> "ScoreScaleBase":
+        marked = self.interpolated_primary
+        if list(marked) != sorted(set(marked)) or any(
+            not 0 <= primary <= self.max_primary for primary in marked
+        ):
+            raise ValueError("invalid_interpolated_primary")
+        return self
+
+
+class TestScoreScale(ScoreScaleBase):
+    """EGE: every primary score maps to a published 0-100 test score."""
+
+    kind: Literal["test_score"]
+    table: tuple[int, ...]
+
+    @model_validator(mode="after")
+    def validate_table(self) -> "TestScoreScale":
+        table = self.table
+        if len(table) != self.max_primary + 1:
+            raise ValueError("invalid_score_scale_table_length")
+        if any(not 0 <= value <= 100 for value in table):
+            raise ValueError("invalid_score_scale_table_value")
+        if any(table[index] > table[index + 1] for index in range(len(table) - 1)):
+            raise ValueError("score_scale_table_not_monotonic")
+        return self
+
+    def value_for(self, primary: int) -> int:
+        return self.table[min(max(primary, 0), self.max_primary)]
+
+
+class GradeScale(ScoreScaleBase):
+    """OGE: primary thresholds for the 3/4/5 grades; below the first is a 2."""
+
+    kind: Literal["grade"]
+    grades: dict[Literal["3", "4", "5"], int]
+
+    @model_validator(mode="after")
+    def validate_grades(self) -> "GradeScale":
+        if set(self.grades) != {"3", "4", "5"}:
+            raise ValueError("invalid_score_scale_grades")
+        thresholds = [self.grades[key] for key in ("3", "4", "5")]
+        if any(isinstance(value, bool) for value in thresholds):
+            raise ValueError("invalid_score_scale_grades")
+        if any(
+            thresholds[index] >= thresholds[index + 1]
+            for index in range(len(thresholds) - 1)
+        ):
+            raise ValueError("score_scale_grades_not_ascending")
+        if thresholds[0] < 1 or thresholds[-1] > self.max_primary:
+            raise ValueError("invalid_score_scale_grades")
+        return self
+
+    def value_for(self, primary: int) -> int:
+        bounded = min(max(primary, 0), self.max_primary)
+        for grade in ("5", "4", "3"):
+            if bounded >= self.grades[grade]:
+                return int(grade)
+        return 2
+
+
+ScoreScale = Annotated[TestScoreScale | GradeScale, Field(discriminator="kind")]
+
+
+class ScoreScalesConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scales: tuple[ScoreScale, ...] = Field(max_length=64)
+
+    @model_validator(mode="after")
+    def validate_unique(self) -> "ScoreScalesConfig":
+        ids = [scale.id for scale in self.scales]
+        pairs = [(scale.exam, scale.subject) for scale in self.scales]
+        if len(set(ids)) != len(ids):
+            raise ValueError("duplicate_score_scale_id")
+        if len(set(pairs)) != len(pairs):
+            raise ValueError("duplicate_score_scale_subject")
+        return self
+
+
+SCORE_SCALES_ADAPTER = TypeAdapter(ScoreScalesConfig)
+
+
 class SchoolConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     root: Path
     brand: BrandConfig
     links: LinksConfig
+    scales: tuple[ScoreScale, ...] = ()
+
+    def scale_for(self, exam: str, subject: str) -> "TestScoreScale | GradeScale | None":
+        return next(
+            (
+                scale for scale in self.scales
+                if scale.exam == exam and scale.subject == subject
+            ),
+            None,
+        )
 
     def resolve_asset(self, relative_path: str) -> Path:
         root = self.root.resolve(strict=True)
@@ -504,8 +658,16 @@ def load_school(root: Path = Path("school")) -> SchoolConfig:
     validate_school_layout(root)
     brand_data = load_json_file(root / "brand.json", max_bytes=1024 * 1024)
     links_data = load_json_file(root / "links.json", max_bytes=1024 * 1024)
+    scales_path = root / "score_scales.json"
+    scales_data = (
+        load_json_file(scales_path, max_bytes=1024 * 1024)
+        if scales_path.is_file() else {"scales": []}
+    )
     try:
-        school = SchoolConfig(root=root, brand=brand_data, links=links_data)
+        scales = SCORE_SCALES_ADAPTER.validate_python(scales_data).scales
+        school = SchoolConfig(
+            root=root, brand=brand_data, links=links_data, scales=scales
+        )
     except ValidationError:
         raise ValueError("school_config_invalid") from None
     from diagnostic.message_validation import validate_message_template

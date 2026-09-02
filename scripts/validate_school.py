@@ -6,6 +6,7 @@ import argparse
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 from pydantic import ValidationError
 
@@ -20,8 +21,8 @@ from diagnostic.catalog import (  # noqa: E402
 )
 from diagnostic.jsonutil import load_json_file  # noqa: E402
 from diagnostic.school import (  # noqa: E402
-    BrandConfig, LinksConfig, SchoolConfig, load_school, validate_asset_file,
-    validate_school_layout,
+    SCORE_SCALES_ADAPTER, BrandConfig, LinksConfig, SchoolConfig, load_school,
+    validate_asset_file, validate_school_layout,
 )
 
 
@@ -108,6 +109,11 @@ def _validation_error(label: str, path: str, exc: ValidationError) -> str:
         "invalid_selection_limit", "invalid_option_reference", "invalid_input_variant",
         "invalid_quick_count", "duplicate_question_id", "duplicate_diagnostic_id",
         "invalid_asset_path", "invalid_public_url", "duplicate_offer_id",
+        "invalid_score_scale_table_length", "invalid_score_scale_table_value",
+        "score_scale_table_not_monotonic", "invalid_score_scale_grades",
+        "score_scale_grades_not_ascending", "invalid_interpolated_primary",
+        "duplicate_score_scale_id", "duplicate_score_scale_subject",
+        "invalid_score_scale_source", "invalid_score_scale_text",
     )
     reason = next((item for item in known_reasons if item in message), error_type)
     return f"ERROR {label}_invalid: {path} field={location} reason={reason}"
@@ -157,6 +163,18 @@ def validate_repository(root: Path) -> tuple[list[str], dict[str, int | str]]:
             brand = value
         else:
             links = value
+
+    scales: tuple[Any, ...] = ()
+    scales_path = school_root / "score_scales.json"
+    if scales_path.is_symlink():
+        errors.append("ERROR score_scales_symlink_not_allowed: score_scales.json")
+    elif scales_path.exists():
+        try:
+            scales = SCORE_SCALES_ADAPTER.validate_python(_load_json(scales_path)).scales
+        except ValidationError as exc:
+            errors.append(_validation_error("score_scales", "score_scales.json", exc))
+        except (OSError, UnicodeError, ValueError):
+            errors.append("ERROR score_scales_invalid: score_scales.json")
 
     diagnostics: list[Diagnostic] = []
     diagnostics_root = school_root / "diagnostics"
@@ -224,6 +242,14 @@ def validate_repository(root: Path) -> tuple[list[str], dict[str, int | str]]:
             )
             reason = next((item for item in known_reasons if item in detail), "catalog_invalid")
             errors.append(f"ERROR catalog_invalid: {reason}")
+    if scales:
+        diagnostic_pairs = {
+            (diagnostic.exam, diagnostic.subject) for diagnostic in diagnostics
+        }
+        for scale in scales:
+            if (scale.exam, scale.subject) not in diagnostic_pairs:
+                errors.append(f"ERROR score_scale_without_diagnostic: {scale.id}")
+
     assets: set[str] = set()
     if brand is not None:
         assets.add(brand.logo)
@@ -256,6 +282,7 @@ def validate_repository(root: Path) -> tuple[list[str], dict[str, int | str]]:
         "diagnostics": len(diagnostics),
         "questions": sum(len(diagnostic.questions) for diagnostic in diagnostics),
         "assets": len(assets),
+        "scales": len(scales),
     }
     if not errors:
         try:
@@ -284,7 +311,8 @@ def main(argv: list[str] | None = None, *, root: Path | None = None) -> int:
         return 1
     print(
         f"OK school={stats['school']} diagnostics={stats['diagnostics']} "
-        f"questions={stats['questions']} assets={stats['assets']}"
+        f"questions={stats['questions']} assets={stats['assets']} "
+        f"scales={stats['scales']}"
     )
     return 0
 
