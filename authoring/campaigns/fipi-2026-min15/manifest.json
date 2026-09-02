@@ -1,0 +1,519 @@
+{
+  "schema_version": 1,
+  "campaign_id": "fipi-2026-min15",
+  "official_year": 2026,
+  "target_min_questions": 15,
+  "baseline": {
+    "diagnostic_count": 19,
+    "question_count": 178,
+    "additions": 123,
+    "projected_question_count": 301
+  },
+  "defaults": {
+    "operation": "add",
+    "workflow_status": "draft",
+    "source_kind": "original",
+    "rights_status": "original",
+    "assets_policy": "none",
+    "quick_count_policy": "preserve"
+  },
+  "partitions": [
+    {
+      "id": "a-quantitative-ege",
+      "expected_slot_count": 41,
+      "diagnostic_ids": [
+        "ege-chemistry-1208",
+        "ege-informatics-1205",
+        "ege-mathematics-1212",
+        "ege-physics-1206"
+      ]
+    },
+    {
+      "id": "b-natural-humanities-ege",
+      "expected_slot_count": 41,
+      "diagnostic_ids": [
+        "ege-biology-1207",
+        "ege-history-1211",
+        "ege-literature-1209",
+        "ege-social-studies-1210"
+      ]
+    },
+    {
+      "id": "c-languages-small-oge",
+      "expected_slot_count": 41,
+      "diagnostic_ids": [
+        "ege-english-language-1204",
+        "ege-russian-language-1213",
+        "oge-english-language-202",
+        "oge-history-196",
+        "oge-informatics-466",
+        "oge-russian-language-379"
+      ]
+    }
+  ],
+  "known_blockers": [
+    {
+      "blocker_id": "ege-english-legacy-position-31",
+      "diagnostic_id": "ege-english-language-1204",
+      "exam_positions": ["31"],
+      "reason": "Четыре существующих вопроса имеют одну метку 31 и требуют отдельной редакционной перенумерации. Новые слоты используют явные позиции."
+    },
+    {
+      "blocker_id": "ege-literature-position-10-extended",
+      "diagnostic_id": "ege-literature-1209",
+      "exam_positions": ["10"],
+      "reason": "Позиция требует развёрнутого ответа по критериям и исключена из автоматических слотов."
+    },
+    {
+      "blocker_id": "ege-mathematics-level-metadata",
+      "diagnostic_id": "ege-mathematics-1212",
+      "exam_positions": [],
+      "reason": "Профильный уровень зафиксирован в кампании, но ещё не является явным полем runtime-диагностики."
+    },
+    {
+      "blocker_id": "oge-biology-position-27-absent",
+      "diagnostic_id": "oge-biology-699",
+      "exam_positions": ["27"],
+      "reason": "В официальной модели 2026 года позиции 27 нет. Существующий вопрос нельзя наделять официальным баллом по этой позиции."
+    },
+    {
+      "blocker_id": "oge-physics-positions-18-19-extended",
+      "diagnostic_id": "oge-physics-197",
+      "exam_positions": ["18", "19"],
+      "reason": "Позиции требуют критериальной проверки развёрнутого ответа и не включаются в автоматические слоты."
+    },
+    {
+      "blocker_id": "oge-russian-legacy-numbering",
+      "diagnostic_id": "oge-russian-language-379",
+      "exam_positions": ["1", "10", "2", "3", "4", "5", "6", "8", "9"],
+      "reason": "Нумерация существующих вопросов не соответствует модели 2026 года. Новые слоты сопоставляются независимо."
+    },
+    {
+      "blocker_id": "oge-russian-position-1-extended",
+      "diagnostic_id": "oge-russian-language-379",
+      "exam_positions": ["1"],
+      "reason": "Позиция является изложением с критериальной проверкой и исключена из автоматических слотов."
+    }
+  ],
+  "diagnostics": [
+    {
+      "diagnostic_id": "ege-biology-1207",
+      "catalog_file": "ege-biology-1207.json",
+      "expected_catalog_sha256": "334474b310dcda0d2e4056a8732f18d18efeac3ea0db03f0999a2a737ee62c50",
+      "expected_question_count": 6,
+      "target_question_count": 15,
+      "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/bi_11_2026.zip",
+      "exam_level": null,
+      "allowlist": [
+        {"exam_position": "12", "question_types": ["input"], "max_primary_score": 2},
+        {"exam_position": "2", "question_types": ["multiple"], "max_primary_score": 2},
+        {"exam_position": "5", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "6", "question_types": ["input"], "max_primary_score": 2},
+        {"exam_position": "7", "question_types": ["multiple"], "max_primary_score": 2}
+      ],
+      "slots": [
+        {"question_id": "f26-ege-bio-a01", "exam_position": "2", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-bio-a02", "exam_position": "5", "question_type": "input", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-bio-a03", "exam_position": "6", "question_type": "input", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-bio-a04", "exam_position": "7", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-bio-a05", "exam_position": "12", "question_type": "input", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-bio-a06", "exam_position": "2", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-bio-a07", "exam_position": "5", "question_type": "input", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-bio-a08", "exam_position": "6", "question_type": "input", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-bio-a09", "exam_position": "7", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"}
+      ]
+    },
+    {
+      "diagnostic_id": "ege-chemistry-1208",
+      "catalog_file": "ege-chemistry-1208.json",
+      "expected_catalog_sha256": "e079e20974f5d7c912540cd0cb9b3633cb178e744beda746ff3caf6ddbde459f",
+      "expected_question_count": 6,
+      "target_question_count": 15,
+      "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/hi_11_2026.zip",
+      "exam_level": null,
+      "allowlist": [
+        {"exam_position": "10", "question_types": ["input", "multiple"], "max_primary_score": 1},
+        {"exam_position": "11", "question_types": ["input", "multiple"], "max_primary_score": 1},
+        {"exam_position": "2", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "27", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "6", "question_types": ["input", "multiple"], "max_primary_score": 2},
+        {"exam_position": "9", "question_types": ["input", "multiple"], "max_primary_score": 1}
+      ],
+      "slots": [
+        {"question_id": "f26-ege-chem-a01", "exam_position": "2", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-chem-a02", "exam_position": "6", "question_type": "input", "max_primary_score": 2, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-chem-a03", "exam_position": "9", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-chem-a04", "exam_position": "10", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-chem-a05", "exam_position": "11", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-chem-a06", "exam_position": "27", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-chem-a07", "exam_position": "2", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-chem-a08", "exam_position": "6", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-chem-a09", "exam_position": "9", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"}
+      ]
+    },
+    {
+      "diagnostic_id": "ege-english-language-1204",
+      "catalog_file": "ege-english-language-1204.json",
+      "expected_catalog_sha256": "7796a691b563f32696f42cec78e17dee9f19cee6f9d7402468151d9ed1e29ae7",
+      "expected_question_count": 8,
+      "target_question_count": 15,
+      "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip",
+      "exam_level": null,
+      "allowlist": [
+        {"exam_position": "11", "question_types": ["input"], "max_primary_score": 2},
+        {"exam_position": "30", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "31", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "34", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "35", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "36", "question_types": ["input"], "max_primary_score": 1}
+      ],
+      "slots": [
+        {"question_id": "f26-ege-eng-a01", "exam_position": "11", "question_type": "input", "max_primary_score": 2, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-ege-eng-a02", "exam_position": "30", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-ege-eng-a03", "exam_position": "31", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-ege-eng-a04", "exam_position": "34", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-ege-eng-a05", "exam_position": "35", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-ege-eng-a06", "exam_position": "36", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-ege-eng-a07", "exam_position": "11", "question_type": "input", "max_primary_score": 2, "owner_partition": "c-languages-small-oge"}
+      ]
+    },
+    {
+      "diagnostic_id": "ege-history-1211",
+      "catalog_file": "ege-history-1211.json",
+      "expected_catalog_sha256": "4746502c234ce0abb78abd65437192c91e44c2116c4e72ab60002c9206988b6b",
+      "expected_question_count": 5,
+      "target_question_count": 15,
+      "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/is_11_2026.zip",
+      "exam_level": null,
+      "allowlist": [
+        {"exam_position": "2", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "3", "question_types": ["input"], "max_primary_score": 2},
+        {"exam_position": "4", "question_types": ["input"], "max_primary_score": 3},
+        {"exam_position": "5", "question_types": ["input"], "max_primary_score": 2},
+        {"exam_position": "6", "question_types": ["multiple"], "max_primary_score": 2}
+      ],
+      "slots": [
+        {"question_id": "f26-ege-hist-a01", "exam_position": "2", "question_type": "input", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-hist-a02", "exam_position": "3", "question_type": "input", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-hist-a03", "exam_position": "4", "question_type": "input", "max_primary_score": 3, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-hist-a04", "exam_position": "5", "question_type": "input", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-hist-a05", "exam_position": "6", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-hist-a06", "exam_position": "2", "question_type": "input", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-hist-a07", "exam_position": "3", "question_type": "input", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-hist-a08", "exam_position": "4", "question_type": "input", "max_primary_score": 3, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-hist-a09", "exam_position": "5", "question_type": "input", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-hist-a10", "exam_position": "6", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"}
+      ]
+    },
+    {
+      "diagnostic_id": "ege-informatics-1205",
+      "catalog_file": "ege-informatics-1205.json",
+      "expected_catalog_sha256": "bae671127f8fe3698e90933fba9ca28c28001704557c3fb31e157d42d6a052ed",
+      "expected_question_count": 3,
+      "target_question_count": 15,
+      "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/inf_11_2026.zip",
+      "exam_level": null,
+      "allowlist": [
+        {"exam_position": "16", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "4", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "7", "question_types": ["input"], "max_primary_score": 1}
+      ],
+      "slots": [
+        {"question_id": "f26-ege-inf-a01", "exam_position": "4", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-inf-a02", "exam_position": "7", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-inf-a03", "exam_position": "16", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-inf-a04", "exam_position": "4", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-inf-a05", "exam_position": "7", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-inf-a06", "exam_position": "16", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-inf-a07", "exam_position": "4", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-inf-a08", "exam_position": "7", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-inf-a09", "exam_position": "16", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-inf-a10", "exam_position": "4", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-inf-a11", "exam_position": "7", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-inf-a12", "exam_position": "16", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"}
+      ]
+    },
+    {
+      "diagnostic_id": "ege-literature-1209",
+      "catalog_file": "ege-literature-1209.json",
+      "expected_catalog_sha256": "2faa27c23e7af7cd8b33a6297ed75f5073fc94add99bc9870dc8bff8649824fe",
+      "expected_question_count": 3,
+      "target_question_count": 15,
+      "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/li_11_2026.zip",
+      "exam_level": null,
+      "allowlist": [
+        {"exam_position": "2", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "8", "question_types": ["multiple"], "max_primary_score": 1}
+      ],
+      "slots": [
+        {"question_id": "f26-ege-lit-a01", "exam_position": "2", "question_type": "input", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-lit-a02", "exam_position": "8", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-lit-a03", "exam_position": "2", "question_type": "input", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-lit-a04", "exam_position": "8", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-lit-a05", "exam_position": "2", "question_type": "input", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-lit-a06", "exam_position": "8", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-lit-a07", "exam_position": "2", "question_type": "input", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-lit-a08", "exam_position": "8", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-lit-a09", "exam_position": "2", "question_type": "input", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-lit-a10", "exam_position": "8", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-lit-a11", "exam_position": "2", "question_type": "input", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-lit-a12", "exam_position": "8", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"}
+      ]
+    },
+    {
+      "diagnostic_id": "ege-mathematics-1212",
+      "catalog_file": "ege-mathematics-1212.json",
+      "expected_catalog_sha256": "75e71e46347c7488cf31dafd68c3de5785cadc6d2d4859a499ae248689059fd1",
+      "expected_question_count": 4,
+      "target_question_count": 15,
+      "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip",
+      "exam_level": "profile",
+      "allowlist": [
+        {"exam_position": "1", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "10", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "3", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "6", "question_types": ["input"], "max_primary_score": 1}
+      ],
+      "slots": [
+        {"question_id": "f26-ege-math-a01", "exam_position": "1", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-math-a02", "exam_position": "3", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-math-a03", "exam_position": "6", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-math-a04", "exam_position": "10", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-math-a05", "exam_position": "1", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-math-a06", "exam_position": "3", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-math-a07", "exam_position": "6", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-math-a08", "exam_position": "10", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-math-a09", "exam_position": "1", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-math-a10", "exam_position": "3", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-math-a11", "exam_position": "6", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"}
+      ]
+    },
+    {
+      "diagnostic_id": "ege-physics-1206",
+      "catalog_file": "ege-physics-1206.json",
+      "expected_catalog_sha256": "c8b7d7c6a98a79ec8bad50c8933560d21e2e5cf53ddd5072671fc21462afdce5",
+      "expected_question_count": 6,
+      "target_question_count": 15,
+      "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/fi_11_2026.zip",
+      "exam_level": null,
+      "allowlist": [
+        {"exam_position": "1", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "14", "question_types": ["multiple"], "max_primary_score": 2},
+        {"exam_position": "17", "question_types": ["input"], "max_primary_score": 2},
+        {"exam_position": "6", "question_types": ["input"], "max_primary_score": 2},
+        {"exam_position": "8", "question_types": ["input"], "max_primary_score": 1}
+      ],
+      "slots": [
+        {"question_id": "f26-ege-phys-a01", "exam_position": "1", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-phys-a02", "exam_position": "6", "question_type": "input", "max_primary_score": 2, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-phys-a03", "exam_position": "8", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-phys-a04", "exam_position": "14", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-phys-a05", "exam_position": "17", "question_type": "input", "max_primary_score": 2, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-phys-a06", "exam_position": "1", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-phys-a07", "exam_position": "6", "question_type": "input", "max_primary_score": 2, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-phys-a08", "exam_position": "8", "question_type": "input", "max_primary_score": 1, "owner_partition": "a-quantitative-ege"},
+        {"question_id": "f26-ege-phys-a09", "exam_position": "14", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "a-quantitative-ege"}
+      ]
+    },
+    {
+      "diagnostic_id": "ege-russian-language-1213",
+      "catalog_file": "ege-russian-language-1213.json",
+      "expected_catalog_sha256": "595bfde5e19b49c796a69dc4681918831f47d5594d2245ebb47da8bdfed22f36",
+      "expected_question_count": 5,
+      "target_question_count": 15,
+      "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ru_11_2026.zip",
+      "exam_level": null,
+      "allowlist": [
+        {"exam_position": "13", "question_types": ["input", "multiple"], "max_primary_score": 1},
+        {"exam_position": "15", "question_types": ["input", "multiple"], "max_primary_score": 1},
+        {"exam_position": "17", "question_types": ["input", "multiple"], "max_primary_score": 1},
+        {"exam_position": "20", "question_types": ["input", "multiple"], "max_primary_score": 1},
+        {"exam_position": "4", "question_types": ["input", "multiple"], "max_primary_score": 1}
+      ],
+      "slots": [
+        {"question_id": "f26-ege-rus-a01", "exam_position": "4", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-ege-rus-a02", "exam_position": "13", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-ege-rus-a03", "exam_position": "15", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-ege-rus-a04", "exam_position": "17", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-ege-rus-a05", "exam_position": "20", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-ege-rus-a06", "exam_position": "4", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-ege-rus-a07", "exam_position": "13", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-ege-rus-a08", "exam_position": "15", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-ege-rus-a09", "exam_position": "17", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-ege-rus-a10", "exam_position": "20", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"}
+      ]
+    },
+    {
+      "diagnostic_id": "ege-social-studies-1210",
+      "catalog_file": "ege-social-studies-1210.json",
+      "expected_catalog_sha256": "562b5a22d7fda4318e9e3289a32845ddb41344dc954c3a39df5f1d4c8081479e",
+      "expected_question_count": 5,
+      "target_question_count": 15,
+      "official_archive_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ob_11_2026.zip",
+      "exam_level": null,
+      "allowlist": [
+        {"exam_position": "12", "question_types": ["multiple"], "max_primary_score": 1},
+        {"exam_position": "13", "question_types": ["input", "multiple"], "max_primary_score": 2},
+        {"exam_position": "2", "question_types": ["multiple"], "max_primary_score": 2},
+        {"exam_position": "5", "question_types": ["multiple"], "max_primary_score": 2},
+        {"exam_position": "7", "question_types": ["multiple"], "max_primary_score": 2}
+      ],
+      "slots": [
+        {"question_id": "f26-ege-soc-a01", "exam_position": "2", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-soc-a02", "exam_position": "5", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-soc-a03", "exam_position": "7", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-soc-a04", "exam_position": "12", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-soc-a05", "exam_position": "13", "question_type": "input", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-soc-a06", "exam_position": "2", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-soc-a07", "exam_position": "5", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-soc-a08", "exam_position": "7", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-soc-a09", "exam_position": "12", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "b-natural-humanities-ege"},
+        {"question_id": "f26-ege-soc-a10", "exam_position": "13", "question_type": "multiple", "max_primary_score": 2, "owner_partition": "b-natural-humanities-ege"}
+      ]
+    },
+    {
+      "diagnostic_id": "oge-biology-699",
+      "catalog_file": "oge-biology-699.json",
+      "expected_catalog_sha256": "4971da2251ba15a45342ba4d15d8c2d5d1bcec3d6579946b5d2d2d33f6a371e2",
+      "expected_question_count": 20,
+      "target_question_count": 20,
+      "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/bi_9_2026.zip",
+      "exam_level": null,
+      "allowlist": [],
+      "slots": []
+    },
+    {
+      "diagnostic_id": "oge-chemistry-192",
+      "catalog_file": "oge-chemistry-192.json",
+      "expected_catalog_sha256": "2ef31107cfab23de0bccf4f0435a478ac36a9be33e57d7470b37b3a071f27ca8",
+      "expected_question_count": 19,
+      "target_question_count": 19,
+      "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/hi_9_2026.zip",
+      "exam_level": null,
+      "allowlist": [],
+      "slots": []
+    },
+    {
+      "diagnostic_id": "oge-english-language-202",
+      "catalog_file": "oge-english-language-202.json",
+      "expected_catalog_sha256": "938a7f8bc8f3fbe58593965843cbf7704d81c51391339030042b93a063527973",
+      "expected_question_count": 2,
+      "target_question_count": 15,
+      "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/aya_9_2026.zip",
+      "exam_level": null,
+      "allowlist": [
+        {"exam_position": "10", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "9", "question_types": ["input"], "max_primary_score": 1}
+      ],
+      "slots": [
+        {"question_id": "f26-oge-eng-a01", "exam_position": "9", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-eng-a02", "exam_position": "10", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-eng-a03", "exam_position": "9", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-eng-a04", "exam_position": "10", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-eng-a05", "exam_position": "9", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-eng-a06", "exam_position": "10", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-eng-a07", "exam_position": "9", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-eng-a08", "exam_position": "10", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-eng-a09", "exam_position": "9", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-eng-a10", "exam_position": "10", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-eng-a11", "exam_position": "9", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-eng-a12", "exam_position": "10", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-eng-a13", "exam_position": "9", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"}
+      ]
+    },
+    {
+      "diagnostic_id": "oge-history-196",
+      "catalog_file": "oge-history-196.json",
+      "expected_catalog_sha256": "b23d1240c614d16e1758e3ded28a7179cc2c61310f44b5c5aef82511ee79216c",
+      "expected_question_count": 14,
+      "target_question_count": 15,
+      "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/is_9_2026.zip",
+      "exam_level": null,
+      "allowlist": [
+        {"exam_position": "2", "question_types": ["input"], "max_primary_score": 1}
+      ],
+      "slots": [
+        {"question_id": "f26-oge-hist-a01", "exam_position": "2", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"}
+      ]
+    },
+    {
+      "diagnostic_id": "oge-informatics-466",
+      "catalog_file": "oge-informatics-466.json",
+      "expected_catalog_sha256": "2d73cc6f87e4bb7ab7da967ab62ee2be6aa8e53dd535a35938878ec871f6d14f",
+      "expected_question_count": 11,
+      "target_question_count": 15,
+      "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip",
+      "exam_level": null,
+      "allowlist": [
+        {"exam_position": "1", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "12", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "4", "question_types": ["input"], "max_primary_score": 1},
+        {"exam_position": "8", "question_types": ["input"], "max_primary_score": 1}
+      ],
+      "slots": [
+        {"question_id": "f26-oge-inf-a01", "exam_position": "1", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-inf-a02", "exam_position": "4", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-inf-a03", "exam_position": "8", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-inf-a04", "exam_position": "12", "question_type": "input", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"}
+      ]
+    },
+    {
+      "diagnostic_id": "oge-mathematics-198",
+      "catalog_file": "oge-mathematics-198.json",
+      "expected_catalog_sha256": "b579a5b780cbdbcd87187d2aece1966ac080d91b233e765862e2bf13a98d59c7",
+      "expected_question_count": 19,
+      "target_question_count": 19,
+      "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/ma_9_2026.zip",
+      "exam_level": null,
+      "allowlist": [],
+      "slots": []
+    },
+    {
+      "diagnostic_id": "oge-physics-197",
+      "catalog_file": "oge-physics-197.json",
+      "expected_catalog_sha256": "1e5027d5be15457463277578a01f1e5fa1b2047f6ba28d730d8244309f30e08d",
+      "expected_question_count": 18,
+      "target_question_count": 18,
+      "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/fi_9_2026.zip",
+      "exam_level": null,
+      "allowlist": [],
+      "slots": []
+    },
+    {
+      "diagnostic_id": "oge-russian-language-379",
+      "catalog_file": "oge-russian-language-379.json",
+      "expected_catalog_sha256": "b1c0046e579b8815d50c6bbf4340ca30b74b63d821d753cb8f6e887b7a5b50b1",
+      "expected_question_count": 9,
+      "target_question_count": 15,
+      "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/ru_9_2026.zip",
+      "exam_level": null,
+      "allowlist": [
+        {"exam_position": "2", "question_types": ["multiple"], "max_primary_score": 1},
+        {"exam_position": "3", "question_types": ["multiple"], "max_primary_score": 1},
+        {"exam_position": "4", "question_types": ["multiple"], "max_primary_score": 1},
+        {"exam_position": "5", "question_types": ["multiple"], "max_primary_score": 1},
+        {"exam_position": "6", "question_types": ["multiple"], "max_primary_score": 1},
+        {"exam_position": "8", "question_types": ["multiple"], "max_primary_score": 1}
+      ],
+      "slots": [
+        {"question_id": "f26-oge-rus-a01", "exam_position": "2", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-rus-a02", "exam_position": "3", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-rus-a03", "exam_position": "4", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-rus-a04", "exam_position": "5", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-rus-a05", "exam_position": "6", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"},
+        {"question_id": "f26-oge-rus-a06", "exam_position": "8", "question_type": "multiple", "max_primary_score": 1, "owner_partition": "c-languages-small-oge"}
+      ]
+    },
+    {
+      "diagnostic_id": "oge-social-studies-195",
+      "catalog_file": "oge-social-studies-195.json",
+      "expected_catalog_sha256": "4032f04cef4d5f9a05be8e5a289f471037e25f8db2daac2339d74d14309ddddd",
+      "expected_question_count": 15,
+      "target_question_count": 15,
+      "official_archive_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/ob_9_2026.zip",
+      "exam_level": null,
+      "allowlist": [],
+      "slots": []
+    }
+  ]
+}

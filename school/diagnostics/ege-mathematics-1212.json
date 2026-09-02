@@ -12,53 +12,113 @@
     {
       "id": "q9891",
       "type": "input",
-      "topic": "Показательные уравнения",
-      "learning_material_text": "Приведите обе части к одному основанию, если это возможно, и приравняйте показатели. Если основания разные, сделайте замену или используйте свойства степеней; в конце проверьте корень подстановкой.",
-      "learning_material_url": "https://maximumtest.ru/uchebnik/matematika",
-      "title": "Задание 6",
-      "prompt": "Решите уравнение:\n6^(3−x)=0,6∙10^(3−x)",
+      "topic": "Планиметрия: площадь трапеции",
+      "learning_material_text": "Площадь трапеции равна произведению полусуммы её оснований на высоту. Сначала сложите основания, разделите сумму пополам, затем умножьте на высоту.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/9-klass/matematika/treugolniki-ploshchadi",
+      "title": "Задание 1",
+      "prompt": "Основания трапеции равны 10 и 18, а её высота равна 7. Найдите площадь трапеции.",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "1",
+        "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
+      "explanation": "Площадь трапеции равна произведению полусуммы оснований на высоту. Полусумма оснований равна (10 + 18) / 2 = 14. Умножаем на высоту: 14 · 7 = 98.",
       "correct": [
-        "2"
+        "98"
       ]
     },
     {
       "id": "q9892",
       "type": "input",
-      "topic": "Стереометрия",
-      "learning_material_text": "Сделайте рисунок тела, отметьте известные рёбра, высоты и нужное сечение. Разбейте пространственную задачу на плоские треугольники и применяйте теорему Пифагора или формулу объёма только к отмеченным элементам.",
+      "topic": "Стереометрия: объём призмы",
+      "learning_material_text": "Объём прямой призмы равен произведению площади основания на высоту. Проверьте, что обе величины даны в совместимых единицах.",
       "learning_material_url": "https://maximumtest.ru/uchebnik/9-klass/matematika/prizmy-osnovy",
       "title": "Задание 3",
-      "prompt": "Первая цилиндрическая кружка вдвое выше второй, зато вторая в три раза шире. Найдите отношение объёма второй кружки к объёму первой.",
+      "prompt": "Площадь основания прямой призмы равна 18, а её высота равна 7. Найдите объём призмы.",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "3",
+        "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
+      "explanation": "Объём прямой призмы вычисляется по формуле V = Sосн · h. Подставляем площадь основания 18 и высоту 7: V = 18 · 7 = 126.",
       "correct": [
-        "4,5",
-        "4.5"
-      ],
-      "asset": "assets/questions/q9892.png"
+        "126"
+      ]
     },
     {
       "id": "q9894",
       "type": "input",
-      "topic": "Планиметрия",
-      "learning_material_text": "Нарисуйте аккуратную схему и выпишите свойства фигуры из условия. Найдите вспомогательные углы или отрезки через равенство углов, подобие, теорему Пифагора или свойства окружности, затем вычисляйте искомое.",
-      "learning_material_url": "https://maximumtest.ru/uchebnik/9-klass/matematika/treugolniki-ploshchadi",
-      "title": "Задание 1",
-      "prompt": "Площадь параллелограмма ABCD равна 148. Точка G — середина стороны CD.\nНайдите площадь трапеции ABGD.",
+      "topic": "Показательные уравнения",
+      "learning_material_text": "Представьте обе части уравнения как степени с одинаковым основанием. Для положительного основания, не равного единице, равенство степеней означает равенство показателей.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/matematika",
+      "title": "Задание 6",
+      "prompt": "Решите уравнение 3^(2x−1) = 27.",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "6",
+        "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
+      "explanation": "Число 27 равно 3^(3). Получаем 3^(2x−1) = 3^(3), поэтому 2x−1 = 3. Тогда 2x = 4 и x = 2.",
       "correct": [
-        "111"
-      ],
-      "asset": "assets/questions/q9894.png"
+        "2"
+      ]
     },
     {
       "id": "q9895",
       "type": "input",
-      "topic": "Текстовые задачи на проценты",
-      "learning_material_text": "Определите базовую величину, которая принимается за 100 процентов. Переводите проценты в десятичные дроби, последовательно применяйте изменения и не складывайте проценты, если каждое изменение считается от новой базы.",
+      "topic": "Текстовые задачи: движение по маршруту",
+      "learning_material_text": "Последовательно вычитайте уже пройденные части маршрута из общей длины. Если остаток распределён поровну, разделите его на число одинаковых участков.",
       "learning_material_url": "https://maximumtest.ru/uchebnik/9-klass/matematika/praktikooriyentirovannye-zadaniya",
       "title": "Задание 10",
-      "prompt": "Брюки дороже рубашки на 25% и дешевле пиджака на 50%. На сколько процентов рубашка дешевле пиджака?",
+      "prompt": "Длина туристического маршрута равна 180 км. В первый день группа прошла 30% маршрута, во второй день прошла 42 км. Оставшуюся часть маршрута группа прошла за три дня, каждый день преодолевая одинаковое расстояние. Сколько километров группа проходила в каждый из этих трёх дней?",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "10",
+        "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
+      "explanation": "В первый день группа прошла 180 · 0,3 = 54 км. После второго дня осталось 180 − 54 − 42 = 84 км. Эти 84 км распределены поровну на три дня, поэтому каждый день группа проходила 84 / 3 = 28 км.",
       "correct": [
-        "60"
+        "28"
       ]
-    }
+    },
+    {"id":"f26-ege-math-a01","type":"input","topic":"Планиметрия","title":"Задание 1","prompt":"Основание треугольника равно 12, высота к этому основанию равна 7. Найдите площадь треугольника.","correct":["42"],"explanation":"Площадь треугольника равна половине произведения основания на высоту: 12 · 7 / 2 = 42.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"1","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-math-a02","type":"input","topic":"Стереометрия","title":"Задание 3","prompt":"Рёбра прямоугольного параллелепипеда равны 4, 5 и 6. Найдите его объём.","correct":["120"],"explanation":"Объём прямоугольного параллелепипеда равен произведению трёх рёбер: 4 · 5 · 6 = 120.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"3","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-math-a03","type":"input","topic":"Уравнения","title":"Задание 6","prompt":"Решите уравнение 5x − 7 = 18.","correct":["5"],"explanation":"Переносим −7 вправо: 5x = 25. Делим обе части на 5 и получаем x = 5.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"6","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-math-a04","type":"input","topic":"Проценты","title":"Задание 10","prompt":"Курс стоил 2400 рублей. После скидки 15% найдите новую стоимость курса в рублях.","correct":["2040"],"explanation":"После скидки остаётся 85% цены. Новая стоимость равна 2400 · 0,85 = 2040 рублей.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"10","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-math-a05","type":"input","topic":"Планиметрия","title":"Задание 1","prompt":"Сторона параллелограмма равна 9, а проведённая к ней высота равна 8. Найдите площадь параллелограмма.","correct":["72"],"explanation":"Площадь параллелограмма равна произведению стороны на соответствующую высоту: 9 · 8 = 72.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"1","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-math-a06","type":"input","topic":"Стереометрия","title":"Задание 3","prompt":"Радиус цилиндра увеличили в 2 раза, высоту не изменяли. Во сколько раз увеличился объём цилиндра?","correct":["4"],"explanation":"Объём цилиндра пропорционален квадрату радиуса. При удвоении радиуса объём возрастает в 2² = 4 раза.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"3","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-math-a07","type":"input","topic":"Показательные уравнения","title":"Задание 6","prompt":"Решите уравнение 2^(x + 1) = 32.","correct":["4"],"explanation":"Число 32 равно 2^5, поэтому x + 1 = 5. Следовательно, x = 4.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"6","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-math-a08","type":"input","topic":"Движение","title":"Задание 10","prompt":"Автобус прошёл 360 км с постоянной скоростью 72 км/ч. Сколько часов длилась поездка?","correct":["5"],"explanation":"Время равно отношению пути к скорости: 360 / 72 = 5 часов.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"10","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-math-a09","type":"input","topic":"Планиметрия","title":"Задание 1","prompt":"Радиус круга равен 5. Найдите отношение площади круга к числу π.","correct":["25"],"explanation":"Площадь круга равна πr². После деления на π остаётся r² = 5² = 25.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"1","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-math-a10","type":"input","topic":"Стереометрия","title":"Задание 3","prompt":"Объём куба равен 343. Найдите длину его ребра.","correct":["7"],"explanation":"Объём куба равен a³. Поскольку 343 = 7³, ребро куба равно 7.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"3","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-math-a11","type":"input","topic":"Логарифмические уравнения","title":"Задание 6","prompt":"Решите уравнение log по основанию 2 от x = 6.","correct":["64"],"explanation":"По определению логарифма x = 2^6 = 64.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"6","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}}
   ]
 }
