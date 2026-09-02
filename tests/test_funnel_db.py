@@ -37,7 +37,7 @@ async def seed(rows) -> None:
             """
             INSERT INTO diagnostic_funnel_events
                 (subject_hash, action, exam, subject, occurred_on, occurred_at)
-            VALUES ($1, $2, $3, $4, $5, $5::timestamptz)
+            VALUES ($1, $2, $3, $4, $5::date, ($5::date)::timestamptz)
             """,
             rows,
         )
