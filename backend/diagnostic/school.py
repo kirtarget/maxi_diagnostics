@@ -442,7 +442,7 @@ class OfferConfig(BaseModel):
     label: str = Field(min_length=1, max_length=128)
     button: str = Field(min_length=1, max_length=64)
     url: HttpUrl
-    forecast_delta: int = Field(ge=0, le=100, strict=True)
+    recovery_share: int = Field(ge=0, le=100, strict=True)
 
     @field_validator("label")
     @classmethod

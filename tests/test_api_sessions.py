@@ -37,7 +37,7 @@ def signed_init_data(user_id: int = 42) -> str:
 
 def make_client(
     monkeypatch, *, complete_attempt=None, upsert_progress=None, catalog=None,
-    get_attempt=None,
+    get_attempt=None, school=None,
 ) -> TestClient:
     from diagnostic.api.main import create_app
     from diagnostic.api import sessions
@@ -64,7 +64,7 @@ def make_client(
         "https://app.example", "admin", "password", None,
         application_secret=APPLICATION_SECRET,
     )
-    school = load_school(SAMPLE_SCHOOL)
+    school = school or load_school(SAMPLE_SCHOOL)
     return TestClient(create_app(settings, school, catalog or load_catalog(school)))
 
 
@@ -100,7 +100,7 @@ def test_public_school_payload_omits_server_forecast_rules_and_pdf_copy():
     payload = public_school_payload(load_school(SAMPLE_SCHOOL))
     serialized = json.dumps(payload, ensure_ascii=False)
 
-    assert "forecast_delta" not in serialized
+    assert "recovery_share" not in serialized
     assert '"pdf"' not in serialized
     assert payload["brand"]["interface"]["start_diagnostic"]
     assert payload["brand"]["interface"]["delivery_note"]
@@ -453,7 +453,8 @@ def test_completion_returns_server_scored_result_and_pending_pdf(monkeypatch):
         for question in stored["completion"].report_snapshot["diagnostic"]["questions"]
     )
     assert stored["completion"].forecast == {
-        "points": [{"id": "intensive", "label": "Интенсив", "value": 100}]
+        "kind": "accuracy_percent",
+        "points": [{"id": "intensive", "label": "Интенсив", "value": 100}],
     }
     assert not hasattr(stored["completion"], "telegram_username")
     assert not hasattr(stored["completion"], "first_name")
@@ -861,3 +862,138 @@ def test_repeated_completion_returns_persisted_result_after_catalog_scoring_chan
 
     assert response.status_code == 200
     assert response.json()["result"]["score"] == 50
+
+
+DEMO_SCALE = {
+    "id": "demo-mathematics",
+    "exam": "demo",
+    "subject": "Математика",
+    "kind": "test_score",
+    "max_primary": 8,
+    "min_pass": 27,
+    "table": [0, 10, 20, 35, 50, 65, 80, 90, 100],
+    "interpolated_primary": [],
+    "notes": "",
+    "source": {
+        "title": "Источник",
+        "url": "https://example.org/scale.pdf",
+        "date": "2026-05-07",
+        "confidence": "secondary",
+    },
+}
+
+
+def school_with(*, scales=(), recovery_share=60):
+    from diagnostic.school import SCORE_SCALES_ADAPTER
+
+    school = load_school(SAMPLE_SCHOOL)
+    offers = [
+        offer.model_copy(update={"recovery_share": recovery_share})
+        for offer in school.links.offers
+    ]
+    return school.model_copy(
+        update={
+            "links": school.links.model_copy(update={"offers": offers}),
+            "scales": SCORE_SCALES_ADAPTER.validate_python(
+                {"scales": list(scales)}
+            ).scales,
+        }
+    )
+
+
+def half_correct_completion() -> dict:
+    return base_completion() | {"answers": {"q1": "1", "q2": ["1", "3"]}}
+
+
+def capture_completion(monkeypatch, school):
+    stored = {}
+
+    async def complete_attempt(completion):
+        stored["completion"] = completion
+        return {
+            "attempt_id": completion.attempt_id,
+            "diagnostic_id": completion.diagnostic_id,
+            "mode": completion.mode,
+            "status": "completed",
+            "score": completion.score,
+            "correct_count": completion.correct_count,
+            "pdf_status": "pending",
+            "result_snapshot": completion.result_snapshot,
+        }
+
+    client = make_client(monkeypatch, complete_attempt=complete_attempt, school=school)
+    response = client.post(
+        "/api/diagnostics/session/complete", json=half_correct_completion()
+    )
+    assert response.status_code == 200
+    return stored["completion"], response.json()
+
+
+def test_forecast_recovers_a_share_of_the_missed_growth_points(monkeypatch):
+    completion, payload = capture_completion(monkeypatch, school_with())
+
+    assert payload["result"]["score"] == 50
+    assert payload["result"]["recoverable_primary_score"] == 1
+    assert completion.forecast == {
+        "kind": "accuracy_percent",
+        "points": [{"id": "intensive", "label": "Интенсив", "value": 100}],
+    }
+
+
+def test_forecast_keeps_the_current_value_when_nothing_is_recovered(monkeypatch):
+    completion, _ = capture_completion(
+        monkeypatch, school_with(recovery_share=0)
+    )
+
+    assert completion.forecast["points"][0]["value"] == 50
+
+
+def test_completion_estimates_the_exam_score_from_the_matching_scale(monkeypatch):
+    completion, payload = capture_completion(
+        monkeypatch, school_with(scales=[DEMO_SCALE])
+    )
+
+    assert payload["result"]["estimate"] == {
+        "kind": "test_score",
+        "value": 50,
+        "scaled_primary": 4,
+        "exam_max_primary": 8,
+        "sample_max_primary": 2,
+        "sample_size": 2,
+        "min_pass": 27,
+    }
+    assert completion.result_snapshot["estimate"] == payload["result"]["estimate"]
+    assert completion.forecast == {
+        "kind": "test_score",
+        "points": [{"id": "intensive", "label": "Интенсив", "value": 100}],
+    }
+
+
+def test_bootstrap_results_carry_the_persisted_estimate(monkeypatch):
+    from diagnostic.api.sessions import serialize_attempt
+
+    row = {
+        "attempt_id": "attempt_123",
+        "diagnostic_id": "demo-math",
+        "mode": "quick",
+        "status": "completed",
+        "score": 50,
+        "result_snapshot": {"score": 50, "estimate": {"kind": "grade", "value": 4}},
+    }
+
+    assert serialize_attempt(row)["estimate"] == {"kind": "grade", "value": 4}
+
+
+def test_bootstrap_results_omit_the_estimate_for_older_attempts():
+    from diagnostic.api.sessions import serialize_attempt
+
+    row = {
+        "attempt_id": "attempt_123",
+        "diagnostic_id": "demo-math",
+        "mode": "quick",
+        "status": "completed",
+        "score": 50,
+        "result_snapshot": {"score": 50},
+    }
+
+    assert "estimate" not in serialize_attempt(row)

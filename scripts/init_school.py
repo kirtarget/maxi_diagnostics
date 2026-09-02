@@ -25,7 +25,7 @@ from diagnostic.settings import _normalize_miniapp_url  # noqa: E402
 
 _BOT_USERNAME = re.compile(r"(?=.{5,32}\Z)[A-Za-z][A-Za-z0-9_]*[Bb][Oo][Tt]\Z")
 _TEMPLATE_BRAND_HASH = "58b6e5151011bb5805ea04f8a5fde6f924d690e68aa989375ca8cb22c20355d8"
-_TEMPLATE_LINKS_HASH = "b60820fff9330f0779bed29e594f38d120c2f0efb866995456ba7e0f162f9f97"
+_TEMPLATE_LINKS_HASH = "77e52ab4d3694466275cfc9ff2e7ca4ee09de34429c71a94d04a9f6acad438c7"
 _MARKER_NAME = ".initialized.json"
 _MAX_CONFIG_BYTES = 1024 * 1024
 _TEMPLATE_INSTALLATION_ID = "00000000-0000-4000-8000-000000000000"
@@ -298,7 +298,7 @@ def initialize_school(
             {
                 "id": "preparation", "label": "Preparation program",
                 "button": "Learn more", "url": f"{origin}/program",
-                "forecast_delta": 10,
+                "recovery_share": 10,
             }
         ],
     }

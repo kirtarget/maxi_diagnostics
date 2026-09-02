@@ -109,7 +109,7 @@ def write_sample_school(root: Path) -> None:
                         "label": "Intensive",
                         "button": "Start preparation",
                         "url": "https://school.example/intensive",
-                        "forecast_delta": 14,
+                        "recovery_share": 14,
                     }
                 ],
             }
@@ -129,7 +129,7 @@ def test_load_school_returns_brand_and_offer_links(tmp_path: Path):
     school = load_school(tmp_path)
 
     assert school.brand.school_id == "demo-school"
-    assert school.links.offers[0].forecast_delta == 14
+    assert school.links.offers[0].recovery_share == 14
     assert school.resolve_asset("assets/logo.svg").is_file()
 
 
@@ -366,7 +366,7 @@ def test_asset_path_rejects_windows_reserved_device_names(asset: str):
         lambda offer, links: offer.update(id=""),
         lambda offer, links: offer.update(label=" "),
         lambda offer, links: offer.update(button="x" * 65),
-        lambda offer, links: offer.update(forecast_delta=101),
+        lambda offer, links: offer.update(recovery_share=101),
         lambda offer, links: links.update(offers=[offer] * 11),
         lambda offer, links: links.update(offers=[offer, dict(offer)]),
     ],
