@@ -12,7 +12,7 @@ from aiogram.types import CallbackQuery, Message
 
 from diagnostic.analytics import fire_event
 from diagnostic.catalog import DiagnosticCatalog
-from diagnostic.db import attempts
+from diagnostic.db import attempts, funnel
 from diagnostic.messages import render_message
 from diagnostic.school import SchoolConfig
 from diagnostic.settings import Settings
@@ -43,7 +43,7 @@ def _diagnostic_value(
     return default
 
 
-async def _mark_viewed(attempt_id: str, user_id: int) -> None:
+async def _mark_viewed(attempt_id: str, user_id: int, settings: Settings) -> None:
     try:
         row = await attempts.mark_result_viewed(attempt_id, user_id)
     except (RuntimeError, ValueError):
@@ -51,6 +51,13 @@ async def _mark_viewed(attempt_id: str, user_id: int) -> None:
     if _value(row, "viewed_transition", False):
         fire_event(
             "diagnostic_result_viewed", user_id, {"attempt_id": attempt_id}
+        )
+        await funnel.record_event(
+            application_secret=settings.application_secret,
+            user_id=user_id,
+            action="result_viewed",
+            exam=_value(row, "exam"),
+            subject=_value(row, "subject"),
         )
 
 
@@ -75,6 +82,11 @@ async def send_home(
         return
     if first_open:
         fire_event("diagnostic_opened", user_id, {})
+        await funnel.record_event(
+            application_secret=settings.application_secret,
+            user_id=user_id,
+            action="opened",
+        )
     text = await render_message("WELCOME", school)
     await message.answer(
         text,
@@ -135,7 +147,7 @@ async def _send_results_to(answer, user_id: int, settings, school, catalog) -> N
         disable_web_page_preview=True,
     )
     for row in rows[:10]:
-        await _mark_viewed(str(_value(row, "attempt_id", "")), user_id)
+        await _mark_viewed(str(_value(row, "attempt_id", "")), user_id, settings)
 
 
 async def send_plan(
@@ -202,7 +214,7 @@ async def _send_plan_to(answer, user_id: int, settings, school, catalog) -> None
         ),
         disable_web_page_preview=True,
     )
-    await _mark_viewed(str(_value(latest, "attempt_id", "")), user_id)
+    await _mark_viewed(str(_value(latest, "attempt_id", "")), user_id, settings)
 
 
 async def show_result(
@@ -248,7 +260,7 @@ async def show_result(
             ),
             disable_web_page_preview=True,
         )
-        await _mark_viewed(attempt_id, user_id)
+        await _mark_viewed(attempt_id, user_id, settings)
 
 
 def build_router(

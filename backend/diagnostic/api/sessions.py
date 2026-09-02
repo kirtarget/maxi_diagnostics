@@ -17,7 +17,7 @@ from diagnostic.catalog import (
     DiagnosticCatalog,
 )
 from diagnostic.analytics import emit_event
-from diagnostic.db import attempts
+from diagnostic.db import attempts, funnel
 from diagnostic.db.attempts import AttemptCompletion, AttemptProgress
 from diagnostic.db.gameplay import serialize_gameplay_profile
 from diagnostic.review import build_review_snapshot, public_review_items
@@ -264,6 +264,25 @@ async def get_progress_profile(user_id: int):
     return await attempts.get_progress_profile(user_id)
 
 
+def _funnel(
+    background_tasks: BackgroundTasks,
+    request: Request,
+    user_id: int,
+    action: str,
+    exam: str | None = None,
+    subject: str | None = None,
+) -> None:
+    """Queue one best-effort funnel row alongside the existing analytics event."""
+    background_tasks.add_task(
+        funnel.record_event,
+        application_secret=request.app.state.settings.application_secret,
+        user_id=user_id,
+        action=action,
+        exam=exam,
+        subject=subject,
+    )
+
+
 async def get_gameplay_profile(user_id: int):
     return await attempts.get_gameplay_profile(user_id)
 
@@ -284,6 +303,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
             raise
         if first_open:
             background_tasks.add_task(emit_event, "diagnostic_opened", user["id"], {})
+            _funnel(background_tasks, request, user["id"], "opened")
         resumable = await get_resumable_attempt(user["id"])
         if resumable is not None:
             resumable_diagnostic = next(
@@ -410,6 +430,10 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
                 emit_event, "diagnostic_started", user["id"],
                 {"attempt_id": body.attempt_id, "diagnostic_id": diagnostic.id, "mode": body.mode},
             )
+            _funnel(
+                background_tasks, request, user["id"], "started",
+                diagnostic.exam, diagnostic.subject,
+            )
         return {"ok": True, "attempt": serialize_attempt(row)}
 
     @router.post("/session/complete")
@@ -487,6 +511,10 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
                         "question_index": 0,
                     },
                 )
+                _funnel(
+                    background_tasks, request, user["id"], "started",
+                    diagnostic.exam, diagnostic.subject,
+                )
             background_tasks.add_task(
                 emit_event, "diagnostic_completed", user["id"],
                 {
@@ -494,6 +522,10 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
                     "mode": body.mode, "question_count": result.question_count,
                     "result_status": "completed", "delivery_status": "pending",
                 },
+            )
+            _funnel(
+                background_tasks, request, user["id"], "completed",
+                diagnostic.exam, diagnostic.subject,
             )
         return {
             "ok": True,
@@ -534,6 +566,10 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
             background_tasks.add_task(
                 emit_event, "diagnostic_result_viewed", user["id"],
                 {"attempt_id": body.attempt_id, "result_status": "viewed"},
+            )
+            _funnel(
+                background_tasks, request, user["id"], "result_viewed",
+                row.get("exam"), row.get("subject"),
             )
         return {"ok": True, "attempt": serialize_attempt(row)}
 

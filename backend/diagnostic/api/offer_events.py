@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from diagnostic.db import offer_events
 from diagnostic.db.core import get_pool
@@ -12,14 +12,16 @@ from diagnostic.session_identity import session_subject_key
 
 from .dependencies import telegram_user
 from .models import OfferEventRequest
-from .sessions import _require_current_session
+from .sessions import _funnel, _require_current_session
 
 
 def create_offer_events_router() -> APIRouter:
     router = APIRouter(prefix="/api/diagnostics")
 
     @router.post("/offer-events")
-    async def record(body: OfferEventRequest, request: Request) -> dict[str, Any]:
+    async def record(
+        body: OfferEventRequest, request: Request, background_tasks: BackgroundTasks
+    ) -> dict[str, Any]:
         user = telegram_user(request, body.init_data)
         await _require_current_session(request, user["id"], body.session_scope)
         if body.placement not in offer_events.OFFER_PLACEMENTS:
@@ -46,6 +48,8 @@ def create_offer_events_router() -> APIRouter:
         except ValueError as exc:
             status = 429 if str(exc) == "offer_event_rate_limited" else 409
             raise HTTPException(status_code=status, detail=str(exc)) from exc
+        if recorded and body.event_type == "click":
+            _funnel(background_tasks, request, user["id"], "offer_clicked")
         return {"ok": True, "recorded": recorded}
 
     return router
