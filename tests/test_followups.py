@@ -238,6 +238,46 @@ async def test_followup_deletes_known_message_after_failure_finalizer_resolves_u
 
 
 @pytest.mark.asyncio
+async def test_abandoned_followup_alerts_with_identifiers_only(monkeypatch):
+    from diagnostic import followups
+
+    lease = claimed("result_unviewed")
+    context = lease | {
+        "attempt_status": "completed", "result_viewed_at": None,
+        "subject": "Математика", "mode": "quick", "payload": {},
+    }
+    alerted = []
+
+    async def notify(kind, text):
+        alerted.append((kind, text))
+
+    monkeypatch.setattr(followups.attempts, "claim_due_notifications", AsyncMock(return_value=[lease]))
+    monkeypatch.setattr(followups.attempts, "get_claimed_notification", AsyncMock(return_value=context))
+    monkeypatch.setattr(followups, "render_message", AsyncMock(return_value="safe"))
+    monkeypatch.setattr(
+        followups.attempts, "mark_notification_failed", AsyncMock(return_value=True),
+    )
+    monkeypatch.setattr(
+        followups.attempts, "notification_is_abandoned", AsyncMock(return_value=True),
+    )
+    monkeypatch.setattr(followups.alerts, "notify", notify)
+    bot = SimpleNamespace(
+        send_message=AsyncMock(side_effect=RuntimeError("telegram down")),
+        delete_message=AsyncMock(),
+    )
+
+    assert await followups.dispatch_followups(
+        bot, SimpleNamespace(miniapp_url="https://app.example"), load_school(ROOT / "school")
+    ) == 0
+    assert alerted == [
+        (
+            "followup_abandoned",
+            "notification=9 kind=result_unviewed attempts=8 error=RuntimeError",
+        )
+    ]
+
+
+@pytest.mark.asyncio
 async def test_followup_unknown_kind_is_cancelled_without_sending(monkeypatch):
     from diagnostic import followups
 

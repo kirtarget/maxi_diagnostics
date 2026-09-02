@@ -474,6 +474,55 @@ def test_settings_normalizes_urls_and_optional_webhook(monkeypatch: pytest.Monke
     assert settings.diagnostic_retention_days == 365
     assert settings.in_progress_retention_days == 30
     assert settings.bot_polling_enabled is False
+    assert settings.alert_chat_id is None
+    assert settings.log_level == "INFO"
+
+
+@pytest.mark.parametrize(
+    ("configured", "expected"),
+    [("", None), ("4242", 4242), (" -100200300 ", -100200300)],
+)
+def test_alert_chat_id_is_optional_and_numeric(
+    monkeypatch: pytest.MonkeyPatch, configured: str, expected,
+):
+    _set_required_settings(monkeypatch, "https://app.example")
+    monkeypatch.setenv("ALERT_CHAT_ID", configured)
+
+    assert Settings.from_env().alert_chat_id == expected
+
+
+@pytest.mark.parametrize("configured", ["0", "chat", "42.0", "+42", "1_000"])
+def test_settings_rejects_an_unusable_alert_chat_id(
+    monkeypatch: pytest.MonkeyPatch, configured: str,
+):
+    _set_required_settings(monkeypatch, "https://app.example")
+    monkeypatch.setenv("ALERT_CHAT_ID", configured)
+
+    with pytest.raises(RuntimeError, match="invalid_settings:ALERT_CHAT_ID"):
+        Settings.from_env()
+
+
+@pytest.mark.parametrize(
+    ("configured", "expected"), [("debug", "DEBUG"), ("WARNING", "WARNING")]
+)
+def test_log_level_is_normalized(
+    monkeypatch: pytest.MonkeyPatch, configured: str, expected: str,
+):
+    _set_required_settings(monkeypatch, "https://app.example")
+    monkeypatch.setenv("LOG_LEVEL", configured)
+
+    assert Settings.from_env().log_level == expected
+
+
+@pytest.mark.parametrize("configured", ["verbose", "TRACE", "10"])
+def test_settings_rejects_an_unknown_log_level(
+    monkeypatch: pytest.MonkeyPatch, configured: str,
+):
+    _set_required_settings(monkeypatch, "https://app.example")
+    monkeypatch.setenv("LOG_LEVEL", configured)
+
+    with pytest.raises(RuntimeError, match="invalid_settings:LOG_LEVEL"):
+        Settings.from_env()
 
 
 @pytest.mark.parametrize("configured", ["0", "yes", "FALSE ", "enabled"])

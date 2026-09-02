@@ -22,6 +22,52 @@ service then runs only the bounded delivery scheduler and does not call
 `getUpdates`. Do not use this mode unless the polling owner points users to this
 installation's Mini App.
 
+`LOG_LEVEL` sets the root log level for both the API and the bot, default `INFO`.
+Accepted values are `CRITICAL`, `ERROR`, `WARNING`, `INFO` and `DEBUG`. Uvicorn keeps
+its own access log configuration. Raise the level only for a bounded investigation;
+`DEBUG` increases log volume and rotation pressure.
+
+## Operator alerts
+
+Set `ALERT_CHAT_ID` to a Telegram chat id to receive alerts from the bot process.
+An empty value disables alerting, which is the default. Use a private operator chat:
+anyone in that chat sees the alerts.
+
+Alerts are sent for four conditions.
+
+- `pdf_abandoned` - a report was abandoned after eight delivery attempts.
+- `followup_abandoned` - a follow-up was abandoned after eight attempts.
+- `worker_tick_failed` - the one-minute worker tick raised an unhandled exception.
+- `pdf_queue_backlog` - more than 50 reports were waiting at the start of a tick.
+
+A message carries the kind, counts, and the attempt or notification id already visible
+in the protected admin lists. It never carries `initData`, Telegram profile data,
+answers, payloads, or a stack trace with values. Only the exception type and message
+are reported for a failed tick.
+
+Dedupe is in-memory inside the bot process: at most one message per kind per hour.
+Restarting the bot clears that window. Alerting is best effort, so a failed send is
+logged and dropped rather than retried. Treat the admin issue lists and `/healthz` as
+the authoritative state, and the alert as a prompt to look.
+
+## Funnel
+
+The protected `/admin/funnel` page shows how many students opened the Mini App,
+started, completed, viewed their result, came back, answered in the trainer, and
+clicked an offer. Both a 7 and a 30 day window are shown with conversion percentages,
+plus a breakdown by exam and subject.
+
+Counts are unique students per step, identified by the same installation-local
+pseudonymous subject hash the offer events use. No Telegram identifier, name, answer,
+or payload is stored. Days are counted in UTC. "Next day" means any event on the day
+after a day with activity; "returned within a week" means any event two to seven days
+after such a day. Events are purged after 90 days by the same worker step as the offer
+events, and user erasure removes that subject's rows.
+
+Recording is best effort. A failed write is logged and never affects the student's
+request, so treat small gaps as expected and do not reconcile the funnel against
+attempt counts.
+
 ## Update
 
 1. Create a backup with the platform-specific command in the next section.

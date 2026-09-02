@@ -334,6 +334,52 @@ async def test_delivery_deletes_known_message_after_failure_finalizer_resolves_u
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("abandoned", [True, False])
+async def test_abandonment_after_eight_attempts_alerts_without_private_detail(
+    monkeypatch, abandoned
+):
+    from diagnostic import delivery
+
+    row = claimed_attempt() | {"report_asset_bundle_id": "0" * 64}
+    alerted = []
+
+    async def notify(kind, text):
+        alerted.append((kind, text))
+
+    monkeypatch.setattr(delivery.attempts, "claim_pending_pdf", AsyncMock(return_value=row))
+    monkeypatch.setattr(delivery.attempts, "get_report_asset_bundle", AsyncMock(return_value=None))
+    monkeypatch.setattr(delivery.attempts, "mark_pdf_failed", AsyncMock(return_value=True))
+    monkeypatch.setattr(
+        delivery.attempts, "pdf_delivery_is_abandoned", AsyncMock(return_value=abandoned)
+    )
+    monkeypatch.setattr(delivery.alerts, "notify", notify)
+
+    assert await delivery.deliver_attempt(SimpleNamespace(), "attempt_123") == "failed"
+    assert alerted == (
+        [("pdf_abandoned", "attempt=attempt_123 attempts=8 error=ValueError")]
+        if abandoned
+        else []
+    )
+
+
+@pytest.mark.asyncio
+async def test_alert_failure_never_changes_the_delivery_outcome(monkeypatch):
+    from diagnostic import delivery
+
+    row = claimed_attempt() | {"report_asset_bundle_id": "0" * 64}
+    monkeypatch.setattr(delivery.attempts, "claim_pending_pdf", AsyncMock(return_value=row))
+    monkeypatch.setattr(delivery.attempts, "get_report_asset_bundle", AsyncMock(return_value=None))
+    monkeypatch.setattr(delivery.attempts, "mark_pdf_failed", AsyncMock(return_value=True))
+    monkeypatch.setattr(
+        delivery.attempts,
+        "pdf_delivery_is_abandoned",
+        AsyncMock(side_effect=RuntimeError("database gone")),
+    )
+
+    assert await delivery.deliver_attempt(SimpleNamespace(), "attempt_123") == "failed"
+
+
+@pytest.mark.asyncio
 async def test_delivery_reports_empty_without_claim(monkeypatch):
     from diagnostic import delivery
 

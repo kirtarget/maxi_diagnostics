@@ -9,6 +9,7 @@ from typing import Any, Final
 
 from aiogram import Bot
 
+from diagnostic import alerts
 from diagnostic.analytics import fire_event
 from diagnostic.bot.keyboards import home_keyboard, result_keyboard, webapp_keyboard
 from diagnostic.db import attempts
@@ -76,6 +77,21 @@ def _keyboard(row: Mapping[str, Any], settings: Settings, school: SchoolConfig):
             miniapp_url=settings.miniapp_url,
         )
     return home_keyboard(school, settings.miniapp_url, user_id)
+
+
+async def _alert_if_abandoned(
+    notification_id: int, kind: str, error_status: str
+) -> None:
+    """Alerting must never turn a handled follow-up failure into an exception."""
+    try:
+        if await attempts.notification_is_abandoned(notification_id):
+            await alerts.notify(
+                "followup_abandoned",
+                f"notification={notification_id} kind={kind} attempts=8 "
+                f"error={error_status}",
+            )
+    except Exception:
+        logger.warning("diagnostic_followup_alert_failed error=database_error")
 
 
 async def dispatch_followups(
@@ -192,6 +208,11 @@ async def dispatch_followups(
                     "diagnostic_followup_failed", row["user_id"],
                     {"attempt_id": str(_value(row, "attempt_id", "")), "delivery_status": "failed"},
                 )
+                # A cancelled task must not await anything else before re-raising.
+                if not isinstance(exc, asyncio.CancelledError):
+                    await asyncio.shield(
+                        _alert_if_abandoned(notification_id, kind, error_status)
+                    )
             if isinstance(exc, asyncio.CancelledError):
                 raise
     return sent_count

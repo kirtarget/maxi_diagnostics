@@ -14,6 +14,7 @@ from diagnostic.admin import install_admin
 from diagnostic.catalog import DiagnosticCatalog, load_catalog
 from diagnostic.db.core import close_db, database_ready, init_db
 from diagnostic.db.attempts import store_report_asset_bundle
+from diagnostic.logging_config import configure_logging
 from diagnostic.school import SchoolConfig, load_school
 from diagnostic.settings import Settings
 
@@ -85,6 +86,7 @@ def create_app(
 
 def create_default_app() -> FastAPI:
     settings = Settings.from_env()
+    configure_logging(settings.log_level)
     school = load_school()
 
     @asynccontextmanager

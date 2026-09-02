@@ -18,6 +18,7 @@ async def test_dispatch_work_caps_pdf_and_notification_batches(monkeypatch):
     monkeypatch.setattr(worker.attempts, "purge_expired_erasure_tombstones", purge)
     retention = AsyncMock(return_value={})
     monkeypatch.setattr(worker.attempts, "purge_retained_diagnostic_data", retention)
+    monkeypatch.setattr(worker.attempts, "count_pending_pdfs", AsyncMock(return_value=0))
 
     settings = SimpleNamespace(
         application_secret="stable-secret", diagnostic_retention_days=365,
@@ -45,6 +46,7 @@ async def test_dispatch_work_continues_after_poison_pdf_and_stops_only_when_empt
     monkeypatch.setattr(
         worker.attempts, "purge_retained_diagnostic_data", AsyncMock(return_value={})
     )
+    monkeypatch.setattr(worker.attempts, "count_pending_pdfs", AsyncMock(return_value=0))
 
     settings = SimpleNamespace(
         application_secret="stable-secret", diagnostic_retention_days=365,
@@ -54,6 +56,38 @@ async def test_dispatch_work_continues_after_poison_pdf_and_stops_only_when_empt
 
     assert deliver.await_count == 3
     assert counts == {"pdfs": 1, "notifications": 0}
+
+
+@pytest.mark.asyncio
+async def test_backlog_and_tick_failure_reach_the_operator_alert(monkeypatch):
+    from diagnostic import worker
+
+    alerted = []
+
+    async def notify(kind, text):
+        alerted.append((kind, text))
+
+    monkeypatch.setattr(worker.alerts, "notify", notify)
+    monkeypatch.setattr(
+        worker.attempts, "count_pending_pdfs", AsyncMock(return_value=51)
+    )
+    monkeypatch.setattr(
+        worker.attempts,
+        "purge_expired_erasure_tombstones",
+        AsyncMock(side_effect=RuntimeError("database gone")),
+    )
+    settings = SimpleNamespace(
+        application_secret="stable-secret", diagnostic_retention_days=365,
+        in_progress_retention_days=30,
+    )
+
+    with pytest.raises(RuntimeError):
+        await worker.dispatch_work(SimpleNamespace(), settings, SimpleNamespace())
+
+    assert alerted == [
+        ("pdf_queue_backlog", "pending=51 threshold=50"),
+        ("worker_tick_failed", "error=RuntimeError: database gone"),
+    ]
 
 
 def test_worker_scheduler_runs_every_minute_with_single_instance():

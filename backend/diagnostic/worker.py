@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from diagnostic import alerts
 from diagnostic.catalog import DiagnosticCatalog
 from diagnostic.delivery import deliver_attempt
 from diagnostic.db import attempts
@@ -14,6 +15,7 @@ from diagnostic.settings import Settings
 
 PDF_BATCH_LIMIT = 20
 NOTIFICATION_BATCH_LIMIT = 20
+PENDING_PDF_ALERT_THRESHOLD = 50
 
 
 async def dispatch_work(
@@ -22,6 +24,27 @@ async def dispatch_work(
     school: SchoolConfig,
     catalog: DiagnosticCatalog | None = None,
 ) -> dict[str, int]:
+    try:
+        return await _dispatch_work(bot, settings, school, catalog)
+    except Exception as exc:
+        await alerts.notify(
+            "worker_tick_failed", f"error={type(exc).__name__}: {exc}"
+        )
+        raise
+
+
+async def _dispatch_work(
+    bot,
+    settings: Settings,
+    school: SchoolConfig,
+    catalog: DiagnosticCatalog | None,
+) -> dict[str, int]:
+    pending = await attempts.count_pending_pdfs()
+    if pending > PENDING_PDF_ALERT_THRESHOLD:
+        await alerts.notify(
+            "pdf_queue_backlog",
+            f"pending={pending} threshold={PENDING_PDF_ALERT_THRESHOLD}",
+        )
     await attempts.purge_expired_erasure_tombstones()
     await attempts.purge_retained_diagnostic_data(
         settings.application_secret,

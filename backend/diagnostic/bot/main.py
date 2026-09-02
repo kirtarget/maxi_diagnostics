@@ -10,8 +10,10 @@ from collections.abc import Awaitable
 from aiogram import Bot, Dispatcher
 from aiogram.types import BotCommand
 
+from diagnostic import alerts
 from diagnostic.catalog import load_catalog
 from diagnostic.db.core import close_db, init_db
+from diagnostic.logging_config import configure_logging
 from diagnostic.db.attempts import store_report_asset_bundle
 from diagnostic.api.sessions import prepare_report_asset_bundles
 from diagnostic.school import SchoolConfig, load_school
@@ -72,6 +74,7 @@ async def wait_for_worker_shutdown() -> None:
 
 async def main() -> None:
     settings = Settings.from_env(require_admin=False)
+    configure_logging(settings.log_level)
     school = load_school()
     catalog = load_catalog(school)
     bot: Bot | None = None
@@ -88,6 +91,7 @@ async def main() -> None:
             await store_report_asset_bundle(bundle_id, payload)
             stored_bundle_ids.add(bundle_id)
         bot = Bot(token=settings.bot_token)
+        alerts.configure(bot, settings.alert_chat_id)
         dispatcher = None
         if settings.bot_polling_enabled:
             dispatcher = Dispatcher()
@@ -108,6 +112,7 @@ async def main() -> None:
                 if scheduler is not None and scheduler.running:
                     scheduler.shutdown(wait=False)
             finally:
+                alerts.reset()
                 if bot is not None:
                     await bot.session.close()
         finally:

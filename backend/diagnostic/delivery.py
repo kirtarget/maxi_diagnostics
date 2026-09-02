@@ -11,6 +11,7 @@ from typing import Literal
 from aiogram import Bot
 from aiogram.types import BufferedInputFile
 
+from diagnostic import alerts
 from diagnostic.analytics import fire_event
 from diagnostic.catalog import DiagnosticCatalog, load_catalog
 from diagnostic.db import attempts
@@ -32,6 +33,18 @@ async def _delete_sent_message(bot: Bot, user_id: int, message_id: int) -> None:
         )
     except BaseException:
         logger.warning("diagnostic_pdf_cleanup_failed error=telegram_delete_failed")
+
+
+async def _alert_if_abandoned(attempt_id: str, error_status: str) -> None:
+    """Alerting must never turn a handled delivery failure into an exception."""
+    try:
+        if await attempts.pdf_delivery_is_abandoned(attempt_id):
+            await alerts.notify(
+                "pdf_abandoned",
+                f"attempt={attempt_id} attempts=8 error={error_status}",
+            )
+    except Exception:
+        logger.warning("diagnostic_pdf_alert_failed error=database_error")
 
 
 async def deliver_attempt(
@@ -150,6 +163,11 @@ async def deliver_attempt(
                 "diagnostic_pdf_failed", row["user_id"],
                 {"attempt_id": row["attempt_id"], "delivery_status": "failed"},
             )
+            # A cancelled task must not await anything else before re-raising.
+            if not isinstance(exc, asyncio.CancelledError):
+                await asyncio.shield(
+                    _alert_if_abandoned(row["attempt_id"], error_status)
+                )
         if isinstance(exc, asyncio.CancelledError):
             raise
         return "failed"
