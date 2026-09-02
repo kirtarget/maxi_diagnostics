@@ -1,3 +1,21 @@
+/** Every screen the mini app can show. Owned by `page.tsx`, shared with its hooks. */
+export type Screen =
+  | "loading"
+  | "diagnostic-loading"
+  | "welcome"
+  | "home"
+  | "profile"
+  | "league"
+  | "mode"
+  | "subjects"
+  | "question"
+  | "submitting"
+  | "result"
+  | "review"
+  | "forecast"
+  | "route"
+  | "trainer";
+
 export type DiagnosticMode = "quick" | "full";
 export type QuestionType = "single" | "multiple" | "matching" | "input";
 
