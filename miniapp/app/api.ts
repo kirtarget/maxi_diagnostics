@@ -657,6 +657,7 @@ export async function loadWeeklyLeague(
 
 export type TrainerStartPayload =
   | { session_scope: string; diagnostic_id: string; count: number; mode: "normal" }
+  | { session_scope: string; diagnostic_id: string; count: number; mode: "plan" }
   | { session_scope: string; diagnostic_id: string; count: number; mode: "mistakes"; source_attempt_id: string };
 
 export const startTrainer = (

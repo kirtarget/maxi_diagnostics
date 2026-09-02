@@ -248,6 +248,22 @@ export type GameplayProfile = {
   quest: GameplayQuest | null;
 };
 
+/** Why the server put one question in today's plan. */
+export type PlanReason = "mistake_review" | "growth_topic";
+
+export type PlanStatus = "ready" | "done" | "no_diagnostic";
+
+/** Compact plan progress carried by `/bootstrap` so the home screen needs no extra call. */
+export type DailyPlanSummary = {
+  plan_date: string | null;
+  diagnostic_id: string | null;
+  subject: string | null;
+  exam: string | null;
+  total: number;
+  completed: number;
+  status: PlanStatus;
+};
+
 export type BootstrapResponse = {
   catalog_contract: 2;
   session_scope: string;
@@ -259,6 +275,7 @@ export type BootstrapResponse = {
   diagnostics: PublicDiagnosticSummary[];
   progress_profile?: ProgressProfile;
   gameplay_profile?: GameplayProfile;
+  daily_plan?: DailyPlanSummary | null;
   attempt: ServerAttempt | null;
   results: ServerAttempt[];
 };

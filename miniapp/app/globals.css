@@ -698,6 +698,19 @@ select:focus-visible,
 
 .gameplay-home-cta { width: 100%; }
 
+.gameplay-plan-done {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--accent-tint);
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .gameplay-cta-row { display: flex; gap: 10px; }
 
 .gameplay-cta-row .secondary-button { flex: 1; }
@@ -2464,6 +2477,19 @@ select:focus-visible,
   font-size: 12px;
   font-weight: 700;
 }
+
+.trainer-plan-reason {
+  display: inline-flex;
+  padding: 4px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: lowercase;
+}
+
+.trainer-plan-progress { font-size: 12px; font-weight: 700; }
 
 .trainer-prompt h1 {
   margin: 0;

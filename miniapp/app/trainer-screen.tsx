@@ -8,6 +8,8 @@ import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata"
 import type { AnswerValue, Question, SchoolLinks } from "./types";
 import {
   isTrainerAnswerComplete,
+  planProgress,
+  planReasonLabel,
   type TrainerAction,
   type TrainerState,
 } from "./trainer-model";
@@ -31,8 +33,8 @@ export type TrainerScreenProps = {
   onOfferEvent?: (event: OfferTelemetryEvent) => void;
 };
 
-function QuestionPrompt({ question }: { question: Question }) {
-  return <div className="trainer-prompt"><div className="trainer-prompt-meta"><span>{question.title}</span>{hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}</div><h1><FormattedStem text={question.prompt} /></h1><small>{question.topic}</small></div>;
+function QuestionPrompt({ question, reason }: { question: Question; reason?: string | null }) {
+  return <div className="trainer-prompt"><div className="trainer-prompt-meta"><span>{question.title}</span>{reason && <span className="trainer-plan-reason">{reason}</span>}{hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}</div><h1><FormattedStem text={question.prompt} /></h1><small>{question.topic}</small></div>;
 }
 
 const LIFE_REFILL_INTERVAL_MS = 4 * 60 * 60 * 1000;
@@ -149,6 +151,7 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
   const question = state.session?.questions[questionIndex];
   if (!question || !state.session) return null;
   const locked = state.phase !== "answering";
+  const plan = planProgress(state);
   const canSubmit = isTrainerAnswerComplete(question, state.draftAnswer);
   const isLast = state.currentIndex >= state.session.questions.length;
   const submit = () => {
@@ -156,9 +159,9 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
     if (state.draftAnswer) onAnswer?.(question.id, state.draftAnswer);
   };
   return <section className="screen trainer-screen" aria-labelledby="trainer-title">
-    <div className="question-topline"><span aria-label="Прогресс">Тренажёр · {Math.min(questionIndex + 1, state.session.questions.length)} из {state.session.questions.length}</span>{state.session.mode === "normal" && <strong className="trainer-lives" aria-label={`Жизни: ${state.session.lives_remaining}`}>{"♥".repeat(Math.min(5, Math.max(0, state.session.lives_remaining)))}<span className="trainer-lives-empty">{"♥".repeat(Math.max(0, 5 - state.session.lives_remaining))}</span></strong>}{state.session.mode === "mistakes" && <strong>Повтор ошибок</strong>}</div>
+    <div className="question-topline"><span aria-label="Прогресс">Тренажёр · {Math.min(questionIndex + 1, state.session.questions.length)} из {state.session.questions.length}</span>{state.session.mode === "normal" && <strong className="trainer-lives" aria-label={`Жизни: ${state.session.lives_remaining}`}>{"♥".repeat(Math.min(5, Math.max(0, state.session.lives_remaining)))}<span className="trainer-lives-empty">{"♥".repeat(Math.max(0, 5 - state.session.lives_remaining))}</span></strong>}{state.session.mode === "mistakes" && <strong>Повтор ошибок</strong>}{plan && <strong className="trainer-plan-progress">План: {plan.completed} из {plan.total}</strong>}</div>
     <div className="question-progress-rail" role="progressbar" aria-valuemin={0} aria-valuemax={state.session.questions.length} aria-valuenow={Math.min(questionIndex + 1, state.session.questions.length)}><span className="question-progress-fill" style={{ width: `${(Math.min(questionIndex + 1, state.session.questions.length) / state.session.questions.length) * 100}%` }} /></div>
-    <QuestionPrompt question={question} />
+    <QuestionPrompt question={question} reason={planReasonLabel(state, question.id)} />
     <AnswerEditor question={question} value={state.draftAnswer} disabled={locked} onChange={(answer) => dispatch({ type: "set_answer", answer })} />
     {state.phase === "feedback" ? <><Feedback state={state} showPrimaryScore={hasApprovedPrimaryScore(question.source)} />{!state.answerResult?.is_correct && offer && !offerDismissed.trainer_wrong && <OfferSurface offer={offer} placement="trainer_wrong" onClose={() => onOfferDismiss?.("trainer_wrong")} onEvent={onOfferEvent} />}{isLast ? <button className="primary-button question-next" type="button" onClick={() => { dispatch({ type: "finish_requested" }); onFinish?.(); }}>Завершить тренировку <span aria-hidden="true">→</span></button> : <button className="primary-button question-next" type="button" onClick={() => dispatch({ type: "next_question" })}>Следующий вопрос <span aria-hidden="true">→</span></button>}</> : <button className="primary-button question-next" type="button" disabled={!canSubmit || state.phase === "awaiting_result"} onClick={submit}>{state.phase === "awaiting_result" ? "Проверяем…" : "Проверить ответ"}<span aria-hidden="true">→</span></button>}
   </section>;
