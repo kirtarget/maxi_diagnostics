@@ -281,3 +281,103 @@ async def test_delivery_only_mode_runs_scheduler_without_starting_polling(monkey
         "scheduler_stopped",
         "bot_closed",
     ]
+
+
+def _completed_row(**overrides) -> dict:
+    row = {
+        "attempt_id": "attempt-7",
+        "user_id": 731,
+        "diagnostic_id": "ege-physics-1206",
+        "exam": "ЕГЭ",
+        "subject": "Физика",
+        "mode": "quick",
+        "status": "completed",
+        "score": 50,
+        "max_score": 100,
+        "score_unit": "accuracy_percent",
+        "correct_count": 5,
+        "question_count": 10,
+        "result_snapshot": {
+            "score": 50,
+            "estimate": {
+                "kind": "test_score",
+                "value": 53,
+                "scaled_primary": 17,
+                "exam_max_primary": 45,
+                "sample_max_primary": 10,
+                "sample_size": 10,
+                "min_pass": 36,
+            },
+        },
+    }
+    row.update(overrides)
+    return row
+
+
+@pytest.mark.asyncio
+async def test_results_listing_shows_the_estimate_next_to_the_percent(monkeypatch):
+    from diagnostic.bot import handlers
+
+    monkeypatch.setattr(
+        handlers.attempts,
+        "list_completed_attempts",
+        AsyncMock(return_value=[_completed_row()]),
+    )
+    monkeypatch.setattr(handlers, "_mark_viewed", AsyncMock())
+    message = SimpleNamespace(from_user=SimpleNamespace(id=731), answer=AsyncMock())
+
+    await handlers.send_results(
+        message, _settings(), load_school(), load_catalog(load_school())
+    )
+
+    text = message.answer.await_args.args[0]
+    assert "50%" in text
+    assert "≈ 53 балла ЕГЭ" in text
+
+
+@pytest.mark.asyncio
+async def test_results_listing_keeps_the_percent_only_for_older_attempts(monkeypatch):
+    from diagnostic.bot import handlers
+
+    monkeypatch.setattr(
+        handlers.attempts,
+        "list_completed_attempts",
+        AsyncMock(return_value=[_completed_row(result_snapshot={"score": 50})]),
+    )
+    monkeypatch.setattr(handlers, "_mark_viewed", AsyncMock())
+    message = SimpleNamespace(from_user=SimpleNamespace(id=731), answer=AsyncMock())
+
+    await handlers.send_results(
+        message, _settings(), load_school(), load_catalog(load_school())
+    )
+
+    text = message.answer.await_args.args[0]
+    assert "50%" in text
+    assert "≈" not in text
+
+
+@pytest.mark.asyncio
+async def test_result_message_repeats_the_estimate_and_its_caption(monkeypatch):
+    from diagnostic.bot import handlers
+
+    monkeypatch.setattr(
+        handlers.attempts, "get_attempt", AsyncMock(return_value=_completed_row())
+    )
+    monkeypatch.setattr(handlers, "_mark_viewed", AsyncMock())
+    callback = SimpleNamespace(
+        data="diag:result:attempt-7",
+        from_user=SimpleNamespace(id=731),
+        answer=AsyncMock(),
+        message=SimpleNamespace(answer=AsyncMock()),
+    )
+
+    await handlers.show_result(
+        callback, _settings(), load_school(), load_catalog(load_school())
+    )
+
+    text = callback.message.answer.await_args.args[0]
+    assert "≈ 53 балла ЕГЭ" in text
+    assert (
+        "ориентировочно, "
+        "по 10 заданиям" in text
+    )

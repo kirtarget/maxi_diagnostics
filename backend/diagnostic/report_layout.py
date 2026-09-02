@@ -25,6 +25,7 @@ from reportlab.platypus import (
 )
 
 from diagnostic.school import SchoolConfig
+from diagnostic.score_text import estimate_caption, estimate_headline
 
 
 _FONT_ROOT = Path(__file__).resolve().parent / "assets" / "fonts"
@@ -274,12 +275,24 @@ def summary_story(
         else {}
     )
     points = forecast.get("points") if isinstance(forecast.get("points"), list) else []
+    estimate = _result_value(attempt, "estimate")
+    headline = estimate_headline(estimate, _provenance_value(attempt, "exam"))
+    caption = estimate_caption(estimate)
     story: list[Any] = [
         Paragraph(escape(school.brand.name), styles["label"]),
         Paragraph("Ваша точка старта", styles["display"]),
         Paragraph(f"Предмет: <b>{escape(subject)}</b>", styles["heading"]),
         Paragraph(f"Режим: {escape(mode)}", styles["muted"]),
         Paragraph(f"Дата завершения: {_completion_date(attempt)}", styles["muted"]),
+    ]
+    if headline is not None and caption is not None:
+        story.extend(
+            [
+                Paragraph(f"Ожидаемый результат: <b>{escape(headline)}</b>", styles["heading"]),
+                Paragraph(escape(caption), styles["muted"]),
+            ]
+        )
+    story.extend([
         Paragraph(
             f"Текущий результат: <b>{escape(_display(score))} из "
             f"{escape(_display(max_score))} {escape(_display(score_unit))}</b>",
@@ -303,7 +316,7 @@ def summary_story(
             "Диагностика показывает, что уже получается и где быстрее всего вырастет балл.",
             styles["muted"],
         ),
-    ]
+    ])
     persisted_points = [
         point
         for point in points[:2]
@@ -313,7 +326,10 @@ def summary_story(
         rows = [
             [
                 Paragraph("Прогноз", styles["label"]),
-                Paragraph("Баллы", styles["label"]),
+                Paragraph(
+                    "Отметка" if forecast.get("kind") == "grade" else "Баллы",
+                    styles["label"],
+                ),
             ]
         ]
         rows.extend(
