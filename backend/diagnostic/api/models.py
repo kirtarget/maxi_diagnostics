@@ -19,6 +19,12 @@ class SessionRequest(ApiRequest):
     session_scope: str = Field(pattern=r"^[0-9a-f]{24}$")
 
 
+class CatalogRequest(ApiRequest):
+    session_scope: str = Field(pattern=r"^[0-9a-f]{24}$")
+    diagnostic_id: str = Field(min_length=3, max_length=64)
+    content_version: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
 class ProgressRequest(SessionRequest):
     supersedes_attempt_id: str | None = Field(
         default=None, pattern=r"^[A-Za-z0-9_-]{8,48}$"

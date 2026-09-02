@@ -5,7 +5,7 @@ import type { GameplayProfileView } from "./gameplay-profile-model";
 import type {
   Brand,
   DiagnosticMode,
-  PublicDiagnostic,
+  PublicDiagnosticSummary,
   SchoolLinks,
 } from "./types";
 
@@ -21,14 +21,14 @@ export function NotTelegramScreen({ botUrl }: { botUrl: string | null }) {
 }
 
 export type WelcomeScreenProps = {
-  diagnostics: PublicDiagnostic[];
+  diagnostics: PublicDiagnosticSummary[];
   labels: Brand["interface"];
   links: SchoolLinks;
   onStart: () => void;
 };
 
 export type GameplayHomeScreenProps = {
-  diagnostics: PublicDiagnostic[];
+  diagnostics: PublicDiagnosticSummary[];
   labels: Brand["interface"];
   profile: GameplayProfileView;
   onStart: () => void;
@@ -165,7 +165,7 @@ export function WelcomeScreen({
   onStart,
 }: WelcomeScreenProps) {
   const minimumQuestions = Math.min(...diagnostics.map((item) => item.quick_count));
-  const maximumQuestions = Math.max(...diagnostics.map((item) => item.questions.length));
+  const maximumQuestions = Math.max(...diagnostics.map((item) => item.question_count));
   const questionRange = minimumQuestions === maximumQuestions
     ? String(maximumQuestions)
     : `${minimumQuestions}–${maximumQuestions}`;
@@ -239,13 +239,13 @@ export function ModeScreen({ labels, onBack, onSelect }: ModeScreenProps) {
 }
 
 export type SubjectsScreenProps = {
-  diagnostics: PublicDiagnostic[];
+  diagnostics: PublicDiagnosticSummary[];
   exam: string;
   labels: Brand["interface"];
   mode: DiagnosticMode;
   onBack: () => void;
   onExam: (exam: string) => void;
-  onSelect: (diagnostic: PublicDiagnostic) => void;
+  onSelect: (diagnostic: PublicDiagnosticSummary) => void;
 };
 
 export function SubjectsScreen({
@@ -285,7 +285,7 @@ export function SubjectsScreen({
       )}
       <div className="subject-list">
         {visibleDiagnostics.map((item) => {
-          const count = mode === "quick" ? item.quick_count : item.questions.length;
+          const count = mode === "quick" ? item.quick_count : item.question_count;
           return (
             <button className="subject-card" key={item.id} onClick={() => onSelect(item)} type="button">
               <SubjectIllustration subject={item.subject} />

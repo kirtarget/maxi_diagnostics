@@ -2,6 +2,7 @@ import { answerInputConfig } from "./math-text";
 import { FormattedMathText, FormattedStem } from "./math-display";
 import { isValidNumericInput, updateCompactAnswer, updateMatchingAnswer } from "./answer-values";
 import { questionAssetPaths } from "./question-assets";
+import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import {
   answerTypeLabel,
   cleanAnswerLabel,
@@ -153,7 +154,10 @@ export function QuestionView({
         <p className="question-progress-motivation" aria-live="polite">{progress.message}</p>
       </div>
       <div className="question-worksheet">
-      <div className="question-meta"><span className="question-type-chip">{subject ?? question.topic} · {answerTypeLabel(question)}</span></div>
+      <div className="question-meta">
+        <span className="question-type-chip">{subject ?? question.topic} · {answerTypeLabel(question)}</span>
+        {hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}
+      </div>
       <div className="question-copy">
         {promptBlocks.map((block, blockIndex) => {
           if (tableGap && block.kind !== "stem") return null;

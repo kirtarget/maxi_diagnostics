@@ -5,6 +5,7 @@ import type {
   CompletionResponse,
   DiagnosticMode,
   PublicDiagnostic,
+  PublicDiagnosticSummary,
   ReviewResponse,
   SavedSession,
   ServerAttempt,
@@ -14,6 +15,7 @@ import type {
   TrainerFinishResponse,
   TrainerStartResponse,
 } from "./trainer-model";
+import type { OfferPlacement } from "./offer-ux";
 import { parseLeagueResponse, type LeagueResponse } from "./league-model";
 import {
   isValidNumericInput,
@@ -161,6 +163,76 @@ export function loadLocalSession(
   }
 }
 
+function readLocalSessionEnvelope(
+  schoolId: string,
+  sessionScope: string,
+  diagnostics: PublicDiagnosticSummary[],
+  storage: Storage | undefined,
+): SavedSession | null {
+  if (!storage) return null;
+  try {
+    const raw = storage.getItem(storageKey(schoolId, sessionScope));
+    if (!raw) return null;
+    const candidate = JSON.parse(raw) as unknown;
+    if (!isRecord(candidate) || Object.keys(candidate).some((key) => !SAVED_SESSION_KEYS.has(key))) return null;
+    const {
+      attemptId, supersedesAttemptId, diagnosticId, contentVersion,
+      mode, questionIndex, revision, answers, syncedQuestionIndex, syncedAnswers,
+    } = candidate;
+    const diagnostic = diagnostics.find((item) => item.id === diagnosticId);
+    if (
+      typeof attemptId !== "string" || !ATTEMPT_ID_PATTERN.test(attemptId) ||
+      (supersedesAttemptId !== undefined && (
+        typeof supersedesAttemptId !== "string" || !ATTEMPT_ID_PATTERN.test(supersedesAttemptId)
+      )) ||
+      !diagnostic || diagnostic.content_version !== contentVersion ||
+      (mode !== "quick" && mode !== "full") ||
+      typeof questionIndex !== "number" || !Number.isInteger(questionIndex) ||
+      typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 0 || revision > 1000 ||
+      !isRecord(answers) ||
+      (syncedQuestionIndex !== undefined && (!Number.isInteger(syncedQuestionIndex))) ||
+      (syncedAnswers !== undefined && !isRecord(syncedAnswers))
+    ) return null;
+    const questionCount = mode === "quick" ? diagnostic.quick_count : diagnostic.question_count;
+    if (questionIndex < 0 || questionIndex >= questionCount) return null;
+    if (typeof syncedQuestionIndex === "number" && (
+      syncedQuestionIndex < 0 || syncedQuestionIndex >= questionCount
+    )) return null;
+    return candidate as SavedSession;
+  } catch {
+    return null;
+  }
+}
+
+export function bootstrapResumeSummary(
+  bootstrap: BootstrapResponse,
+  storage: Storage | undefined = typeof window === "undefined" ? undefined : window.localStorage,
+): PublicDiagnosticSummary | null {
+  let local = readLocalSessionEnvelope(
+    bootstrap.school.brand.school_id,
+    bootstrap.session_scope,
+    bootstrap.diagnostics,
+    storage,
+  );
+  const completedAttemptIds = new Set(
+    bootstrap.results.filter((item) => item.status === "completed").map((item) => item.attempt_id),
+  );
+  if (local && completedAttemptIds.has(local.attemptId)) local = null;
+  if (local && !bootstrap.attempt && bootstrap.latest_attempt_id && (
+    local.attemptId === bootstrap.latest_attempt_id || local.revision > 0
+  )) local = null;
+  if (
+    local && local.revision > 0 && bootstrap.attempt?.attempt_id !== local.attemptId &&
+    !completedAttemptIds.has(local.attemptId)
+  ) local = null;
+
+  const server = bootstrap.attempt?.status === "in_progress" ? bootstrap.attempt : null;
+  const diagnosticId = server && (!local || (
+    local.attemptId !== server.attempt_id && local.supersedesAttemptId !== server.attempt_id
+  )) ? server.diagnostic_id : local?.diagnosticId;
+  return bootstrap.diagnostics.find((item) => item.id === diagnosticId) ?? null;
+}
+
 export function validateSavedSession(
   candidate: unknown,
   diagnostics: PublicDiagnostic[],
@@ -294,10 +366,13 @@ export function reconcileRestoredSession(
 export function restoreBootstrapSession(
   bootstrap: BootstrapResponse,
   storage: Storage | undefined = typeof window === "undefined" ? undefined : window.localStorage,
+  loadedDiagnostics: PublicDiagnostic[] = bootstrap.diagnostics.flatMap(
+    (item) => "questions" in item ? [item as PublicDiagnostic] : [],
+  ),
 ): SavedSession | null {
   const schoolId = bootstrap.school.brand.school_id;
   let local = loadLocalSession(
-    schoolId, bootstrap.session_scope, bootstrap.diagnostics, storage,
+    schoolId, bootstrap.session_scope, loadedDiagnostics, storage,
   );
   const completedAttemptIds = new Set(
     bootstrap.results
@@ -325,7 +400,7 @@ export function restoreBootstrapSession(
     local = null;
   }
 
-  const restored = reconcileRestoredSession(bootstrap.attempt, local, bootstrap.diagnostics);
+  const restored = reconcileRestoredSession(bootstrap.attempt, local, loadedDiagnostics);
   if (restored && completedAttemptIds.has(restored.attemptId)) {
     clearLocalSession(schoolId, bootstrap.session_scope, storage);
     return null;
@@ -517,6 +592,32 @@ export async function postDiagnostic<T>(
 export const loadBootstrap = (initData: string) =>
   postDiagnostic<BootstrapResponse>("/api/diagnostics/bootstrap", initData);
 
+export const loadDiagnostic = async (
+  initData: string,
+  sessionScope: string,
+  diagnosticId: string,
+  contentVersion: string,
+  fetcher: FetchLike = fetch,
+): Promise<PublicDiagnostic> => {
+  const response = await postDiagnostic<{ diagnostic: PublicDiagnostic }>(
+    "/api/diagnostics/catalog",
+    initData,
+    {
+      session_scope: sessionScope,
+      diagnostic_id: diagnosticId,
+      content_version: contentVersion,
+    },
+    fetcher,
+  );
+  if (
+    response.diagnostic.id !== diagnosticId ||
+    response.diagnostic.content_version !== contentVersion ||
+    !Array.isArray(response.diagnostic.questions) ||
+    response.diagnostic.questions.length !== response.diagnostic.question_count
+  ) throw new Error("diagnostic_catalog_mismatch");
+  return response.diagnostic;
+};
+
 export const saveProgress = (
   initData: string,
   payload: ProgressPayload,
@@ -594,7 +695,7 @@ export const finishTrainer = (
 export type OfferEventPayload = {
   session_scope: string;
   event_id: string;
-  placement: "home" | "diagnostic_result" | "trainer";
+  placement: OfferPlacement;
   offer_id: string;
   event_type: "impression" | "click" | "dismiss";
 };

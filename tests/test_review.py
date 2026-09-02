@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from diagnostic.catalog import load_catalog
+from diagnostic.catalog import QuestionSource, load_catalog
 from diagnostic.review import build_review_snapshot, public_review_items
 from diagnostic.school import load_school
 
@@ -41,6 +41,34 @@ def test_individual_explanation_wins_and_public_review_drops_raw_values():
     assert payload[0]["guidance"] == "Сложите два и два: получится четыре."
     assert "expected_value" not in payload[0]
     assert "user_value" not in payload[0]
+
+
+def test_review_exposes_earned_primary_score_and_safe_source_attribution():
+    catalog = load_catalog(load_school(SAMPLE_SCHOOL))
+    question = catalog.get("demo-math").questions[0].model_copy(
+        update={
+            "max_primary_score": 2,
+            "source": QuestionSource(
+                provider="fipi",
+                official_year=2026,
+                approval_status="approved",
+                source_kind="demo",
+                source_url="https://doc.fipi.ru/ege/demo.pdf",
+                exam_position="1",
+                rights_status="link_only",
+                verified_at="2026-09-01",
+            ),
+        }
+    )
+
+    payload = public_review_items(
+        {"review_snapshot": build_review_snapshot((question,), {"q1": "2"})}
+    )
+
+    assert payload is not None
+    assert payload[0]["max_primary_score"] == 2
+    assert payload[0]["earned_primary_score"] == 2
+    assert payload[0]["source"]["provider"] == "fipi"
 
 
 def test_review_snapshot_freezes_question_options_and_matching_items():

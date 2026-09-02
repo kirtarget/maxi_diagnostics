@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState, type Dispatch, type ReactNode } from "react";
 import { FormattedMathText, FormattedStem } from "./math-display";
+import { normalizeOffer, OfferSurface, type OfferPlacement, type OfferTelemetryEvent } from "./offer-ux";
+import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import { cleanAnswerLabel } from "./question-prompt";
-import type { AnswerValue, InputQuestion, MatchingQuestion, MultipleQuestion, Question } from "./types";
+import type { AnswerValue, InputQuestion, MatchingQuestion, MultipleQuestion, Question, SchoolLinks } from "./types";
 import {
   isTrainerAnswerComplete,
   type TrainerAction,
@@ -23,10 +25,14 @@ export type TrainerScreenProps = {
   onRetry?: () => void;
   livesReminder?: LivesReminderState;
   onRemindLives?: () => void;
+  offers?: SchoolLinks["offers"];
+  offerDismissed?: Partial<Record<"trainer_wrong" | "trainer_no_lives", boolean>>;
+  onOfferDismiss?: (placement: Extract<OfferPlacement, "trainer_wrong" | "trainer_no_lives">) => void;
+  onOfferEvent?: (event: OfferTelemetryEvent) => void;
 };
 
 function QuestionPrompt({ question }: { question: Question }) {
-  return <div className="trainer-prompt"><span>{question.title}</span><h1><FormattedStem text={question.prompt} /></h1><small>{question.topic}</small></div>;
+  return <div className="trainer-prompt"><div className="trainer-prompt-meta"><span>{question.title}</span>{hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}</div><h1><FormattedStem text={question.prompt} /></h1><small>{question.topic}</small></div>;
 }
 
 function AnswerEditor({ question, value, disabled, onChange }: {
@@ -91,12 +97,16 @@ function useNow(): number {
   return now;
 }
 
-function TrainerNoLivesScreen({ nextLifeAt, livesReminder, onRemindLives, onHome, onRetry }: {
+function TrainerNoLivesScreen({ nextLifeAt, livesReminder, offer, offerDismissed, onOfferDismiss, onOfferEvent, onRemindLives, onHome, onRetry }: {
   nextLifeAt: string | null;
   livesReminder?: LivesReminderState;
   onRemindLives?: () => void;
   onHome?: () => void;
   onRetry?: () => void;
+  offer: ReturnType<typeof normalizeOffer>;
+  offerDismissed: boolean;
+  onOfferDismiss?: () => void;
+  onOfferEvent?: (event: OfferTelemetryEvent) => void;
 }) {
   const now = useNow();
   const dueAt = nextLifeAt ? Date.parse(nextLifeAt) : Number.NaN;
@@ -123,6 +133,9 @@ function TrainerNoLivesScreen({ nextLifeAt, livesReminder, onRemindLives, onHome
         <span className="lives-recovery-timer">{formatCountdown(remainingMs)}</span>
       </div>
     )}
+    {offer && !offerDismissed && (
+      <OfferSurface offer={offer} placement="trainer_no_lives" onClose={() => onOfferDismiss?.()} onEvent={onOfferEvent} />
+    )}
     {ready
       ? <button className="primary-button" type="button" onClick={onRetry}>Обновить жизни <span aria-hidden="true">→</span></button>
       : <button className="primary-button" type="button" onClick={onHome}>Пройти диагностику <span aria-hidden="true">→</span></button>}
@@ -135,18 +148,20 @@ function TrainerNoLivesScreen({ nextLifeAt, livesReminder, onRemindLives, onHome
   </section>;
 }
 
-function Feedback({ state }: { state: TrainerState }) {
+function Feedback({ state, showPrimaryScore }: { state: TrainerState; showPrimaryScore: boolean }) {
   const result = state.answerResult;
   if (!result) return null;
   return <aside className={`trainer-feedback ${result.is_correct ? "is-correct" : "is-wrong"}`} aria-live="polite">
     <strong>{result.is_correct ? "Верно" : "Почти"}</strong>
+    {showPrimaryScore && <PrimaryScoreBadge maxPrimaryScore={result.max_primary_score} earnedPrimaryScore={result.earned_primary_score} />}
     {result.correct_answer && <p>Ответ: <FormattedMathText text={result.correct_answer} /></p>}
     {result.explanation && <p>{result.explanation}</p>}
     {result.xp_delta > 0 && <small>+{result.xp_delta} XP</small>}
   </aside>;
 }
 
-export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onRetry, livesReminder, onRemindLives }: TrainerScreenProps) {
+export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onRetry, livesReminder, onRemindLives, offers = [], offerDismissed = {}, onOfferDismiss, onOfferEvent }: TrainerScreenProps) {
+  const offer = normalizeOffer(offers[0] ?? {});
   const autoFinishKey = `${state.session?.trainer_session_id ?? ""}:${state.session?.revision ?? ""}`;
   const autoFinishedKey = useRef<string | null>(null);
   useEffect(() => {
@@ -168,6 +183,10 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
       onRemindLives={onRemindLives}
       onHome={onHome}
       onRetry={onRetry}
+      offer={offer}
+      offerDismissed={Boolean(offerDismissed.trainer_no_lives)}
+      onOfferDismiss={() => onOfferDismiss?.("trainer_no_lives")}
+      onOfferEvent={onOfferEvent}
     />;
   }
   const questionIndex = state.phase === "feedback" && state.answeredQuestionIndex !== null
@@ -187,7 +206,7 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
     <div className="question-progress-rail" role="progressbar" aria-valuemin={0} aria-valuemax={state.session.questions.length} aria-valuenow={Math.min(questionIndex + 1, state.session.questions.length)}><span className="question-progress-fill" style={{ width: `${(Math.min(questionIndex + 1, state.session.questions.length) / state.session.questions.length) * 100}%` }} /></div>
     <QuestionPrompt question={question} />
     <AnswerEditor question={question} value={state.draftAnswer} disabled={locked} onChange={(answer) => dispatch({ type: "set_answer", answer })} />
-    {state.phase === "feedback" ? <><Feedback state={state} />{isLast ? <button className="primary-button question-next" type="button" onClick={() => { dispatch({ type: "finish_requested" }); onFinish?.(); }}>Завершить тренировку <span aria-hidden="true">→</span></button> : <button className="primary-button question-next" type="button" onClick={() => dispatch({ type: "next_question" })}>Следующий вопрос <span aria-hidden="true">→</span></button>}</> : <button className="primary-button question-next" type="button" disabled={!canSubmit || state.phase === "awaiting_result"} onClick={submit}>{state.phase === "awaiting_result" ? "Проверяем…" : "Проверить ответ"}<span aria-hidden="true">→</span></button>}
+    {state.phase === "feedback" ? <><Feedback state={state} showPrimaryScore={hasApprovedPrimaryScore(question.source)} />{!state.answerResult?.is_correct && offer && !offerDismissed.trainer_wrong && <OfferSurface offer={offer} placement="trainer_wrong" onClose={() => onOfferDismiss?.("trainer_wrong")} onEvent={onOfferEvent} />}{isLast ? <button className="primary-button question-next" type="button" onClick={() => { dispatch({ type: "finish_requested" }); onFinish?.(); }}>Завершить тренировку <span aria-hidden="true">→</span></button> : <button className="primary-button question-next" type="button" onClick={() => dispatch({ type: "next_question" })}>Следующий вопрос <span aria-hidden="true">→</span></button>}</> : <button className="primary-button question-next" type="button" disabled={!canSubmit || state.phase === "awaiting_result"} onClick={submit}>{state.phase === "awaiting_result" ? "Проверяем…" : "Проверить ответ"}<span aria-hidden="true">→</span></button>}
   </section>;
 }
 

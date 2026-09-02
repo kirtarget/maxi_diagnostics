@@ -24,6 +24,8 @@ export type TrainerAnswerResponse = {
   is_correct: boolean;
   correct_answer: string | null;
   explanation: string | null;
+  max_primary_score?: number;
+  earned_primary_score?: number;
   xp_delta: number;
   life_delta: number;
   current_index: number;

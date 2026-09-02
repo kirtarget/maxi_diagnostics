@@ -42,6 +42,37 @@ def test_importer_preserves_clean_bounded_explanation():
     assert converted["explanation"] == "Сложите два и два: получится четыре."
 
 
+def test_importer_preserves_supplied_primary_score_and_source_without_scraping():
+    source = {
+        "provider": "fipi",
+        "official_year": 2026,
+        "approval_status": "approved",
+        "source_kind": "demo",
+        "source_url": "https://doc.fipi.ru/ege/demo.pdf",
+        "exam_position": "1",
+        "rights_status": "written_permission",
+        "verified_at": "2026-09-01",
+    }
+    converted = _convert_question({
+        "question_id": 8,
+        "question_index": 1,
+        "description_text": "Чему равно 3 + 3?",
+        "description_html": "",
+        "images": [],
+        "audio_file": None,
+        "subject": {"code": "math"},
+        "blocks": [],
+        "type": "short-answer",
+        "correct_answers": ["6"],
+        "max_primary_score": 2,
+        "source": source,
+    })
+
+    assert converted is not None
+    assert converted["max_primary_score"] == 2
+    assert converted["source"] == source
+
+
 def test_importer_drops_blank_or_oversized_explanation():
     assert _explanation({"solution": "   "}) is None
     assert _explanation({"solution": "x" * 2001}) is None

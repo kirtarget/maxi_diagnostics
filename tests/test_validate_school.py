@@ -104,7 +104,7 @@ def test_validator_rejects_duplicate_diagnostics_and_questions(tmp_path: Path, c
     assert "Traceback" not in output
 
 
-def test_validator_reports_global_question_limit_reason(tmp_path: Path, capsys):
+def test_validator_accepts_more_than_200_questions_across_catalog(tmp_path: Path, capsys):
     root = sample_root(tmp_path)
     source = json.loads(
         (root / "school/diagnostics/demo-math.json").read_text(encoding="utf-8")
@@ -121,8 +121,8 @@ def test_validator_reports_global_question_limit_reason(tmp_path: Path, capsys):
 
     result = load_tool().main([], root=root)
 
-    assert result == 1
-    assert "ERROR catalog_invalid: too_many_total_questions" in capsys.readouterr().out
+    assert result == 0
+    assert "OK school=demo-school diagnostics=2 questions=201" in capsys.readouterr().out
 
 
 def test_validator_scopes_question_ids_to_each_diagnostic(tmp_path: Path, capsys):

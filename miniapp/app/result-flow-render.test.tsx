@@ -19,6 +19,17 @@ describe("result flow screens", () => {
           expected_answer: "16",
           guidance: "Решайте по шагам.",
           guidance_kind: "fallback",
+          max_primary_score: 2,
+          earned_primary_score: 0,
+          source: {
+            provider: "maximum",
+            official_year: 2026,
+            approval_status: "approved",
+            source_kind: "original",
+            source_url: "https://maximumtest.ru/",
+            rights_status: "original",
+            verified_at: "2026-09-01",
+          },
         }]}
         index={0}
         onBack={() => undefined}
@@ -29,6 +40,7 @@ describe("result flow screens", () => {
     expect(html).toContain("Ваш ответ");
     expect(html).toContain("Правильный ответ");
     expect(html).toContain("Как решать");
+    expect(html).toContain("0 из 2 первичных баллов");
   });
 
   it("formats review question math like the worksheet", () => {
@@ -89,6 +101,33 @@ describe("result flow screens", () => {
     expect(html).not.toContain("MAXIMUM");
     expect(html).not.toContain("средний прирост");
     expect(html).not.toContain("+42");
+  });
+
+  it("renders a configured white-label offer between the forecast explanation and route action", () => {
+    const html = renderToStaticMarkup(
+      <ForecastScreen
+        points={[
+          { id: "current", label: "Сейчас", value: 74 },
+          { id: "goal", label: "Цель", value: 85 },
+        ]}
+        offers={[{
+          id: "school-course",
+          label: "Подготовка к экзамену",
+          button: "Узнать больше",
+          url: "https://school.example/course",
+        }]}
+        offerDismissed={false}
+        onOfferDismiss={() => undefined}
+        onOfferEvent={() => undefined}
+        onBack={() => undefined}
+        onRoute={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("offer-surface-forecast");
+    expect(html).toContain("Подготовка к экзамену");
+    expect(html.indexOf("forecast-explainer")).toBeLessThan(html.indexOf("offer-surface-forecast"));
+    expect(html.indexOf("offer-surface-forecast")).toBeLessThan(html.indexOf("Открыть маршрут"));
   });
 
   it("shows the not-enough-data state with progress toward two diagnostics", () => {

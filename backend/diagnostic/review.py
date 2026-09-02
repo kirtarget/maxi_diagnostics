@@ -27,6 +27,9 @@ _PUBLIC_REVIEW_FIELDS = frozenset(
         "asset",
         "assets",
         "is_correct",
+        "max_primary_score",
+        "earned_primary_score",
+        "source",
         "user_answer",
         "expected_answer",
         "guidance",
@@ -79,6 +82,7 @@ def build_review_snapshot(
         answer_value = expected_value(question)
         expected_answer = format_answer(question, answer_value)
         individual_guidance = question.explanation
+        is_correct = is_answer_correct(question, user_value)
         assets = getattr(question, "assets", None)
         snapshot.append(
             {
@@ -98,7 +102,14 @@ def build_review_snapshot(
                     item.model_dump(mode="json")
                     for item in getattr(question, "items", ())
                 ],
-                "is_correct": is_answer_correct(question, user_value),
+                "is_correct": is_correct,
+                "max_primary_score": question.max_primary_score,
+                "earned_primary_score": question.max_primary_score if is_correct else 0,
+                "source": (
+                    question.source.model_dump(mode="json")
+                    if question.source is not None
+                    else None
+                ),
                 "user_value": user_value,
                 "expected_value": answer_value,
                 "user_answer": format_answer(question, user_value),

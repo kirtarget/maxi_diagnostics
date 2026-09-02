@@ -97,7 +97,14 @@ def test_bootstrap_returns_brand_and_sanitized_catalog(monkeypatch):
         "lives_remaining", "next_life_at", "daily_goal", "quest",
     }
     assert body["school"]["brand"]["name"] == configured_school.brand.name
+    assert body["catalog_contract"] == 2
+    assert set(body["diagnostics"][0]) == {
+        "id", "content_version", "exam", "subject", "mark", "quick_count",
+        "question_count",
+    }
+    assert body["diagnostics"][0]["question_count"] >= body["diagnostics"][0]["quick_count"]
     assert '"correct"' not in json.dumps(body["diagnostics"], ensure_ascii=False)
+    assert "questions" not in body["diagnostics"][0]
 
 
 def test_bootstrap_returns_only_public_progress_profile_fields(monkeypatch):

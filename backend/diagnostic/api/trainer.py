@@ -224,7 +224,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
             "explanation": explanation[:4000],
         }
         try:
-            return await trainer.answer_question(
+            result = await trainer.answer_question(
                 session_id=body.trainer_session_id,
                 user_id=user["id"],
                 question_id=body.question_id,
@@ -236,6 +236,14 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
                 public_feedback=feedback,
                 timezone_name=request.app.state.settings.timezone,
             )
+            is_correct = bool(result.get("is_correct"))
+            return {
+                **result,
+                "max_primary_score": question.max_primary_score,
+                "earned_primary_score": (
+                    question.max_primary_score if is_correct else 0
+                ),
+            }
         except ValueError as exc:
             raise _error(exc) from exc
 
