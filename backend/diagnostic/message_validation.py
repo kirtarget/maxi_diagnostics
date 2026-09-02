@@ -27,6 +27,23 @@ _MARKUP_TOKEN = re.compile(
     r"</?[A-Za-z][^<>]*>|&(?:amp|lt|gt|quot|#[0-9]{1,7}|#x[0-9A-Fa-f]{1,6});"
 )
 
+# The product speaks to students in one voice: informal "ты", never the formal
+# "вы". These are the tell-tale markers of formal Russian address — the
+# pronoun family plus a short list of common formal imperative verbs.
+_FORMAL_ADDRESS_VERBS = (
+    "откройте", "выберите", "пройдите", "нажмите", "продолжите",
+    "посмотрите", "проверьте", "попробуйте",
+)
+FORMAL_ADDRESS_PATTERN = re.compile(
+    r"\b(?:вы|вас|вам|вами|ваш\w*|" + "|".join(_FORMAL_ADDRESS_VERBS) + r")\b",
+    re.IGNORECASE,
+)
+
+
+def find_formal_address(text: str) -> list[str]:
+    """Return every formal-address marker found in ``text`` (empty if none)."""
+    return FORMAL_ADDRESS_PATTERN.findall(text)
+
 
 class _TelegramHtmlValidator(HTMLParser):
     def __init__(self) -> None:
