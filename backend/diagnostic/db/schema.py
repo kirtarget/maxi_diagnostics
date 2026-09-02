@@ -433,6 +433,48 @@ CREATE TABLE IF NOT EXISTS message_templates (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS diagnostic_content_drafts (
+    diagnostic_id TEXT PRIMARY KEY,
+    payload JSONB NOT NULL,
+    edit_revision BIGINT NOT NULL DEFAULT 1 CHECK (edit_revision >= 1),
+    base_content_version TEXT NOT NULL,
+    payload_sha256 TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    updated_by TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK (diagnostic_id ~ '^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$'),
+    CHECK (base_content_version ~ '^[0-9a-f]{64}$'),
+    CHECK (payload_sha256 ~ '^[0-9a-f]{64}$'),
+    CHECK (length(created_by) BETWEEN 1 AND 128),
+    CHECK (length(updated_by) BETWEEN 1 AND 128),
+    CHECK (jsonb_typeof(payload) = 'object'),
+    CHECK (octet_length(convert_to(payload::text, 'UTF8')) <= 1048576)
+);
+
+CREATE TABLE IF NOT EXISTS diagnostic_content_audit (
+    event_id BIGSERIAL PRIMARY KEY,
+    action TEXT NOT NULL,
+    actor TEXT NOT NULL,
+    diagnostic_id TEXT NOT NULL,
+    question_id TEXT,
+    edit_revision BIGINT NOT NULL CHECK (edit_revision >= 1),
+    before_hash TEXT NOT NULL,
+    after_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK (action IN (
+        'draft_created', 'question_created', 'question_updated',
+        'validated', 'exported'
+    )),
+    CHECK (length(actor) BETWEEN 1 AND 128),
+    CHECK (diagnostic_id ~ '^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$'),
+    CHECK (question_id IS NULL OR question_id ~ '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$'),
+    CHECK (before_hash ~ '^[0-9a-f]{64}$'),
+    CHECK (after_hash ~ '^[0-9a-f]{64}$')
+);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_content_audit_diagnostic_created
+    ON diagnostic_content_audit(diagnostic_id, created_at DESC);
+
 DO $$
 BEGIN
     IF NOT EXISTS (

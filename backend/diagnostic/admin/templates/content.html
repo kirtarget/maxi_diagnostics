@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Вопросы - {{ school_name }}{% endblock %}
+{% block content %}
+  <div id="content-status" class="status" role="status" aria-live="polite">Загрузка вопросов...</div>
+
+  <section class="card" aria-labelledby="filters-heading">
+    <h2 id="filters-heading">База вопросов</h2>
+    <div class="toolbar">
+      <label><span>Поиск</span><input id="content-query" type="search" placeholder="Номер, тема или текст"></label>
+      <label><span>Экзамен</span><select id="content-exam"><option value="">Все</option></select></label>
+      <label><span>Предмет</span><select id="content-subject"><option value="">Все</option></select></label>
+      <label><span>Тип</span><select id="content-type"><option value="">Все</option><option value="single">Один ответ</option><option value="multiple">Несколько ответов</option><option value="matching">Соответствие</option><option value="input">Числовой ответ</option></select></label>
+    </div>
+    <p id="content-count" class="muted"></p>
+    <div id="content-list" class="message-list"></div>
+  </section>
+
+  <section id="editor-section" class="card" aria-labelledby="editor-heading" hidden>
+    <h2 id="editor-heading">Редактор задания</h2>
+    <p class="muted">Сохранение создаёт черновик. Ученики увидят изменения только после скачивания JSON, проверки в Git и deployment.</p>
+    <div class="editor-grid">
+      <label><span>ID задания</span><input id="question-id" autocomplete="off"></label>
+      <label><span>Тип</span><select id="question-type"><option value="input">Числовой ответ</option><option value="single">Один ответ</option><option value="multiple">Несколько ответов</option><option value="matching">Соответствие</option></select></label>
+      <label><span>Название</span><input id="question-title"></label>
+      <label><span>Тема</span><input id="question-topic"></label>
+      <label><span>Максимальный первичный балл</span><input id="question-max-score" type="number" min="1" max="100"></label>
+      <label><span>Число выбираемых ответов</span><input id="question-selection-limit" type="number" min="1" max="50"></label>
+      <label class="wide"><span>Условие</span><textarea id="question-prompt"></textarea></label>
+      <label class="wide"><span>Варианты ответа. Одна строка в формате ID | Текст</span><textarea id="question-options"></textarea></label>
+      <label class="wide"><span>Элементы для сопоставления. Одна строка в формате ID | Текст</span><textarea id="question-items"></textarea></label>
+      <label class="wide"><span>Правильный ответ. Для нескольких вариантов используйте по одной строке</span><textarea id="question-correct"></textarea></label>
+      <label class="wide"><span>Объяснение правильного ответа</span><textarea id="question-explanation"></textarea></label>
+      <label class="wide"><span>Подсказка из учебника MAXIMUM</span><textarea id="question-learning-text"></textarea></label>
+      <label class="wide"><span>Ссылка на учебник MAXIMUM</span><input id="question-learning-url" type="url"></label>
+    </div>
+    <details>
+      <summary>Источник и проверка задания</summary>
+      <div class="editor-grid">
+        <label><span>Поставщик</span><input id="source-provider" placeholder="fipi или maximum"></label>
+        <label><span>Официальный год</span><input id="source-year" type="number" min="2000" max="2100"></label>
+        <label><span>Статус материала</span><select id="source-approval"><option value="approved">Утверждён</option><option value="draft">Проект</option></select></label>
+        <label><span>Тип источника</span><select id="source-kind"><option value="open_bank">Открытый банк</option><option value="open_variant">Открытый вариант</option><option value="demo">Демоверсия</option><option value="specification">Спецификация</option><option value="commission_material">Материал комиссии</option><option value="original">Оригинальное задание</option></select></label>
+        <label class="wide"><span>Ссылка на источник</span><input id="source-url" type="url"></label>
+        <label><span>ID проекта ФИПИ</span><input id="source-project-id"></label>
+        <label><span>ID задания ФИПИ</span><input id="source-question-id"></label>
+        <label><span>Позиция в экзамене</span><input id="source-position"></label>
+        <label><span>Дата проверки</span><input id="source-verified-at" type="date"></label>
+        <label class="wide"><span>Ссылка на официальные критерии</span><input id="source-criteria-url" type="url"></label>
+        <label><span>Права использования</span><select id="source-rights"><option value="link_only">Только ссылка</option><option value="written_permission">Письменное разрешение</option><option value="licensed_copy">Лицензированная копия</option><option value="original">Оригинал школы</option></select></label>
+      </div>
+    </details>
+    <div class="actions">
+      <button id="save-question" type="button">Сохранить черновик</button>
+      <button id="validate-draft" class="secondary" type="button">Проверить диагностику</button>
+      <button id="export-draft" class="secondary" type="button">Скачать JSON</button>
+    </div>
+    <div id="editor-status" class="status" role="status" aria-live="polite"></div>
+  </section>
+{% endblock %}
+{% block scripts %}<script src="/admin/static/content.js" defer></script>{% endblock %}

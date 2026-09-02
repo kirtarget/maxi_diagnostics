@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import json
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import HTMLResponse, Response
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.templating import Jinja2Templates
 
 from diagnostic.db.messages import MESSAGE_KEYS
+from diagnostic.db.content import ContentDraftNotFound, ContentRevisionConflict
+from diagnostic.catalog import Diagnostic, DiagnosticCatalog
 from diagnostic.messages import validate_message_template
 from diagnostic.session_identity import new_session_generation, session_subject_key
 
@@ -66,6 +69,22 @@ class DeleteUserRequest(BaseModel):
     confirm: Literal[True]
 
 
+class ExpectedRevision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_revision: int = Field(ge=1, le=9_223_372_036_854_775_807, strict=True)
+
+
+class QuestionWrite(ExpectedRevision):
+    question: dict[str, Any]
+
+    @field_validator("question")
+    @classmethod
+    def bound_question_payload(cls, value: dict[str, Any]) -> dict[str, Any]:
+        if len(json.dumps(value, ensure_ascii=False).encode("utf-8")) > 65_536:
+            raise ValueError("question_payload_too_large")
+        return value
+
+
 def _value(row: Mapping[str, Any], key: str) -> Any:
     try:
         return row[key]
@@ -86,17 +105,325 @@ def _page(total: int, rows: list, fields: tuple[str, ...], limit: int, offset: i
     }
 
 
+def _admin_context(request: Request) -> dict[str, str]:
+    school = request.app.state.school
+    return {
+        "school_name": school.brand.name,
+        "primary_color": school.brand.colors.primary,
+        "accent_color": school.brand.colors.accent,
+        "background_color": school.brand.colors.background,
+    }
+
+
+def _require_admin_origin(request: Request) -> None:
+    origin = request.headers.get("origin")
+    if origin != request.app.state.settings.miniapp_origin:
+        raise HTTPException(status_code=403, detail="admin_origin_invalid")
+
+
+def _draft_response(row: Mapping[str, Any]) -> dict[str, Any]:
+    return _sanitize(
+        row,
+        (
+            "diagnostic_id", "payload", "edit_revision", "base_content_version",
+            "payload_sha256", "updated_by", "updated_at",
+        ),
+    )
+
+
+def _actor(request: Request) -> str:
+    return request.app.state.settings.admin_username
+
+
+def _diagnostic_or_404(request: Request, diagnostic_id: str) -> Diagnostic:
+    try:
+        return request.app.state.catalog.get(diagnostic_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="diagnostic_not_found") from exc
+
+
+def _validate_diagnostic(payload: Mapping[str, Any], diagnostic_id: str) -> Diagnostic:
+    try:
+        diagnostic = Diagnostic.model_validate(payload)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="content_invalid") from exc
+    if diagnostic.id != diagnostic_id:
+        raise HTTPException(status_code=422, detail="diagnostic_id_immutable")
+    return diagnostic
+
+
+def _validate_full_catalog(request: Request, draft: Diagnostic) -> DiagnosticCatalog:
+    published_assets = {
+        asset
+        for diagnostic in request.app.state.catalog.diagnostics
+        for question in diagnostic.questions
+        for asset in question.asset_paths
+    }
+    draft_assets = {
+        asset for question in draft.questions for asset in question.asset_paths
+    }
+    if not draft_assets.issubset(published_assets):
+        raise HTTPException(status_code=422, detail="content_asset_not_available")
+    diagnostics = tuple(
+        draft if diagnostic.id == draft.id else diagnostic
+        for diagnostic in request.app.state.catalog.diagnostics
+    )
+    try:
+        return DiagnosticCatalog(diagnostics=diagnostics)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="content_catalog_invalid") from exc
+
+
+def _require_current_base(request: Request, row: Mapping[str, Any]) -> None:
+    diagnostic_id = str(row["diagnostic_id"])
+    current_version = request.app.state.catalog.content_version(
+        diagnostic_id,
+        request.app.state.settings.application_secret,
+    )
+    if row["base_content_version"] != current_version:
+        raise HTTPException(status_code=409, detail="content_base_changed")
+
+
+async def _draft_or_404(diagnostic_id: str):
+    row = await repository.get_content_draft(diagnostic_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="content_draft_not_found")
+    return row
+
+
+def _content_error(exc: RuntimeError) -> HTTPException:
+    if isinstance(exc, ContentDraftNotFound):
+        return HTTPException(status_code=404, detail="content_draft_not_found")
+    if isinstance(exc, ContentRevisionConflict):
+        return HTTPException(status_code=409, detail="content_revision_conflict")
+    return HTTPException(status_code=500, detail="content_operation_failed")
+
+
 @router.get("/admin/diagnostics", response_class=HTMLResponse)
 async def diagnostics_page(request: Request):
-    school = request.app.state.school
     return templates.TemplateResponse(
         request=request,
         name="diagnostics.html",
-        context={
-            "school_name": school.brand.name,
-            "primary_color": school.brand.colors.primary,
-            "accent_color": school.brand.colors.accent,
-            "background_color": school.brand.colors.background,
+        context=_admin_context(request),
+    )
+
+
+@router.get("/admin/content", response_class=HTMLResponse)
+async def content_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="content.html",
+        context=_admin_context(request),
+    )
+
+
+@router.get("/api/admin/diagnostics/content")
+async def content_index(
+    request: Request,
+    exam: str | None = Query(default=None, min_length=1, max_length=32),
+    subject: str | None = Query(default=None, min_length=1, max_length=128),
+    question_type: str | None = Query(default=None, alias="type", pattern=r"^(single|multiple|matching|input)$"),
+    query: str | None = Query(default=None, min_length=1, max_length=128),
+):
+    draft_rows = await repository.list_content_drafts()
+    drafts = {row["diagnostic_id"]: row for row in draft_rows}
+    items: list[dict[str, Any]] = []
+    needle = query.casefold() if query else None
+    for published in request.app.state.catalog.diagnostics:
+        row = drafts.get(published.id)
+        payload = row["payload"] if row is not None else published.model_dump(mode="json")
+        try:
+            diagnostic = Diagnostic.model_validate(payload)
+        except Exception:
+            diagnostic = published
+        if exam and diagnostic.exam != exam:
+            continue
+        if subject and diagnostic.subject != subject:
+            continue
+        questions = []
+        for question in diagnostic.questions:
+            if question_type and question.type != question_type:
+                continue
+            if needle and needle not in " ".join(
+                (question.id, question.title, question.topic, question.prompt)
+            ).casefold():
+                continue
+            source = getattr(question, "source", None)
+            questions.append(
+                {
+                    "id": question.id,
+                    "type": question.type,
+                    "topic": question.topic,
+                    "title": question.title,
+                    "max_primary_score": getattr(question, "max_primary_score", None),
+                    "has_explanation": bool(question.explanation),
+                    "has_source": source is not None,
+                }
+            )
+        if questions:
+            items.append(
+                {
+                    "diagnostic_id": diagnostic.id,
+                    "exam": diagnostic.exam,
+                    "subject": diagnostic.subject,
+                    "is_draft": row is not None,
+                    "edit_revision": row["edit_revision"] if row is not None else None,
+                    "questions": questions,
+                }
+            )
+    return {
+        "catalog_question_count": sum(
+            len(item.questions) for item in request.app.state.catalog.diagnostics
+        ),
+        "diagnostic_question_limit": 200,
+        "items": items,
+    }
+
+
+@router.post(
+    "/api/admin/diagnostics/content/{diagnostic_id}/draft",
+    status_code=status.HTTP_201_CREATED,
+)
+async def content_draft_create(diagnostic_id: str, request: Request):
+    _require_admin_origin(request)
+    diagnostic = _diagnostic_or_404(request, diagnostic_id)
+    row = await repository.create_content_draft(
+        diagnostic_id=diagnostic.id,
+        payload=diagnostic.model_dump(mode="json"),
+        base_content_version=request.app.state.catalog.content_version(
+            diagnostic.id, request.app.state.settings.application_secret
+        ),
+        actor=_actor(request),
+    )
+    return _draft_response(row)
+
+
+@router.get("/api/admin/diagnostics/content/{diagnostic_id}/draft")
+async def content_draft_get(diagnostic_id: str):
+    return _draft_response(await _draft_or_404(diagnostic_id))
+
+
+@router.post("/api/admin/diagnostics/content/{diagnostic_id}/draft/questions")
+async def content_question_create(
+    diagnostic_id: str, body: QuestionWrite, request: Request
+):
+    _require_admin_origin(request)
+    row = await _draft_or_404(diagnostic_id)
+    payload = dict(row["payload"])
+    questions = list(payload.get("questions", []))
+    question_id = body.question.get("id")
+    if not isinstance(question_id, str):
+        raise HTTPException(status_code=422, detail="content_invalid")
+    if any(question.get("id") == question_id for question in questions):
+        raise HTTPException(status_code=409, detail="question_already_exists")
+    questions.append(body.question)
+    payload["questions"] = questions
+    diagnostic = _validate_diagnostic(payload, diagnostic_id)
+    _validate_full_catalog(request, diagnostic)
+    try:
+        saved = await repository.save_content_draft(
+            diagnostic_id=diagnostic_id,
+            payload=diagnostic.model_dump(mode="json"),
+            expected_revision=body.expected_revision,
+            actor=_actor(request),
+            action="question_created",
+            question_id=question_id,
+        )
+    except RuntimeError as exc:
+        raise _content_error(exc) from exc
+    return _draft_response(saved)
+
+
+@router.put(
+    "/api/admin/diagnostics/content/{diagnostic_id}/draft/questions/{question_id}"
+)
+async def content_question_update(
+    diagnostic_id: str, question_id: str, body: QuestionWrite, request: Request
+):
+    _require_admin_origin(request)
+    if body.question.get("id") != question_id:
+        raise HTTPException(status_code=422, detail="question_id_immutable")
+    row = await _draft_or_404(diagnostic_id)
+    payload = dict(row["payload"])
+    questions = list(payload.get("questions", []))
+    indexes = [index for index, item in enumerate(questions) if item.get("id") == question_id]
+    if not indexes:
+        raise HTTPException(status_code=404, detail="question_not_found")
+    questions[indexes[0]] = body.question
+    payload["questions"] = questions
+    diagnostic = _validate_diagnostic(payload, diagnostic_id)
+    _validate_full_catalog(request, diagnostic)
+    try:
+        saved = await repository.save_content_draft(
+            diagnostic_id=diagnostic_id,
+            payload=diagnostic.model_dump(mode="json"),
+            expected_revision=body.expected_revision,
+            actor=_actor(request),
+            action="question_updated",
+            question_id=question_id,
+        )
+    except RuntimeError as exc:
+        raise _content_error(exc) from exc
+    return _draft_response(saved)
+
+
+@router.post("/api/admin/diagnostics/content/{diagnostic_id}/draft/validate")
+async def content_draft_validate(
+    diagnostic_id: str, body: ExpectedRevision, request: Request
+):
+    _require_admin_origin(request)
+    row = await _draft_or_404(diagnostic_id)
+    _require_current_base(request, row)
+    diagnostic = _validate_diagnostic(row["payload"], diagnostic_id)
+    catalog = _validate_full_catalog(request, diagnostic)
+    try:
+        await repository.record_content_action(
+            diagnostic_id=diagnostic_id,
+            expected_revision=body.expected_revision,
+            actor=_actor(request),
+            action="validated",
+        )
+    except RuntimeError as exc:
+        raise _content_error(exc) from exc
+    return {
+        "ok": True,
+        "edit_revision": body.expected_revision,
+        "diagnostic_count": len(catalog.diagnostics),
+        "question_count": sum(len(item.questions) for item in catalog.diagnostics),
+    }
+
+
+@router.post("/api/admin/diagnostics/content/{diagnostic_id}/draft/export")
+async def content_draft_export(
+    diagnostic_id: str, body: ExpectedRevision, request: Request
+):
+    _require_admin_origin(request)
+    row = await _draft_or_404(diagnostic_id)
+    _require_current_base(request, row)
+    diagnostic = _validate_diagnostic(row["payload"], diagnostic_id)
+    _validate_full_catalog(request, diagnostic)
+    try:
+        await repository.record_content_action(
+            diagnostic_id=diagnostic_id,
+            expected_revision=body.expected_revision,
+            actor=_actor(request),
+            action="exported",
+        )
+    except RuntimeError as exc:
+        raise _content_error(exc) from exc
+    encoded = (
+        json.dumps(
+            diagnostic.model_dump(mode="json"),
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n"
+    ).encode("utf-8")
+    return Response(
+        encoded,
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="{diagnostic.id}.json"'
         },
     )
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from diagnostic.db.core import get_pool
+from diagnostic.db import content
 
 
 def _bounded(limit: int, offset: int) -> tuple[int, int]:
@@ -14,6 +15,26 @@ def _delete_count(status: str) -> int:
         return int(status.rsplit(" ", 1)[1])
     except (IndexError, ValueError):
         return 0
+
+
+async def list_content_drafts() -> list:
+    return await content.list_drafts()
+
+
+async def get_content_draft(diagnostic_id: str):
+    return await content.get_draft(diagnostic_id)
+
+
+async def create_content_draft(**kwargs):
+    return await content.create_draft(**kwargs)
+
+
+async def save_content_draft(**kwargs):
+    return await content.save_draft(**kwargs)
+
+
+async def record_content_action(**kwargs):
+    return await content.record_action(**kwargs)
 
 
 async def get_summary() -> dict[str, int]:

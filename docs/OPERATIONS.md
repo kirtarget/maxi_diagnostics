@@ -30,6 +30,33 @@ installation's Mini App.
    `ps`.
 4. Check API health, Mini App load, admin authentication, and bot commands.
 
+## Question authoring
+
+The protected `/admin/content` page stores private authoring drafts in PostgreSQL.
+Saving a draft does not change the catalog used by the API or bot. Correct answers,
+explanations, and other private authoring fields remain confined to authenticated
+admin responses and the database backup.
+
+Use this publication sequence:
+
+1. Open an existing question or add a numeric question inside the required
+   diagnostic.
+2. Save the draft. If another editor changed the same diagnostic, reload after the
+   revision-conflict warning and reconcile the changes.
+3. Run **Проверить диагностику**. The server validates the complete catalog, including
+   the global question and payload limits.
+4. Download the UTF-8 JSON file. It has no byte-order mark.
+5. Replace the matching file under `school/diagnostics/` in a reviewed Git change.
+6. Run `python scripts/validate_school.py` and
+   `python scripts/check_brand_isolation.py`, followed by the affected tests.
+7. Publish only through the normal image build and deployment procedure above.
+
+Do not copy admin API responses, draft rows, database dumps, or exported files into
+public tickets. The audit table stores actions, actor names, revisions, and hashes,
+but does not store a second copy of question content. New image assets cannot be
+uploaded through this first version of the editor. Add reviewed assets through Git
+and the existing content validation workflow.
+
 ## Backup and guarded restore
 
 The backup script writes a binary custom archive plus `.sha256` and
