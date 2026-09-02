@@ -468,10 +468,8 @@ BEGIN
         ALTER TABLE diagnostic_trainer_sessions
             ADD CONSTRAINT diagnostic_trainer_sessions_mode_check
             CHECK (mode IN ('normal', 'mistakes', 'plan'));
-        -- Existing mistakes have never been reviewed. Tomorrow is the first interval.
-        UPDATE diagnostic_mistakes
-           SET next_review_on = CURRENT_DATE + 1
-         WHERE next_review_on IS NULL;
+        -- Existing mistakes have never been reviewed, so the column default puts
+        -- every one of them at tomorrow, the first interval.
         INSERT INTO diagnostic_schema_migrations(version)
         VALUES ('2026-09-02-kir-173-daily-plan');
     END IF;

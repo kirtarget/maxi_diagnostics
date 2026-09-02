@@ -1158,17 +1158,17 @@ async def schedule_streak_save_notifications(
             """
             INSERT INTO diagnostic_notifications (dedupe_key, user_id, kind, due_at)
             SELECT 'streak_save:' || profile.user_id::text || ':'
-                       || to_char(local.today, 'YYYYMMDD'),
+                       || to_char(school.today, 'YYYYMMDD'),
                    profile.user_id, 'streak_save',
-                   (local.today + make_interval(hours => $2))
+                   (school.today + make_interval(hours => $2::int))
                        AT TIME ZONE $1
               FROM diagnostic_progress_profiles AS profile
               CROSS JOIN LATERAL (
                   SELECT (now() AT TIME ZONE $1)::date AS today
-              ) AS local
+              ) AS school
              WHERE profile.streak_days >= 2
                AND (profile.streak_last_date IS NULL
-                    OR profile.streak_last_date < local.today)
+                    OR profile.streak_last_date < school.today)
                AND NOT EXISTS (
                    SELECT 1 FROM diagnostic_erased_users erased
                     WHERE erased.user_id=profile.user_id

@@ -177,15 +177,15 @@ async def ensure_plan(
             await gameplay.get_reconciled_profile(connection, user_id)
             existing = await _read_plan(connection, user_id, plan_date, lock=True)
             built = build(await _read_inputs(connection, user_id, plan_date))
-            if existing is not None:
-                stored = serialize_plan(existing)
-                assert stored is not None
-                if built is None or (
+            stored = serialize_plan(existing)
+            if stored is not None and (
+                built is None or (
                     stored["diagnostic_id"] == built.diagnostic_id
                     and stored["content_version"] == built.content_version
-                ):
-                    await _sync_daily_goal(connection, user_id, plan_date, stored)
-                    return stored
+                )
+            ):
+                await _sync_daily_goal(connection, user_id, plan_date, stored)
+                return stored
             if built is None:
                 return None
             row = await connection.fetchrow(
@@ -209,12 +209,12 @@ async def ensure_plan(
                 built.diagnostic_id,
                 built.content_version,
                 built.source_attempt_id,
-                json.dumps(built.question_ids, ensure_ascii=False),
-                json.dumps(built.reasons, ensure_ascii=False),
+                built.question_ids,
+                built.reasons,
             )
             plan = serialize_plan(row)
-            assert plan is not None
-            await _sync_daily_goal(connection, user_id, plan_date, plan)
+            if plan is not None:
+                await _sync_daily_goal(connection, user_id, plan_date, plan)
             return plan
 
 
@@ -272,5 +272,5 @@ async def record_plan_answer(
             user_id, diagnostic_id, question_id, count, due_on, is_correct,
         )
     plan = serialize_plan(row)
-    assert plan is not None
-    await _sync_daily_goal(connection, user_id, plan_date, plan)
+    if plan is not None:
+        await _sync_daily_goal(connection, user_id, plan_date, plan)

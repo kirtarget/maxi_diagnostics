@@ -86,16 +86,6 @@ def _shuffle_key(user_id: int, plan_date: date, question_id: str) -> str:
     return hashlib.sha256(seed).hexdigest()
 
 
-def topic_names(topics: Iterable[Any]) -> tuple[str, ...]:
-    """Growth topics reach us either as plain strings or as scored objects."""
-    names: list[str] = []
-    for topic in topics:
-        value = topic.get("topic") if isinstance(topic, Mapping) else topic
-        if isinstance(value, str) and value:
-            names.append(value)
-    return tuple(names)
-
-
 def build_daily_plan(
     *,
     user_id: int,

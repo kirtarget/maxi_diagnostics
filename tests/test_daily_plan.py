@@ -10,7 +10,6 @@ from diagnostic.daily_plan import (
     plan_date_for,
     plan_status,
     plan_summary,
-    topic_names,
 )
 
 
@@ -135,12 +134,6 @@ def test_plan_status_reports_done_only_when_every_question_is_answered():
     assert plan_status(0, 0) == "no_diagnostic"
     assert plan_status(5, 2) == "ready"
     assert plan_status(5, 5) == "done"
-
-
-def test_topic_names_accepts_plain_strings_and_scored_objects():
-    assert topic_names(["Алгебра", {"topic": "Геометрия"}, {"ratio": 1}, 7]) == (
-        "Алгебра", "Геометрия",
-    )
 
 
 class _Catalog:
