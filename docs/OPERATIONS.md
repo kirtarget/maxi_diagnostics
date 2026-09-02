@@ -25,7 +25,8 @@ installation's Mini App.
 ## Update
 
 1. Create a backup with the platform-specific command in the next section.
-2. Fetch the reviewed revision and run the validation/isolation/tests used by CI.
+2. Fetch the reviewed revision as described in the deployment guide's
+   "Updating a running installation" section and confirm CI is green for it.
 3. Run the production Compose pair with `up -d --build`, then check its status with
    `ps`.
 4. Check API health, Mini App load, admin authentication, and bot commands.
