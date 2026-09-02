@@ -5,7 +5,7 @@ from __future__ import annotations
 import secrets
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from diagnostic.catalog import (
     is_valid_answer_shape,
@@ -24,7 +24,7 @@ from .models import (
     TrainerLivesReminderRequest,
     TrainerStartRequest,
 )
-from .sessions import _require_current_session
+from .sessions import _funnel, _require_current_session
 
 
 def _validate_answer(question: Any, answer: Any) -> None:
@@ -167,7 +167,9 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
         }
 
     @router.post("/trainer/answer")
-    async def answer(body: TrainerAnswerRequest, request: Request) -> dict[str, Any]:
+    async def answer(
+        body: TrainerAnswerRequest, request: Request, background_tasks: BackgroundTasks
+    ) -> dict[str, Any]:
         user = telegram_user(request, body.init_data)
         await _require_current_session(request, user["id"], body.session_scope)
         session = await trainer.get_session(body.trainer_session_id, user["id"])
@@ -178,7 +180,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
         )
         if expected_version != session["content_version"]:
             raise HTTPException(status_code=409, detail="trainer_content_changed")
-        _, question = _trainer_question(
+        diagnostic, question = _trainer_question(
             catalog, session["diagnostic_id"], body.question_id
         )
         _validate_answer(question, body.answer)
@@ -212,6 +214,10 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
                 timezone_name=request.app.state.settings.timezone,
             )
             is_correct = bool(result.get("is_correct"))
+            _funnel(
+                background_tasks, request, user["id"], "trainer_answered",
+                diagnostic.exam, diagnostic.subject,
+            )
             return {
                 **result,
                 "max_primary_score": question.max_primary_score,

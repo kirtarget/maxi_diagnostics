@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import Any, Literal
 
 from diagnostic.db.core import get_pool
-from diagnostic.db import gameplay, offer_events
+from diagnostic.db import funnel, gameplay, offer_events
 from diagnostic.session_identity import new_session_generation, session_subject_key
 
 
@@ -878,6 +878,26 @@ async def pdf_delivery_is_sent(attempt_id: str, message_id: int) -> bool:
         ))
 
 
+async def pdf_delivery_is_abandoned(attempt_id: str) -> bool:
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        return bool(await connection.fetchval(
+            "SELECT pdf_status='abandoned' FROM diagnostic_attempts WHERE attempt_id=$1",
+            attempt_id,
+        ))
+
+
+async def count_pending_pdfs() -> int:
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        return int(await connection.fetchval(
+            """
+            SELECT count(*) FROM diagnostic_attempts
+             WHERE status='completed' AND pdf_status IN ('pending', 'failed', 'sending')
+            """
+        ) or 0)
+
+
 async def purge_expired_erasure_tombstones() -> int:
     pool = await get_pool()
     async with pool.acquire() as connection:
@@ -1017,6 +1037,7 @@ async def purge_retained_diagnostic_data(
             )
             counts["deleted_bundles"] = int(status.rsplit(" ", 1)[-1])
             await offer_events.purge_offer_events(connection)
+            await funnel.purge_funnel_events(connection)
     return counts
 
 
@@ -1184,6 +1205,15 @@ async def notification_is_sent(notification_id: int) -> bool:
     async with pool.acquire() as connection:
         return bool(await connection.fetchval(
             "SELECT status='sent' FROM diagnostic_notifications WHERE id=$1",
+            notification_id,
+        ))
+
+
+async def notification_is_abandoned(notification_id: int) -> bool:
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        return bool(await connection.fetchval(
+            "SELECT status='abandoned' FROM diagnostic_notifications WHERE id=$1",
             notification_id,
         ))
 

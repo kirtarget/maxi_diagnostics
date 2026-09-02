@@ -648,6 +648,37 @@ def test_completion_only_enqueues_pdf_for_the_single_worker(monkeypatch):
     ]
 
 
+def test_completion_records_funnel_steps_without_a_telegram_identifier(monkeypatch):
+    from unittest.mock import AsyncMock
+    from diagnostic.api import sessions
+    from diagnostic.session_identity import session_subject_key
+
+    async def complete_attempt(completion):
+        return {
+            "attempt_id": completion.attempt_id,
+            "status": "completed",
+            "pdf_status": "pending",
+            "completed_transition": True,
+            "started_transition": True,
+        }
+
+    recorded = AsyncMock()
+    monkeypatch.setattr(sessions.funnel, "record_event", recorded)
+    client = make_client(monkeypatch, complete_attempt=complete_attempt)
+
+    response = client.post("/api/diagnostics/session/complete", json=base_completion())
+    secret = client.app.state.settings.application_secret
+
+    assert response.status_code == 200
+    assert [call.kwargs["action"] for call in recorded.await_args_list] == [
+        "started", "completed"
+    ]
+    for call in recorded.await_args_list:
+        assert call.kwargs["exam"] and call.kwargs["subject"]
+        assert session_subject_key(secret, call.kwargs["user_id"]) is not None
+        assert "init_data" not in call.kwargs
+
+
 def test_completion_accepts_the_server_expected_question_count(monkeypatch):
     async def complete_attempt(completion):
         return {

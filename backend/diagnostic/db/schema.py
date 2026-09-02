@@ -475,6 +475,33 @@ CREATE TABLE IF NOT EXISTS diagnostic_content_audit (
 CREATE INDEX IF NOT EXISTS idx_diagnostic_content_audit_diagnostic_created
     ON diagnostic_content_audit(diagnostic_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS diagnostic_funnel_events (
+    event_id BIGSERIAL PRIMARY KEY,
+    subject_hash TEXT NOT NULL,
+    action TEXT NOT NULL,
+    exam TEXT,
+    subject TEXT,
+    occurred_on DATE NOT NULL DEFAULT (now() AT TIME ZONE 'UTC')::date,
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT diagnostic_funnel_events_subject_hash_shape
+        CHECK (subject_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT diagnostic_funnel_events_action_check
+        CHECK (action IN (
+            'opened', 'started', 'completed', 'result_viewed',
+            'trainer_answered', 'offer_clicked'
+        )),
+    CONSTRAINT diagnostic_funnel_events_exam_length
+        CHECK (exam IS NULL OR length(exam) BETWEEN 1 AND 32),
+    CONSTRAINT diagnostic_funnel_events_subject_length
+        CHECK (subject IS NULL OR length(subject) BETWEEN 1 AND 128)
+);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_funnel_events_day_action
+    ON diagnostic_funnel_events(occurred_on, action);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_funnel_events_subject_day
+    ON diagnostic_funnel_events(subject_hash, occurred_on);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_funnel_events_retention
+    ON diagnostic_funnel_events(occurred_at);
+
 DO $$
 BEGIN
     IF NOT EXISTS (

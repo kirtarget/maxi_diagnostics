@@ -21,6 +21,7 @@ def make_client(monkeypatch) -> TestClient:
     from diagnostic.api.main import create_app
 
     monkeypatch.setattr(router.repository, "get_summary", AsyncMock(return_value={"attempts": 3, "completed": 2, "pending_pdfs": 1, "due_notifications": 1}))
+    monkeypatch.setattr(router.repository, "get_funnel", AsyncMock(return_value={"days": 7, "exam": None, "subject": None, "summary": {}, "breakdown": []}))
     monkeypatch.setattr(router.repository, "list_attempts", AsyncMock(return_value=(0, [])))
     monkeypatch.setattr(router.repository, "list_delivery_issues", AsyncMock(return_value=(0, [])))
     monkeypatch.setattr(router.repository, "list_notification_issues", AsyncMock(return_value=(0, [])))
@@ -41,6 +42,46 @@ def test_summary_is_diagnostic_only(monkeypatch):
     assert response.status_code == 200
     assert response.json() == {"attempts": 3, "completed": 2, "pending_pdfs": 1, "due_notifications": 1}
     router.repository.get_summary.assert_awaited_once()
+
+
+def test_funnel_api_passes_only_bounded_documented_windows(monkeypatch):
+    from diagnostic.admin import router
+
+    client = make_client(monkeypatch)
+    router.repository.get_funnel.return_value = {
+        "days": 30, "exam": "oge", "subject": "Математика",
+        "summary": {"subjects": 4, "opened": 4, "started": 3, "completed": 2,
+                    "result_viewed": 1, "trainer_answered": 1, "offer_clicked": 0,
+                    "returned_d1": 1, "returned_d7": 2},
+        "breakdown": [],
+    }
+
+    response = client.get(
+        "/api/admin/diagnostics/funnel?days=30&exam=oge&subject=Математика",
+        auth=ADMIN_AUTH,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["summary"]["completed"] == 2
+    router.repository.get_funnel.assert_awaited_once_with(
+        days=30, exam="oge", subject="Математика"
+    )
+    assert client.get("/api/admin/diagnostics/funnel?days=1", auth=ADMIN_AUTH).status_code == 422
+    assert client.get("/api/admin/diagnostics/funnel?days=90", auth=ADMIN_AUTH).status_code == 422
+    assert client.get(
+        "/api/admin/diagnostics/funnel?exam=" + "e" * 33, auth=ADMIN_AUTH
+    ).status_code == 422
+
+
+def test_funnel_page_is_served_in_the_shared_admin_shell(monkeypatch):
+    client = make_client(monkeypatch)
+
+    response = client.get("/admin/funnel", auth=ADMIN_AUTH)
+
+    assert response.status_code == 200
+    assert "/admin/static/funnel.js" in response.text
+    assert 'href="/admin/funnel"' in response.text
+    assert "https://cdn" not in response.text.lower()
 
 
 def test_attempt_api_allowlists_fields_and_omits_sensitive_payloads(monkeypatch):
@@ -192,7 +233,7 @@ def test_delete_user_requires_positive_id_json_confirmation_and_delete_method(mo
     from diagnostic.admin import router
 
     client = make_client(monkeypatch)
-    router.repository.delete_diagnostic_user.return_value = {"notifications": 2, "attempts": 1, "engagements": 1, "offer_events": 1}
+    router.repository.delete_diagnostic_user.return_value = {"notifications": 2, "attempts": 1, "engagements": 1, "offer_events": 1, "funnel_events": 3}
 
     response = client.request(
         "DELETE", "/api/admin/diagnostics/users", auth=ADMIN_AUTH,
@@ -200,7 +241,7 @@ def test_delete_user_requires_positive_id_json_confirmation_and_delete_method(mo
     )
 
     assert response.status_code == 200
-    assert response.json() == {"ok": True, "deleted": {"notifications": 2, "attempts": 1, "engagements": 1, "offer_events": 1}}
+    assert response.json() == {"ok": True, "deleted": {"notifications": 2, "attempts": 1, "engagements": 1, "offer_events": 1, "funnel_events": 3}}
     call = router.repository.delete_diagnostic_user.await_args
     assert call.args[0] == 42
     assert len(call.args[1]) == 64
@@ -256,7 +297,7 @@ class _DeleteConnection:
         if normalized.startswith("INSERT INTO diagnostic_session_generations"):
             return "INSERT 0 1"
         table = normalized.split("FROM", 1)[1].strip().split()[0]
-        return {"diagnostic_erased_users": "DELETE 0", "diagnostic_notifications": "DELETE 2", "diagnostic_attempts": "DELETE 1", "diagnostic_engagements": "DELETE 1", "diagnostic_progress_events": "DELETE 1", "diagnostic_offer_events": "DELETE 1", "diagnostic_progress_profiles": "DELETE 1"}[table]
+        return {"diagnostic_erased_users": "DELETE 0", "diagnostic_notifications": "DELETE 2", "diagnostic_attempts": "DELETE 1", "diagnostic_engagements": "DELETE 1", "diagnostic_progress_events": "DELETE 1", "diagnostic_offer_events": "DELETE 1", "diagnostic_funnel_events": "DELETE 3", "diagnostic_progress_profiles": "DELETE 1"}[table]
 
 
 class _DeletePool:
@@ -276,7 +317,7 @@ async def test_delete_repository_is_atomic_parameterized_and_diagnostic_only(mon
 
     result = await repository.delete_diagnostic_user(42, "a" * 64, "b" * 32)
 
-    assert result == {"notifications": 2, "attempts": 1, "engagements": 1, "offer_events": 1}
+    assert result == {"notifications": 2, "attempts": 1, "engagements": 1, "offer_events": 1, "funnel_events": 3}
     assert connection.events == ["acquire:enter", "transaction:enter", "transaction:commit", "acquire:commit"]
     assert connection.queries[0][0].startswith("SELECT pg_advisory_xact_lock")
     assert connection.queries[1][0].startswith("DELETE FROM diagnostic_erased_users")
@@ -286,11 +327,12 @@ async def test_delete_repository_is_atomic_parameterized_and_diagnostic_only(mon
     delete_queries = connection.queries[4:]
     assert [query[0].split("FROM ")[1].split()[0] for query in delete_queries] == [
         "diagnostic_notifications", "diagnostic_attempts", "diagnostic_engagements",
-        "diagnostic_progress_events", "diagnostic_offer_events", "diagnostic_progress_profiles",
+        "diagnostic_progress_events", "diagnostic_offer_events", "diagnostic_funnel_events",
+        "diagnostic_progress_profiles",
     ]
     assert all(
         ("WHERE subject_hash=$1" in query and arguments == ("a" * 64,))
-        if "diagnostic_offer_events" in query
+        if "diagnostic_offer_events" in query or "diagnostic_funnel_events" in query
         else ("WHERE user_id=$1" in query and arguments == (42,))
         for query, arguments in delete_queries
     )

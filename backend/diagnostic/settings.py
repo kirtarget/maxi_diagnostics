@@ -207,6 +207,30 @@ def _retention_days(name: str, default: int, minimum: int, maximum: int) -> int:
     return value
 
 
+_LOG_LEVELS = frozenset({"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"})
+
+
+def _alert_chat_id() -> int | None:
+    """An empty value disables alerting; anything else must be a Telegram chat id."""
+    raw = os.getenv("ALERT_CHAT_ID", "").strip()
+    if not raw:
+        return None
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise RuntimeError("invalid_settings:ALERT_CHAT_ID") from exc
+    if value == 0 or str(value) != raw or abs(value) > 9_223_372_036_854_775_807:
+        raise RuntimeError("invalid_settings:ALERT_CHAT_ID")
+    return value
+
+
+def _log_level() -> str:
+    raw = os.getenv("LOG_LEVEL", "").strip() or "INFO"
+    if raw.upper() not in _LOG_LEVELS:
+        raise RuntimeError("invalid_settings:LOG_LEVEL")
+    return raw.upper()
+
+
 def _boolean_setting(name: str, default: bool) -> bool:
     raw = os.getenv(name, "true" if default else "false")
     if raw == "true":
@@ -230,6 +254,8 @@ class Settings:
     diagnostic_retention_days: int = 365
     in_progress_retention_days: int = 30
     bot_polling_enabled: bool = True
+    alert_chat_id: int | None = None
+    log_level: str = "INFO"
 
     @classmethod
     def from_env(cls, *, require_admin: bool = True) -> "Settings":
@@ -292,4 +318,6 @@ class Settings:
                 "IN_PROGRESS_RETENTION_DAYS", 30, 1, 365
             ),
             bot_polling_enabled=_boolean_setting("BOT_POLLING_ENABLED", True),
+            alert_chat_id=_alert_chat_id(),
+            log_level=_log_level(),
         )

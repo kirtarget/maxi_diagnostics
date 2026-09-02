@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from diagnostic.db.core import get_pool
-from diagnostic.db import content
+from diagnostic.db import content, funnel
 
 
 def _bounded(limit: int, offset: int) -> tuple[int, int]:
@@ -35,6 +35,10 @@ async def save_content_draft(**kwargs):
 
 async def record_content_action(**kwargs):
     return await content.record_action(**kwargs)
+
+
+async def get_funnel(*, days: int, exam: str | None, subject: str | None) -> dict:
+    return await funnel.funnel_report(days=days, exam=exam, subject=subject)
 
 
 async def get_summary() -> dict[str, int]:
@@ -192,6 +196,10 @@ async def delete_diagnostic_user(
                 "DELETE FROM diagnostic_offer_events WHERE subject_hash=$1",
                 session_subject_key,
             )
+            funnel_events = await connection.execute(
+                "DELETE FROM diagnostic_funnel_events WHERE subject_hash=$1",
+                session_subject_key,
+            )
             await connection.execute(
                 # Trainer sessions reference the profile with ON DELETE CASCADE.
                 # Deleting the profile here therefore erases trainer answers and
@@ -203,4 +211,5 @@ async def delete_diagnostic_user(
         "attempts": _delete_count(attempts),
         "engagements": _delete_count(engagements),
         "offer_events": _delete_count(offer_events),
+        "funnel_events": _delete_count(funnel_events),
     }
