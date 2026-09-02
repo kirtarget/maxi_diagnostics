@@ -309,6 +309,8 @@ def test_answer_returns_feedback_only_after_submission(monkeypatch):
     assert response.status_code == 200
     assert response.json()["correct_answer"] == "4"
     assert response.json()["explanation"]
+    assert response.json()["max_primary_score"] == 1
+    assert response.json()["earned_primary_score"] == 1
     assert submit.await_args.kwargs["public_feedback"]["correct_answer"] == "4"
 
 

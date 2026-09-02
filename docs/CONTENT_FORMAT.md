@@ -4,6 +4,13 @@ All files are UTF-8 strict JSON: duplicate keys, `NaN`, and `Infinity` are rejec
 Keep IDs stable after launch. Before completion, `correct` and `explanation` are
 server-only and excluded from bootstrap, TypeScript, HTML, and public assets.
 
+Original MAXIMUM tasks based on the current FIPI structure use the separate
+editorial workflow in [ORIGINAL_CONTENT_AUTHORING.md](ORIGINAL_CONTENT_AUTHORING.md).
+The 2026 position and score map is recorded in
+[FIPI_2026_CONTENT_MATRIX.md](FIPI_2026_CONTENT_MATRIX.md). Runtime JSON with
+`approval_status=draft` is only a review draft. It is not an expert-approved
+authoring package and must not be presented as approved content.
+
 ## Diagnostic file envelope
 
 `school/diagnostics/` contains only regular top-level `.json` files. Filenames use
@@ -25,6 +32,16 @@ differ only by case. Each file contains one object with every field below:
       "topic": "Arithmetic",
       "title": "Task 1",
       "prompt": "Enter two plus two.",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "approved",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
       "correct": ["4"]
     }
   ]
@@ -40,15 +57,56 @@ task parts; other control characters remain forbidden. Text cannot be blank.
 through the question count. Percentage accuracy is the only score unit, so
 `max_score` is exactly `100`.
 
+`max_primary_score` is a strict integer from 1 through 100 and defaults to `1`.
+The result keeps `accuracy_percent` as its score unit, but calculates that percentage
+from earned primary points divided by available primary points. A correct answer earns
+the whole `max_primary_score`; an incorrect or missing answer earns zero. Catalogs in
+which every task has the default value therefore keep their existing scores exactly.
+The Mini App displays primary-point labels only when `source.approval_status` is
+`approved`. The default value remains an internal scoring weight and must not be
+presented as a verified FIPI point value without approved attribution.
+
+## Question provenance
+
+`source` is optional and contains traceable, display-safe attribution:
+
+```json
+{
+  "provider": "fipi",
+  "official_year": 2026,
+  "approval_status": "approved",
+  "source_kind": "open_bank",
+  "source_url": "https://ege.fipi.ru/bank/questions.php?proj=...&qid=...",
+  "fipi_project_id": "...",
+  "fipi_question_id": "...",
+  "exam_position": "1",
+  "official_criteria_url": "https://doc.fipi.ru/ege/specification.pdf",
+  "rights_status": "link_only",
+  "verified_at": "2026-09-01"
+}
+```
+
+`approval_status` is `approved` or `draft`. `source_kind` is `open_bank`,
+`open_variant`, `demo`, `specification`, `commission_material`, or `original`.
+`rights_status` is `link_only`, `written_permission`, `licensed_copy`, or `original`.
+Every source URL must use HTTPS without embedded credentials. For provider `fipi`,
+URLs must use `fipi.ru` or one of its subdomains and rights cannot be `original`.
+Open-bank content remains link-only until written permission or a license is recorded.
+The Edcheck converter never reads the FIPI website. It only preserves source metadata
+and primary scores already present in the supplied export.
+
+The public catalog may include `max_primary_score` and `source`. It never includes
+`correct`, `explanation`, or learning material fields before completion.
+
 Every catalog string that can appear in a PDF must have glyphs in both bundled
 Liberation Sans regular and bold fonts. The required validator checks this before
 deployment. The bundled set covers the shipped Latin and Cyrillic examples; add and
 license an appropriate font before authoring content in another script.
 
-There are at most 20 diagnostics and 200 questions across the school; each diagnostic
-also has at most 200 questions. A question has at most 50 options/items. Each file is
-at most 1 MiB, all diagnostic files together at most 5 MiB, and the complete public
-bootstrap payload at most 2 MiB.
+There are at most 20 diagnostics and 200 questions in each diagnostic. A question has
+at most 50 options/items. Each file is at most 1 MiB and all diagnostic files together
+are at most 5 MiB. Bootstrap contains only diagnostic summaries. An authenticated
+diagnostic-detail response is at most 2 MiB.
 
 ## Answer-review boundary
 
@@ -57,7 +115,10 @@ bootstrap payload at most 2 MiB.
   the URL may point only to a canonical article in the MAXIMUM study book.
   - They are excluded from bootstrap and public assets.
 - After an authenticated completed attempt, the Mini App may receive display-only
-  `expected_answer` and resolved guidance for that attempt.
+  `expected_answer` and resolved guidance, plus `max_primary_score` and
+  `earned_primary_score` for that attempt.
+- A submitted trainer answer receives the same maximum and earned primary-point
+  values. An unsubmitted trainer question receives only its maximum and attribution.
 - A missing verified study-book text is shown as an explicit "разбор пока не
   добавлен" message; the system does not fabricate a general algorithm.
 - Existing attempts without `review_snapshot` remain legacy reports.

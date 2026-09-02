@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   buildCompletionPayload,
+  bootstrapResumeSummary,
   createProgressSaveQueue,
   loadReview,
   loadLocalSession,
@@ -14,6 +15,7 @@ import {
   updateMatchingAnswer,
   isConflictError,
   isValidNumericInput,
+  loadDiagnostic,
   updateNumericInputAnswer,
 } from "./api";
 import type {
@@ -92,6 +94,7 @@ const diagnostics: PublicDiagnostic[] = [{
       prompt: "Введите ответ",
     },
   ],
+  question_count: 4,
 }];
 const SESSION_SCOPE = "account-scope-1";
 
@@ -132,6 +135,7 @@ function bootstrapPayload({
   latestAttemptId?: string | null;
 } = {}): BootstrapResponse {
   return {
+    catalog_contract: 2,
     session_scope: SESSION_SCOPE,
     latest_attempt_id: latestAttemptId,
     school: {
@@ -164,6 +168,47 @@ function bootstrapPayload({
 }
 
 describe("diagnostic API payloads", () => {
+  it("selects resumable content from metadata without semantically validating offline answers", () => {
+    const storage = memoryStorage();
+    saveLocalSession("north-school", SESSION_SCOPE, {
+      ...validSession,
+      revision: 0,
+      answers: { unknown_question: "kept-until-content-loads" },
+    }, storage);
+
+    expect(bootstrapResumeSummary(bootstrapPayload(), storage)).toMatchObject({ id: "demo-math" });
+    expect(storage.getItem(storageKey("north-school", SESSION_SCOPE))).not.toBeNull();
+  });
+
+  it("loads exactly one versioned diagnostic within the bootstrap session", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({ diagnostic: diagnostics[0] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+
+    await expect(loadDiagnostic(
+      "signed-init-data", SESSION_SCOPE, "demo-math", "a".repeat(64), fetcher,
+    )).resolves.toEqual(diagnostics[0]);
+    expect(fetcher).toHaveBeenCalledWith("/api/diagnostics/catalog", expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({
+        init_data: "signed-init-data",
+        session_scope: SESSION_SCOPE,
+        diagnostic_id: "demo-math",
+        content_version: "a".repeat(64),
+      }),
+    }));
+  });
+
+  it("rejects diagnostic content that does not match the requested version", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      diagnostic: { ...diagnostics[0], content_version: "b".repeat(64) },
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+
+    await expect(loadDiagnostic(
+      "signed-init-data", SESSION_SCOPE, "demo-math", "a".repeat(64), fetcher,
+    )).rejects.toThrow("diagnostic_catalog_mismatch");
+  });
   it("recognizes a server conflict that requires a fresh bootstrap", () => {
     expect(isConflictError(new Error("diagnostic_api_409"))).toBe(true);
     expect(isConflictError(new Error("diagnostic_api_422"))).toBe(false);
@@ -247,6 +292,22 @@ describe("diagnostic API payloads", () => {
     expect(fetcher).toHaveBeenCalledTimes(3);
     expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({
       init_data: "signed-init-data",
+    });
+  });
+
+  it("requests a lives reminder with only authentication and session scope", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      ok: true, due_at: "2026-08-28T12:00:00+00:00",
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+
+    const { requestLivesReminder } = await import("./api");
+    await expect(requestLivesReminder("signed-init-data", "a".repeat(24), fetcher))
+      .resolves.toEqual({ ok: true, due_at: "2026-08-28T12:00:00+00:00" });
+
+    expect(String(fetcher.mock.calls[0][0])).toContain("/api/diagnostics/trainer/lives-reminder");
+    expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({
+      init_data: "signed-init-data",
+      session_scope: "a".repeat(24),
     });
   });
 

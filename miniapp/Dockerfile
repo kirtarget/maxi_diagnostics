@@ -12,7 +12,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 COPY --from=dependencies /app/miniapp/node_modules /app/miniapp/node_modules
 COPY miniapp /app/miniapp
-COPY school/brand.json /app/school/brand.json
+COPY school/brand.json school/links.json /app/school/
 COPY school/assets /app/school/assets
 WORKDIR /app/miniapp
 RUN npm run build

@@ -34,6 +34,8 @@ class ScoreResult(BaseModel):
     mode: Literal["quick", "full"]
     correct_count: int = Field(ge=0)
     question_count: int = Field(gt=0)
+    primary_score: int = Field(ge=0)
+    max_primary_score: int = Field(gt=0)
     score: int = Field(ge=0)
     max_score: int = Field(gt=0)
     score_unit: str
@@ -57,8 +59,14 @@ def score_answers(
         for question in questions
     }
     correct_count = sum(correct_by_question.values())
+    primary_score = sum(
+        question.max_primary_score
+        for question in questions
+        if correct_by_question[question.id]
+    )
+    max_primary_score = sum(question.max_primary_score for question in questions)
     score = math.floor(
-        (correct_count / len(questions)) * diagnostic.scoring.max_score + 0.5
+        (primary_score / max_primary_score) * diagnostic.scoring.max_score + 0.5
     )
     topics = _topic_scores(questions, correct_by_question)
     strong_topics = [item for item in topics if item.ratio >= 0.7]
@@ -68,6 +76,8 @@ def score_answers(
         mode=mode,
         correct_count=correct_count,
         question_count=len(questions),
+        primary_score=primary_score,
+        max_primary_score=max_primary_score,
         score=score,
         max_score=diagnostic.scoring.max_score,
         score_unit=diagnostic.scoring.score_unit,
@@ -102,17 +112,22 @@ def _topic_scores(
 ) -> list[TopicScore]:
     totals: dict[str, list[int]] = {}
     for question in questions:
-        correct, total = totals.setdefault(question.topic, [0, 0])
+        correct, total, earned, maximum = totals.setdefault(
+            question.topic, [0, 0, 0, 0]
+        )
+        is_correct = correct_by_question[question.id]
         totals[question.topic] = [
-            correct + int(correct_by_question[question.id]),
+            correct + int(is_correct),
             total + 1,
+            earned + (question.max_primary_score if is_correct else 0),
+            maximum + question.max_primary_score,
         ]
     return [
         TopicScore(
             topic=topic,
             correct_count=correct,
             question_count=total,
-            ratio=correct / total,
+            ratio=earned / maximum,
         )
-        for topic, (correct, total) in totals.items()
+        for topic, (correct, total, earned, maximum) in totals.items()
     ]

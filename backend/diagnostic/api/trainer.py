@@ -10,7 +10,6 @@ from fastapi import APIRouter, HTTPException, Request
 from diagnostic.catalog import (
     DiagnosticCatalog,
     InputQuestion,
-    MatchingQuestion,
     MultipleQuestion,
     SingleQuestion,
     public_question,
@@ -22,7 +21,12 @@ from diagnostic.review import fallback_guidance, format_answer
 from diagnostic.scoring import is_answer_correct
 
 from .dependencies import telegram_user
-from .models import TrainerAnswerRequest, TrainerFinishRequest, TrainerStartRequest
+from .models import (
+    TrainerAnswerRequest,
+    TrainerFinishRequest,
+    TrainerLivesReminderRequest,
+    TrainerStartRequest,
+)
 from .sessions import _require_current_session
 
 
@@ -177,11 +181,13 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
         ]
         if not selected:
             raise HTTPException(status_code=409, detail="trainer_content_changed")
+        profile_payload = serialize_gameplay_profile(profile)
         return {
             "ok": True,
             **session,
             "questions": [public_question(question) for question in selected],
-            "lives_remaining": serialize_gameplay_profile(profile)["lives_remaining"],
+            "lives_remaining": profile_payload["lives_remaining"],
+            "next_life_at": profile_payload["next_life_at"],
         }
 
     @router.post("/trainer/answer")
@@ -217,7 +223,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
             "explanation": explanation[:4000],
         }
         try:
-            return await trainer.answer_question(
+            result = await trainer.answer_question(
                 session_id=body.trainer_session_id,
                 user_id=user["id"],
                 question_id=body.question_id,
@@ -229,8 +235,28 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
                 public_feedback=feedback,
                 timezone_name=request.app.state.settings.timezone,
             )
+            is_correct = bool(result.get("is_correct"))
+            return {
+                **result,
+                "max_primary_score": question.max_primary_score,
+                "earned_primary_score": (
+                    question.max_primary_score if is_correct else 0
+                ),
+            }
         except ValueError as exc:
             raise _error(exc) from exc
+
+    @router.post("/trainer/lives-reminder")
+    async def lives_reminder(
+        body: TrainerLivesReminderRequest, request: Request
+    ) -> dict[str, Any]:
+        user = telegram_user(request, body.init_data)
+        await _require_current_session(request, user["id"], body.session_scope)
+        try:
+            due_at = await trainer.schedule_lives_refill_reminder(user["id"])
+        except ValueError as exc:
+            raise _error(exc) from exc
+        return {"ok": True, "due_at": due_at}
 
     @router.post("/trainer/finish")
     async def finish(body: TrainerFinishRequest, request: Request) -> dict[str, Any]:

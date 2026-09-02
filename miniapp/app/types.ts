@@ -6,12 +6,28 @@ export type QuestionOption = {
   label: string;
 };
 
+export type QuestionSourceAttribution = {
+  provider: string;
+  official_year: number;
+  approval_status: "approved" | "draft";
+  source_kind: "open_bank" | "open_variant" | "demo" | "specification" | "commission_material" | "original";
+  source_url: string;
+  fipi_project_id?: string;
+  fipi_question_id?: string;
+  exam_position?: string;
+  official_criteria_url?: string;
+  rights_status: "link_only" | "written_permission" | "licensed_copy" | "original";
+  verified_at: string;
+};
+
 type BaseQuestion = {
   id: string;
   type: QuestionType;
   topic: string;
   title: string;
   prompt: string;
+  max_primary_score?: number;
+  source?: QuestionSourceAttribution;
   asset?: string;
   assets?: string[];
 };
@@ -46,13 +62,17 @@ export type Question =
 export type AnswerValue = string | string[] | Record<string, string>;
 export type AnswerMap = Record<string, AnswerValue>;
 
-export type PublicDiagnostic = {
+export type PublicDiagnosticSummary = {
   id: string;
   content_version: string;
   exam: string;
   subject: string;
   mark: string;
   quick_count: number;
+  question_count: number;
+};
+
+export type PublicDiagnostic = PublicDiagnosticSummary & {
   questions: Question[];
 };
 
@@ -189,18 +209,20 @@ export type GameplayProfile = {
   level_progress: number;
   streak_days: number;
   lives_remaining: number;
+  next_life_at?: string | null;
   daily_goal: GameplayDailyGoal;
   quest: GameplayQuest | null;
 };
 
 export type BootstrapResponse = {
+  catalog_contract: 2;
   session_scope: string;
   latest_attempt_id: string | null;
   school: {
     brand: Brand;
     links: SchoolLinks;
   };
-  diagnostics: PublicDiagnostic[];
+  diagnostics: PublicDiagnosticSummary[];
   progress_profile?: ProgressProfile;
   gameplay_profile?: GameplayProfile;
   attempt: ServerAttempt | null;
@@ -228,6 +250,9 @@ export type ReviewItem = {
   guidance: string;
   guidance_kind: "individual" | "fallback";
   learning_material_text?: string | null;
+  max_primary_score?: number;
+  earned_primary_score?: number;
+  source?: QuestionSourceAttribution;
 };
 
 export type ReviewResponse = {

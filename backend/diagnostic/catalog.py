@@ -7,6 +7,7 @@ import hmac
 import json
 import re
 import unicodedata
+from datetime import date
 from typing import Annotated, Any, Literal
 from urllib.parse import urlsplit
 
@@ -28,7 +29,6 @@ _MAX_TOTAL_CATALOG_BYTES = 5 * 1024 * 1024
 _MAX_PUBLIC_PAYLOAD_BYTES = 2 * 1024 * 1024
 _MAX_DIAGNOSTICS = 20
 _MAX_QUESTIONS = 200
-_MAX_TOTAL_QUESTIONS = 200
 _MAX_OPTIONS = 50
 _BROAD_QUESTION_TOPICS = frozenset(
     {
@@ -100,6 +100,84 @@ class QuestionOption(BaseModel):
         return _validate_display_text(value)
 
 
+class QuestionSource(BaseModel):
+    """Traceable provenance without private answer or editorial content."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str = Field(min_length=1, max_length=64, pattern=_ID_PATTERN)
+    official_year: int = Field(ge=2000, le=2100, strict=True)
+    approval_status: Literal["approved", "draft"]
+    source_kind: Literal[
+        "open_bank",
+        "open_variant",
+        "demo",
+        "specification",
+        "commission_material",
+        "original",
+    ]
+    source_url: str = Field(min_length=1, max_length=2048)
+    fipi_project_id: str | None = Field(default=None, min_length=1, max_length=128)
+    fipi_question_id: str | None = Field(default=None, min_length=1, max_length=128)
+    exam_position: str | None = Field(default=None, min_length=1, max_length=64)
+    official_criteria_url: str | None = Field(default=None, min_length=1, max_length=2048)
+    rights_status: Literal[
+        "link_only", "written_permission", "licensed_copy", "original"
+    ]
+    verified_at: date
+
+    @field_validator("provider")
+    @classmethod
+    def validate_provider(cls, value: str) -> str:
+        if _ID_FULLMATCH.fullmatch(value) is None:
+            raise ValueError("invalid_identifier")
+        return value
+
+    @field_validator("fipi_project_id", "fipi_question_id", "exam_position")
+    @classmethod
+    def validate_optional_text(cls, value: str | None) -> str | None:
+        return None if value is None else _validate_display_text(value)
+
+    @model_validator(mode="after")
+    def validate_urls_and_fipi_rights(self) -> "QuestionSource":
+        urls = (self.source_url, self.official_criteria_url)
+        if any(url is not None and not _is_safe_https_url(url) for url in urls):
+            raise ValueError("invalid_source_url")
+        if self.provider.casefold() == "fipi":
+            if self.rights_status == "original" or any(
+                url is not None and not _is_fipi_url(url) for url in urls
+            ):
+                raise ValueError("invalid_fipi_source")
+        return self
+
+
+def _is_safe_https_url(value: str) -> bool:
+    if any(unicodedata.category(character).startswith("C") for character in value):
+        return False
+    try:
+        parsed = urlsplit(value)
+        hostname = parsed.hostname
+        port = parsed.port
+    except ValueError:
+        return False
+    return bool(
+        parsed.scheme == "https"
+        and hostname
+        and port in {None, 443}
+        and parsed.username is None
+        and parsed.password is None
+    )
+
+
+def _is_fipi_url(value: str) -> bool:
+    if not _is_safe_https_url(value):
+        return False
+    hostname = (urlsplit(value).hostname or "").casefold()
+    return (
+        hostname == "fipi.ru" or hostname.endswith(".fipi.ru")
+    )
+
+
 class QuestionBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -108,6 +186,8 @@ class QuestionBase(BaseModel):
     topic: str = Field(min_length=1, max_length=128)
     title: str = Field(min_length=1, max_length=128)
     prompt: str = Field(min_length=1, max_length=4000)
+    max_primary_score: int = Field(default=1, ge=1, le=100, strict=True)
+    source: QuestionSource | None = None
     explanation: str | None = Field(default=None, min_length=1, max_length=2000)
     learning_material_text: str | None = Field(default=None, min_length=1, max_length=1200)
     learning_material_url: str | None = Field(default=None, max_length=255)
@@ -314,6 +394,7 @@ def _public_diagnostic(diagnostic: Diagnostic, content_version: str) -> dict[str
     return {
         **diagnostic.model_dump(exclude={"questions", "scoring"}, mode="json"),
         "content_version": content_version,
+        "question_count": len(diagnostic.questions),
         "questions": [
             {
                 key: value
@@ -340,18 +421,10 @@ class DiagnosticCatalog(BaseModel):
         diagnostic_ids = [diagnostic.id for diagnostic in self.diagnostics]
         if len(set(diagnostic_ids)) != len(diagnostic_ids):
             raise ValueError("duplicate_diagnostic_id")
-        if sum(len(diagnostic.questions) for diagnostic in self.diagnostics) > _MAX_TOTAL_QUESTIONS:
-            raise ValueError("too_many_total_questions")
-        preview = {
-            "diagnostics": [
-                _public_diagnostic(diagnostic, "0" * 64)
-                for diagnostic in self.diagnostics
-            ]
-        }
-        encoded = json.dumps(
-            preview, ensure_ascii=False, separators=(",", ":")
-        ).encode("utf-8")
-        if len(encoded) > _MAX_PUBLIC_PAYLOAD_BYTES:
+        if any(
+            _public_response_size(diagnostic) > _MAX_PUBLIC_PAYLOAD_BYTES
+            for diagnostic in self.diagnostics
+        ):
             raise ValueError("catalog_public_payload_too_large")
         return self
 
@@ -371,15 +444,21 @@ class DiagnosticCatalog(BaseModel):
             return diagnostic.questions
         raise ValueError("invalid_mode")
 
-    def public_payload(self, version_secret: str) -> dict[str, Any]:
-        return {
-            "diagnostics": [
-                _public_diagnostic(
-                    diagnostic, self.content_version(diagnostic.id, version_secret)
-                )
-                for diagnostic in self.diagnostics
-            ]
-        }
+    def public_summaries(self, version_secret: str) -> list[dict[str, Any]]:
+        return [
+            _public_summary(
+                diagnostic, self.content_version(diagnostic.id, version_secret)
+            )
+            for diagnostic in self.diagnostics
+        ]
+
+    def public_diagnostic(
+        self, diagnostic_id: str, version_secret: str
+    ) -> dict[str, Any]:
+        diagnostic = self.get(diagnostic_id)
+        return _public_diagnostic(
+            diagnostic, self.content_version(diagnostic.id, version_secret)
+        )
 
     def content_version(self, diagnostic_id: str, version_secret: str) -> str:
         diagnostic = self.get(diagnostic_id)
@@ -411,6 +490,25 @@ def public_question(question: Question) -> dict[str, Any]:
             "correct", "explanation", "learning_material_text", "learning_material_url"
         }
     }
+
+
+def _public_summary(diagnostic: Diagnostic, content_version: str) -> dict[str, Any]:
+    return {
+        "id": diagnostic.id,
+        "content_version": content_version,
+        "exam": diagnostic.exam,
+        "subject": diagnostic.subject,
+        "mark": diagnostic.mark,
+        "quick_count": diagnostic.quick_count,
+        "question_count": len(diagnostic.questions),
+    }
+
+
+def _public_response_size(diagnostic: Diagnostic) -> int:
+    preview = {"diagnostic": _public_diagnostic(diagnostic, "0" * 64)}
+    return len(
+        json.dumps(preview, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    )
 
 
 def _validate_catalog_filenames(names: list[str]) -> None:

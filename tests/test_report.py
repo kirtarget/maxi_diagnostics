@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
-from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 from pypdf import PdfReader

@@ -220,7 +220,6 @@ def validate_repository(root: Path) -> tuple[list[str], dict[str, int | str]]:
             detail = str(exc)
             known_reasons = (
                 "duplicate_diagnostic_id",
-                "too_many_total_questions",
                 "catalog_public_payload_too_large",
             )
             reason = next((item for item in known_reasons if item in detail), "catalog_invalid")

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 from typing import Any, Mapping
@@ -46,9 +46,11 @@ def _session_payload(row: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _answer_payload(
-    answer_row: Mapping[str, Any], session_row: Mapping[str, Any], profile: Mapping[str, Any]
+    answer_row: Mapping[str, Any], session_row: Mapping[str, Any], profile: Mapping[str, Any],
+    *, now: datetime | None = None,
 ) -> dict[str, Any]:
     feedback = answer_row["public_feedback"] or {}
+    profile_payload = gameplay.serialize_gameplay_profile(profile, now=now)
     return {
         "ok": True,
         "trainer_session_id": session_row["session_id"],
@@ -61,7 +63,8 @@ def _answer_payload(
         "current_index": int(session_row["current_index"]),
         "revision": int(session_row["revision"]),
         "status": session_row["status"],
-        "lives_remaining": int(profile["lives_remaining"]),
+        "lives_remaining": profile_payload["lives_remaining"],
+        "next_life_at": profile_payload["next_life_at"],
     }
 
 
@@ -486,3 +489,32 @@ async def finish_session(*, session_id: str, user_id: int, revision: int) -> dic
         "lives_spent": int(stats["lives_spent"]),
         "lives_remaining": int(profile["lives_remaining"]),
     }
+
+
+async def schedule_lives_refill_reminder(
+    user_id: int, *, now: datetime | None = None
+) -> str | None:
+    """Queue one Telegram reminder for when the next trainer life arrives."""
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        async with connection.transaction():
+            await connection.execute("SELECT pg_advisory_xact_lock($1)", user_id)
+            await _raise_if_erased(connection, user_id)
+            profile = await gameplay.get_reconciled_profile(connection, user_id, now=now)
+            anchor = profile["lives_refill_at"]
+            if int(profile["lives_remaining"]) >= 5 or anchor is None:
+                return None
+            if anchor.tzinfo is None:
+                anchor = anchor.replace(tzinfo=timezone.utc)
+            due_at = anchor + timedelta(hours=4)
+            await connection.execute(
+                """
+                INSERT INTO diagnostic_notifications (dedupe_key, user_id, kind, due_at)
+                VALUES ('lives_refill:' || $1::bigint::text, $1, 'lives_refill', $2)
+                ON CONFLICT (dedupe_key) DO UPDATE SET
+                    due_at=EXCLUDED.due_at, status='pending', locked_at=NULL,
+                    last_error=NULL, updated_at=now()
+                """,
+                user_id, due_at,
+            )
+            return due_at.isoformat()

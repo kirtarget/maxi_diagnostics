@@ -26,6 +26,7 @@ _MESSAGE_KEYS: Final[dict[str, str]] = {
     "day_followup": "DAY_FOLLOWUP",
     "quick_to_full": "QUICK_TO_FULL",
     "month_retest": "MONTH_RETEST",
+    "lives_refill": "LIVES_REFILL",
 }
 
 
@@ -42,6 +43,8 @@ def _eligible(row: Mapping[str, Any]) -> bool:
     status = _value(row, "attempt_status")
     if kind == "not_started":
         return _value(row, "attempt_id") is None
+    if kind == "lives_refill":
+        return True
     if kind == "incomplete":
         return status == "in_progress"
     if status != "completed":
@@ -56,7 +59,7 @@ def _eligible(row: Mapping[str, Any]) -> bool:
 def _keyboard(row: Mapping[str, Any], settings: Settings, school: SchoolConfig):
     kind = str(_value(row, "kind", ""))
     user_id = int(_value(row, "user_id"))
-    if kind in {"not_started", "incomplete", "quick_to_full", "month_retest"}:
+    if kind in {"not_started", "incomplete", "quick_to_full", "month_retest", "lives_refill"}:
         label = (
             school.brand.interface.take_full_diagnostic
             if kind == "quick_to_full"

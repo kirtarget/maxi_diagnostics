@@ -1194,11 +1194,6 @@ select:focus-visible,
   font-weight: 700;
 }
 
-.question-meta span:last-child {
-  color: var(--brand-primary);
-  background: var(--primary-tint);
-}
-
 .question-copy { display: flex; flex-direction: column; gap: 10px; }
 
 .question-screen h1,
@@ -2062,13 +2057,32 @@ select:focus-visible,
   flex-wrap: wrap;
 }
 
-.review-heading > span:last-child {
+.review-heading > span:not(.mistake-status):not(.primary-score-badge) {
   padding: 5px 10px;
   border-radius: 9px;
   color: var(--ink);
   background: var(--accent-tint);
   font-size: 12px;
   font-weight: 700;
+}
+
+.primary-score-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 9px;
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 58%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-accent) 14%, white);
+  color: color-mix(in srgb, var(--brand-ink) 76%, var(--brand-accent));
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.question-meta .primary-score-badge {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-accent) 14%, white);
 }
 
 .mistake-status {
@@ -2416,7 +2430,14 @@ select:focus-visible,
   gap: 6px;
 }
 
-.trainer-prompt > span {
+.trainer-prompt-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.trainer-prompt-meta > span:first-child {
   display: inline-flex;
   align-self: flex-start;
   padding: 5px 10px;
@@ -2456,6 +2477,12 @@ select:focus-visible,
   color: var(--brand-accent);
   font-size: 19px;
   font-weight: 800;
+}
+
+.trainer-feedback .primary-score-badge {
+  align-self: flex-start;
+  color: var(--brand-ink);
+  background: var(--brand-accent);
 }
 
 .trainer-feedback strong::before {
@@ -2506,6 +2533,97 @@ select:focus-visible,
   font-size: 13px;
   font-weight: 600;
 }
+
+.forecast-empty-screen .text-back { align-self: flex-start; }
+
+.forecast-empty-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.forecast-empty-dot {
+  width: 34px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--brand-ink) 12%, white);
+}
+
+.forecast-empty-dot.is-done { background: var(--brand-primary); }
+
+.forecast-empty-progress small {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.no-lives-screen .lives-row {
+  font-size: 34px;
+  letter-spacing: 4px;
+  color: color-mix(in srgb, var(--brand-ink) 12%, white);
+}
+
+.no-lives-screen .lives-row-lost { color: var(--brand-signal); }
+
+.no-lives-screen p b { color: var(--brand-ink); }
+
+.lives-recovery {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 18px;
+  border: 1.5px solid var(--line);
+  border-radius: 18px;
+  background: var(--brand-paper);
+  margin-top: 10px;
+}
+
+.lives-recovery-icon { font-size: 22px; }
+
+.lives-recovery-track { flex: 1; text-align: left; }
+
+.lives-recovery-track strong { font-size: 13px; font-weight: 700; }
+
+.lives-recovery-rail {
+  height: 7px;
+  margin-top: 6px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--brand-ink) 10%, var(--brand-background));
+  overflow: hidden;
+}
+
+.lives-recovery-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--brand-signal);
+  transition: width 1s linear;
+}
+
+.lives-recovery-timer {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--brand-signal);
+  font-variant-numeric: tabular-nums;
+}
+
+.link-button {
+  border: 0;
+  background: none;
+  padding: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand-primary);
+  cursor: pointer;
+}
+
+.link-button:disabled { color: var(--muted); cursor: default; }
+
+.lives-reminder-note { font-size: 13px; font-weight: 600; }
 
 .trainer-complete {
   align-items: center;
@@ -2701,6 +2819,13 @@ select:focus-visible,
   border-radius: 18px;
   background: linear-gradient(100deg, color-mix(in srgb, var(--brand-accent) 16%, white), color-mix(in srgb, var(--brand-accent) 7%, white));
   color: var(--ink);
+}
+
+.offer-surface-forecast,
+.offer-surface-trainer_wrong,
+.offer-surface-trainer_no_lives {
+  width: 100%;
+  text-align: left;
 }
 
 .offer-surface-close {

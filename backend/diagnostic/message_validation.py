@@ -16,6 +16,7 @@ ALLOWED_PLACEHOLDERS = frozenset({
 })
 _KEY_PLACEHOLDERS = {
     "NOT_STARTED": ALLOWED_PLACEHOLDERS - {"subject", "mode"},
+    "LIVES_REFILL": ALLOWED_PLACEHOLDERS - {"subject", "mode"},
 }
 _ALLOWED_HTML_TAGS = frozenset({
     "b", "strong", "i", "em", "u", "ins", "s", "strike", "del", "code",

@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 
+import { FormattedMathText, FormattedStem } from "./math-display";
+import { normalizeOffer, OfferSurface, type OfferTelemetryEvent } from "./offer-ux";
+import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import { safeAssetPath } from "./question-assets";
 import { shouldShowResultMetrics } from "./result-display";
 import { pdfStatusCopy, resultGameSummary, topicRecommendation, type PdfStatusCopy, type PersonalRouteAction } from "./result-flow-model";
@@ -219,9 +222,10 @@ export function ReviewScreen({
       <div className="review-heading">
         <span className="mistake-status"><b aria-hidden="true">×</b> Неверно</span>
         <span>{item.topic}</span>
+        {hasApprovedPrimaryScore(item.source) && <PrimaryScoreBadge maxPrimaryScore={item.max_primary_score} earnedPrimaryScore={item.earned_primary_score} />}
       </div>
       <h1 id="review-title">{item.title}</h1>
-      <p className="review-prompt">{item.prompt}</p>
+      <p className="review-prompt"><FormattedStem text={item.prompt} /></p>
       {imagePaths.length > 0 && (
         <div className="review-media">
           {imagePaths.map((path, imageIndex) => (
@@ -234,11 +238,11 @@ export function ReviewScreen({
       <dl className="answer-review">
         <div className="answer-review-user">
           <dt>Ваш ответ</dt>
-          <dd>{item.user_answer}</dd>
+          <dd><FormattedMathText text={item.user_answer} /></dd>
         </div>
         <div className="answer-review-expected">
           <dt>Правильный ответ</dt>
-          <dd>{item.expected_answer}</dd>
+          <dd><FormattedMathText text={item.expected_answer} /></dd>
         </div>
       </dl>
       <section className="guidance" aria-labelledby="guidance-title">
@@ -253,8 +257,42 @@ export function ReviewScreen({
   );
 }
 
-export function ForecastScreen({ points, onBack, onRoute }: {
+export function ForecastEmptyScreen({ completedCount, onBack, onStart }: {
+  completedCount: number;
+  onBack: () => void;
+  onStart: () => void;
+}): ReactNode {
+  const done = Math.min(Math.max(completedCount, 0), 2);
+  return (
+    <section className="screen centered-state forecast-empty-screen" aria-labelledby="forecast-empty-title">
+      <button className="text-back" onClick={onBack} type="button">Назад</button>
+      <span className="state-icon" aria-hidden="true">📈</span>
+      <h1 id="forecast-empty-title">Пока мало данных</h1>
+      <p>Прогноз появится после 2 диагностик. Сейчас у тебя {done === 1 ? "одна" : String(done)} — пройди ещё, и посчитаем траекторию.</p>
+      <div className="forecast-empty-progress" aria-label={`Диагностик пройдено: ${done} из 2`}>
+        <span className={`forecast-empty-dot${done >= 1 ? " is-done" : ""}`} aria-hidden="true" />
+        <span className={`forecast-empty-dot${done >= 2 ? " is-done" : ""}`} aria-hidden="true" />
+        <small>{done} из 2</small>
+      </div>
+      <button className="primary-button" onClick={onStart} type="button">Пройти диагностику <span aria-hidden="true">→</span></button>
+    </section>
+  );
+}
+
+export function ForecastScreen({
+  points,
+  offers = [],
+  offerDismissed = false,
+  onOfferDismiss,
+  onOfferEvent,
+  onBack,
+  onRoute,
+}: {
   points: ForecastPoint[];
+  offers?: SchoolLinks["offers"];
+  offerDismissed?: boolean;
+  onOfferDismiss?: () => void;
+  onOfferEvent?: (event: OfferTelemetryEvent) => void;
   onBack: () => void;
   onRoute: () => void;
 }): ReactNode {
@@ -263,6 +301,7 @@ export function ForecastScreen({ points, onBack, onRoute }: {
   const ariaLabel = points.length > 0
     ? `Ориентир по результату: ${points.map((point) => `${point.label} — ${point.value}`).join(", ")}`
     : "Ориентир по результату пока без числовых точек";
+  const offer = normalizeOffer(offers[0] ?? {});
   return (
     <section className="screen forecast-screen radar-screen" aria-labelledby="forecast-title">
       <button className="text-back" onClick={onBack} type="button">Назад</button>
@@ -287,6 +326,14 @@ export function ForecastScreen({ points, onBack, onRoute }: {
       </div>
       {next && <p className="forecast-explainer">Это ориентир на основе среднего прироста, а не личная гарантия. Он достижим при системной подготовке по вашему маршруту.</p>}
       {points.length === 0 && <p className="forecast-empty">Пока нет числового ориентира. Откройте маршрут: он уже собран по вашим темам.</p>}
+      {offer && !offerDismissed && (
+        <OfferSurface
+          offer={offer}
+          placement="forecast"
+          onClose={() => onOfferDismiss?.()}
+          onEvent={onOfferEvent}
+        />
+      )}
       <button className="primary-button" onClick={onRoute} type="button">Открыть маршрут <span aria-hidden="true">→</span></button>
     </section>
   );

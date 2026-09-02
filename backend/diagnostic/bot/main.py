@@ -13,7 +13,7 @@ from aiogram.types import BotCommand
 from diagnostic.catalog import load_catalog
 from diagnostic.db.core import close_db, init_db
 from diagnostic.db.attempts import store_report_asset_bundle
-from diagnostic.api.sessions import prepare_report_assets
+from diagnostic.api.sessions import prepare_report_asset_bundles
 from diagnostic.school import SchoolConfig, load_school
 from diagnostic.settings import Settings
 from diagnostic.worker import build_worker_scheduler
@@ -79,8 +79,14 @@ async def main() -> None:
 
     try:
         await init_db(settings.database_url, school)
-        bundle_id, bundle = prepare_report_assets(school, catalog)
-        await store_report_asset_bundle(bundle_id, bundle)
+        stored_bundle_ids: set[str] = set()
+        for bundle_id, payload in prepare_report_asset_bundles(
+            school, catalog
+        ).values():
+            if bundle_id in stored_bundle_ids:
+                continue
+            await store_report_asset_bundle(bundle_id, payload)
+            stored_bundle_ids.add(bundle_id)
         bot = Bot(token=settings.bot_token)
         dispatcher = None
         if settings.bot_polling_enabled:

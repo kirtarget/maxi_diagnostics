@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-export type OfferPlacement = "home" | "diagnostic_result" | "trainer";
+export type OfferPlacement = "home" | "diagnostic_result" | "trainer" | "trainer_wrong" | "trainer_no_lives" | "forecast";
 export type OfferEventAction = "impression" | "click" | "dismiss";
 
 export type ConfiguredOffer = {
@@ -31,6 +31,12 @@ export type OfferTelemetryEvent = {
   placement: OfferPlacement;
   action: OfferEventAction;
 };
+
+export type OfferDismissalState = Partial<Record<OfferPlacement, boolean>>;
+
+export function dismissOffer(state: OfferDismissalState, placement: OfferPlacement): OfferDismissalState {
+  return { ...state, [placement]: true };
+}
 
 function eventId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {

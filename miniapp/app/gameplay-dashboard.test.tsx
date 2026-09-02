@@ -12,7 +12,7 @@ describe("gameplay dashboard", () => {
     subject: "Математика",
     mark: "М",
     quick_count: 3,
-    questions: [],
+    question_count: 12,
   }];
 
   it("renders server-owned XP, streak, lives, daily goal, and quest", () => {

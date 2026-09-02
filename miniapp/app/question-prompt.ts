@@ -1,3 +1,7 @@
+import { parseSequenceMatchingPrompt } from "./sequence-matching";
+import { parseTableGapPrompt } from "./table-gap-matching";
+import type { Question } from "./types";
+
 export type PromptBlock =
   | { kind: "stem" | "heading" | "instruction" | "paragraph"; text: string }
   | { kind: "item"; marker: string; text: string };
@@ -35,6 +39,15 @@ export function parseQuestionPrompt(prompt: string): PromptBlock[] {
 export function cleanAnswerLabel(label: string): string {
   const cleaned = label.replace(/^\s*(?:[А-ЯЁA-Z]|\d{1,2})\)\s*/u, "").trim();
   return cleaned || label;
+}
+
+export function answerTypeLabel(question: Question): string {
+  if (question.type === "single") return "один ответ";
+  if (question.type === "multiple") return "несколько ответов";
+  if (question.type === "matching") return "сопоставление";
+  if (parseTableGapPrompt(question.prompt)) return "таблица с пропусками";
+  if (parseSequenceMatchingPrompt(question.prompt)) return "сопоставление";
+  return "короткий ответ";
 }
 
 export function questionTitleClassName(text: string): string {

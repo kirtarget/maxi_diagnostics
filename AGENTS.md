@@ -167,10 +167,12 @@ py -3.11 -m venv .venv
 ```text
 python scripts/validate_school.py
 python scripts/check_brand_isolation.py --history
+python -m ruff check backend scripts tests
 python -m pytest -q
 cd miniapp
 npm ci
 npm run test:unit
+npm run typecheck
 npm run build
 npm test
 cd ..

@@ -15,7 +15,6 @@ from diagnostic.catalog import (
     Diagnostic,
     DiagnosticCatalog,
     InputQuestion,
-    MatchingQuestion,
     MultipleQuestion,
     SingleQuestion,
 )
@@ -34,7 +33,9 @@ from diagnostic.session_identity import (
 )
 
 from .dependencies import telegram_user
-from .models import ApiRequest, CompletionRequest, ProgressRequest, SessionRequest
+from .models import (
+    ApiRequest, CatalogRequest, CompletionRequest, ProgressRequest, SessionRequest,
+)
 
 
 def build_completion(
@@ -142,16 +143,14 @@ def _build_report_assets(
     return payload
 
 
-def prepare_report_assets(
+def prepare_report_asset_bundles(
     school: SchoolConfig, catalog: DiagnosticCatalog
-) -> tuple[str, bytes]:
-    questions = tuple(
-        question
-        for diagnostic in catalog.diagnostics
-        for question in diagnostic.questions
-    )
-    payload = _build_report_assets(school, questions)
-    return hashlib.sha256(payload).hexdigest(), payload
+) -> dict[str, tuple[str, bytes]]:
+    bundles: dict[str, tuple[str, bytes]] = {}
+    for diagnostic in catalog.diagnostics:
+        payload = _build_report_assets(school, diagnostic.questions)
+        bundles[diagnostic.id] = (hashlib.sha256(payload).hexdigest(), payload)
+    return bundles
 
 
 def serialize_attempt(row: Mapping[str, Any] | None) -> dict[str, Any] | None:
@@ -324,6 +323,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
             session_subject_key(secret, user["id"])
         )
         return {
+            "catalog_contract": 2,
             "session_scope": _session_scope(
                 secret, user["id"], generation
             ),
@@ -331,12 +331,28 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
             "progress_profile": serialize_progress_profile(progress_profile),
             "gameplay_profile": serialize_gameplay_profile(gameplay_profile),
             "school": public_school_payload(school),
-            "diagnostics": catalog.public_payload(
-                request.app.state.settings.application_secret
-            )["diagnostics"],
+            "diagnostics": catalog.public_summaries(secret),
             "attempt": serialize_attempt(resumable),
             "results": [serialize_attempt(row) for row in completed],
         }
+
+    @router.post("/catalog")
+    async def catalog_detail(body: CatalogRequest, request: Request) -> dict[str, Any]:
+        user = telegram_user(request, body.init_data)
+        await _require_current_session(request, user["id"], body.session_scope)
+        try:
+            diagnostic = catalog.get(body.diagnostic_id)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=404, detail="diagnostic_not_found"
+            ) from exc
+        secret = request.app.state.settings.application_secret
+        current_version = catalog.content_version(diagnostic.id, secret)
+        if not hmac.compare_digest(body.content_version, current_version):
+            raise HTTPException(
+                status_code=409, detail="diagnostic_content_changed"
+            )
+        return {"diagnostic": catalog.public_diagnostic(diagnostic.id, secret)}
 
     @router.post("/session/progress")
     async def progress(
@@ -449,7 +465,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
                 diagnostic,
                 result,
                 request.app.state.school,
-                request.app.state.report_asset_bundle_id,
+                request.app.state.report_asset_bundles[diagnostic.id][0],
                 request.app.state.settings.timezone,
             )
             row = await attempts.complete_attempt(completion)

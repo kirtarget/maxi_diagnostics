@@ -45,6 +45,56 @@ def test_lives_refill_is_pure_and_caps_at_five():
     ) == (5, None)
 
 
+def test_serializer_reports_next_life_at_from_refill_anchor():
+    refill_at = datetime(2026, 8, 25, 8, tzinfo=timezone.utc)
+    payload = gameplay.serialize_gameplay_profile(
+        {"lives_remaining": 2, "lives_refill_at": refill_at},
+        now=refill_at + timedelta(minutes=30),
+    )
+    assert payload["lives_remaining"] == 2
+    assert payload["next_life_at"] == "2026-08-25T12:00:00+00:00"
+
+
+def test_serializer_reconciles_elapsed_refills_before_reporting():
+    refill_at = datetime(2026, 8, 25, 8, tzinfo=timezone.utc)
+    payload = gameplay.serialize_gameplay_profile(
+        {"lives_remaining": 1, "lives_refill_at": refill_at},
+        now=refill_at + timedelta(hours=8, minutes=30),
+    )
+    assert payload["lives_remaining"] == 3
+    assert payload["next_life_at"] == "2026-08-25T20:00:00+00:00"
+
+
+def test_serializer_omits_next_life_when_lives_are_full():
+    payload = gameplay.serialize_gameplay_profile({"lives_remaining": 5})
+    assert payload["lives_remaining"] == 5
+    assert payload["next_life_at"] is None
+    assert gameplay.serialize_gameplay_profile(None)["next_life_at"] is None
+
+
+def test_answer_payload_carries_next_life_at_for_countdown():
+    refill_at = datetime(2026, 8, 25, 8, tzinfo=timezone.utc)
+    payload = trainer._answer_payload(
+        {
+            "question_id": "q0",
+            "is_correct": False,
+            "public_feedback": {},
+            "xp_delta": 0,
+            "life_delta": -1,
+        },
+        {
+            "session_id": "s1",
+            "current_index": 1,
+            "revision": 2,
+            "status": "active",
+        },
+        {"lives_remaining": 0, "lives_refill_at": refill_at},
+        now=refill_at + timedelta(minutes=10),
+    )
+    assert payload["lives_remaining"] == 0
+    assert payload["next_life_at"] == "2026-08-25T12:00:00+00:00"
+
+
 def test_trainer_schema_has_separate_session_and_answer_ownership():
     assert "CREATE TABLE IF NOT EXISTS diagnostic_trainer_sessions" in DDL
     assert "CREATE TABLE IF NOT EXISTS diagnostic_trainer_answers" in DDL
@@ -92,6 +142,52 @@ async def _source_attempt(user_id: int, attempt_id: str, *, snapshot: dict):
             """,
             attempt_id, user_id, "a" * 64, json.dumps(snapshot, ensure_ascii=False),
         )
+
+
+@pytest.mark.asyncio
+async def test_lives_reminder_schedules_notification_at_next_refill(database):
+    user_id = 9_700_000_000 + uuid4().int % 100_000_000
+    anchor = datetime.now(timezone.utc) - timedelta(hours=1)
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute(
+            """
+            INSERT INTO diagnostic_progress_profiles (user_id, lives_remaining, lives_refill_at)
+            VALUES ($1, 0, $2)
+            """,
+            user_id, anchor,
+        )
+
+    due_at = await trainer.schedule_lives_refill_reminder(user_id)
+
+    assert due_at == (anchor + timedelta(hours=4)).isoformat()
+    async with pool.acquire() as connection:
+        row = await connection.fetchrow(
+            "SELECT kind, due_at, status FROM diagnostic_notifications WHERE user_id=$1",
+            user_id,
+        )
+    assert row["kind"] == "lives_refill"
+    assert row["status"] == "pending"
+    assert row["due_at"] == anchor + timedelta(hours=4)
+
+    assert await trainer.schedule_lives_refill_reminder(user_id) == due_at
+
+
+@pytest.mark.asyncio
+async def test_lives_reminder_is_noop_when_lives_are_full(database):
+    user_id = 9_700_100_000 + uuid4().int % 100_000_000
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute(
+            "INSERT INTO diagnostic_progress_profiles (user_id) VALUES ($1)", user_id,
+        )
+
+    assert await trainer.schedule_lives_refill_reminder(user_id) is None
+    async with pool.acquire() as connection:
+        count = await connection.fetchval(
+            "SELECT count(*) FROM diagnostic_notifications WHERE user_id=$1", user_id,
+        )
+    assert count == 0
 
 
 @pytest.mark.asyncio

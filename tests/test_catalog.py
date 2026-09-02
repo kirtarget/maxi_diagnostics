@@ -13,14 +13,89 @@ SAMPLE_SCHOOL = ROOT / "tests/fixtures/sample-school"
 
 def test_public_catalog_omits_explanation_and_correct():
     catalog = load_catalog(load_school(SAMPLE_SCHOOL))
-    payload = catalog.public_payload("test-secret")
+    payload = catalog.public_diagnostic("demo-math", "test-secret")
 
+    assert payload["question_count"] == len(payload["questions"])
     assert '"correct"' not in json.dumps(payload, ensure_ascii=False)
     assert '"explanation"' not in json.dumps(payload, ensure_ascii=False)
     assert '"learning_material_text"' not in json.dumps(payload, ensure_ascii=False)
     assert '"learning_material_url"' not in json.dumps(payload, ensure_ascii=False)
     assert '"scoring"' not in json.dumps(payload, ensure_ascii=False)
-    assert payload != catalog.public_payload("other-secret")
+    assert payload != catalog.public_diagnostic("demo-math", "other-secret")
+
+
+def test_public_summaries_contain_counts_without_questions():
+    catalog = load_catalog(load_school(SAMPLE_SCHOOL))
+
+    summaries = catalog.public_summaries("test-secret")
+
+    assert summaries == [
+        {
+            "id": "demo-math",
+            "content_version": catalog.content_version("demo-math", "test-secret"),
+            "exam": "demo",
+            "subject": "Математика",
+            "mark": "Демо",
+            "quick_count": 2,
+            "question_count": 4,
+        }
+    ]
+    assert "questions" not in summaries[0]
+
+
+def test_public_catalog_exposes_primary_score_and_safe_source_attribution():
+    data = sample_diagnostic_data()
+    data["questions"][0].update(
+        max_primary_score=2,
+        source={
+            "provider": "fipi",
+            "official_year": 2026,
+            "approval_status": "approved",
+            "source_kind": "open_bank",
+            "source_url": "https://ege.fipi.ru/bank/questions.php?proj=1&qid=2",
+            "fipi_project_id": "1",
+            "fipi_question_id": "2",
+            "exam_position": "1",
+            "official_criteria_url": "https://doc.fipi.ru/ege/specification.pdf",
+            "rights_status": "link_only",
+            "verified_at": "2026-09-01",
+        },
+    )
+
+    diagnostic = Diagnostic.model_validate(data)
+    catalog = DiagnosticCatalog(diagnostics=(diagnostic,))
+    question = catalog.public_diagnostic("demo-math", "test-secret")["questions"][0]
+
+    assert question["max_primary_score"] == 2
+    assert question["source"]["provider"] == "fipi"
+    assert question["source"]["source_url"].startswith("https://ege.fipi.ru/")
+    assert "correct" not in question
+    assert "explanation" not in question
+
+
+@pytest.mark.parametrize(
+    ("source_url", "rights_status"),
+    [
+        ("https://example.com/copied-question", "link_only"),
+        ("https://ege.fipi.ru/bank/questions.php", "original"),
+    ],
+)
+def test_fipi_source_requires_an_official_domain_and_valid_rights(
+    source_url: str, rights_status: str
+):
+    data = sample_diagnostic_data()
+    data["questions"][0]["source"] = {
+        "provider": "fipi",
+        "official_year": 2026,
+        "approval_status": "approved",
+        "source_kind": "open_bank",
+        "source_url": source_url,
+        "rights_status": rights_status,
+        "verified_at": "2026-09-01",
+    }
+
+    with pytest.raises(ValueError, match="invalid_fipi_source"):
+        Diagnostic.model_validate(data)
 
 
 def test_catalog_rejects_a_broad_subject_as_a_question_topic():
@@ -239,41 +314,40 @@ def test_catalog_rejects_windows_reserved_filenames(filename: str):
         _validate_catalog_filenames([filename])
 
 
-def test_catalog_rejects_more_than_200_questions_across_all_diagnostics():
+def test_catalog_accepts_more_than_300_questions_across_diagnostics():
     first = sample_diagnostic_data()
     first["questions"] = [
-        {**first["questions"][0], "id": f"a{index}"} for index in range(101)
+        {**first["questions"][0], "id": f"a{index}"} for index in range(151)
     ]
     first["quick_count"] = 1
     second = sample_diagnostic_data()
     second["id"] = "second-math"
     second["questions"] = [
-        {**second["questions"][0], "id": f"b{index}"} for index in range(100)
+        {**second["questions"][0], "id": f"b{index}"} for index in range(150)
     ]
     second["quick_count"] = 1
 
-    with pytest.raises(ValueError, match="too_many_total_questions"):
-        DiagnosticCatalog(diagnostics=(Diagnostic.model_validate(first), Diagnostic.model_validate(second)))
+    catalog = DiagnosticCatalog(
+        diagnostics=(Diagnostic.model_validate(first), Diagnostic.model_validate(second))
+    )
+
+    assert sum(len(item.questions) for item in catalog.diagnostics) == 301
 
 
-def test_catalog_rejects_bootstrap_payload_over_two_megabytes():
-    diagnostics_data = []
-    for diagnostic_index in range(2):
-        data = sample_diagnostic_data()
-        data["id"] = f"large-{diagnostic_index}"
-        question = data["questions"][0]
-        question["options"] = [
-            {"id": f"o{index}", "label": "x" * 250} for index in range(50)
-        ]
-        question["correct"] = "o0"
-        data["questions"] = [
-            {**question, "id": f"q{index}"} for index in range(100)
-        ]
-        data["quick_count"] = 1
-        diagnostics_data.append(Diagnostic.model_validate(data))
+def test_catalog_rejects_one_diagnostic_public_payload_over_two_megabytes():
+    data = sample_diagnostic_data()
+    question = data["questions"][0]
+    question["options"] = [
+        {"id": f"o{index}", "label": "x" * 250} for index in range(50)
+    ]
+    question["correct"] = "o0"
+    data["questions"] = [
+        {**question, "id": f"q{index}"} for index in range(200)
+    ]
+    data["quick_count"] = 1
 
     with pytest.raises(ValueError, match="catalog_public_payload_too_large"):
-        DiagnosticCatalog(diagnostics=tuple(diagnostics_data))
+        DiagnosticCatalog(diagnostics=(Diagnostic.model_validate(data),))
 
 
 def test_content_version_changes_when_a_referenced_question_asset_changes(tmp_path: Path):
@@ -329,7 +403,7 @@ def test_catalog_loads_and_publishes_multiple_question_assets(tmp_path: Path):
         "assets/question-1.svg",
         "assets/question-2.svg",
     )
-    public_question = catalog.public_payload("test-secret")["diagnostics"][0][
+    public_question = catalog.public_diagnostic("demo-math", "test-secret")[
         "questions"
     ][0]
     assert public_question["assets"] == [

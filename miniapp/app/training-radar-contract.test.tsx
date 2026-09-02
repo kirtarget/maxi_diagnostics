@@ -24,6 +24,7 @@ describe("Training Radar UI contracts", () => {
       subject: "Математика",
       mark: "М",
       quick_count: 3,
+      question_count: 7,
       questions: Array.from({ length: 7 }, (_, index) => question(String(index + 1))),
     }];
     const html = renderToStaticMarkup(

@@ -10,6 +10,8 @@ def test_schema_contains_only_starter_tables():
         "diagnostic_offer_events",
         "diagnostic_notifications",
         "message_templates",
+        "diagnostic_content_drafts",
+        "diagnostic_content_audit",
     ):
         assert "CREATE TABLE IF NOT EXISTS " + table in DDL
     assert "tenant_id" not in DDL

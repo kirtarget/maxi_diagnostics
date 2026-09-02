@@ -55,6 +55,15 @@ describe("trainer model", () => {
     expect(trainerReducer(state, { type: "submit_answer" }).phase).toBe("answering");
   });
 
+  it("carries next_life_at from the answer result into the session", () => {
+    let state = trainerReducer(trainerInitialState, { type: "start", response: { ...start, lives_remaining: 1, next_life_at: null } });
+    state = trainerReducer(state, { type: "set_answer", answer: "a" });
+    state = trainerReducer(state, { type: "submit_answer" });
+    state = trainerReducer(state, { type: "answer_result", response: { trainer_session_id: "s1", question_id: "single", is_correct: false, correct_answer: "a", explanation: null, xp_delta: 0, life_delta: -1, current_index: 1, revision: 2, status: "in_progress", lives_remaining: 0, next_life_at: "2026-08-28T12:00:00+00:00" } });
+    expect(state.session?.lives_remaining).toBe(0);
+    expect(state.session?.next_life_at).toBe("2026-08-28T12:00:00+00:00");
+  });
+
   it("allows mistake replay to continue without spending lives", () => {
     const mistakes: TrainerStartResponse = { ...start, mode: "mistakes", source_attempt_id: "attempt-1", lives_remaining: 0 };
     let state = trainerReducer(trainerInitialState, { type: "start", response: mistakes });

@@ -9,7 +9,14 @@ from typing import Final
 
 
 OFFER_PLACEMENTS: Final[frozenset[str]] = frozenset(
-    {"home", "diagnostic_result", "trainer"}
+    {
+        "home",
+        "diagnostic_result",
+        "trainer",
+        "trainer_wrong",
+        "trainer_no_lives",
+        "forecast",
+    }
 )
 EVENT_TYPES: Final[frozenset[str]] = frozenset({"impression", "click", "dismiss"})
 MAX_EVENTS_PER_SUBJECT_PER_HOUR: Final[int] = 120

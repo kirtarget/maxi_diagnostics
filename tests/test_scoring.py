@@ -23,6 +23,52 @@ def test_server_scores_all_question_types():
 
     assert result.correct_count == 4
     assert result.score == 100
+    assert result.primary_score == 4
+    assert result.max_primary_score == 4
+
+
+def test_server_weights_accuracy_by_primary_score():
+    catalog = sample_catalog()
+    diagnostic = catalog.get("demo-math")
+    weighted = diagnostic.model_copy(
+        update={
+            "questions": (
+                diagnostic.questions[0].model_copy(update={"max_primary_score": 3}),
+                diagnostic.questions[1],
+            ),
+            "quick_count": 2,
+        }
+    )
+    bounded = catalog.model_copy(update={"diagnostics": (weighted,)})
+
+    result = score_answers(bounded, "demo-math", "full", {"q1": "2"})
+
+    assert result.correct_count == 1
+    assert result.question_count == 2
+    assert result.primary_score == 3
+    assert result.max_primary_score == 4
+    assert result.score == 75
+
+
+def test_topic_strength_uses_primary_score_weighting():
+    catalog = sample_catalog()
+    diagnostic = catalog.get("demo-math")
+    questions = (
+        diagnostic.questions[0].model_copy(
+            update={"topic": "Общая тема", "max_primary_score": 3}
+        ),
+        diagnostic.questions[1].model_copy(update={"topic": "Общая тема"}),
+    )
+    weighted = diagnostic.model_copy(
+        update={"questions": questions, "quick_count": 2}
+    )
+    bounded = catalog.model_copy(update={"diagnostics": (weighted,)})
+
+    result = score_answers(bounded, "demo-math", "full", {"q1": "2"})
+
+    assert result.strong_topics[0].topic == "Общая тема"
+    assert result.strong_topics[0].correct_count == 1
+    assert result.strong_topics[0].ratio == 0.75
 
 
 def test_server_rejects_unknown_answer_key():

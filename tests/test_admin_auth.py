@@ -43,6 +43,7 @@ def test_admin_page_requires_generic_basic_challenge():
     ("method", "path"),
     [
         ("get", "/admin/diagnostics"),
+        ("get", "/admin/content"),
         ("get", "/api/admin/diagnostics/summary"),
         ("get", "/api/admin/diagnostics/attempts"),
         ("get", "/api/admin/diagnostics/delivery-issues"),
@@ -50,6 +51,8 @@ def test_admin_page_requires_generic_basic_challenge():
         ("get", "/api/admin/diagnostics/messages"),
         ("put", "/api/admin/diagnostics/messages/WELCOME"),
         ("delete", "/api/admin/diagnostics/users"),
+        ("get", "/api/admin/diagnostics/content"),
+        ("post", "/api/admin/diagnostics/content/demo-math/draft"),
     ],
 )
 def test_every_admin_diagnostics_route_requires_auth(method: str, path: str):

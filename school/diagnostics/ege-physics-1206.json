@@ -11,12 +11,13 @@
   "questions": [
     {
       "id": "q9855",
+      "explanation": "При быстром расширении теплообменом пренебрегают, поэтому по первому началу термодинамики изменение внутренней энергии равно минус работе газа. Модуль равен 450 Дж = 0,45 кДж.",
       "type": "input",
       "topic": "Первое начало термодинамики",
       "learning_material_text": "Выберите систему знаков из условия и используйте первое начало термодинамики: изменение внутренней энергии связано с количеством теплоты и работой. Подставляйте величины со знаками, не заменяя работу газа работой внешних сил.",
       "learning_material_url": "https://maximumtest.ru/uchebnik/fizika",
       "title": "Задание 8",
-      "prompt": "В результате быстрого расширения газ совершил работу, равную 450 Дж. Чему равен модуль изменения внутренней энергия тела в этом процессе? Ответ дайте в кДж.",
+      "prompt": "В результате быстрого расширения газ совершил работу, равную 450 Дж. Чему равен модуль изменения внутренней энергии газа в этом процессе? Ответ дайте в кДж.",
       "correct": [
         "0,45",
         "0.45"
@@ -24,6 +25,7 @@
     },
     {
       "id": "q9856",
+      "explanation": "Скорость получают как производную координаты по времени, после чего подставляют моменты 2 и 4 секунды. Разность модулей скоростей по заданному на рисунке закону равна 8 м/с.",
       "type": "input",
       "topic": "Равноускоренное движение",
       "learning_material_text": "Выпишите начальную скорость, ускорение и время, затем выберите формулу для скорости или перемещения. Проверьте направление ускорения: при торможении его знак противоположен направлению начальной скорости.",
@@ -37,6 +39,7 @@
     },
     {
       "id": "q9857",
+      "explanation": "Для плавающего шарика сила Архимеда равна неизменной силе тяжести, поэтому первая величина не меняется. Масло менее плотное, значит для той же выталкивающей силы нужен больший погружённый объём и ответ равен 31.",
       "type": "input",
       "topic": "Сила Архимеда",
       "learning_material_text": "Найдите объём погружённой части тела и плотность жидкости. Сила Архимеда равна весу вытесненной жидкости: F = ρgV; затем сравните её с весом тела, если нужно определить характер плавания.",
@@ -49,6 +52,7 @@
     },
     {
       "id": "q9858",
+      "explanation": "После отключения заряд сохраняется, а увеличение расстояния уменьшает ёмкость. При постоянном заряде напряжение и энергия возрастают, поле между идеальными пластинами не меняется, поэтому верны 2, 3 и 4.",
       "type": "multiple",
       "topic": "Конденсатор",
       "learning_material_text": "Определите, какая величина меняется: заряд, напряжение, ёмкость или энергия. Используйте связь Q = CU и учитывайте, подключён ли конденсатор к источнику: это определяет, что остаётся постоянным.",
@@ -70,7 +74,7 @@
         },
         {
           "id": "o4",
-          "label": "Максимальная энергия, которую может запасти конденсатор, увеличилась."
+          "label": "Энергия электрического поля конденсатора увеличилась."
         },
         {
           "id": "o5",
@@ -86,6 +90,7 @@
     },
     {
       "id": "q9859",
+      "explanation": "Сопротивление R = ρl / S при удвоении длины возрастает вдвое. Мощность I²R при уменьшении тока вдвое становится в два раза меньше, поэтому верны варианты 2 и 5.",
       "type": "multiple",
       "topic": "Электрический ток",
       "learning_material_text": "Нарисуйте схему соединения и определите, какие величины одинаковы в последовательной и параллельной ветвях. Используйте закон Ома и формулы мощности, не смешивая напряжение всей цепи с напряжением отдельного участка.",
@@ -122,6 +127,7 @@
     },
     {
       "id": "q9860",
+      "explanation": "При электронном захвате протон ядра превращается в нейтрон. Число нейтронов увеличивается, заряд ядра уменьшается, поэтому ответ 12.",
       "type": "input",
       "topic": "Радиоактивные распады",
       "learning_material_text": "Сохраните массовое и зарядовое числа в ядерном уравнении. При альфа-распаде отнимите 4 и 2, при бета-распаде массовое число не меняется, а заряд ядра изменяется на единицу.",
@@ -131,6 +137,15 @@
       "correct": [
         "12"
       ]
-    }
+    },
+    {"id":"f26-ege-phys-a01","type":"input","topic":"Кинематика","title":"Задание 1","prompt":"Скорость тела за 4 с равномерно увеличилась с 3 до 15 м/с. Найдите модуль ускорения в м/с².","correct":["3"],"explanation":"Ускорение равно изменению скорости, делённому на время: (15 − 3) / 4 = 3 м/с².","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"1","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/fi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-phys-a02","type":"input","topic":"Количество теплоты","title":"Задание 6","prompt":"Два килограмма воды нагрели на 5 °C. Удельная теплоёмкость воды 4200 Дж/(кг·°C). Какое количество теплоты получила вода? Ответ дайте в джоулях.","correct":["42000"],"explanation":"Используем Q = cmΔT: 4200 · 2 · 5 = 42000 Дж.","max_primary_score":2,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"6","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/fi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-phys-a03","type":"input","topic":"Закон Ома","title":"Задание 8","prompt":"Напряжение на резисторе равно 12 В, сила тока равна 3 А. Найдите сопротивление резистора в омах.","correct":["4"],"explanation":"По закону Ома R = U / I = 12 / 3 = 4 Ом.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"8","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/fi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-phys-a04","type":"multiple","topic":"Электромагнитные волны","title":"Задание 14","prompt":"Выберите два верных утверждения об электромагнитных волнах.","options":[{"id":"o1","label":"В вакууме они распространяются со скоростью света."},{"id":"o2","label":"Для их распространения обязательно нужна материальная среда."},{"id":"o3","label":"Они переносят энергию."},{"id":"o4","label":"Их скорость в вакууме зависит от частоты."}],"selection_limit":2,"correct":["o1","o3"],"explanation":"Электромагнитные волны распространяются в вакууме со скоростью света и переносят энергию. Материальная среда им не нужна, а скорость в вакууме от частоты не зависит.","max_primary_score":2,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"14","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/fi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-phys-a05","type":"input","topic":"Ядерные реакции","title":"Задание 17","prompt":"Ядро урана с массовым числом 238 испытало один альфа-распад. Найдите массовое число образовавшегося ядра.","correct":["234"],"explanation":"При альфа-распаде ядро испускает частицу с массовым числом 4. Массовое число дочернего ядра равно 238 − 4 = 234.","max_primary_score":2,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"17","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/fi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-phys-a06","type":"input","topic":"Равномерное движение","title":"Задание 1","prompt":"Велосипедист двигался равномерно со скоростью 12 м/с в течение 15 с. Какой путь он прошёл? Ответ дайте в метрах.","correct":["180"],"explanation":"При равномерном движении путь равен произведению скорости на время: 12 · 15 = 180 м.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"1","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/fi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-phys-a07","type":"input","topic":"Первое начало термодинамики","title":"Задание 6","prompt":"Газ получил 50 кДж теплоты и совершил работу 20 кДж. На сколько килоджоулей увеличилась его внутренняя энергия?","correct":["30"],"explanation":"По первому началу термодинамики изменение внутренней энергии равно Q − A. Получаем 50 − 20 = 30 кДж.","max_primary_score":2,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"6","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/fi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-phys-a08","type":"input","topic":"Мощность тока","title":"Задание 8","prompt":"Электроприбор работает при напряжении 220 В и силе тока 2 А. Найдите его мощность в ваттах.","correct":["440"],"explanation":"Электрическая мощность равна P = UI = 220 · 2 = 440 Вт.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"8","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/fi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-phys-a09","type":"multiple","topic":"Последовательное соединение","title":"Задание 14","prompt":"Выберите два верных утверждения о последовательном соединении резисторов.","options":[{"id":"o1","label":"Сила тока во всех резисторах одинакова."},{"id":"o2","label":"Напряжение на всех резисторах всегда одинаково."},{"id":"o3","label":"Общее сопротивление меньше каждого отдельного сопротивления."},{"id":"o4","label":"Общее сопротивление равно сумме сопротивлений."}],"selection_limit":2,"correct":["o1","o4"],"explanation":"При последовательном соединении ток одинаков на всех участках, а эквивалентное сопротивление равно сумме сопротивлений. Напряжения складываются и могут различаться.","max_primary_score":2,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"14","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/fi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}}
   ]
 }

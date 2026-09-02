@@ -13,6 +13,7 @@ export type TrainerStartResponse = {
   status: "active" | "in_progress" | "exhausted" | "completed";
   questions: Question[];
   lives_remaining: number;
+  next_life_at?: string | null;
 };
 
 export type TrainerMode = "normal" | "mistakes";
@@ -23,12 +24,15 @@ export type TrainerAnswerResponse = {
   is_correct: boolean;
   correct_answer: string | null;
   explanation: string | null;
+  max_primary_score?: number;
+  earned_primary_score?: number;
   xp_delta: number;
   life_delta: number;
   current_index: number;
   revision: number;
   status: "active" | "in_progress" | "exhausted" | "completed";
   lives_remaining: number;
+  next_life_at?: string | null;
 };
 
 export type TrainerFinishResponse = {
@@ -135,7 +139,7 @@ export function trainerReducer(state: TrainerState, action: TrainerAction): Trai
         answeredQuestionIndex: state.currentIndex,
         answerResult: action.response,
         error: null,
-        session: { ...state.session, revision: action.response.revision, status: action.response.status, lives_remaining: action.response.lives_remaining },
+        session: { ...state.session, revision: action.response.revision, status: action.response.status, lives_remaining: action.response.lives_remaining, next_life_at: action.response.next_life_at ?? null },
       };
     case "next_question": {
       const result = state.answerResult;

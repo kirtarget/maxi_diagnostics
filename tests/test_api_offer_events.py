@@ -5,6 +5,7 @@ import time
 from urllib.parse import urlencode
 from unittest.mock import AsyncMock
 
+import pytest
 from fastapi.testclient import TestClient
 
 from diagnostic.school import load_school
@@ -113,6 +114,26 @@ def test_event_is_validated_and_response_is_minimal(monkeypatch):
     assert recorder.await_args.kwargs["offer_id"] == "exam-preparation"
     assert recorder.await_args.kwargs["placement"] == "home"
     assert recorder.await_args.kwargs["event_type"] == "impression"
+
+
+@pytest.mark.parametrize(
+    "placement",
+    ["trainer_wrong", "trainer_no_lives", "forecast"],
+)
+def test_contextual_offer_placements_are_accepted(monkeypatch, placement):
+    from diagnostic.api import offer_events
+
+    recorder = AsyncMock(return_value=True)
+    monkeypatch.setattr(offer_events.offer_events, "record_offer_event", recorder)
+    monkeypatch.setattr(offer_events, "get_pool", AsyncMock(return_value=_Pool()))
+
+    response = make_client(monkeypatch).post(
+        "/api/diagnostics/offer-events",
+        json=event_body(placement=placement),
+    )
+
+    assert response.status_code == 200
+    assert recorder.await_args.kwargs["placement"] == placement
 
 
 def test_unknown_offer_and_placement_are_rejected(monkeypatch):

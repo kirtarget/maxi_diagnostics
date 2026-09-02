@@ -1,13 +1,10 @@
-import {
-  answerInputConfig,
-  isImportantPromptSentence,
-  mathDisplayParts,
-  splitPromptSentences,
-  tokenizeMathText,
-} from "./math-text";
+import { answerInputConfig } from "./math-text";
+import { FormattedMathText, FormattedStem } from "./math-display";
 import { isValidNumericInput, updateCompactAnswer, updateMatchingAnswer } from "./answer-values";
 import { questionAssetPaths } from "./question-assets";
+import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import {
+  answerTypeLabel,
   cleanAnswerLabel,
   parseQuestionPrompt,
   questionTitleClassName,
@@ -33,6 +30,7 @@ import type {
 
 export type QuestionScreenProps = {
   question: Question;
+  subject?: string;
   index: number;
   total: number;
   answer: AnswerValue | undefined;
@@ -84,48 +82,9 @@ function isAnswered(question: Question, answer: AnswerValue | undefined): boolea
     : isValidNumericInput(answer);
 }
 
-function FormattedMathText({ text }: { text: string }) {
-  return (
-    <>
-      {tokenizeMathText(text).map((part, partIndex) => (
-        part.isMath
-          ? (
-            <span
-              className={part.isVariable ? "math-expression math-variable" : "math-expression"}
-              key={`${partIndex}-${part.text}`}
-            >
-              {mathDisplayParts(part.text).map((displayPart, displayIndex) => (
-                displayPart.isSuperscript
-                  ? <sup key={displayIndex}>{displayPart.text}</sup>
-                  : displayPart.text
-              ))}
-            </span>
-          )
-          : part.text
-      ))}
-    </>
-  );
-}
-
-function FormattedStem({ text }: { text: string }) {
-  return (
-    <>
-      {splitPromptSentences(text).map((sentence, sentenceIndex) => (
-        <span
-          className={isImportantPromptSentence(sentence)
-            ? "prompt-sentence prompt-sentence-important"
-            : "prompt-sentence"}
-          key={`${sentenceIndex}-${sentence}`}
-        >
-          <FormattedMathText text={sentence} />
-        </span>
-      ))}
-    </>
-  );
-}
-
 export function QuestionView({
   question,
+  subject,
   index,
   total,
   answer,
@@ -195,7 +154,10 @@ export function QuestionView({
         <p className="question-progress-motivation" aria-live="polite">{progress.message}</p>
       </div>
       <div className="question-worksheet">
-      <div className="question-meta"><span>{question.title}</span><span>{question.topic}</span></div>
+      <div className="question-meta">
+        <span className="question-type-chip">{subject ?? question.topic} · {answerTypeLabel(question)}</span>
+        {hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}
+      </div>
       <div className="question-copy">
         {promptBlocks.map((block, blockIndex) => {
           if (tableGap && block.kind !== "stem") return null;
@@ -421,7 +383,7 @@ function SequenceMatchingAnswer({ matching, onChange, value }: {
 function AnswerPreview({ markers, selected }: { markers: string[]; selected: string[] }) {
   return (
     <div className={`sequence-answer-preview${selected.length === markers.length ? " complete" : ""}`} aria-live="polite">
-      <span>Получившийся ответ</span>
+      <span>Твой ответ</span>
       <strong>
         {markers.map((marker, index) => (
           <span key={marker}>{selected[index] ?? "—"}<small>{marker}</small></span>

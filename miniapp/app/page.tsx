@@ -6,12 +6,14 @@ import {
   buildCompletionPayload,
   answerTrainer,
   apiErrorDetail,
+  bootstrapResumeSummary,
   clearLocalSession,
   completeDiagnostic,
   createAttemptId,
   createProgressSaveQueue,
   isConflictError,
   loadBootstrap,
+  loadDiagnostic,
   loadReview,
   loadWeeklyLeague,
   markResultViewed,
@@ -21,13 +23,15 @@ import {
   updateNumericInputAnswer,
   saveProgress,
   finishTrainer,
+  requestLivesReminder,
   startTrainer,
 } from "./api";
 import type { ProgressPayload, ProgressSaveQueue } from "./api";
-import { GameplayHomeScreen, GameplayProfileScreen, ModeScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
+import { GameplayHomeScreen, GameplayProfileScreen, ModeScreen, NotTelegramScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
 import { safeAssetPath } from "./question-assets";
 import { QuestionView as TrainingQuestionView } from "./question-screen";
 import {
+  ForecastEmptyScreen,
   ForecastScreen,
   ResultScreen,
   ReviewScreen,
@@ -35,13 +39,18 @@ import {
 } from "./result-flow";
 import { forecastTrajectory, pdfStatusCopy, personalRoute } from "./result-flow-model";
 import { createReviewRequestGate } from "./review-request-gate";
+import {
+  diagnosticLoadInitialState,
+  diagnosticLoadReducer,
+  diagnosticSummaryKey,
+} from "./diagnostic-loader-model";
 import { initializeTelegram } from "./telegram-webapp";
 import { gameplayProfileView } from "./gameplay-profile-model";
-import { TrainerScreen } from "./trainer-screen";
+import { TrainerScreen, type LivesReminderState } from "./trainer-screen";
 import { trainerInitialState, trainerReducer } from "./trainer-model";
 import { LeagueScreen } from "./league-screen";
 import type { LeagueScreenState } from "./league-model";
-import type { OfferTelemetryEvent } from "./offer-ux";
+import { dismissOffer, type OfferDismissalState, type OfferPlacement, type OfferTelemetryEvent } from "./offer-ux";
 import type {
   AnswerMap,
   AnswerValue,
@@ -49,16 +58,22 @@ import type {
   BootstrapResponse,
   DiagnosticMode,
   PublicDiagnostic,
+  PublicDiagnosticSummary,
   Question,
   ReviewResponse,
   ServerResult,
 } from "./types";
 
-type Screen = "loading" | "welcome" | "home" | "profile" | "league" | "mode" | "subjects" | "question" | "submitting" | "result" | "review" | "forecast" | "route" | "trainer";
+type Screen = "loading" | "diagnostic-loading" | "welcome" | "home" | "profile" | "league" | "mode" | "subjects" | "question" | "submitting" | "result" | "review" | "forecast" | "route" | "trainer";
 
 type DisplayBrand = Pick<Brand, "name" | "short_name" | "logo"> & {
   resultStatus: string;
 };
+
+const BUILD_BOT_USERNAME = process.env.NEXT_PUBLIC_BUILD_BOT_USERNAME ?? "";
+const BUILD_BOT_URL = /^[A-Za-z][A-Za-z0-9_]{1,28}[Bb][Oo][Tt]$/.test(BUILD_BOT_USERNAME)
+  ? `https://t.me/${BUILD_BOT_USERNAME}`
+  : null;
 
 const BUILD_BRAND: DisplayBrand = {
   name: process.env.NEXT_PUBLIC_BUILD_SCHOOL_NAME ?? "School",
@@ -116,6 +131,11 @@ function BrandHeader({
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("loading");
   const [bootstrap, setBootstrap] = useState<BootstrapResponse | null>(null);
+  const [loadedDiagnostic, setLoadedDiagnostic] = useState<PublicDiagnostic | null>(null);
+  const [diagnosticLoad, dispatchDiagnosticLoad] = useReducer(
+    diagnosticLoadReducer,
+    diagnosticLoadInitialState,
+  );
   const [error, setError] = useState<string | null>(null);
   const [syncWarning, setSyncWarning] = useState<string | null>(null);
   const [mode, setMode] = useState<DiagnosticMode>("quick");
@@ -131,7 +151,10 @@ export default function Home() {
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [trainerState, dispatchTrainer] = useReducer(trainerReducer, trainerInitialState);
   const [leagueState, setLeagueState] = useState<LeagueScreenState>({ kind: "loading" });
-  const [offerDismissed, setOfferDismissed] = useState(false);
+  const [livesReminder, setLivesReminder] = useState<LivesReminderState>({ status: "idle" });
+  const [sessionCompletions, setSessionCompletions] = useState(0);
+  const [outsideTelegram, setOutsideTelegram] = useState(false);
+  const [dismissedOfferPlacements, setDismissedOfferPlacements] = useState<OfferDismissalState>({});
   const initData = useRef("");
   const progressRevision = useRef(0);
   const syncedQuestionIndex = useRef(0);
@@ -150,6 +173,8 @@ export default function Home() {
     reviewRequestGate.current.activate({ attemptId, generation: attemptGeneration.current });
   }
   const hydrateGeneration = useRef(0);
+  const diagnosticLoadRequestId = useRef(0);
+  const diagnosticCache = useRef(new Map<string, Promise<PublicDiagnostic>>());
   const recoveryPromise = useRef<Promise<void> | null>(null);
   const trainerDiagnosticId = useRef<string | null>(null);
   const trainerMode = useRef<"normal" | "mistakes">("normal");
@@ -208,16 +233,32 @@ export default function Home() {
     );
   }
 
-  const diagnostic = useMemo(
-    () => bootstrap?.diagnostics.find((item) => item.id === diagnosticId) ?? null,
-    [bootstrap, diagnosticId],
-  );
+  const diagnostic = loadedDiagnostic?.id === diagnosticId ? loadedDiagnostic : null;
   const questions = useMemo(
     () => diagnostic ? questionsFor(diagnostic, mode) : [],
     [diagnostic, mode],
   );
   const brand = bootstrap?.school.brand;
   const sessionScope = bootstrap?.session_scope;
+  const loadCachedDiagnostic = useCallback((
+    summary: PublicDiagnosticSummary,
+    scope: string,
+  ): Promise<PublicDiagnostic> => {
+    const key = diagnosticSummaryKey(summary);
+    const cached = diagnosticCache.current.get(key);
+    if (cached) return cached;
+    const request = loadDiagnostic(
+      initData.current,
+      scope,
+      summary.id,
+      summary.content_version,
+    ).catch((loadError) => {
+      diagnosticCache.current.delete(key);
+      throw loadError;
+    });
+    diagnosticCache.current.set(key, request);
+    return request;
+  }, []);
   const handleOfferEvent = useCallback((event: OfferTelemetryEvent) => {
     if (!sessionScope || !initData.current) return;
     void recordOfferEvent(initData.current, {
@@ -228,6 +269,9 @@ export default function Home() {
       event_type: event.action,
     }).catch(() => undefined);
   }, [sessionScope]);
+  const dismissOfferPlacement = useCallback((placement: OfferPlacement) => {
+    setDismissedOfferPlacements((current) => dismissOffer(current, placement));
+  }, []);
 
   const refreshReview = useCallback(async () => {
     if (!sessionScope || !initData.current) return null;
@@ -255,15 +299,17 @@ export default function Home() {
     const webApp = initializeTelegram();
     initData.current = webApp?.initData ?? "";
     if (!initData.current) {
-      setError("Откройте диагностику из Telegram-бота школы, чтобы подтвердить вход.");
+      setOutsideTelegram(true);
       return false;
     }
+    setOutsideTelegram(false);
     try {
       const data = await loadBootstrap(initData.current);
       if (generation !== hydrateGeneration.current) return false;
       attemptGeneration.current += 1;
       progressQueue.current?.cancel();
       setBootstrap(data);
+      setLoadedDiagnostic(null);
       setExam((current) => current || data.diagnostics[0]?.exam || "");
       schoolIdRef.current = data.school.brand.school_id;
       sessionScopeRef.current = data.session_scope;
@@ -274,8 +320,45 @@ export default function Home() {
         return true;
       }
 
-      const session = restoreBootstrapSession(data);
-      const savedDiagnostic = session && data.diagnostics.find((item) => item.id === session.diagnosticId);
+      const resumeSummary = bootstrapResumeSummary(data);
+      let savedDiagnostic: PublicDiagnostic | null = null;
+      let session = null;
+      if (resumeSummary) {
+        const requestId = diagnosticLoadRequestId.current + 1;
+        diagnosticLoadRequestId.current = requestId;
+        dispatchDiagnosticLoad({ type: "load", requestId, summary: resumeSummary, intent: "resume" });
+        setScreen("diagnostic-loading");
+        try {
+          savedDiagnostic = await loadCachedDiagnostic(resumeSummary, data.session_scope);
+          if (generation !== hydrateGeneration.current || requestId !== diagnosticLoadRequestId.current) return false;
+          dispatchDiagnosticLoad({ type: "loaded", requestId, diagnostic: savedDiagnostic });
+          session = restoreBootstrapSession(data, undefined, [savedDiagnostic]);
+          if (
+            !session && data.attempt?.status === "in_progress" &&
+            data.attempt.diagnostic_id !== savedDiagnostic.id
+          ) {
+            const serverSummary = data.diagnostics.find(
+              (item) => item.id === data.attempt?.diagnostic_id,
+            );
+            if (serverSummary) {
+              dispatchDiagnosticLoad({ type: "load", requestId, summary: serverSummary, intent: "resume" });
+              savedDiagnostic = await loadCachedDiagnostic(serverSummary, data.session_scope);
+              if (generation !== hydrateGeneration.current || requestId !== diagnosticLoadRequestId.current) return false;
+              dispatchDiagnosticLoad({ type: "loaded", requestId, diagnostic: savedDiagnostic });
+              session = restoreBootstrapSession(data, undefined, [savedDiagnostic]);
+            }
+          }
+        } catch {
+          if (generation !== hydrateGeneration.current || requestId !== diagnosticLoadRequestId.current) return false;
+          dispatchDiagnosticLoad({
+            type: "failed",
+            requestId,
+            message: "Не удалось загрузить задания. Прогресс сохранён на устройстве.",
+          });
+          setScreen("diagnostic-loading");
+          return false;
+        }
+      }
       if (session && savedDiagnostic) {
         reviewRequestGate.current!.activate({
           attemptId: session.attemptId,
@@ -287,6 +370,7 @@ export default function Home() {
         );
         supersedesAttemptId.current = session.supersedesAttemptId;
         setAttemptId(session.attemptId);
+        setLoadedDiagnostic(savedDiagnostic);
         setDiagnosticId(session.diagnosticId);
         setMode(session.mode);
         setQuestionIndex(session.questionIndex);
@@ -321,7 +405,7 @@ export default function Home() {
       setError("Не удалось загрузить диагностику. Проверьте соединение и повторите попытку.");
       return false;
     }
-  }, []);
+  }, [loadCachedDiagnostic]);
   recoverConflict.current = () => {
     setSyncWarning("Прогресс изменился на другом устройстве. Загружаем актуальную версию.");
     if (!recoveryPromise.current) {
@@ -382,7 +466,7 @@ export default function Home() {
     void markResultViewed(initData.current, attemptId, sessionScope).catch(() => undefined);
   }, [attemptId, screen, sessionScope]);
 
-  const beginDiagnostic = (selected: PublicDiagnostic) => {
+  const beginLoadedDiagnostic = (selected: PublicDiagnostic) => {
     progressQueue.current?.cancel();
     attemptGeneration.current += 1;
     const nextAttemptId = createAttemptId();
@@ -393,6 +477,7 @@ export default function Home() {
     activeAttemptId.current = nextAttemptId;
     supersedesAttemptId.current = persistedAttemptId.current ?? undefined;
     setAttemptId(nextAttemptId);
+    setLoadedDiagnostic(selected);
     setDiagnosticId(selected.id);
     setQuestionIndex(0);
     latestQuestionIndex.current = 0;
@@ -408,6 +493,27 @@ export default function Home() {
     setReviewError(null);
     setError(null);
     setScreen("question");
+  };
+
+  const beginDiagnostic = async (selected: PublicDiagnosticSummary) => {
+    if (!sessionScope) return;
+    const requestId = diagnosticLoadRequestId.current + 1;
+    diagnosticLoadRequestId.current = requestId;
+    dispatchDiagnosticLoad({ type: "load", requestId, summary: selected, intent: "new" });
+    setScreen("diagnostic-loading");
+    try {
+      const loaded = await loadCachedDiagnostic(selected, sessionScope);
+      if (requestId !== diagnosticLoadRequestId.current) return;
+      dispatchDiagnosticLoad({ type: "loaded", requestId, diagnostic: loaded });
+      beginLoadedDiagnostic(loaded);
+    } catch {
+      if (requestId !== diagnosticLoadRequestId.current) return;
+      dispatchDiagnosticLoad({
+        type: "failed",
+        requestId,
+        message: "Не удалось загрузить задания. Проверьте соединение и повторите попытку.",
+      });
+    }
   };
 
   const answerQuestion = (value: AnswerValue) => {
@@ -457,6 +563,7 @@ export default function Home() {
       progressRevision.current = response.attempt.progress_revision;
       supersedesAttemptId.current = undefined;
       setResult(response.result);
+      setSessionCompletions((count) => count + 1);
       setReview(null);
       setReviewIndex(0);
       setReviewError(null);
@@ -483,6 +590,7 @@ export default function Home() {
   const gameplayProfile = gameplayProfileView({ ...bootstrap?.progress_profile, ...bootstrap?.gameplay_profile });
   const mistakeCount = review?.items.filter((item) => !item.is_correct).length ?? 0;
   const forecastPoints = result ? forecastTrajectory(result) : [];
+  const completedDiagnostics = (bootstrap?.progress_profile?.completion_count ?? 0) + sessionCompletions;
   const routeItems = result ? personalRoute(result.growth_topics) : [];
   const currentPdfStatus = review?.pdf_status ?? "pending";
 
@@ -517,20 +625,21 @@ export default function Home() {
     trainerSourceAttemptId.current = requestedMode === "mistakes" ? (sourceAttemptId ?? null) : null;
     trainerRecoveryMode.current = "retry";
     dispatchTrainer({ type: "reset" });
+    setLivesReminder({ status: "idle" });
     setScreen("trainer");
     try {
       const payload = requestedMode === "mistakes" && sourceAttemptId
         ? {
           session_scope: sessionScope,
           diagnostic_id: selected.id,
-          count: Math.min(5, selected.questions.length),
+          count: Math.min(5, selected.question_count),
           mode: "mistakes" as const,
           source_attempt_id: sourceAttemptId,
         }
         : {
           session_scope: sessionScope,
           diagnostic_id: selected.id,
-          count: Math.min(5, selected.questions.length),
+          count: Math.min(5, selected.question_count),
           mode: "normal" as const,
       };
       const response = await startTrainer(initData.current, payload);
@@ -579,6 +688,17 @@ export default function Home() {
     }
   }, [sessionScope, trainerState.session]);
 
+  const remindAboutLives = useCallback(async () => {
+    if (!sessionScope || !initData.current) return;
+    setLivesReminder({ status: "pending" });
+    try {
+      await requestLivesReminder(initData.current, sessionScope);
+      setLivesReminder({ status: "scheduled" });
+    } catch {
+      setLivesReminder({ status: "error" });
+    }
+  }, [sessionScope]);
+
   const retryTrainer = useCallback(() => {
     if (trainerRecoveryMode.current === "restart" && trainerDiagnosticId.current) {
       void runTrainerStart(trainerDiagnosticId.current, trainerMode.current, trainerSourceAttemptId.current ?? undefined);
@@ -612,6 +732,15 @@ export default function Home() {
     "--brand-background": brand.colors.background,
   } as React.CSSProperties : undefined;
 
+  if (outsideTelegram && !bootstrap) {
+    return (
+      <main className="app-shell" style={style}>
+        <BrandHeader brand={displayBrand} disabled onHome={() => undefined} />
+        <NotTelegramScreen botUrl={BUILD_BOT_URL} />
+      </main>
+    );
+  }
+
   if (error && !bootstrap) {
     return (
       <main className="app-shell" style={style}>
@@ -644,6 +773,29 @@ export default function Home() {
         </section>
       )}
 
+      {screen === "diagnostic-loading" && diagnosticLoad.phase === "loading" && (
+        <section className="screen centered-state" aria-live="polite" aria-busy="true">
+          <div className="loading-spinner" aria-hidden="true" />
+          <h1>{diagnosticLoad.intent === "resume" ? "Восстанавливаем прогресс…" : "Загружаем задания…"}</h1>
+          <p>{diagnosticLoad.summary.exam} · {diagnosticLoad.summary.subject}</p>
+        </section>
+      )}
+
+      {screen === "diagnostic-loading" && diagnosticLoad.phase === "error" && (
+        <section className="screen centered-state" role="alert">
+          <span className="state-icon" aria-hidden="true">✈️</span>
+          <h1>Задания пока недоступны</h1>
+          <p>{diagnosticLoad.message}</p>
+          <button className="primary-button" type="button" onClick={() => {
+            if (diagnosticLoad.intent === "resume") void hydrate();
+            else void beginDiagnostic(diagnosticLoad.summary);
+          }}>Повторить</button>
+          {diagnosticLoad.intent === "new" && (
+            <button className="secondary-button" type="button" onClick={() => setScreen("subjects")}>Назад к предметам</button>
+          )}
+        </section>
+      )}
+
       {screen === "welcome" && bootstrap && bootstrap.diagnostics.length === 0 && (
         <section className="screen centered-state">
           <span className="state-icon" aria-hidden="true">📚</span>
@@ -673,8 +825,8 @@ export default function Home() {
           onOpenLeague={() => void openLeague()}
           offers={bootstrap.school.links.offers}
           onOfferEvent={handleOfferEvent}
-          offerDismissed={offerDismissed}
-          onOfferDismiss={() => setOfferDismissed(true)}
+          offerDismissed={Boolean(dismissedOfferPlacements.home)}
+          onOfferDismiss={() => dismissOfferPlacement("home")}
         />
       )}
 
@@ -724,6 +876,7 @@ export default function Home() {
           {error && <p className="inline-error" role="alert">{error}</p>}
           <TrainingQuestionView
             question={questions[questionIndex]}
+            subject={diagnostic?.subject}
             index={questionIndex}
             total={questions.length}
             answer={questions[questionIndex].type === "input"
@@ -775,6 +928,12 @@ export default function Home() {
           onFinish={() => void finishTrainerSession()}
           onHome={() => setScreen(bootstrap?.diagnostics.length ? "home" : "welcome")}
           onRetry={retryTrainer}
+          livesReminder={livesReminder}
+          onRemindLives={() => void remindAboutLives()}
+          offers={bootstrap?.school.links.offers}
+          offerDismissed={dismissedOfferPlacements}
+          onOfferDismiss={dismissOfferPlacement}
+          onOfferEvent={handleOfferEvent}
         />
       )}
 
@@ -798,11 +957,23 @@ export default function Home() {
       )}
 
       {screen === "forecast" && result && (
-        <ForecastScreen
-          points={forecastPoints}
-          onBack={() => setScreen(review ? "review" : "result")}
-          onRoute={() => setScreen("route")}
-        />
+        completedDiagnostics >= 2 ? (
+          <ForecastScreen
+            points={forecastPoints}
+            offers={bootstrap?.school.links.offers}
+            offerDismissed={Boolean(dismissedOfferPlacements.forecast)}
+            onOfferDismiss={() => dismissOfferPlacement("forecast")}
+            onOfferEvent={handleOfferEvent}
+            onBack={() => setScreen(review ? "review" : "result")}
+            onRoute={() => setScreen("route")}
+          />
+        ) : (
+          <ForecastEmptyScreen
+            completedCount={completedDiagnostics}
+            onBack={() => setScreen(review ? "review" : "result")}
+            onStart={() => setScreen("mode")}
+          />
+        )
       )}
 
       {screen === "route" && result && bootstrap && (

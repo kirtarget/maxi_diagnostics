@@ -120,14 +120,76 @@ def test_public_school_payload_includes_resolved_visual_roles():
     }
 
 
-def test_report_asset_bundle_is_deterministic_across_restarts():
-    from diagnostic.api.sessions import prepare_report_assets
+def catalog_request() -> dict:
+    catalog = load_catalog(load_school(SAMPLE_SCHOOL))
+    return {
+        "init_data": signed_init_data(),
+        "session_scope": SESSION_SCOPE,
+        "diagnostic_id": "demo-math",
+        "content_version": catalog.content_version(
+            "demo-math", APPLICATION_SECRET
+        ),
+    }
+
+
+def test_catalog_detail_requires_current_session_and_returns_sanitized_questions(
+    monkeypatch,
+):
+    client = make_client(monkeypatch)
+
+    response = client.post("/api/diagnostics/catalog", json=catalog_request())
+
+    assert response.status_code == 200
+    diagnostic = response.json()["diagnostic"]
+    assert diagnostic["id"] == "demo-math"
+    assert len(diagnostic["questions"]) == 4
+    assert diagnostic["question_count"] == len(diagnostic["questions"])
+    serialized = json.dumps(diagnostic, ensure_ascii=False)
+    assert '"correct"' not in serialized
+    assert '"explanation"' not in serialized
+    assert '"learning_material_text"' not in serialized
+    assert '"learning_material_url"' not in serialized
+
+
+def test_catalog_detail_rejects_expired_session(monkeypatch):
+    client = make_client(monkeypatch)
+    body = catalog_request() | {"session_scope": "0" * 24}
+
+    response = client.post("/api/diagnostics/catalog", json=body)
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": "session_expired"}
+
+
+def test_catalog_detail_rejects_stale_content_version(monkeypatch):
+    client = make_client(monkeypatch)
+    body = catalog_request() | {"content_version": "0" * 64}
+
+    response = client.post("/api/diagnostics/catalog", json=body)
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": "diagnostic_content_changed"}
+
+
+def test_catalog_detail_hides_unknown_diagnostic(monkeypatch):
+    client = make_client(monkeypatch)
+    body = catalog_request() | {"diagnostic_id": "missing-diagnostic"}
+
+    response = client.post("/api/diagnostics/catalog", json=body)
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "diagnostic_not_found"}
+
+
+def test_report_asset_bundles_are_deterministic_across_restarts():
+    from diagnostic.api.sessions import prepare_report_asset_bundles
 
     school = load_school(SAMPLE_SCHOOL)
     catalog = load_catalog(school)
 
-    assert prepare_report_assets(school, catalog) == prepare_report_assets(school, catalog)
-    _, payload = prepare_report_assets(school, catalog)
+    first = prepare_report_asset_bundles(school, catalog)
+    assert first == prepare_report_asset_bundles(school, catalog)
+    _, payload = first["demo-math"]
     from io import BytesIO
     from zipfile import ZipFile
 
@@ -135,7 +197,7 @@ def test_report_asset_bundle_is_deterministic_across_restarts():
         assert {item.date_time for item in archive.infolist()} == {(1980, 1, 1, 0, 0, 0)}
 
 
-def test_report_asset_bundle_includes_every_question_image(tmp_path: Path):
+def test_report_asset_bundle_includes_only_its_diagnostic_images(tmp_path: Path):
     school_root = tmp_path / "school"
     shutil.copytree(SAMPLE_SCHOOL, school_root)
     for name, color in (("question-1.svg", "#111111"), ("question-2.svg", "#222222")):
@@ -146,25 +208,32 @@ def test_report_asset_bundle_includes_every_question_image(tmp_path: Path):
         )
     diagnostic_path = school_root / "diagnostics/demo-math.json"
     data = json.loads(diagnostic_path.read_text(encoding="utf-8"))
-    data["questions"][0]["assets"] = [
-        "assets/question-1.svg",
-        "assets/question-2.svg",
-    ]
+    data["questions"][0]["assets"] = ["assets/question-1.svg"]
     diagnostic_path.write_text(json.dumps(data), encoding="utf-8")
+    second = dict(data)
+    second["id"] = "second-math"
+    second["questions"] = [dict(question) for question in data["questions"]]
+    second["questions"][0]["assets"] = ["assets/question-2.svg"]
+    (school_root / "diagnostics/second-math.json").write_text(
+        json.dumps(second), encoding="utf-8"
+    )
     school = load_school(school_root)
     catalog = load_catalog(school)
 
-    from diagnostic.api.sessions import prepare_report_assets
+    from diagnostic.api.sessions import prepare_report_asset_bundles
     from io import BytesIO
     from zipfile import ZipFile
 
-    _, payload = prepare_report_assets(school, catalog)
+    bundles = prepare_report_asset_bundles(school, catalog)
+    _, first_payload = bundles["demo-math"]
+    _, second_payload = bundles["second-math"]
 
-    with ZipFile(BytesIO(payload)) as archive:
-        assert {
-            "assets/question-1.svg",
-            "assets/question-2.svg",
-        }.issubset(archive.namelist())
+    with ZipFile(BytesIO(first_payload)) as archive:
+        assert "assets/question-1.svg" in archive.namelist()
+        assert "assets/question-2.svg" not in archive.namelist()
+    with ZipFile(BytesIO(second_payload)) as archive:
+        assert "assets/question-2.svg" in archive.namelist()
+        assert "assets/question-1.svg" not in archive.namelist()
 
 
 def test_progress_rejects_unknown_question_id(monkeypatch):

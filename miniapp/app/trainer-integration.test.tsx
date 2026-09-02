@@ -20,6 +20,16 @@ const question: Question = {
   topic: "Алгебра",
   title: "Задание 1",
   prompt: "Сколько будет два плюс два?",
+  max_primary_score: 1,
+  source: {
+    provider: "maximum",
+    official_year: 2026,
+    approval_status: "approved",
+    source_kind: "original",
+    source_url: "https://maximumtest.ru/",
+    rights_status: "original",
+    verified_at: "2026-09-01",
+  },
   options: [{ id: "a", label: "4" }, { id: "b", label: "5" }],
 };
 
@@ -139,7 +149,7 @@ describe("trainer integration contracts", () => {
 
   it("keeps the trainer CTA separate from the diagnostic CTA", () => {
     const html = renderToStaticMarkup(<GameplayHomeScreen
-      diagnostics={[{ id: "math", content_version: "v1", exam: "ОГЭ", subject: "Математика", mark: "М", quick_count: 3, questions: [] }]}
+      diagnostics={[{ id: "math", content_version: "v1", exam: "ОГЭ", subject: "Математика", mark: "М", quick_count: 3, question_count: 12 }]}
       labels={{ start_diagnostic: "Начать диагностику" } as never}
       profile={gameplayProfileView({ completion_count: 0, achievement_keys: [] })}
       onStart={() => undefined}
@@ -166,13 +176,91 @@ describe("trainer integration contracts", () => {
       response: {
         trainer_session_id: "s".repeat(32), question_id: "q1", is_correct: false,
         correct_answer: "4", explanation: "Проверь сложение.", xp_delta: 0,
+        max_primary_score: 1, earned_primary_score: 0,
         life_delta: -1, current_index: 1, revision: 2, status: "exhausted", lives_remaining: 4,
       },
     });
-    const html = renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />);
+    const html = renderToStaticMarkup(<TrainerScreen
+      state={state}
+      dispatch={() => undefined}
+      offers={[{ id: "school-course", label: "Разобрать тему с преподавателем", button: "Открыть", url: "https://school.example/course" }]}
+      offerDismissed={{ trainer_wrong: false }}
+      onOfferDismiss={() => undefined}
+      onOfferEvent={() => undefined}
+    />);
     expect(html).toContain("Почти");
     expect(html).toContain("Проверь сложение.");
     expect(html).toContain("Завершить тренировку");
+    expect(html).toContain("до 1 первичного балла");
+    expect(html).toContain("0 из 1 первичного балла");
+    expect(html).toContain("offer-surface-trainer_wrong");
+  });
+
+  it("formats trainer question math the same way as the diagnostic sheet", () => {
+    const mathQuestion = {
+      ...question,
+      prompt: "Решите уравнение x^(2) − 5x + 6 = 0. Укажите меньший корень.",
+      options: [{ id: "a", label: "А) 2" }, { id: "b", label: "Б) 3" }],
+    };
+    const state = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [mathQuestion], lives_remaining: 5,
+      },
+    });
+    const html = renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />);
+    expect(html).toContain("math-expression");
+    expect(html).toContain("<sup>2</sup>");
+    expect(html).not.toContain("x^(2)");
+    expect(html).not.toContain("А) 2");
+  });
+
+  it("shows the dedicated no-lives screen with a countdown and a Telegram reminder", () => {
+    const state = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [question], lives_remaining: 0,
+        next_life_at: new Date(Date.now() + 42 * 60_000).toISOString(),
+      },
+    });
+    const html = renderToStaticMarkup(
+      <TrainerScreen
+        state={state}
+        dispatch={() => undefined}
+        livesReminder={{ status: "idle" }}
+        onRemindLives={() => undefined}
+        offers={[{ id: "school-course", label: "Продолжить подготовку", button: "Открыть", url: "https://school.example/course" }]}
+        offerDismissed={{ trainer_no_lives: false }}
+        onOfferDismiss={() => undefined}
+        onOfferEvent={() => undefined}
+      />,
+    );
+    expect(html).toContain("Жизни закончились");
+    expect(html).toContain("Восстановление");
+    expect(html).toContain("Напомнить в Telegram");
+    expect(html).toContain("Пройти диагностику");
+    expect(html).toContain("offer-surface-trainer_no_lives");
+    expect(html).not.toContain("Проверить ответ");
+  });
+
+  it("confirms a scheduled Telegram reminder instead of the button", () => {
+    const state = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [question], lives_remaining: 0,
+        next_life_at: new Date(Date.now() + 42 * 60_000).toISOString(),
+      },
+    });
+    const html = renderToStaticMarkup(
+      <TrainerScreen state={state} dispatch={() => undefined} livesReminder={{ status: "scheduled" }} onRemindLives={() => undefined} />,
+    );
+    expect(html).toContain("Напомним в Telegram");
   });
 
   it("keeps mistake replay available when the normal life pool is empty", () => {

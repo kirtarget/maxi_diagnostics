@@ -375,6 +375,10 @@ def _convert_question(question: dict[str, Any]) -> dict[str, Any] | None:
     explanation = _explanation(question)
     if explanation is not None:
         converted["explanation"] = explanation
+    if type(question.get("max_primary_score")) is int:
+        converted["max_primary_score"] = question["max_primary_score"]
+    if isinstance(question.get("source"), dict):
+        converted["source"] = dict(question["source"])
     image_sources = _inline_image_sources(question)
     if len(image_sources) > 1:
         return None

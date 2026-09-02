@@ -16,7 +16,7 @@
       "learning_material_text": "Определите часть речи и форму слова, затем проверьте суффикс, зависимые слова и приставку. Не переносите правило для прилагательного на причастие без проверки контекста.",
       "learning_material_url": "https://maximumtest.ru/uchebnik/russky-yazyk",
       "title": "Задание 15",
-      "prompt": "Укажите цифр у(- ы ) , на месте котор ой(- ых ) пишется НН .\nАндрей вскочил, весь до шеи вымаза ( 1) ый снегом, и недалеко от себя увидел перепачка (2) ое кровью серебря(З) ое ружье и золоче (4) ый кубок.",
+      "prompt": "Укажите цифру(-ы), на месте которой(-ых) пишется НН.\nАндрей вскочил, весь до шеи вымаза(1)ый снегом, и недалеко от себя увидел перепачка(2)ое кровью серебря(3)ое ружьё и золочё(4)ый кубок.",
       "options": [
         {
           "id": "o1",
@@ -39,7 +39,8 @@
       "correct": [
         "o1",
         "o2"
-      ]
+      ],
+      "explanation": "В словах «вымазанный» и «перепачканное» пишется НН: это полные страдательные причастия с суффиксом -анн-. «Серебряное» имеет суффикс -ян-, а «золочёный» без зависимых слов пишется с одной Н."
     },
     {
       "id": "q9897",
@@ -56,7 +57,7 @@
         },
         {
           "id": "o2",
-          "label": "Он вошел в (НЕ)МАЛЕНЬКЙ, но очень уютный зал."
+          "label": "Он вошел в (НЕ)МАЛЕНЬКИЙ, но очень уютный зал."
         },
         {
           "id": "o3",
@@ -77,7 +78,8 @@
         "o3",
         "o4",
         "o5"
-      ]
+      ],
+      "explanation": "Раздельное написание требуется при отрицании с глаголом, зависимом слове у причастия, усилителе «никому» и противопоставлении с союзом «а». Поэтому подходят позиции 1, 3, 4 и 5; в сочетании «немаленький, но уютный» противопоставления нет."
     },
     {
       "id": "q9898",
@@ -115,7 +117,8 @@
         "o2",
         "o4",
         "o5"
-      ]
+      ],
+      "explanation": "Нормативные ударения: молЯщий, вернА, оптОвый, прибЫв. Форма «клалА» неверна, потому что в прошедшем времени нормативно клАла."
     },
     {
       "id": "q9900",
@@ -147,7 +150,8 @@
       "correct": [
         "o3",
         "o4"
-      ]
+      ],
+      "explanation": "Оборот «неведомо как очутившегося в озере» стоит после определяемого слова «кузова» и обособляется с двух сторон. Поэтому запятые нужны на местах 3 и 4, а однородные деепричастия соединены одиночным союзом «и»."
     },
     {
       "id": "q9901",
@@ -180,7 +184,18 @@
         "o1",
         "o3",
         "o4"
-      ]
-    }
+      ],
+      "explanation": "Перед союзом «и» разделяются части сложного предложения, поэтому нужна запятая 1. Придаточные с союзами «когда» и «хотя» отделяются запятыми 3 и 4; перед «когда» после «и» запятая не ставится из-за соотносительного слова «то»."
+    },
+    {"id":"f26-ege-rus-a01","type":"multiple","topic":"Орфоэпические нормы","title":"Задание 4","prompt":"Выберите слова, в которых верно выделена ударная гласная.","options":[{"id":"a","label":"баловАть"},{"id":"b","label":"красИвее"},{"id":"c","label":"тОрты"},{"id":"d","label":"звОнит"}],"selection_limit":3,"max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"4","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ru_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Нормативные ударения: баловАть, красИвее, тОрты. В слове звонит ударение падает на второй слог.","correct":["a","b","c"]},
+    {"id":"f26-ege-rus-a02","type":"multiple","topic":"Слитное и раздельное написание НЕ","title":"Задание 13","prompt":"Выберите предложения, где НЕ со словом пишется раздельно.","options":[{"id":"a","label":"Работа ещё (не)закончена."},{"id":"b","label":"Это был (не)громкий, а тихий голос."},{"id":"c","label":"Он говорил (не)уверенно."},{"id":"d","label":"Мы увидели (не)высокий дом."}],"selection_limit":2,"max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"13","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ru_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Краткое причастие «не закончена» и конструкция с противопоставлением «не громкий, а тихий» требуют раздельного написания.","correct":["a","b"]},
+    {"id":"f26-ege-rus-a03","type":"multiple","topic":"Правописание Н и НН","title":"Задание 15","prompt":"Выберите слова, в которых пишется НН.","options":[{"id":"a","label":"организова(н/нн)ая встреча"},{"id":"b","label":"ветре(н/нн)ый день"},{"id":"c","label":"стекля(н/нн)ая ваза"},{"id":"d","label":"жаре(н/нн)ая картошка"}],"selection_limit":2,"max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"15","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ru_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"«Организованная» является полным причастием с суффиксом -ованн-, а «стеклянная» относится к словам-исключениям. В остальных словах одна Н.","correct":["a","c"]},
+    {"id":"f26-ege-rus-a04","type":"multiple","topic":"Обособление определений и обстоятельств","title":"Задание 17","prompt":"Выберите предложения, где нужны две запятые.","options":[{"id":"a","label":"Уставшие после похода мы сразу уснули."},{"id":"b","label":"Река освещённая луной казалась серебряной."},{"id":"c","label":"Он улыбаясь вошёл в комнату."},{"id":"d","label":"Дети играли во дворе."}],"selection_limit":2,"max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"17","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ru_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"В предложении a распространённое определение перед личным местоимением обособляется одной запятой после оборота: «Уставшие после похода, мы сразу уснули». В предложении b распространённое определение после определяемого существительного обособляется двумя запятыми, а в предложении c деепричастие обособляется с двух сторон. Поэтому подходят b и c.","correct":["b","c"]},
+    {"id":"f26-ege-rus-a05","type":"multiple","topic":"Знаки препинания в сложном предложении","title":"Задание 20","prompt":"Выберите предложения, где на месте пропуска нужна запятая.","options":[{"id":"a","label":"Я понял _ что поезд уже ушёл."},{"id":"b","label":"Когда стемнело _ мы зажгли фонарь."},{"id":"c","label":"На столе лежали хлеб _ сыр и яблоки."},{"id":"d","label":"Он спросил _ кто придёт первым."}],"selection_limit":3,"max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"20","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ru_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Запятые отделяют придаточные части в вариантах a, b и d. Между двумя первыми однородными членами в варианте c запятая не ставится.","correct":["a","b","d"]},
+    {"id":"f26-ege-rus-a06","type":"input","topic":"Орфоэпические нормы","title":"Задание 4","prompt":"В каком слове ударение падает на второй слог? 1) звонит 2) торты 3) свёкла 4) банты. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"4","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ru_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Нормативное ударение звонИт приходится на второй слог. В словах тОрты, свЁкла и бАнты ударение падает на первый слог.","correct":["1"]},
+    {"id":"f26-ege-rus-a07","type":"input","topic":"Раздельное написание НЕ","title":"Задание 13","prompt":"В каком предложении НЕ пишется раздельно? 1) Перед нами (не)широкая река. 2) Письмо (не)отправлено. 3) Раздался (не)громкий голос. 4) Мы вошли в (не)большой зал. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"13","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ru_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"С кратким причастием «не отправлено» частица пишется раздельно. В остальных случаях прилагательные можно заменить синонимами без НЕ.","correct":["2"]},
+    {"id":"f26-ege-rus-a08","type":"input","topic":"Правописание Н и НН","title":"Задание 15","prompt":"В каком словосочетании пишется НН? 1) кожа(н/нн)ый ремень 2) серебря(н/нн)ая ложка 3) дли(н/нн)ая дорога 4) ю(н/нн)ый спортсмен. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"15","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ru_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"В прилагательном «длинная» основа оканчивается на Н и добавляется суффикс -н-, поэтому пишется НН. Другие варианты имеют одну Н.","correct":["3"]},
+    {"id":"f26-ege-rus-a09","type":"input","topic":"Обособление деепричастного оборота","title":"Задание 17","prompt":"В каком предложении нужно поставить две запятые? 1) Он шёл не спеша. 2) Туристы свернув к реке увидели мост. 3) Мы решили остаться дома. 4) Ребёнок сидел молча. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"17","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ru_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Оборот «свернув к реке» находится внутри предложения и обособляется с двух сторон, поэтому верен вариант 2.","correct":["2"]},
+    {"id":"f26-ege-rus-a10","type":"input","topic":"Пунктуация при придаточной части","title":"Задание 20","prompt":"В каком предложении нужна одна запятая? 1) Мы увидели как над лесом поднялся туман. 2) На улице было тихо и прохладно. 3) Ветер стих и утих. 4) В саду росли яблони груши сливы. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"20","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ru_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"В первом предложении придаточная часть с союзом «как» отделяется одной запятой. В третьем предложении однородные сказуемые соединены одиночным союзом «и», а в четвёртом нужны две запятые. Поэтому только вариант 1 требует ровно одну запятую.","correct":["1"]}
   ]
 }

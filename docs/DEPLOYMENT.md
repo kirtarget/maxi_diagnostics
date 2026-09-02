@@ -95,6 +95,37 @@ curl --fail http://127.0.0.1:13002/
 
 Then check `https://maxi.kirtarget.ru/healthz` through Nginx.
 
+## Updating a running installation
+
+The production directory `/opt/maxi_diagnostics` is a source snapshot, not a Git
+checkout. Never run `git pull` there. Update it from a reviewed commit that has a
+green CI run:
+
+1. Create a backup (see operations).
+2. On the server, download the commit archive and unpack it over the directory.
+   `.env` is not part of the archive and survives the extraction:
+
+   ```sh
+   SHA=<full-commit-sha>
+   cd /root && wget -q "https://github.com/kirtarget/maxi_diagnostics/archive/${SHA}.tar.gz"
+   tar -xzf "${SHA}.tar.gz" --strip-components=1 -C /opt/maxi_diagnostics
+   ```
+
+3. Record the release in `/opt/maxi_diagnostics/.release-revision` with `commit=`,
+   `branch=` and `archive_sha256=` lines. The checksum comes from
+   `sha256sum "${SHA}.tar.gz"`.
+4. Rebuild and restart the production Compose pair:
+
+   ```sh
+   cd /opt/maxi_diagnostics
+   docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml up -d --build
+   ```
+
+5. Check `curl --fail http://127.0.0.1:18082/healthz`, `curl --fail http://127.0.0.1:13002/`,
+   then the public `/healthz`, admin sign-in and `/start` in the bot.
+
+Rollback is the same procedure with the previous commit SHA from `.release-revision`.
+
 ## BotFather Mini App
 
 Prefer creating the bot from a school-owned BotFather account. Configure the menu
