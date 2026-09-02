@@ -176,6 +176,19 @@ export type ForecastPoint = {
   value: number;
 };
 
+export type ForecastKind = "test_score" | "grade" | "accuracy_percent";
+
+/** Server-computed estimate of the exam result this sample points to. */
+export type ScoreEstimate = {
+  kind: "test_score" | "grade";
+  value: number;
+  scaled_primary: number;
+  exam_max_primary: number;
+  sample_max_primary: number;
+  sample_size: number;
+  min_pass: number | null;
+};
+
 export type ServerResult = {
   diagnostic_id: string;
   mode: DiagnosticMode;
@@ -187,7 +200,9 @@ export type ServerResult = {
   unassessed_part?: string | null;
   strong_topics: Array<ServerTopic | string>;
   growth_topics: Array<ServerTopic | string>;
-  forecast?: { points: ForecastPoint[] } | Record<string, number>;
+  recoverable_primary_score?: number;
+  estimate?: ScoreEstimate | null;
+  forecast?: { kind?: ForecastKind; points: ForecastPoint[] } | Record<string, number>;
 };
 
 export type ServerAttempt = {
@@ -200,6 +215,7 @@ export type ServerAttempt = {
   question_count: number;
   progress_revision: number;
   answers: AnswerMap;
+  estimate?: ScoreEstimate | null;
 };
 
 export type ProgressProfile = {
