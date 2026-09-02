@@ -122,7 +122,7 @@ def test_backend_and_miniapp_images_are_reproducible_minimal_and_non_root():
 
     assert "FROM node:22-alpine@sha256:" in miniapp
     assert "npm ci" in miniapp and "npm run build" in miniapp
-    assert "COPY school/brand.json" in miniapp
+    assert "COPY school/brand.json school/links.json /app/school/" in miniapp
     assert "COPY school/assets" in miniapp
     assert ".next/standalone" in miniapp
     assert "USER node" in miniapp and "EXPOSE 3000" in miniapp
