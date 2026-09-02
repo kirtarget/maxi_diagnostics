@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, type Dispatch, type ReactNode } from "react";
+import { AnswerEditor } from "./answer-editor";
 import { FormattedMathText, FormattedStem } from "./math-display";
 import { normalizeOffer, OfferSurface, type OfferPlacement, type OfferTelemetryEvent } from "./offer-ux";
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
-import { cleanAnswerLabel } from "./question-prompt";
-import type { AnswerValue, InputQuestion, MatchingQuestion, MultipleQuestion, Question, SchoolLinks } from "./types";
+import type { AnswerValue, Question, SchoolLinks } from "./types";
 import {
   isTrainerAnswerComplete,
   type TrainerAction,
@@ -33,52 +33,6 @@ export type TrainerScreenProps = {
 
 function QuestionPrompt({ question }: { question: Question }) {
   return <div className="trainer-prompt"><div className="trainer-prompt-meta"><span>{question.title}</span>{hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}</div><h1><FormattedStem text={question.prompt} /></h1><small>{question.topic}</small></div>;
-}
-
-function AnswerEditor({ question, value, disabled, onChange }: {
-  question: Question;
-  value: AnswerValue | undefined;
-  disabled: boolean;
-  onChange: (answer: AnswerValue) => void;
-}) {
-  if (question.type === "single") {
-    return <div className="answer-list" role="radiogroup" aria-label="Выберите один вариант">
-      {question.options.map((option, index) => <OptionButton key={option.id} label={option.label} marker={String.fromCharCode(65 + index)} selected={value === option.id} disabled={disabled} onClick={() => onChange(option.id)} />)}
-    </div>;
-  }
-  if (question.type === "multiple") return <MultipleEditor question={question} value={Array.isArray(value) ? value : []} disabled={disabled} onChange={onChange} />;
-  if (question.type === "matching") return <MatchingEditor question={question} value={value && !Array.isArray(value) && typeof value === "object" ? value : {}} disabled={disabled} onChange={onChange} />;
-  return <InputEditor question={question} value={typeof value === "string" ? value : ""} disabled={disabled} onChange={onChange} />;
-}
-
-function OptionButton({ label, marker, selected, disabled, onClick }: { label: string; marker: string; selected: boolean; disabled: boolean; onClick: () => void }) {
-  return <button type="button" role="radio" aria-checked={selected} disabled={disabled} className={`answer-option${selected ? " selected" : ""}`} onClick={onClick}>
-    <span className="option-letter">{marker}</span><span><FormattedMathText text={cleanAnswerLabel(label)} /></span><span className="selection-mark" aria-hidden="true" />
-  </button>;
-}
-
-function MultipleEditor({ question, value, disabled, onChange }: { question: MultipleQuestion; value: string[]; disabled: boolean; onChange: (answer: AnswerValue) => void }) {
-  return <div className="answer-list" role="group" aria-label={`Выберите ${question.selection_limit} варианта`}>
-    {question.options.map((option, index) => {
-      const selected = value.includes(option.id);
-      return <OptionButton key={option.id} label={option.label} marker={String.fromCharCode(65 + index)} selected={selected} disabled={disabled || (!selected && value.length >= question.selection_limit)} onClick={() => onChange(selected ? value.filter((id) => id !== option.id) : [...value, option.id])} />;
-    })}
-  </div>;
-}
-
-function MatchingEditor({ question, value, disabled, onChange }: { question: MatchingQuestion; value: Record<string, string>; disabled: boolean; onChange: (answer: AnswerValue) => void }) {
-  return <div className="matching-list">
-    {question.items.map((item, index) => <label className="matching-row" key={item.id}>
-      <span className="matching-index">{index + 1}</span><span><FormattedMathText text={cleanAnswerLabel(item.label)} /></span>
-      <select disabled={disabled} value={value[item.id] ?? ""} aria-label={`Соответствие для ${item.label}`} onChange={(event) => onChange({ ...value, [item.id]: event.target.value })}>
-        <option value="">Выберите</option>{question.options.map((option) => <option value={option.id} key={option.id}>{cleanAnswerLabel(option.label)}</option>)}
-      </select>
-    </label>)}
-  </div>;
-}
-
-function InputEditor({ question, value, disabled, onChange }: { question: InputQuestion; value: string; disabled: boolean; onChange: (answer: AnswerValue) => void }) {
-  return <label className="short-answer"><span>Твой ответ</span><input disabled={disabled} value={value} maxLength={64} onChange={(event) => onChange(event.target.value)} placeholder="Введи ответ" /></label>;
 }
 
 const LIFE_REFILL_INTERVAL_MS = 4 * 60 * 60 * 1000;
