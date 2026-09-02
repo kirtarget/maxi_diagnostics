@@ -21,6 +21,7 @@ def make_client(monkeypatch) -> TestClient:
     from diagnostic.api.main import create_app
 
     monkeypatch.setattr(router.repository, "get_summary", AsyncMock(return_value={"attempts": 3, "completed": 2, "pending_pdfs": 1, "due_notifications": 1}))
+    monkeypatch.setattr(router.repository, "get_funnel", AsyncMock(return_value={"days": 7, "exam": None, "subject": None, "summary": {}, "breakdown": []}))
     monkeypatch.setattr(router.repository, "list_attempts", AsyncMock(return_value=(0, [])))
     monkeypatch.setattr(router.repository, "list_delivery_issues", AsyncMock(return_value=(0, [])))
     monkeypatch.setattr(router.repository, "list_notification_issues", AsyncMock(return_value=(0, [])))
@@ -41,6 +42,46 @@ def test_summary_is_diagnostic_only(monkeypatch):
     assert response.status_code == 200
     assert response.json() == {"attempts": 3, "completed": 2, "pending_pdfs": 1, "due_notifications": 1}
     router.repository.get_summary.assert_awaited_once()
+
+
+def test_funnel_api_passes_only_bounded_documented_windows(monkeypatch):
+    from diagnostic.admin import router
+
+    client = make_client(monkeypatch)
+    router.repository.get_funnel.return_value = {
+        "days": 30, "exam": "oge", "subject": "Математика",
+        "summary": {"subjects": 4, "opened": 4, "started": 3, "completed": 2,
+                    "result_viewed": 1, "trainer_answered": 1, "offer_clicked": 0,
+                    "returned_d1": 1, "returned_d7": 2},
+        "breakdown": [],
+    }
+
+    response = client.get(
+        "/api/admin/diagnostics/funnel?days=30&exam=oge&subject=Математика",
+        auth=ADMIN_AUTH,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["summary"]["completed"] == 2
+    router.repository.get_funnel.assert_awaited_once_with(
+        days=30, exam="oge", subject="Математика"
+    )
+    assert client.get("/api/admin/diagnostics/funnel?days=1", auth=ADMIN_AUTH).status_code == 422
+    assert client.get("/api/admin/diagnostics/funnel?days=90", auth=ADMIN_AUTH).status_code == 422
+    assert client.get(
+        "/api/admin/diagnostics/funnel?exam=" + "e" * 33, auth=ADMIN_AUTH
+    ).status_code == 422
+
+
+def test_funnel_page_is_served_in_the_shared_admin_shell(monkeypatch):
+    client = make_client(monkeypatch)
+
+    response = client.get("/admin/funnel", auth=ADMIN_AUTH)
+
+    assert response.status_code == 200
+    assert "/admin/static/funnel.js" in response.text
+    assert 'href="/admin/funnel"' in response.text
+    assert "https://cdn" not in response.text.lower()
 
 
 def test_attempt_api_allowlists_fields_and_omits_sensitive_payloads(monkeypatch):

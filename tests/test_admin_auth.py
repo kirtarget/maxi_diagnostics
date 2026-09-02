@@ -44,7 +44,10 @@ def test_admin_page_requires_generic_basic_challenge():
     [
         ("get", "/admin/diagnostics"),
         ("get", "/admin/content"),
+        ("get", "/admin/funnel"),
         ("get", "/api/admin/diagnostics/summary"),
+        ("get", "/api/admin/diagnostics/funnel"),
+        ("get", "/api/admin/diagnostics/funnel?days=30"),
         ("get", "/api/admin/diagnostics/attempts"),
         ("get", "/api/admin/diagnostics/delivery-issues"),
         ("get", "/api/admin/diagnostics/notification-issues"),

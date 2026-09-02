@@ -208,6 +208,26 @@ async def diagnostics_page(request: Request):
     )
 
 
+@router.get("/admin/funnel", response_class=HTMLResponse)
+async def funnel_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="funnel.html",
+        context=_admin_context(request),
+    )
+
+
+@router.get("/api/admin/diagnostics/funnel")
+async def funnel_report(
+    days: int = Query(7, ge=7, le=30),
+    exam: str | None = Query(default=None, max_length=32),
+    subject: str | None = Query(default=None, max_length=128),
+):
+    if days not in (7, 30):
+        raise HTTPException(status_code=422, detail="funnel_window_invalid")
+    return await repository.get_funnel(days=days, exam=exam, subject=subject)
+
+
 @router.get("/admin/content", response_class=HTMLResponse)
 async def content_page(request: Request):
     return templates.TemplateResponse(

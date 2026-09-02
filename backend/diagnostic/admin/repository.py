@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from diagnostic.db.core import get_pool
-from diagnostic.db import content
+from diagnostic.db import content, funnel
 
 
 def _bounded(limit: int, offset: int) -> tuple[int, int]:
@@ -35,6 +35,10 @@ async def save_content_draft(**kwargs):
 
 async def record_content_action(**kwargs):
     return await content.record_action(**kwargs)
+
+
+async def get_funnel(*, days: int, exam: str | None, subject: str | None) -> dict:
+    return await funnel.funnel_report(days=days, exam=exam, subject=subject)
 
 
 async def get_summary() -> dict[str, int]:

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Воронка - {{ school_name }}{% endblock %}
+{% block content %}
+  <div id="funnel-status" class="status" role="status" aria-live="polite">Загрузка данных...</div>
+
+  <section class="card" aria-labelledby="filter-heading">
+    <h2 id="filter-heading">Фильтр</h2>
+    <p class="muted">Считаются уникальные ученики по псевдонимному идентификатору. Дни считаются по UTC, данные хранятся 90 дней.</p>
+    <div class="row">
+      <label>Экзамен<input id="filter-exam" maxlength="32" autocomplete="off"></label>
+      <label>Предмет<input id="filter-subject" maxlength="128" autocomplete="off"></label>
+      <button id="apply-filter" type="button">Показать</button>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="week-heading">
+    <h2 id="week-heading">7 дней</h2>
+    <div id="week-summary" class="grid" aria-label="Воронка за 7 дней"></div>
+    <div class="table-wrap"><table><thead><tr><th>Шаг</th><th>Учеников</th><th>От открывших</th><th>От предыдущего шага</th></tr></thead><tbody id="week-body"></tbody></table></div>
+  </section>
+
+  <section class="card" aria-labelledby="month-heading">
+    <h2 id="month-heading">30 дней</h2>
+    <div id="month-summary" class="grid" aria-label="Воронка за 30 дней"></div>
+    <div class="table-wrap"><table><thead><tr><th>Шаг</th><th>Учеников</th><th>От открывших</th><th>От предыдущего шага</th></tr></thead><tbody id="month-body"></tbody></table></div>
+  </section>
+
+  <section class="card" aria-labelledby="breakdown-heading">
+    <h2 id="breakdown-heading">По экзаменам и предметам за 30 дней</h2>
+    <div class="table-wrap"><table><thead><tr><th>Экзамен</th><th>Предмет</th><th>Начали</th><th>Завершили</th><th>Открыли результат</th><th>Тренажёр</th><th>Доходимость</th></tr></thead><tbody id="breakdown-body"></tbody></table></div>
+  </section>
+{% endblock %}
+{% block scripts %}<script src="/admin/static/funnel.js" defer></script>{% endblock %}
