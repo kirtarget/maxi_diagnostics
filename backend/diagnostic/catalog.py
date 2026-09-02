@@ -81,6 +81,18 @@ def _validate_prompt_text(value: str) -> str:
     return value
 
 
+SERVER_ONLY = {"server_only": True}
+"""Field marker: never serialized toward the Mini App. See public_question()."""
+
+
+def server_only_fields(model: type[BaseModel]) -> frozenset[str]:
+    return frozenset(
+        name
+        for name, field in model.model_fields.items()
+        if isinstance(field.json_schema_extra, dict) and field.json_schema_extra.get("server_only")
+    )
+
+
 class QuestionOption(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -188,9 +200,15 @@ class QuestionBase(BaseModel):
     prompt: str = Field(min_length=1, max_length=4000)
     max_primary_score: int = Field(default=1, ge=1, le=100, strict=True)
     source: QuestionSource | None = None
-    explanation: str | None = Field(default=None, min_length=1, max_length=2000)
-    learning_material_text: str | None = Field(default=None, min_length=1, max_length=1200)
-    learning_material_url: str | None = Field(default=None, max_length=255)
+    explanation: str | None = Field(
+        default=None, min_length=1, max_length=2000, json_schema_extra=SERVER_ONLY
+    )
+    learning_material_text: str | None = Field(
+        default=None, min_length=1, max_length=1200, json_schema_extra=SERVER_ONLY
+    )
+    learning_material_url: str | None = Field(
+        default=None, max_length=255, json_schema_extra=SERVER_ONLY
+    )
     asset: str | None = Field(default=None, max_length=255)
     assets: tuple[str, ...] | None = Field(
         default=None, min_length=1, max_length=5
@@ -286,7 +304,7 @@ class QuestionBase(BaseModel):
 class SingleQuestion(QuestionBase):
     type: Literal["single"]
     options: tuple[QuestionOption, ...] = Field(min_length=1, max_length=_MAX_OPTIONS)
-    correct: str = Field(min_length=1)
+    correct: str = Field(min_length=1, json_schema_extra=SERVER_ONLY)
 
     @model_validator(mode="after")
     def validate_correct_option(self) -> "SingleQuestion":
@@ -300,7 +318,9 @@ class MultipleQuestion(QuestionBase):
     type: Literal["multiple"]
     options: tuple[QuestionOption, ...] = Field(min_length=1, max_length=_MAX_OPTIONS)
     selection_limit: int = Field(ge=1, le=_MAX_OPTIONS, strict=True)
-    correct: tuple[str, ...] = Field(min_length=1, max_length=_MAX_OPTIONS)
+    correct: tuple[str, ...] = Field(
+        min_length=1, max_length=_MAX_OPTIONS, json_schema_extra=SERVER_ONLY
+    )
 
     @model_validator(mode="after")
     def validate_multiple_options(self) -> "MultipleQuestion":
@@ -319,7 +339,9 @@ class MatchingQuestion(QuestionBase):
     type: Literal["matching"]
     items: tuple[QuestionOption, ...] = Field(min_length=1, max_length=_MAX_OPTIONS)
     options: tuple[QuestionOption, ...] = Field(min_length=1, max_length=_MAX_OPTIONS)
-    correct: dict[str, str] = Field(min_length=1, max_length=_MAX_OPTIONS)
+    correct: dict[str, str] = Field(
+        min_length=1, max_length=_MAX_OPTIONS, json_schema_extra=SERVER_ONLY
+    )
 
     @model_validator(mode="after")
     def validate_matching_options(self) -> "MatchingQuestion":
@@ -334,7 +356,7 @@ class MatchingQuestion(QuestionBase):
 
 class InputQuestion(QuestionBase):
     type: Literal["input"]
-    correct: tuple[str, ...] = Field(min_length=1, max_length=20)
+    correct: tuple[str, ...] = Field(min_length=1, max_length=20, json_schema_extra=SERVER_ONLY)
 
     @model_validator(mode="after")
     def validate_input_variants(self) -> "InputQuestion":
@@ -395,18 +417,7 @@ def _public_diagnostic(diagnostic: Diagnostic, content_version: str) -> dict[str
         **diagnostic.model_dump(exclude={"questions", "scoring"}, mode="json"),
         "content_version": content_version,
         "question_count": len(diagnostic.questions),
-        "questions": [
-            {
-                key: value
-                for key, value in question.model_dump(
-                    mode="json", exclude_none=True
-                ).items()
-                if key not in {
-                    "correct", "explanation", "learning_material_text", "learning_material_url"
-                }
-            }
-            for question in diagnostic.questions
-        ],
+        "questions": [public_question(question) for question in diagnostic.questions],
     }
 
 
@@ -483,13 +494,41 @@ def _validate_unique_option_ids(options: tuple[QuestionOption, ...]) -> None:
 
 
 def public_question(question: Question) -> dict[str, Any]:
-    return {
-        key: value
-        for key, value in question.model_dump(mode="json", exclude_none=True).items()
-        if key not in {
-            "correct", "explanation", "learning_material_text", "learning_material_url"
-        }
-    }
+    """Serialize a question for the Mini App, dropping every SERVER_ONLY field."""
+    return question.model_dump(
+        mode="json", exclude_none=True, exclude=set(server_only_fields(type(question)))
+    )
+
+
+def is_valid_answer_shape(question: Question, answer: Any, *, complete: bool) -> bool:
+    """Whether an answer has the right shape for the question.
+
+    Partial answers are allowed while a diagnostic is in progress; with
+    ``complete=True`` a multiple-choice answer must hit selection_limit and a
+    matching answer must cover every item. Correctness is not checked here.
+    """
+    if isinstance(question, SingleQuestion):
+        return isinstance(answer, str) and answer in {option.id for option in question.options}
+    if isinstance(question, InputQuestion):
+        return is_valid_numeric_answer(answer)
+    if isinstance(question, MultipleQuestion):
+        allowed = {option.id for option in question.options}
+        return (
+            isinstance(answer, list)
+            and all(isinstance(value, str) for value in answer)
+            and len(answer) == len(set(answer))
+            and set(answer) <= allowed
+            and len(answer) <= question.selection_limit
+            and (not complete or len(answer) == question.selection_limit)
+        )
+    item_ids = {item.id for item in question.items}
+    option_ids = {option.id for option in question.options}
+    return (
+        isinstance(answer, dict)
+        and set(answer) <= item_ids
+        and all(isinstance(value, str) and value in option_ids for value in answer.values())
+        and (not complete or set(answer) == item_ids)
+    )
 
 
 def _public_summary(diagnostic: Diagnostic, content_version: str) -> dict[str, Any]:

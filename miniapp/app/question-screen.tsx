@@ -1,11 +1,10 @@
-import { answerInputConfig } from "./math-text";
+import { AnswerEditor } from "./answer-editor";
 import { FormattedMathText, FormattedStem } from "./math-display";
-import { isValidNumericInput, updateCompactAnswer, updateMatchingAnswer } from "./answer-values";
+import { isValidNumericInput, updateCompactAnswer } from "./answer-values";
 import { questionAssetPaths } from "./question-assets";
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import {
   answerTypeLabel,
-  cleanAnswerLabel,
   parseQuestionPrompt,
   questionTitleClassName,
 } from "./question-prompt";
@@ -20,13 +19,7 @@ import {
   type TableGapPrompt,
 } from "./table-gap-matching";
 import { Fragment } from "react";
-import type {
-  AnswerValue,
-  Brand,
-  MatchingQuestion,
-  MultipleQuestion,
-  Question,
-} from "./types";
+import type { AnswerValue, Brand, Question } from "./types";
 
 export type QuestionScreenProps = {
   question: Question;
@@ -197,59 +190,21 @@ export function QuestionView({
         })}
       </div>
 
-      {question.type === "single" && (
-        <div className="answer-list" role="radiogroup" aria-label="Выберите один вариант">
-          {question.options.map((option, optionIndex) => {
-            const selected = answer === option.id;
-            return (
-              <button
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                className={`answer-option${selected ? " selected" : ""}`}
-                key={option.id}
-                onClick={() => onAnswer(option.id)}
-              >
-                <span className="option-letter">{String.fromCharCode(65 + optionIndex)}</span>
-                <span><FormattedMathText text={cleanAnswerLabel(option.label)} /></span>
-                <span className="selection-mark" aria-hidden="true" />
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {question.type === "multiple" && (
-        <MultipleAnswers
+      {tableGap ? (
+        <TableGapAnswer matching={tableGap} onChange={onAnswer} value={typeof answer === "string" ? answer : ""} />
+      ) : sequenceMatching ? (
+        <SequenceMatchingAnswer matching={sequenceMatching} onChange={onAnswer} value={typeof answer === "string" ? answer : ""} />
+      ) : (
+        <AnswerEditor
           question={question}
-          value={Array.isArray(answer) ? answer : []}
+          value={answer}
           onChange={onAnswer}
+          labels={{
+            answer: labels.answer_label,
+            placeholder: labels.enter_answer,
+            choose: labels.choose_option,
+          }}
         />
-      )}
-
-      {question.type === "matching" && (
-        <MatchingAnswers
-          question={question}
-          value={answer && typeof answer === "object" && !Array.isArray(answer) ? answer : {}}
-          onChange={onAnswer}
-          chooseLabel={labels.choose_option}
-        />
-      )}
-
-      {question.type === "input" && (
-        tableGap ? (
-          <TableGapAnswer matching={tableGap} onChange={onAnswer} value={typeof answer === "string" ? answer : ""} />
-        ) : sequenceMatching ? (
-          <SequenceMatchingAnswer matching={sequenceMatching} onChange={onAnswer} value={typeof answer === "string" ? answer : ""} />
-        ) : (
-          <ShortAnswer
-            label={labels.answer_label}
-            onChange={onAnswer}
-            placeholder={labels.enter_answer}
-            prompt={question.prompt}
-            value={typeof answer === "string" ? answer : ""}
-          />
-        )
       )}
 
       <p className="question-autosave">Прогресс сохраняется автоматически</p>
@@ -393,93 +348,3 @@ function AnswerPreview({ markers, selected }: { markers: string[]; selected: str
   );
 }
 
-function ShortAnswer({ label, onChange, placeholder, prompt, value }: {
-  label: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-  prompt: string;
-  value: string;
-}) {
-  const config = answerInputConfig(prompt);
-  return (
-    <label className="short-answer">
-      <span>{label}</span>
-      <span className="short-answer-control">
-        <input
-          autoCapitalize="off"
-          autoComplete="off"
-          enterKeyHint="done"
-          inputMode={config.inputMode}
-          className={config.inputMode === "text" ? undefined : "answer-numeric"}
-          maxLength={64}
-          spellCheck={false}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-        {value && <button type="button" onClick={() => onChange("")}>Очистить</button>}
-      </span>
-      <small>{config.hint}</small>
-    </label>
-  );
-}
-
-function MultipleAnswers({ question, value, onChange }: {
-  question: MultipleQuestion;
-  value: string[];
-  onChange: (value: string[]) => void;
-}) {
-  const toggle = (id: string) => {
-    if (value.includes(id)) onChange(value.filter((item) => item !== id));
-    else if (value.length < question.selection_limit) onChange([...value, id]);
-  };
-
-  return (
-    <div className="answer-list" role="group" aria-label={`Выберите ${question.selection_limit} варианта`}>
-      {question.options.map((option, index) => {
-        const selected = value.includes(option.id);
-        return (
-          <button
-            type="button"
-            aria-pressed={selected}
-            className={`answer-option${selected ? " selected" : ""}`}
-            key={option.id}
-            onClick={() => toggle(option.id)}
-          >
-            <span className="option-letter">{String.fromCharCode(65 + index)}</span>
-            <span>{cleanAnswerLabel(option.label)}</span>
-            <span className="selection-mark square" aria-hidden="true" />
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function MatchingAnswers({ question, value, onChange, chooseLabel }: {
-  question: MatchingQuestion;
-  value: Record<string, string>;
-  onChange: (value: Record<string, string>) => void;
-  chooseLabel: string;
-}) {
-  return (
-    <div className="matching-list">
-      {question.items.map((item, index) => (
-        <label className="matching-row" key={item.id}>
-          <span className="matching-index">{index + 1}</span>
-          <span>{cleanAnswerLabel(item.label)}</span>
-          <select
-            aria-label={`Соответствие для ${item.label}`}
-            value={value[item.id] ?? ""}
-            onChange={(event) => onChange(updateMatchingAnswer(value, item.id, event.target.value))}
-          >
-            <option value="">{chooseLabel}</option>
-            {question.options.map((option) => (
-              <option value={option.id} key={option.id}>{cleanAnswerLabel(option.label)}</option>
-            ))}
-          </select>
-        </label>
-      ))}
-    </div>
-  );
-}

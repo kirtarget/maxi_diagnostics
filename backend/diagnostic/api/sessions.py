@@ -12,17 +12,14 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from diagnostic.catalog import (
+    is_valid_answer_shape,
     Diagnostic,
     DiagnosticCatalog,
-    InputQuestion,
-    MultipleQuestion,
-    SingleQuestion,
 )
 from diagnostic.analytics import emit_event
 from diagnostic.db import attempts
 from diagnostic.db.attempts import AttemptCompletion, AttemptProgress
 from diagnostic.db.gameplay import serialize_gameplay_profile
-from diagnostic.numeric import is_valid_numeric_answer
 from diagnostic.review import build_review_snapshot, public_review_items
 from diagnostic.scoring import ScoreResult, score_answers
 from diagnostic.school import SchoolConfig
@@ -562,40 +559,7 @@ def _validate_answer_values(
     complete: bool = False,
 ) -> None:
     for question in catalog.questions_for_mode(diagnostic_id, mode):
-        if question.id not in answers:
-            continue
-        answer = answers[question.id]
-        if isinstance(question, SingleQuestion):
-            valid = isinstance(answer, str) and answer in {
-                option.id for option in question.options
-            }
-        elif isinstance(question, InputQuestion):
-            valid = _is_valid_numeric_answer(answer)
-        elif isinstance(question, MultipleQuestion):
-            allowed = {option.id for option in question.options}
-            valid = (
-                isinstance(answer, list)
-                and all(isinstance(value, str) for value in answer)
-                and len(answer) == len(set(answer))
-                and set(answer) <= allowed
-                and len(answer) <= question.selection_limit
-                and (not complete or len(answer) == question.selection_limit)
-            )
-        else:
-            item_ids = {item.id for item in question.items}
-            option_ids = {option.id for option in question.options}
-            valid = (
-                isinstance(answer, dict)
-                and set(answer) <= item_ids
-                and all(
-                    isinstance(value, str) and value in option_ids
-                    for value in answer.values()
-                )
-                and (not complete or set(answer) == item_ids)
-            )
-        if not valid:
+        if question.id in answers and not is_valid_answer_shape(
+            question, answers[question.id], complete=complete
+        ):
             raise HTTPException(status_code=422, detail="invalid_answer_value")
-
-
-def _is_valid_numeric_answer(value: object) -> bool:
-    return is_valid_numeric_answer(value)

@@ -1,32 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
-import {
-  buildCompletionPayload,
-  answerTrainer,
-  apiErrorDetail,
-  bootstrapResumeSummary,
-  clearLocalSession,
-  completeDiagnostic,
-  createAttemptId,
-  createProgressSaveQueue,
-  isConflictError,
-  loadBootstrap,
-  loadDiagnostic,
-  loadReview,
-  loadWeeklyLeague,
-  markResultViewed,
-  recordOfferEvent,
-  restoreBootstrapSession,
-  saveLocalSession,
-  updateNumericInputAnswer,
-  saveProgress,
-  finishTrainer,
-  requestLivesReminder,
-  startTrainer,
-} from "./api";
-import type { ProgressPayload, ProgressSaveQueue } from "./api";
 import { GameplayHomeScreen, GameplayProfileScreen, ModeScreen, NotTelegramScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
 import { safeAssetPath } from "./question-assets";
 import { QuestionView as TrainingQuestionView } from "./question-screen";
@@ -38,33 +13,13 @@ import {
   RouteScreen,
 } from "./result-flow";
 import { forecastTrajectory, pdfStatusCopy, personalRoute } from "./result-flow-model";
-import { createReviewRequestGate } from "./review-request-gate";
-import {
-  diagnosticLoadInitialState,
-  diagnosticLoadReducer,
-  diagnosticSummaryKey,
-} from "./diagnostic-loader-model";
-import { initializeTelegram } from "./telegram-webapp";
 import { gameplayProfileView } from "./gameplay-profile-model";
-import { TrainerScreen, type LivesReminderState } from "./trainer-screen";
-import { trainerInitialState, trainerReducer } from "./trainer-model";
+import { TrainerScreen } from "./trainer-screen";
 import { LeagueScreen } from "./league-screen";
-import type { LeagueScreenState } from "./league-model";
-import { dismissOffer, type OfferDismissalState, type OfferPlacement, type OfferTelemetryEvent } from "./offer-ux";
-import type {
-  AnswerMap,
-  AnswerValue,
-  Brand,
-  BootstrapResponse,
-  DiagnosticMode,
-  PublicDiagnostic,
-  PublicDiagnosticSummary,
-  Question,
-  ReviewResponse,
-  ServerResult,
-} from "./types";
-
-type Screen = "loading" | "diagnostic-loading" | "welcome" | "home" | "profile" | "league" | "mode" | "subjects" | "question" | "submitting" | "result" | "review" | "forecast" | "route" | "trainer";
+import { useBootstrap } from "./use-bootstrap";
+import { useDiagnosticSession } from "./use-diagnostic-session";
+import { useTrainer } from "./use-trainer";
+import type { Brand, Screen } from "./types";
 
 type DisplayBrand = Pick<Brand, "name" | "short_name" | "logo"> & {
   resultStatus: string;
@@ -81,26 +36,6 @@ const BUILD_BRAND: DisplayBrand = {
   logo: process.env.NEXT_PUBLIC_BUILD_SCHOOL_LOGO ?? "",
   resultStatus: process.env.NEXT_PUBLIC_BUILD_RESULT_STATUS ?? "Result in Telegram",
 };
-
-function questionsFor(diagnostic: PublicDiagnostic, mode: DiagnosticMode): Question[] {
-  return mode === "quick" ? diagnostic.questions.slice(0, diagnostic.quick_count) : diagnostic.questions;
-}
-
-function trainerErrorMessage(error: unknown): string {
-  switch (apiErrorDetail(error)) {
-    case "trainer_no_lives": return "Жизни закончились. Ответить сейчас нельзя, попробуй позже.";
-    case "trainer_revision_stale":
-    case "trainer_answer_conflict":
-    case "trainer_question_out_of_order": return "Сессия устарела. Запусти тренировку заново.";
-    case "trainer_content_changed": return "Материалы обновились. Запусти новую тренировку.";
-    case "trainer_session_not_found":
-    case "trainer_session_not_active": return "Эта тренировка больше недоступна. Запусти новую.";
-    case "trainer_session_incomplete": return "Сначала ответь на все вопросы.";
-    case "session_expired": return "Сессия Telegram устарела. Перезагрузи приложение.";
-    case "trainer_not_enough_questions": return "Для тренировки пока недостаточно заданий.";
-    default: return "Не удалось связаться с сервером. Повтори попытку.";
-  }
-}
 
 function BrandHeader({
   brand,
@@ -130,457 +65,27 @@ function BrandHeader({
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("loading");
-  const [bootstrap, setBootstrap] = useState<BootstrapResponse | null>(null);
-  const [loadedDiagnostic, setLoadedDiagnostic] = useState<PublicDiagnostic | null>(null);
-  const [diagnosticLoad, dispatchDiagnosticLoad] = useReducer(
-    diagnosticLoadReducer,
-    diagnosticLoadInitialState,
-  );
-  const [error, setError] = useState<string | null>(null);
-  const [syncWarning, setSyncWarning] = useState<string | null>(null);
-  const [mode, setMode] = useState<DiagnosticMode>("quick");
-  const [exam, setExam] = useState("");
-  const [diagnosticId, setDiagnosticId] = useState<string | null>(null);
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<AnswerMap>({});
-  const [inputDrafts, setInputDrafts] = useState<Record<string, string>>({});
-  const [attemptId, setAttemptId] = useState(createAttemptId);
-  const [result, setResult] = useState<ServerResult | null>(null);
-  const [review, setReview] = useState<ReviewResponse | null>(null);
-  const [reviewIndex, setReviewIndex] = useState(0);
-  const [reviewError, setReviewError] = useState<string | null>(null);
-  const [trainerState, dispatchTrainer] = useReducer(trainerReducer, trainerInitialState);
-  const [leagueState, setLeagueState] = useState<LeagueScreenState>({ kind: "loading" });
-  const [livesReminder, setLivesReminder] = useState<LivesReminderState>({ status: "idle" });
-  const [sessionCompletions, setSessionCompletions] = useState(0);
-  const [outsideTelegram, setOutsideTelegram] = useState(false);
-  const [dismissedOfferPlacements, setDismissedOfferPlacements] = useState<OfferDismissalState>({});
-  const initData = useRef("");
-  const progressRevision = useRef(0);
-  const syncedQuestionIndex = useRef(0);
-  const syncedAnswers = useRef<AnswerMap>({});
-  const latestQuestionIndex = useRef(0);
-  const latestAnswers = useRef<AnswerMap>({});
-  const activeAttemptId = useRef(attemptId);
-  const persistedAttemptId = useRef<string | null>(null);
-  const supersedesAttemptId = useRef<string | undefined>(undefined);
-  const schoolIdRef = useRef<string | null>(null);
-  const sessionScopeRef = useRef<string | null>(null);
-  const attemptGeneration = useRef(0);
-  const reviewRequestGate = useRef<ReturnType<typeof createReviewRequestGate> | null>(null);
-  if (!reviewRequestGate.current) {
-    reviewRequestGate.current = createReviewRequestGate();
-    reviewRequestGate.current.activate({ attemptId, generation: attemptGeneration.current });
-  }
-  const hydrateGeneration = useRef(0);
-  const diagnosticLoadRequestId = useRef(0);
-  const diagnosticCache = useRef(new Map<string, Promise<PublicDiagnostic>>());
-  const recoveryPromise = useRef<Promise<void> | null>(null);
-  const trainerDiagnosticId = useRef<string | null>(null);
-  const trainerMode = useRef<"normal" | "mistakes">("normal");
-  const trainerSourceAttemptId = useRef<string | null>(null);
-  const trainerRecoveryMode = useRef<"retry" | "restart">("retry");
-  const recoverConflict = useRef<() => Promise<void>>(async () => undefined);
-  const progressQueue = useRef<ProgressSaveQueue<ProgressPayload> | null>(null);
-  if (!progressQueue.current) {
-    progressQueue.current = createProgressSaveQueue(
-      async (payload) => {
-        if (payload.attempt_id !== activeAttemptId.current) return;
-        const sendGeneration = attemptGeneration.current;
-        let response;
-        try {
-          response = await saveProgress(initData.current, {
-            ...payload,
-            progress_revision: progressRevision.current + 1,
-          });
-        } catch (saveError) {
-          if (isConflictError(saveError) && payload.attempt_id === activeAttemptId.current) {
-            progressQueue.current?.cancel(saveError);
-            await recoverConflict.current();
-          }
-          throw saveError;
-        }
-        if (
-          response.attempt.attempt_id !== activeAttemptId.current ||
-          sendGeneration !== attemptGeneration.current
-        ) return;
-        progressRevision.current = response.attempt.progress_revision;
-        syncedQuestionIndex.current = response.attempt.question_index;
-        syncedAnswers.current = response.attempt.answers;
-        persistedAttemptId.current = response.attempt.attempt_id;
-        if (schoolIdRef.current && sessionScopeRef.current) {
-          saveLocalSession(schoolIdRef.current, sessionScopeRef.current, {
-            attemptId: response.attempt.attempt_id,
-            ...(supersedesAttemptId.current
-              ? { supersedesAttemptId: supersedesAttemptId.current }
-              : {}),
-            diagnosticId: response.attempt.diagnostic_id,
-            contentVersion: response.attempt.content_version,
-            mode: response.attempt.mode,
-            questionIndex: latestQuestionIndex.current,
-            revision: response.attempt.progress_revision,
-            answers: latestAnswers.current,
-            syncedQuestionIndex: response.attempt.question_index,
-            syncedAnswers: response.attempt.answers,
-          });
-        }
-      },
-      (state) => {
-        setSyncWarning(state === "error"
-          ? "Ответ сохранён на устройстве. Отправим его на сервер, когда связь восстановится."
-          : null);
-      },
-    );
-  }
+  const bootstrapSession = useBootstrap(setScreen);
+  const session = useDiagnosticSession({ bootstrap: bootstrapSession, screen, setScreen });
+  const trainer = useTrainer({
+    bootstrap: bootstrapSession.state.bootstrap,
+    initData: bootstrapSession.initData,
+    sessionScope: bootstrapSession.sessionScope,
+    setScreen,
+  });
 
-  const diagnostic = loadedDiagnostic?.id === diagnosticId ? loadedDiagnostic : null;
-  const questions = useMemo(
-    () => diagnostic ? questionsFor(diagnostic, mode) : [],
-    [diagnostic, mode],
-  );
-  const brand = bootstrap?.school.brand;
-  const sessionScope = bootstrap?.session_scope;
-  const loadCachedDiagnostic = useCallback((
-    summary: PublicDiagnosticSummary,
-    scope: string,
-  ): Promise<PublicDiagnostic> => {
-    const key = diagnosticSummaryKey(summary);
-    const cached = diagnosticCache.current.get(key);
-    if (cached) return cached;
-    const request = loadDiagnostic(
-      initData.current,
-      scope,
-      summary.id,
-      summary.content_version,
-    ).catch((loadError) => {
-      diagnosticCache.current.delete(key);
-      throw loadError;
-    });
-    diagnosticCache.current.set(key, request);
-    return request;
-  }, []);
-  const handleOfferEvent = useCallback((event: OfferTelemetryEvent) => {
-    if (!sessionScope || !initData.current) return;
-    void recordOfferEvent(initData.current, {
-      session_scope: sessionScope,
-      event_id: event.event_id,
-      placement: event.placement,
-      offer_id: event.offer_id,
-      event_type: event.action,
-    }).catch(() => undefined);
-  }, [sessionScope]);
-  const dismissOfferPlacement = useCallback((placement: OfferPlacement) => {
-    setDismissedOfferPlacements((current) => dismissOffer(current, placement));
-  }, []);
-
-  const refreshReview = useCallback(async () => {
-    if (!sessionScope || !initData.current) return null;
-    const identity = { attemptId, generation: attemptGeneration.current };
-    const outcome = await reviewRequestGate.current!.run(
-      identity,
-      () => loadReview(initData.current, attemptId, sessionScope),
-    );
-    if (outcome.status === "current") {
-      setReview(outcome.value);
-      setReviewError(null);
-      return outcome.value;
-    }
-    if (outcome.status === "error") {
-      setReviewError("Не удалось загрузить разбор. Повторите запрос.");
-    }
-    return null;
-  }, [attemptId, sessionScope]);
-
-  const hydrate = useCallback(async (preserveCurrentScreen = false) => {
-    const generation = hydrateGeneration.current + 1;
-    hydrateGeneration.current = generation;
-    setError(null);
-    if (!preserveCurrentScreen) setScreen("loading");
-    const webApp = initializeTelegram();
-    initData.current = webApp?.initData ?? "";
-    if (!initData.current) {
-      setOutsideTelegram(true);
-      return false;
-    }
-    setOutsideTelegram(false);
-    try {
-      const data = await loadBootstrap(initData.current);
-      if (generation !== hydrateGeneration.current) return false;
-      attemptGeneration.current += 1;
-      progressQueue.current?.cancel();
-      setBootstrap(data);
-      setLoadedDiagnostic(null);
-      setExam((current) => current || data.diagnostics[0]?.exam || "");
-      schoolIdRef.current = data.school.brand.school_id;
-      sessionScopeRef.current = data.session_scope;
-      webApp?.setHeaderColor(data.school.brand.colors.background);
-      webApp?.setBackgroundColor(data.school.brand.colors.background);
-      if (data.diagnostics.length === 0) {
-        setScreen("welcome");
-        return true;
-      }
-
-      const resumeSummary = bootstrapResumeSummary(data);
-      let savedDiagnostic: PublicDiagnostic | null = null;
-      let session = null;
-      if (resumeSummary) {
-        const requestId = diagnosticLoadRequestId.current + 1;
-        diagnosticLoadRequestId.current = requestId;
-        dispatchDiagnosticLoad({ type: "load", requestId, summary: resumeSummary, intent: "resume" });
-        setScreen("diagnostic-loading");
-        try {
-          savedDiagnostic = await loadCachedDiagnostic(resumeSummary, data.session_scope);
-          if (generation !== hydrateGeneration.current || requestId !== diagnosticLoadRequestId.current) return false;
-          dispatchDiagnosticLoad({ type: "loaded", requestId, diagnostic: savedDiagnostic });
-          session = restoreBootstrapSession(data, undefined, [savedDiagnostic]);
-          if (
-            !session && data.attempt?.status === "in_progress" &&
-            data.attempt.diagnostic_id !== savedDiagnostic.id
-          ) {
-            const serverSummary = data.diagnostics.find(
-              (item) => item.id === data.attempt?.diagnostic_id,
-            );
-            if (serverSummary) {
-              dispatchDiagnosticLoad({ type: "load", requestId, summary: serverSummary, intent: "resume" });
-              savedDiagnostic = await loadCachedDiagnostic(serverSummary, data.session_scope);
-              if (generation !== hydrateGeneration.current || requestId !== diagnosticLoadRequestId.current) return false;
-              dispatchDiagnosticLoad({ type: "loaded", requestId, diagnostic: savedDiagnostic });
-              session = restoreBootstrapSession(data, undefined, [savedDiagnostic]);
-            }
-          }
-        } catch {
-          if (generation !== hydrateGeneration.current || requestId !== diagnosticLoadRequestId.current) return false;
-          dispatchDiagnosticLoad({
-            type: "failed",
-            requestId,
-            message: "Не удалось загрузить задания. Прогресс сохранён на устройстве.",
-          });
-          setScreen("diagnostic-loading");
-          return false;
-        }
-      }
-      if (session && savedDiagnostic) {
-        reviewRequestGate.current!.activate({
-          attemptId: session.attemptId,
-          generation: attemptGeneration.current,
-        });
-        activeAttemptId.current = session.attemptId;
-        persistedAttemptId.current = data.attempt?.attempt_id ?? (
-          session.revision > 0 ? session.attemptId : null
-        );
-        supersedesAttemptId.current = session.supersedesAttemptId;
-        setAttemptId(session.attemptId);
-        setLoadedDiagnostic(savedDiagnostic);
-        setDiagnosticId(session.diagnosticId);
-        setMode(session.mode);
-        setQuestionIndex(session.questionIndex);
-        latestQuestionIndex.current = session.questionIndex;
-        progressRevision.current = session.revision;
-        syncedQuestionIndex.current = session.syncedQuestionIndex ?? session.questionIndex;
-        syncedAnswers.current = session.syncedAnswers ?? session.answers;
-        setAnswers(session.answers);
-        latestAnswers.current = session.answers;
-        setInputDrafts(Object.fromEntries(
-          Object.entries(session.answers).filter(([, value]) => typeof value === "string"),
-        ) as Record<string, string>);
-        setReview(null);
-        setReviewIndex(0);
-        setReviewError(null);
-        setScreen("question");
-      } else {
-        reviewRequestGate.current!.activate({
-          attemptId: activeAttemptId.current,
-          generation: attemptGeneration.current,
-        });
-        persistedAttemptId.current = data.attempt?.attempt_id ?? null;
-        supersedesAttemptId.current = undefined;
-        setReview(null);
-        setReviewIndex(0);
-        setReviewError(null);
-        setScreen(data.progress_profile?.completion_count ? "home" : "welcome");
-      }
-      return true;
-    } catch {
-      if (generation !== hydrateGeneration.current) return false;
-      setError("Не удалось загрузить диагностику. Проверьте соединение и повторите попытку.");
-      return false;
-    }
-  }, [loadCachedDiagnostic]);
-  recoverConflict.current = () => {
-    setSyncWarning("Прогресс изменился на другом устройстве. Загружаем актуальную версию.");
-    if (!recoveryPromise.current) {
-      recoveryPromise.current = hydrate(true)
-        .then(() => undefined)
-        .finally(() => { recoveryPromise.current = null; });
-    }
-    return recoveryPromise.current;
-  };
-
-  useEffect(() => { void hydrate(); }, [hydrate]);
+  const { bootstrap, error, outsideTelegram, sessionCompletions, dismissedOfferPlacements, leagueState } = bootstrapSession.state;
+  const { dismissOfferPlacement, handleOfferEvent, openLeague } = bootstrapSession.actions;
+  const {
+    diagnostic, diagnosticLoad, questions, exam, mode, questionIndex,
+    answers, inputDrafts, result, review, reviewIndex, reviewError, syncWarning,
+  } = session.state;
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [screen, questionIndex]);
 
-  useEffect(() => {
-    latestQuestionIndex.current = questionIndex;
-    latestAnswers.current = answers;
-    if (!brand || !sessionScope || screen !== "question" || !diagnostic || questions.length === 0) return;
-    saveLocalSession(brand.school_id, sessionScope, {
-      attemptId,
-      ...(supersedesAttemptId.current
-        ? { supersedesAttemptId: supersedesAttemptId.current }
-        : {}),
-      diagnosticId: diagnostic.id,
-      contentVersion: diagnostic.content_version,
-      mode,
-      questionIndex,
-      revision: progressRevision.current,
-      answers,
-      syncedQuestionIndex: syncedQuestionIndex.current,
-      syncedAnswers: syncedAnswers.current,
-    });
-    if (!initData.current || Object.keys(answers).length === 0) return;
-    const timer = window.setTimeout(() => {
-      progressQueue.current?.enqueue({
-        attempt_id: attemptId,
-        session_scope: sessionScope,
-        ...(supersedesAttemptId.current
-          ? { supersedes_attempt_id: supersedesAttemptId.current }
-          : {}),
-        diagnostic_id: diagnostic.id,
-        content_version: diagnostic.content_version,
-        mode,
-        question_index: questionIndex,
-        question_count: questions.length,
-        progress_revision: progressRevision.current + 1,
-        answers,
-      });
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [answers, attemptId, brand, diagnostic, mode, questionIndex, questions.length, screen, sessionScope]);
-
-  useEffect(() => {
-    if (screen !== "result" || !initData.current) return;
-    if (!sessionScope) return;
-    void markResultViewed(initData.current, attemptId, sessionScope).catch(() => undefined);
-  }, [attemptId, screen, sessionScope]);
-
-  const beginLoadedDiagnostic = (selected: PublicDiagnostic) => {
-    progressQueue.current?.cancel();
-    attemptGeneration.current += 1;
-    const nextAttemptId = createAttemptId();
-    reviewRequestGate.current!.activate({
-      attemptId: nextAttemptId,
-      generation: attemptGeneration.current,
-    });
-    activeAttemptId.current = nextAttemptId;
-    supersedesAttemptId.current = persistedAttemptId.current ?? undefined;
-    setAttemptId(nextAttemptId);
-    setLoadedDiagnostic(selected);
-    setDiagnosticId(selected.id);
-    setQuestionIndex(0);
-    latestQuestionIndex.current = 0;
-    progressRevision.current = 0;
-    syncedQuestionIndex.current = 0;
-    syncedAnswers.current = {};
-    setAnswers({});
-    latestAnswers.current = {};
-    setInputDrafts({});
-    setResult(null);
-    setReview(null);
-    setReviewIndex(0);
-    setReviewError(null);
-    setError(null);
-    setScreen("question");
-  };
-
-  const beginDiagnostic = async (selected: PublicDiagnosticSummary) => {
-    if (!sessionScope) return;
-    const requestId = diagnosticLoadRequestId.current + 1;
-    diagnosticLoadRequestId.current = requestId;
-    dispatchDiagnosticLoad({ type: "load", requestId, summary: selected, intent: "new" });
-    setScreen("diagnostic-loading");
-    try {
-      const loaded = await loadCachedDiagnostic(selected, sessionScope);
-      if (requestId !== diagnosticLoadRequestId.current) return;
-      dispatchDiagnosticLoad({ type: "loaded", requestId, diagnostic: loaded });
-      beginLoadedDiagnostic(loaded);
-    } catch {
-      if (requestId !== diagnosticLoadRequestId.current) return;
-      dispatchDiagnosticLoad({
-        type: "failed",
-        requestId,
-        message: "Не удалось загрузить задания. Проверьте соединение и повторите попытку.",
-      });
-    }
-  };
-
-  const answerQuestion = (value: AnswerValue) => {
-    if (!diagnostic || !brand || !sessionScope) return;
-    const question = questions[questionIndex];
-    if (question.type === "input" && typeof value === "string") {
-      setInputDrafts((current) => ({ ...current, [question.id]: value }));
-      const nextAnswers = updateNumericInputAnswer(answers, question.id, value);
-      latestAnswers.current = nextAnswers;
-      setAnswers(nextAnswers);
-      return;
-    }
-    const nextAnswers = { ...answers, [question.id]: value };
-    latestAnswers.current = nextAnswers;
-    setAnswers(nextAnswers);
-  };
-
-  const submit = async () => {
-    if (!diagnostic || !brand || !sessionScope) return;
-    setScreen("submitting");
-    setError(null);
-    const submittedAttemptId = attemptId;
-    const submittedGeneration = attemptGeneration.current;
-    try {
-      try {
-        await progressQueue.current?.flush();
-      } catch (saveError) {
-        if (isConflictError(saveError)) {
-          setScreen("question");
-          return;
-        }
-        throw saveError;
-      }
-      const response = await completeDiagnostic(
-        initData.current,
-        buildCompletionPayload(
-          attemptId, sessionScope, diagnostic.id, diagnostic.content_version,
-          progressRevision.current + 1, mode, answers, supersedesAttemptId.current,
-        ),
-      );
-      if (
-        submittedAttemptId !== activeAttemptId.current ||
-        submittedGeneration !== attemptGeneration.current
-      ) return;
-      persistedAttemptId.current = response.attempt.attempt_id;
-      activeAttemptId.current = response.attempt.attempt_id;
-      progressRevision.current = response.attempt.progress_revision;
-      supersedesAttemptId.current = undefined;
-      setResult(response.result);
-      setSessionCompletions((count) => count + 1);
-      setReview(null);
-      setReviewIndex(0);
-      setReviewError(null);
-      clearLocalSession(brand.school_id, sessionScope);
-      setScreen("result");
-    } catch (submitError) {
-      if (isConflictError(submitError)) {
-        progressQueue.current?.cancel();
-        setScreen("question");
-        await recoverConflict.current();
-        return;
-      }
-      setError("Не удалось получить результат. Ответы сохранены — повторите отправку.");
-      setScreen("question");
-    }
-  };
-
+  const brand = bootstrap?.school.brand;
   const displayBrand: DisplayBrand = brand ? {
     name: brand.name,
     short_name: brand.short_name,
@@ -588,140 +93,11 @@ export default function Home() {
     resultStatus: brand.interface.result_in_telegram,
   } : BUILD_BRAND;
   const gameplayProfile = gameplayProfileView({ ...bootstrap?.progress_profile, ...bootstrap?.gameplay_profile });
-  const mistakeCount = review?.items.filter((item) => !item.is_correct).length ?? 0;
   const forecastPoints = result ? forecastTrajectory(result) : [];
   const completedDiagnostics = (bootstrap?.progress_profile?.completion_count ?? 0) + sessionCompletions;
   const routeItems = result ? personalRoute(result.growth_topics) : [];
   const currentPdfStatus = review?.pdf_status ?? "pending";
-
-  const openReview = () => {
-    setReviewIndex(0);
-    setReviewError(null);
-    setScreen("review");
-    if (!review) void refreshReview();
-  };
-
-  const openLeague = useCallback(async () => {
-    if (!sessionScope || !initData.current) return;
-    setLeagueState({ kind: "loading" });
-    setScreen("league");
-    try {
-      const data = await loadWeeklyLeague(initData.current, sessionScope);
-      setLeagueState({ kind: "ready", data });
-    } catch {
-      setLeagueState({ kind: "error", message: "Не удалось загрузить рейтинг. Повтори попытку." });
-    }
-  }, [sessionScope]);
-
-  const runTrainerStart = useCallback(async (selectedId: string, requestedMode: "normal" | "mistakes" = "normal", sourceAttemptId?: string) => {
-    if (!sessionScope || !initData.current) return;
-    const selected = bootstrap?.diagnostics.find((item) => item.id === selectedId);
-    if (!selected) {
-      dispatchTrainer({ type: "error", message: "Диагностика для тренировки не найдена." });
-      return;
-    }
-    trainerDiagnosticId.current = selected.id;
-    trainerMode.current = requestedMode;
-    trainerSourceAttemptId.current = requestedMode === "mistakes" ? (sourceAttemptId ?? null) : null;
-    trainerRecoveryMode.current = "retry";
-    dispatchTrainer({ type: "reset" });
-    setLivesReminder({ status: "idle" });
-    setScreen("trainer");
-    try {
-      const payload = requestedMode === "mistakes" && sourceAttemptId
-        ? {
-          session_scope: sessionScope,
-          diagnostic_id: selected.id,
-          count: Math.min(5, selected.question_count),
-          mode: "mistakes" as const,
-          source_attempt_id: sourceAttemptId,
-        }
-        : {
-          session_scope: sessionScope,
-          diagnostic_id: selected.id,
-          count: Math.min(5, selected.question_count),
-          mode: "normal" as const,
-      };
-      const response = await startTrainer(initData.current, payload);
-      dispatchTrainer({ type: "start", response });
-    } catch (startError) {
-      dispatchTrainer({ type: "error", message: trainerErrorMessage(startError) });
-    }
-  }, [bootstrap, sessionScope]);
-
-  const submitTrainerAnswer = useCallback(async (questionId: string, answer: AnswerValue) => {
-    const session = trainerState.session;
-    if (!session || !sessionScope || !initData.current) return;
-    try {
-      const response = await answerTrainer(initData.current, {
-        session_scope: sessionScope,
-        trainer_session_id: session.trainer_session_id,
-        question_id: questionId,
-        answer,
-        revision: session.revision,
-        idempotency_key: `trainer-answer-${session.trainer_session_id}-${questionId}-${session.revision}`,
-      });
-      dispatchTrainer({ type: "answer_result", response });
-    } catch (answerError) {
-      if (["trainer_revision_stale", "trainer_answer_conflict", "trainer_question_out_of_order", "trainer_content_changed", "trainer_session_not_found", "trainer_session_not_active"].includes(apiErrorDetail(answerError) ?? "")) {
-        trainerRecoveryMode.current = "restart";
-      }
-      dispatchTrainer({ type: "error", message: trainerErrorMessage(answerError) });
-    }
-  }, [sessionScope, trainerState.session]);
-
-  const finishTrainerSession = useCallback(async () => {
-    const session = trainerState.session;
-    if (!session || !sessionScope || !initData.current) return;
-    try {
-      const response = await finishTrainer(initData.current, {
-        session_scope: sessionScope,
-        trainer_session_id: session.trainer_session_id,
-        revision: session.revision,
-      });
-      dispatchTrainer({ type: "finish_result", response });
-    } catch (finishError) {
-      if (["trainer_revision_stale", "trainer_session_not_found", "trainer_content_changed"].includes(apiErrorDetail(finishError) ?? "")) {
-        trainerRecoveryMode.current = "restart";
-      }
-      dispatchTrainer({ type: "error", message: trainerErrorMessage(finishError) });
-    }
-  }, [sessionScope, trainerState.session]);
-
-  const remindAboutLives = useCallback(async () => {
-    if (!sessionScope || !initData.current) return;
-    setLivesReminder({ status: "pending" });
-    try {
-      await requestLivesReminder(initData.current, sessionScope);
-      setLivesReminder({ status: "scheduled" });
-    } catch {
-      setLivesReminder({ status: "error" });
-    }
-  }, [sessionScope]);
-
-  const retryTrainer = useCallback(() => {
-    if (trainerRecoveryMode.current === "restart" && trainerDiagnosticId.current) {
-      void runTrainerStart(trainerDiagnosticId.current, trainerMode.current, trainerSourceAttemptId.current ?? undefined);
-      return;
-    }
-    if (trainerState.retryPhase === "idle" && trainerDiagnosticId.current) {
-      void runTrainerStart(trainerDiagnosticId.current, trainerMode.current, trainerSourceAttemptId.current ?? undefined);
-      return;
-    }
-    if (trainerState.retryPhase === "finishing") {
-      void finishTrainerSession();
-      return;
-    }
-    const session = trainerState.session;
-    const questionIndex = trainerState.answeredQuestionIndex;
-    const answer = trainerState.submittedAnswer;
-    const questionId = questionIndex === null ? null : session?.question_ids[questionIndex];
-    if (!session || !questionId || answer === undefined) {
-      if (trainerDiagnosticId.current) void runTrainerStart(trainerDiagnosticId.current, trainerMode.current, trainerSourceAttemptId.current ?? undefined);
-      return;
-    }
-    void submitTrainerAnswer(questionId, answer);
-  }, [finishTrainerSession, runTrainerStart, submitTrainerAnswer, trainerState]);
+  const replayAttemptId = session.actions.persistedAttemptId();
 
   const style = brand ? {
     "--brand-primary": brand.colors.primary,
@@ -749,7 +125,7 @@ export default function Home() {
           <span className="state-icon" aria-hidden="true">✈️</span>
           <h1>Диагностика пока недоступна</h1>
           <p>{error}</p>
-          <button className="primary-button" onClick={() => void hydrate()} type="button">Повторить загрузку</button>
+          <button className="primary-button" onClick={() => void session.actions.hydrate()} type="button">Повторить загрузку</button>
         </section>
       </main>
     );
@@ -787,8 +163,8 @@ export default function Home() {
           <h1>Задания пока недоступны</h1>
           <p>{diagnosticLoad.message}</p>
           <button className="primary-button" type="button" onClick={() => {
-            if (diagnosticLoad.intent === "resume") void hydrate();
-            else void beginDiagnostic(diagnosticLoad.summary);
+            if (diagnosticLoad.intent === "resume") void session.actions.hydrate();
+            else void session.actions.beginDiagnostic(diagnosticLoad.summary);
           }}>Повторить</button>
           {diagnosticLoad.intent === "new" && (
             <button className="secondary-button" type="button" onClick={() => setScreen("subjects")}>Назад к предметам</button>
@@ -820,7 +196,7 @@ export default function Home() {
           labels={bootstrap.school.brand.interface}
           profile={gameplayProfile}
           onStart={() => setScreen("mode")}
-          onStartTrainer={() => void runTrainerStart(bootstrap.diagnostics[0]?.id ?? "")}
+          onStartTrainer={() => void trainer.actions.start(bootstrap.diagnostics[0]?.id ?? "")}
           onOpenProfile={() => setScreen("profile")}
           onOpenLeague={() => void openLeague()}
           offers={bootstrap.school.links.offers}
@@ -850,11 +226,10 @@ export default function Home() {
         <ModeScreen
           labels={bootstrap.school.brand.interface}
           onBack={() => setScreen("home")}
-          onSelect={(selectedMode) => {
-            setMode(selectedMode);
-            setExam(bootstrap.diagnostics[0]?.exam ?? "");
-            setScreen("subjects");
-          }}
+          onSelect={(selectedMode) => session.actions.chooseMode(
+            selectedMode,
+            bootstrap.diagnostics[0]?.exam ?? "",
+          )}
         />
       )}
 
@@ -865,8 +240,8 @@ export default function Home() {
           labels={bootstrap.school.brand.interface}
           mode={mode}
           onBack={() => setScreen("mode")}
-          onExam={setExam}
-          onSelect={beginDiagnostic}
+          onExam={session.actions.setExam}
+          onSelect={session.actions.beginDiagnostic}
         />
       )}
 
@@ -882,17 +257,9 @@ export default function Home() {
             answer={questions[questionIndex].type === "input"
               ? inputDrafts[questions[questionIndex].id] ?? answers[questions[questionIndex].id]
               : answers[questions[questionIndex].id]}
-            onAnswer={answerQuestion}
-            onBack={() => questionIndex === 0 ? setScreen("subjects") : setQuestionIndex((current) => {
-              const next = current - 1;
-              latestQuestionIndex.current = next;
-              return next;
-            })}
-            onNext={() => questionIndex === questions.length - 1 ? void submit() : setQuestionIndex((current) => {
-              const next = current + 1;
-              latestQuestionIndex.current = next;
-              return next;
-            })}
+            onAnswer={session.actions.answerQuestion}
+            onBack={session.actions.previousQuestion}
+            onNext={session.actions.nextQuestion}
             labels={brand!.interface}
           />
         </>
@@ -913,23 +280,25 @@ export default function Home() {
             diagnostic={diagnostic}
             pdfStatus={currentPdfStatus}
             result={result}
-            onReview={openReview}
+            onReview={session.actions.openReview}
             onForecast={() => setScreen("forecast")}
-            onReplayMistakes={persistedAttemptId.current ? () => void runTrainerStart(diagnostic.id, "mistakes", persistedAttemptId.current ?? undefined) : undefined}
+            onReplayMistakes={replayAttemptId
+              ? () => void trainer.actions.start(diagnostic.id, "mistakes", replayAttemptId)
+              : undefined}
           />
         )
       )}
 
       {screen === "trainer" && (
         <TrainerScreen
-          state={trainerState}
-          dispatch={dispatchTrainer}
-          onAnswer={(questionId, answer) => void submitTrainerAnswer(questionId, answer)}
-          onFinish={() => void finishTrainerSession()}
+          state={trainer.state.trainer}
+          dispatch={trainer.actions.dispatch}
+          onAnswer={(questionId, answer) => void trainer.actions.answer(questionId, answer)}
+          onFinish={() => void trainer.actions.finish()}
           onHome={() => setScreen(bootstrap?.diagnostics.length ? "home" : "welcome")}
-          onRetry={retryTrainer}
-          livesReminder={livesReminder}
-          onRemindLives={() => void remindAboutLives()}
+          onRetry={trainer.actions.retry}
+          livesReminder={trainer.state.livesReminder}
+          onRemindLives={() => void trainer.actions.remindLives()}
           offers={bootstrap?.school.links.offers}
           offerDismissed={dismissedOfferPlacements}
           onOfferDismiss={dismissOfferPlacement}
@@ -944,14 +313,12 @@ export default function Home() {
           items={review?.items ?? []}
           legacy={review?.available === false}
           loading={!review && !reviewError}
-          onBack={() => reviewIndex === 0
-            ? setScreen("result")
-            : setReviewIndex((current) => Math.max(0, current - 1))}
+          onBack={session.actions.reviewBack}
           onForecast={() => setScreen("forecast")}
-          onNext={() => setReviewIndex((current) => Math.min(current + 1, Math.max(0, mistakeCount - 1)))}
+          onNext={session.actions.reviewNext}
           onRetry={() => {
-            setReviewError(null);
-            void refreshReview();
+            session.actions.clearReviewError();
+            void session.actions.refreshReview();
           }}
         />
       )}
@@ -981,7 +348,7 @@ export default function Home() {
           items={routeItems}
           offers={bootstrap.school.links.offers}
           pdf={pdfStatusCopy(currentPdfStatus)}
-          onRefreshPdf={() => void refreshReview()}
+          onRefreshPdf={() => void session.actions.refreshReview()}
           onSubjects={() => setScreen("subjects")}
         />
       )}

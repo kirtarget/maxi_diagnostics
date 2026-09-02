@@ -8,15 +8,12 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 
 from diagnostic.catalog import (
+    is_valid_answer_shape,
     DiagnosticCatalog,
-    InputQuestion,
-    MultipleQuestion,
-    SingleQuestion,
     public_question,
 )
 from diagnostic.db import trainer
 from diagnostic.db.gameplay import serialize_gameplay_profile
-from diagnostic.numeric import is_valid_numeric_answer
 from diagnostic.review import fallback_guidance, format_answer
 from diagnostic.scoring import is_answer_correct
 
@@ -31,28 +28,7 @@ from .sessions import _require_current_session
 
 
 def _validate_answer(question: Any, answer: Any) -> None:
-    if isinstance(question, SingleQuestion):
-        valid = isinstance(answer, str) and answer in {option.id for option in question.options}
-    elif isinstance(question, InputQuestion):
-        valid = is_valid_numeric_answer(answer)
-    elif isinstance(question, MultipleQuestion):
-        allowed = {option.id for option in question.options}
-        valid = (
-            isinstance(answer, list)
-            and all(isinstance(value, str) for value in answer)
-            and len(answer) == len(set(answer))
-            and len(answer) == question.selection_limit
-            and set(answer) <= allowed
-        )
-    else:
-        item_ids = {item.id for item in question.items}
-        option_ids = {option.id for option in question.options}
-        valid = (
-            isinstance(answer, dict)
-            and set(answer) == item_ids
-            and all(isinstance(value, str) and value in option_ids for value in answer.values())
-        )
-    if not valid:
+    if not is_valid_answer_shape(question, answer, complete=True):
         raise HTTPException(status_code=422, detail="invalid_answer_value")
 
 
