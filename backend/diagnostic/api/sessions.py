@@ -21,7 +21,9 @@ from diagnostic.db import attempts, funnel
 from diagnostic.db.attempts import AttemptCompletion, AttemptProgress
 from diagnostic.db.gameplay import serialize_gameplay_profile
 from diagnostic.review import build_review_snapshot, public_review_items
-from diagnostic.scoring import ScoreResult, score_answers
+from diagnostic.scoring import (
+    ScoreResult, estimate_for_primary, round_half_up, score_answers,
+)
 from diagnostic.school import SchoolConfig
 from diagnostic.session_identity import (
     new_session_generation,
@@ -35,22 +37,42 @@ from .models import (
 )
 
 
+def build_forecast(
+    diagnostic: Diagnostic, result: ScoreResult, school: SchoolConfig
+) -> dict[str, Any]:
+    """Project the offer's recovery share of the missed growth-topic points."""
+    scale = school.scale_for(diagnostic.exam, diagnostic.subject)
+    points = []
+    for offer in school.links.offers:
+        recovered = round_half_up(
+            result.recoverable_primary_score * offer.recovery_share / 100
+        )
+        forecast_primary = min(
+            result.primary_score + recovered, result.max_primary_score
+        )
+        value = (
+            estimate_for_primary(
+                scale, forecast_primary, result.max_primary_score, result.question_count
+            ).value
+            if scale is not None
+            else round_half_up(
+                forecast_primary / result.max_primary_score * result.max_score
+            )
+        )
+        points.append({"id": offer.id, "label": offer.label, "value": value})
+    return {
+        "kind": result.estimate.kind if result.estimate is not None else "accuracy_percent",
+        "points": points,
+    }
+
+
 def build_completion(
     user: dict[str, Any], body: CompletionRequest, diagnostic: Diagnostic, result: ScoreResult,
     school: SchoolConfig,
     report_asset_bundle_id: str,
     timezone_name: str = "Europe/Moscow",
 ) -> AttemptCompletion:
-    forecast = {
-        "points": [
-            {
-                "id": offer.id,
-                "label": offer.label,
-                "value": min(result.max_score, result.score + offer.forecast_delta),
-            }
-            for offer in school.links.offers
-        ]
-    }
+    forecast = build_forecast(diagnostic, result, school)
     result_snapshot = result.model_dump(mode="json") | {
         "unassessed_part": school.brand.interface.unassessed_full if body.mode == "quick" else None,
         "forecast": forecast,
@@ -160,7 +182,12 @@ def serialize_attempt(row: Mapping[str, Any] | None) -> dict[str, Any] | None:
         "completed_at", "result_viewed_at",
     )
     available = set(row.keys())
-    return {key: row[key] for key in keys if key in available}
+    serialized = {key: row[key] for key in keys if key in available}
+    snapshot = row["result_snapshot"] if "result_snapshot" in available else None
+    estimate = snapshot.get("estimate") if isinstance(snapshot, Mapping) else None
+    if isinstance(estimate, Mapping):
+        serialized["estimate"] = dict(estimate)
+    return serialized
 
 
 def serialize_result(row: Mapping[str, Any], fallback: ScoreResult | None) -> dict[str, Any]:
@@ -478,14 +505,18 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
         _validate_answer_values(
             catalog, body.diagnostic_id, body.mode, body.answers, complete=True
         )
-        result = score_answers(catalog, body.diagnostic_id, body.mode, body.answers)
+        school = request.app.state.school
+        result = score_answers(
+            catalog, body.diagnostic_id, body.mode, body.answers,
+            school.scale_for(diagnostic.exam, diagnostic.subject),
+        )
         try:
             completion = build_completion(
                 user,
                 body,
                 diagnostic,
                 result,
-                request.app.state.school,
+                school,
                 request.app.state.report_asset_bundles[diagnostic.id][0],
                 request.app.state.settings.timezone,
             )

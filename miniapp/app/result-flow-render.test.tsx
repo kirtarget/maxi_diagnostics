@@ -172,4 +172,56 @@ describe("result flow screens", () => {
     expect(html).toContain("Первый шаг");
     expect(html).toContain("Уровень 1");
   });
+
+  it("leads with the estimated exam score and keeps the percent as a secondary line", () => {
+    const html = renderToStaticMarkup(
+      <ResultScreen
+        diagnostic={{ exam: "ЕГЭ", subject: "Физика" } as never}
+        pdfStatus="pending"
+        result={{
+          score: 50,
+          max_score: 100,
+          score_unit: "баллов",
+          correct_count: 5,
+          question_count: 10,
+          strong_topics: [],
+          growth_topics: [],
+          estimate: {
+            kind: "test_score",
+            value: 53,
+            scaled_primary: 17,
+            exam_max_primary: 45,
+            sample_max_primary: 10,
+            sample_size: 10,
+            min_pass: 36,
+          },
+        } as never}
+        onReview={() => undefined}
+        onForecast={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("Ожидаемый результат");
+    expect(html).toContain("≈ 53 балла ЕГЭ");
+    expect(html).toContain("ориентировочно, по 10 заданиям");
+    expect(html).toContain("50 из 100");
+    expect(html).toContain("5 из 10");
+  });
+
+  it("shows the forecast in the unit the estimate uses", () => {
+    const html = renderToStaticMarkup(
+      <ForecastScreen
+        points={[
+          { id: "current", label: "Сейчас", value: 3 },
+          { id: "course", label: "К экзамену", value: 4 },
+        ]}
+        kind="grade"
+        onBack={() => undefined}
+        onRoute={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("отметка");
+    expect(html).not.toContain("баллов");
+  });
 });

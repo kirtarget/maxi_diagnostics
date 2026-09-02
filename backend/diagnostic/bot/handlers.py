@@ -15,6 +15,7 @@ from diagnostic.catalog import DiagnosticCatalog
 from diagnostic.db import attempts, funnel
 from diagnostic.messages import render_message
 from diagnostic.school import SchoolConfig
+from diagnostic.score_text import estimate_caption, estimate_headline
 from diagnostic.settings import Settings
 
 from .keyboards import home_keyboard, result_keyboard, results_keyboard, webapp_keyboard
@@ -26,6 +27,11 @@ def _value(row: Mapping[str, Any], key: str, default: Any = None) -> Any:
     except (KeyError, TypeError):
         value = default
     return default if value is None else value
+
+
+def _estimate(row: Mapping[str, Any]) -> Any:
+    snapshot = _value(row, "result_snapshot")
+    return snapshot.get("estimate") if isinstance(snapshot, Mapping) else None
 
 
 def _diagnostic_value(
@@ -130,13 +136,19 @@ async def _send_results_to(answer, user_id: int, settings, school, catalog) -> N
         subject = html.escape(_diagnostic_value(row, catalog, "subject", fallback), quote=True)
         score = html.escape(str(_value(row, "score", 0)), quote=True)
         score_suffix = "%" if _value(row, "score_unit") == "accuracy_percent" else ""
+        headline = estimate_headline(_estimate(row), _value(row, "exam", ""))
+        estimate_part = (
+            f" · {html.escape(headline, quote=True)}" if headline is not None else ""
+        )
         mode = (
             interface.quick_result
             if _value(row, "mode", "quick") == "quick"
             else interface.full_result
         )
         mode = html.escape(mode, quote=True)
-        lines.append(f"• <b>{subject}</b> — {score}{score_suffix} ({mode})")
+        lines.append(
+            f"• <b>{subject}</b> — {score}{score_suffix}{estimate_part} ({mode})"
+        )
     await answer(
         "\n".join(lines),
         parse_mode="HTML",
@@ -244,9 +256,18 @@ async def show_result(
     score = html.escape(str(_value(attempt, "score", 0)), quote=True)
     question_count = html.escape(str(_value(attempt, "question_count", 0)), quote=True)
     correct_count = html.escape(str(_value(attempt, "correct_count", 0)), quote=True)
+    estimate = _estimate(attempt)
+    headline = estimate_headline(estimate, _value(attempt, "exam", ""))
+    caption = estimate_caption(estimate)
+    estimate_lines = (
+        f"<b>{html.escape(headline, quote=True)}</b>\n"
+        f"{html.escape(caption, quote=True)}\n"
+        if headline is not None and caption is not None else ""
+    )
     if callback.message:
         await callback.message.answer(
             f"<b>{subject}</b>\n"
+            f"{estimate_lines}"
             f"{html.escape(school.brand.pdf.score_label, quote=True)}: {score}\n"
             f"{html.escape(school.brand.pdf.correct_label, quote=True)}: "
             f"{correct_count}/{question_count}",

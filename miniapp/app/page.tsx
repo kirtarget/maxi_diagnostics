@@ -12,7 +12,7 @@ import {
   ReviewScreen,
   RouteScreen,
 } from "./result-flow";
-import { forecastTrajectory, pdfStatusCopy, personalRoute } from "./result-flow-model";
+import { forecastKind, forecastTrajectory, pdfStatusCopy, personalRoute } from "./result-flow-model";
 import { gameplayProfileView } from "./gameplay-profile-model";
 import { TrainerScreen } from "./trainer-screen";
 import { LeagueScreen } from "./league-screen";
@@ -94,6 +94,7 @@ export default function Home() {
   } : BUILD_BRAND;
   const gameplayProfile = gameplayProfileView({ ...bootstrap?.progress_profile, ...bootstrap?.gameplay_profile });
   const forecastPoints = result ? forecastTrajectory(result) : [];
+  const forecastValueKind = result ? forecastKind(result) : "accuracy_percent";
   const completedDiagnostics = (bootstrap?.progress_profile?.completion_count ?? 0) + sessionCompletions;
   const routeItems = result ? personalRoute(result.growth_topics) : [];
   const currentPdfStatus = review?.pdf_status ?? "pending";
@@ -327,6 +328,7 @@ export default function Home() {
         completedDiagnostics >= 2 ? (
           <ForecastScreen
             points={forecastPoints}
+            kind={forecastValueKind}
             offers={bootstrap?.school.links.offers}
             offerDismissed={Boolean(dismissedOfferPlacements.forecast)}
             onOfferDismiss={() => dismissOfferPlacement("forecast")}

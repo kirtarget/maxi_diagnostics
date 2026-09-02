@@ -587,6 +587,19 @@ def _catalog_paths(diagnostics_root) -> tuple:
     return tuple(sorted(entries, key=lambda path: path.name.casefold()))
 
 
+def validate_score_scale_coverage(
+    school: SchoolConfig, catalog: DiagnosticCatalog
+) -> None:
+    """Every published scale must belong to a diagnostic in this catalog."""
+    diagnostic_pairs = {
+        (diagnostic.exam, diagnostic.subject) for diagnostic in catalog.diagnostics
+    }
+    if any(
+        (scale.exam, scale.subject) not in diagnostic_pairs for scale in school.scales
+    ):
+        raise ValueError("score_scale_without_diagnostic")
+
+
 def load_catalog(school: SchoolConfig) -> DiagnosticCatalog:
     diagnostics_root = school.resolve_asset("diagnostics")
     paths = _catalog_paths(diagnostics_root)
@@ -614,6 +627,7 @@ def load_catalog(school: SchoolConfig) -> DiagnosticCatalog:
         for asset in question.asset_paths
     )
     validate_asset_inventory(school.root, references)
+    validate_score_scale_coverage(school, catalog)
     catalog._asset_digests = {
         relative: hashlib.sha256(school.resolve_asset(relative).read_bytes()).hexdigest()
         for relative in set(references)

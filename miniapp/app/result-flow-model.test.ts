@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { forecastTrajectory, personalRoute, pdfStatusCopy, resultGameSummary, topicRecommendation } from "./result-flow-model";
+import { forecastKind, forecastTrajectory, personalRoute, pdfStatusCopy, resultGameSummary, topicRecommendation } from "./result-flow-model";
 
 describe("result flow model", () => {
   it("uses the current score plus at most two persisted forecast points", () => {
@@ -35,6 +35,31 @@ describe("result flow model", () => {
     expect(forecastTrajectory({ score: 40 } as never)).toEqual([
       { id: "current", label: "Сейчас", value: 40 },
     ]);
+  });
+
+  it("starts the trajectory at the estimate when the forecast speaks that unit", () => {
+    expect(forecastTrajectory({
+      score: 40,
+      estimate: { kind: "test_score", value: 53, sample_size: 10 },
+      forecast: { kind: "test_score", points: [{ id: "stage", label: "Первый этап", value: 71 }] },
+    } as never)).toEqual([
+      { id: "current", label: "Сейчас", value: 53 },
+      { id: "stage", label: "Первый этап", value: 71 },
+    ]);
+  });
+
+  it("keeps the percent as the starting point when the forecast has no scale", () => {
+    expect(forecastTrajectory({
+      score: 40,
+      estimate: { kind: "test_score", value: 53, sample_size: 10 },
+      forecast: { points: [{ id: "stage", label: "Первый этап", value: 60 }] },
+    } as never)[0]).toEqual({ id: "current", label: "Сейчас", value: 40 });
+  });
+
+  it("reads the forecast unit from the persisted forecast", () => {
+    expect(forecastKind({ score: 40 } as never)).toBe("accuracy_percent");
+    expect(forecastKind({ score: 40, forecast: { kind: "grade", points: [] } } as never)).toBe("grade");
+    expect(forecastKind({ score: 40, forecast: { kind: "nonsense", points: [] } } as never)).toBe("accuracy_percent");
   });
 
   it("builds a bounded route from persisted growth topics", () => {

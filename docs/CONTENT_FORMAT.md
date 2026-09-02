@@ -225,7 +225,7 @@ Completion captions must render within 1,024 characters and other messages withi
       "label": "Preparation course",
       "button": "Learn more",
       "url": "https://school.example/course",
-      "forecast_delta": 10
+      "recovery_share": 10
     }
   ]
 }
@@ -234,8 +234,52 @@ Completion captions must render within 1,024 characters and other messages withi
 Public URLs must be HTTPS, contain no credentials or fragment, be at most 2,048
 characters, and have a query of at most 512 characters. Offer IDs are unique lowercase
 ASCII IDs up to 32 characters, labels/buttons are at most 128/64, and
-`forecast_delta` is a strict integer from 0 to 100. Forecast points are calculated
-only on the server and stored with the result.
+`recovery_share` is a strict integer from 0 to 100. It is the share of the primary
+points missed in the growth topics that the forecast assumes the student recovers.
+Forecast points are calculated only on the server and stored with the result.
+
+## Score scales
+
+`school/score_scales.json` is optional. It maps a diagnostic's primary score onto the
+official 2026 exam scale so the result can show an estimated test score or grade next
+to the accuracy percent.
+
+```json
+{
+  "scales": [
+    {
+      "id": "ege-physics",
+      "exam": "ЕГЭ",
+      "subject": "Физика",
+      "kind": "test_score",
+      "max_primary": 45,
+      "min_pass": 36,
+      "table": [0, 5, 9],
+      "interpolated_primary": [17],
+      "notes": "",
+      "source": {
+        "title": "...",
+        "url": "https://example.org/scale.pdf",
+        "date": "2026-05-07",
+        "confidence": "secondary"
+      }
+    }
+  ]
+}
+```
+
+`exam` and `subject` must match a diagnostic exactly; a scale that matches no
+diagnostic fails validation, and each pair may appear at most once. `kind` is
+`test_score` (EGE) or `grade` (OGE). A `test_score` scale carries `table` with
+`max_primary + 1` non-decreasing values from 0 to 100, indexed by primary score. A
+`grade` scale carries `grades` with ascending `"3"`, `"4"` and `"5"` primary
+thresholds, none above `max_primary`. `min_pass` is the passing value in the same unit
+as the estimate, or `null`. `interpolated_primary` lists primary scores whose table
+value was reconstructed rather than published. `notes` is free text for conditions the
+runtime does not model, such as the OGE geometry minimum; nothing reads it as logic.
+
+Rebuild the file from the research data with
+`python scripts/build_score_scales.py`.
 
 ## Public assets
 

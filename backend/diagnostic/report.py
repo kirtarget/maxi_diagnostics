@@ -30,6 +30,7 @@ from diagnostic.report_layout import (
     summary_story,
 )
 from diagnostic.school import SchoolConfig, validate_asset_bytes, validate_asset_path
+from diagnostic.score_text import estimate_caption, estimate_headline
 
 
 _FONT_REGULAR = "DiagnosticLiberationSans"
@@ -256,6 +257,19 @@ def _legacy_story(
     default_max_score = scoring.get("max_score", 0) if isinstance(scoring, Mapping) else 0
     max_score = _value(attempt, "max_score", default_max_score)
     correct = _value(attempt, "correct_count", 0)
+    result_snapshot = _value(attempt, "result_snapshot", {}) or {}
+    estimate = (
+        result_snapshot.get("estimate") if isinstance(result_snapshot, Mapping) else None
+    )
+    headline = estimate_headline(estimate, _value(attempt, "exam", ""))
+    caption = estimate_caption(estimate)
+    if headline is not None and caption is not None:
+        story.extend(
+            [
+                Paragraph(f"<b>{_text(headline)}</b>", styles["heading"]),
+                Paragraph(_text(caption), styles["small"]),
+            ]
+        )
     story.extend(
         [
             Paragraph(
@@ -288,7 +302,6 @@ def _legacy_story(
             Paragraph(" - ".join(_text(topic) for topic in growth_topics), styles["body"])
         )
 
-    result_snapshot = _value(attempt, "result_snapshot", {}) or {}
     forecast = (
         result_snapshot.get("forecast", {})
         if isinstance(result_snapshot, Mapping)

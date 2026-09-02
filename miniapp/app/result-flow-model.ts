@@ -1,6 +1,9 @@
-import type { ForecastPoint, ReviewResponse, ServerResult, ServerTopic } from "./types";
+import { normalizedEstimate } from "./score-estimate";
+import type {
+  ForecastKind, ForecastPoint, ReviewResponse, ServerResult, ServerTopic,
+} from "./types";
 
-type ResultWithForecast = Pick<ServerResult, "score" | "forecast">;
+type ResultWithForecast = Pick<ServerResult, "score" | "forecast" | "estimate">;
 type GrowthTopic = ServerTopic | string;
 
 export type TopicRecommendation = {
@@ -121,9 +124,21 @@ function persistedForecastPoints(forecast: ResultWithForecast["forecast"]): Fore
   ));
 }
 
+export function forecastKind(result: ResultWithForecast): ForecastKind {
+  const forecast = result.forecast;
+  if (isRecord(forecast) && (forecast.kind === "test_score" || forecast.kind === "grade")) {
+    return forecast.kind;
+  }
+  return "accuracy_percent";
+}
+
 export function forecastTrajectory(result: ResultWithForecast): ForecastPoint[] {
-  const current = isNumericValue(result.score)
-    ? [{ id: "current", label: "Сейчас", value: result.score }]
+  const estimate = normalizedEstimate(result.estimate);
+  const currentValue = estimate !== null && forecastKind(result) !== "accuracy_percent"
+    ? estimate.value
+    : result.score;
+  const current = isNumericValue(currentValue)
+    ? [{ id: "current", label: "Сейчас", value: currentValue }]
     : [];
   return [...current, ...persistedForecastPoints(result.forecast).slice(0, 2)];
 }

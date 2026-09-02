@@ -42,7 +42,7 @@ def expected_summary(root: Path) -> str:
     return (
         f"OK school={school.brand.school_id} diagnostics={len(catalog.diagnostics)} "
         f"questions={sum(len(item.questions) for item in catalog.diagnostics)} "
-        f"assets={len(assets)}\n"
+        f"assets={len(assets)} scales={len(school.scales)}\n"
     )
 
 
@@ -138,7 +138,7 @@ def test_validator_scopes_question_ids_to_each_diagnostic(tmp_path: Path, capsys
 
     assert result == 0
     assert capsys.readouterr().out == (
-        "OK school=demo-school diagnostics=2 questions=8 assets=1\n"
+        "OK school=demo-school diagnostics=2 questions=8 assets=1 scales=0\n"
     )
 
 

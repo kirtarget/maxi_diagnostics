@@ -5,8 +5,10 @@ import { normalizeOffer, OfferSurface, type OfferTelemetryEvent } from "./offer-
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import { safeAssetPath } from "./question-assets";
 import { shouldShowResultMetrics } from "./result-display";
+import { estimateCaption, estimateHeadline, forecastUnitLabel } from "./score-estimate";
 import { pdfStatusCopy, resultGameSummary, topicRecommendation, type PdfStatusCopy, type PersonalRouteAction } from "./result-flow-model";
 import type {
+  ForecastKind,
   ForecastPoint,
   PublicDiagnostic,
   ReviewItem,
@@ -48,6 +50,8 @@ export function ResultScreen({
   const pdf = pdfStatusCopy(pdfStatus);
   const game = resultGameSummary(result);
   const recommendation = topicRecommendation(result.growth_topics);
+  const headline = estimateHeadline(result.estimate, diagnostic.exam);
+  const caption = estimateCaption(result.estimate);
   return (
     <section className="screen result-screen" aria-labelledby="result-title">
       <div className="result-hero">
@@ -55,11 +59,25 @@ export function ResultScreen({
         <h1 id="result-title">Карта знаний готова</h1>
         {shouldShowResultMetrics(result) && (
           <div className="result-overview" aria-label="Итог тестовой части">
-            <div className="result-score">
-              <span>Текущий балл</span>
-              <strong>{result.score}</strong>
-              <small>из {result.max_score} {result.score_unit}</small>
-            </div>
+            {headline && caption ? (
+              <div className="result-estimate">
+                <span>Ожидаемый результат</span>
+                <strong>{headline}</strong>
+                <small>{caption}</small>
+              </div>
+            ) : (
+              <div className="result-score">
+                <span>Текущий балл</span>
+                <strong>{result.score}</strong>
+                <small>из {result.max_score} {result.score_unit}</small>
+              </div>
+            )}
+            {headline && caption && (
+              <div className="result-correct">
+                <span>Текущий балл</span>
+                <strong>{result.score} из {result.max_score}</strong>
+              </div>
+            )}
             <div className="result-correct">
               <span>Верные ответы</span>
               <strong>{result.correct_count} из {result.question_count}</strong>
@@ -281,6 +299,7 @@ export function ForecastEmptyScreen({ completedCount, onBack, onStart }: {
 
 export function ForecastScreen({
   points,
+  kind = "accuracy_percent",
   offers = [],
   offerDismissed = false,
   onOfferDismiss,
@@ -289,6 +308,7 @@ export function ForecastScreen({
   onRoute,
 }: {
   points: ForecastPoint[];
+  kind?: ForecastKind;
   offers?: SchoolLinks["offers"];
   offerDismissed?: boolean;
   onOfferDismiss?: () => void;
@@ -311,7 +331,7 @@ export function ForecastScreen({
         {current && (
           <div className="forecast-step forecast-step-current">
             <span className="forecast-step-marker" aria-hidden="true" />
-            <div><small>{current.label}</small><strong>{current.value}</strong><span>баллов</span></div>
+            <div><small>{current.label}</small><strong>{current.value}</strong><span>{forecastUnitLabel(kind, current.value)}</span></div>
           </div>
         )}
         {next && (
@@ -319,7 +339,7 @@ export function ForecastScreen({
             <div className="forecast-path-line" aria-hidden="true"><span>+{next.value - (current?.value ?? 0)}</span></div>
             <div className="forecast-step forecast-step-goal">
               <span className="forecast-step-marker" aria-hidden="true" />
-              <div><small>{next.label}</small><strong>{next.value}</strong><span>баллов</span></div>
+              <div><small>{next.label}</small><strong>{next.value}</strong><span>{forecastUnitLabel(kind, next.value)}</span></div>
             </div>
           </>
         )}

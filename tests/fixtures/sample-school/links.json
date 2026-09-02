@@ -8,7 +8,7 @@
       "label": "Интенсив",
       "button": "Начать подготовку",
       "url": "https://school.example/intensive",
-      "forecast_delta": 14
+      "recovery_share": 14
     }
   ]
 }

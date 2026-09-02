@@ -1812,6 +1812,24 @@ select:focus-visible,
 
 .result-score small { margin-top: 4px; opacity: 0.85; font-size: 14px; }
 
+.result-estimate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.result-estimate span { font-size: 12px; font-weight: 700; opacity: 0.75; }
+
+.result-estimate strong {
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 1.05;
+  margin-top: 6px;
+}
+
+.result-estimate small { margin-top: 4px; opacity: 0.8; font-size: 13px; }
+
 .result-correct {
   display: flex;
   gap: 6px;

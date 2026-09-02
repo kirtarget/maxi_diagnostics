@@ -16,6 +16,14 @@ from diagnostic.catalog import (
     SingleQuestion,
 )
 from diagnostic.numeric import normalize_numeric_answer
+from diagnostic.school import GradeScale, TestScoreScale
+
+
+ScoreScale = TestScoreScale | GradeScale
+
+
+def round_half_up(value: float) -> int:
+    return math.floor(value + 0.5)
 
 
 class TopicScore(BaseModel):
@@ -25,6 +33,47 @@ class TopicScore(BaseModel):
     correct_count: int = Field(ge=0)
     question_count: int = Field(gt=0)
     ratio: float = Field(ge=0, le=1)
+    primary_score: int = Field(ge=0)
+    max_primary_score: int = Field(gt=0)
+
+
+class ScoreEstimate(BaseModel):
+    """Official-scale estimate projected from a short sample of exam tasks."""
+
+    model_config = ConfigDict(frozen=True)
+
+    kind: Literal["test_score", "grade"]
+    value: int = Field(ge=0)
+    scaled_primary: int = Field(ge=0)
+    exam_max_primary: int = Field(gt=0)
+    sample_max_primary: int = Field(gt=0)
+    sample_size: int = Field(gt=0)
+    min_pass: int | None = None
+
+
+def estimate_for_primary(
+    scale: ScoreScale,
+    primary_score: int,
+    sample_max_primary: int,
+    sample_size: int,
+) -> ScoreEstimate:
+    """Project a sample primary score onto the full exam scale. Pure."""
+    if sample_max_primary <= 0 or sample_size <= 0:
+        raise ValueError("invalid_score_sample")
+    bounded = min(max(primary_score, 0), sample_max_primary)
+    scaled_primary = min(
+        round_half_up(bounded / sample_max_primary * scale.max_primary),
+        scale.max_primary,
+    )
+    return ScoreEstimate(
+        kind=scale.kind,
+        value=scale.value_for(scaled_primary),
+        scaled_primary=scaled_primary,
+        exam_max_primary=scale.max_primary,
+        sample_max_primary=sample_max_primary,
+        sample_size=sample_size,
+        min_pass=scale.min_pass,
+    )
 
 
 class ScoreResult(BaseModel):
@@ -41,6 +90,8 @@ class ScoreResult(BaseModel):
     score_unit: str
     strong_topics: tuple[TopicScore, ...]
     growth_topics: tuple[TopicScore, ...]
+    recoverable_primary_score: int = Field(default=0, ge=0)
+    estimate: ScoreEstimate | None = None
 
 
 def score_answers(
@@ -48,6 +99,7 @@ def score_answers(
     diagnostic_id: str,
     mode: Literal["quick", "full"],
     answers: dict[str, Any],
+    scale: ScoreScale | None = None,
 ) -> ScoreResult:
     questions = catalog.questions_for_mode(diagnostic_id, mode)
     diagnostic = catalog.get(diagnostic_id)
@@ -69,8 +121,14 @@ def score_answers(
         (primary_score / max_primary_score) * diagnostic.scoring.max_score + 0.5
     )
     topics = _topic_scores(questions, correct_by_question)
-    strong_topics = [item for item in topics if item.ratio >= 0.7]
-    growth_topics = [item for item in topics if item.ratio < 0.7]
+    strong_topics = sorted(
+        (item for item in topics if item.ratio >= 0.7),
+        key=lambda item: (-item.ratio, item.topic.casefold()),
+    )[:2]
+    growth_topics = sorted(
+        (item for item in topics if item.ratio < 0.7),
+        key=lambda item: (item.ratio, item.topic.casefold()),
+    )[:2]
     return ScoreResult(
         diagnostic_id=diagnostic.id,
         mode=mode,
@@ -81,11 +139,16 @@ def score_answers(
         score=score,
         max_score=diagnostic.scoring.max_score,
         score_unit=diagnostic.scoring.score_unit,
-        strong_topics=tuple(
-            sorted(strong_topics, key=lambda item: (-item.ratio, item.topic.casefold()))[:2]
+        strong_topics=tuple(strong_topics),
+        growth_topics=tuple(growth_topics),
+        recoverable_primary_score=sum(
+            item.max_primary_score - item.primary_score for item in growth_topics
         ),
-        growth_topics=tuple(
-            sorted(growth_topics, key=lambda item: (item.ratio, item.topic.casefold()))[:2]
+        estimate=(
+            estimate_for_primary(
+                scale, primary_score, max_primary_score, len(questions)
+            )
+            if scale is not None else None
         ),
     )
 
@@ -128,6 +191,8 @@ def _topic_scores(
             correct_count=correct,
             question_count=total,
             ratio=earned / maximum,
+            primary_score=earned,
+            max_primary_score=maximum,
         )
         for topic, (correct, total, earned, maximum) in totals.items()
     ]
