@@ -192,7 +192,7 @@ def test_delete_user_requires_positive_id_json_confirmation_and_delete_method(mo
     from diagnostic.admin import router
 
     client = make_client(monkeypatch)
-    router.repository.delete_diagnostic_user.return_value = {"notifications": 2, "attempts": 1, "engagements": 1, "offer_events": 1}
+    router.repository.delete_diagnostic_user.return_value = {"notifications": 2, "attempts": 1, "engagements": 1, "offer_events": 1, "funnel_events": 3}
 
     response = client.request(
         "DELETE", "/api/admin/diagnostics/users", auth=ADMIN_AUTH,
@@ -200,7 +200,7 @@ def test_delete_user_requires_positive_id_json_confirmation_and_delete_method(mo
     )
 
     assert response.status_code == 200
-    assert response.json() == {"ok": True, "deleted": {"notifications": 2, "attempts": 1, "engagements": 1, "offer_events": 1}}
+    assert response.json() == {"ok": True, "deleted": {"notifications": 2, "attempts": 1, "engagements": 1, "offer_events": 1, "funnel_events": 3}}
     call = router.repository.delete_diagnostic_user.await_args
     assert call.args[0] == 42
     assert len(call.args[1]) == 64
@@ -256,7 +256,7 @@ class _DeleteConnection:
         if normalized.startswith("INSERT INTO diagnostic_session_generations"):
             return "INSERT 0 1"
         table = normalized.split("FROM", 1)[1].strip().split()[0]
-        return {"diagnostic_erased_users": "DELETE 0", "diagnostic_notifications": "DELETE 2", "diagnostic_attempts": "DELETE 1", "diagnostic_engagements": "DELETE 1", "diagnostic_progress_events": "DELETE 1", "diagnostic_offer_events": "DELETE 1", "diagnostic_progress_profiles": "DELETE 1"}[table]
+        return {"diagnostic_erased_users": "DELETE 0", "diagnostic_notifications": "DELETE 2", "diagnostic_attempts": "DELETE 1", "diagnostic_engagements": "DELETE 1", "diagnostic_progress_events": "DELETE 1", "diagnostic_offer_events": "DELETE 1", "diagnostic_funnel_events": "DELETE 3", "diagnostic_progress_profiles": "DELETE 1"}[table]
 
 
 class _DeletePool:
@@ -276,7 +276,7 @@ async def test_delete_repository_is_atomic_parameterized_and_diagnostic_only(mon
 
     result = await repository.delete_diagnostic_user(42, "a" * 64, "b" * 32)
 
-    assert result == {"notifications": 2, "attempts": 1, "engagements": 1, "offer_events": 1}
+    assert result == {"notifications": 2, "attempts": 1, "engagements": 1, "offer_events": 1, "funnel_events": 3}
     assert connection.events == ["acquire:enter", "transaction:enter", "transaction:commit", "acquire:commit"]
     assert connection.queries[0][0].startswith("SELECT pg_advisory_xact_lock")
     assert connection.queries[1][0].startswith("DELETE FROM diagnostic_erased_users")
@@ -286,11 +286,12 @@ async def test_delete_repository_is_atomic_parameterized_and_diagnostic_only(mon
     delete_queries = connection.queries[4:]
     assert [query[0].split("FROM ")[1].split()[0] for query in delete_queries] == [
         "diagnostic_notifications", "diagnostic_attempts", "diagnostic_engagements",
-        "diagnostic_progress_events", "diagnostic_offer_events", "diagnostic_progress_profiles",
+        "diagnostic_progress_events", "diagnostic_offer_events", "diagnostic_funnel_events",
+        "diagnostic_progress_profiles",
     ]
     assert all(
         ("WHERE subject_hash=$1" in query and arguments == ("a" * 64,))
-        if "diagnostic_offer_events" in query
+        if "diagnostic_offer_events" in query or "diagnostic_funnel_events" in query
         else ("WHERE user_id=$1" in query and arguments == (42,))
         for query, arguments in delete_queries
     )

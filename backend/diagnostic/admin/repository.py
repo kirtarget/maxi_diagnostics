@@ -192,6 +192,10 @@ async def delete_diagnostic_user(
                 "DELETE FROM diagnostic_offer_events WHERE subject_hash=$1",
                 session_subject_key,
             )
+            funnel_events = await connection.execute(
+                "DELETE FROM diagnostic_funnel_events WHERE subject_hash=$1",
+                session_subject_key,
+            )
             await connection.execute(
                 # Trainer sessions reference the profile with ON DELETE CASCADE.
                 # Deleting the profile here therefore erases trainer answers and
@@ -203,4 +207,5 @@ async def delete_diagnostic_user(
         "attempts": _delete_count(attempts),
         "engagements": _delete_count(engagements),
         "offer_events": _delete_count(offer_events),
+        "funnel_events": _delete_count(funnel_events),
     }
