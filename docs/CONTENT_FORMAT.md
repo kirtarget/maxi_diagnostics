@@ -443,11 +443,6 @@ list of accepted wordings are emitted as `text`:
 }
 ```
 
-The runtime models do not carry this type yet, so a catalog containing it fails
-`validate_school.py`. Until the type lands, validate everything else with
-`python scripts/validate_school.py --skip-text`, which ignores `text` questions
-and reports how many it skipped. Drop the flag once the type is released.
-
 Run `python scripts/validate_school.py` and `python scripts/check_brand_isolation.py`
 after every brand, link, content, or asset change. Both commands must print `OK`
 before deployment. They use the same runtime validation contract as the API and bot.

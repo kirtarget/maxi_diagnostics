@@ -113,10 +113,9 @@ python scripts/import_edcheck_export.py <путь-к-выгрузке>
 python scripts/import_sharepoint_diagnostics.py <каталог-с-docx>
 ```
 
-Часть заданий конвертируется в тип `text` (свободный краткий ответ). Пока этот
-тип не добавлен в `catalog.py`, каталог проверяется командой
-`python scripts/validate_school.py --skip-text`, которая пропускает вопросы
-этого типа. После появления типа флаг больше не нужен.
+Часть заданий конвертируется в тип `text` (свободный краткий ответ). Он
+поддержан в `catalog.py`, поэтому каталог проверяется обычной командой
+`python scripts/validate_school.py`.
 
 ## Критические инварианты
 
