@@ -107,6 +107,7 @@ def _validation_error(label: str, path: str, exc: ValidationError) -> str:
     message = str(error.get("msg", ""))
     known_reasons = (
         "invalid_selection_limit", "invalid_option_reference", "invalid_input_variant",
+        "invalid_text_variant", "duplicate_text_variant",
         "invalid_quick_count", "duplicate_question_id", "duplicate_diagnostic_id",
         "invalid_asset_path", "invalid_public_url", "duplicate_offer_id",
         "invalid_score_scale_table_length", "invalid_score_scale_table_value",

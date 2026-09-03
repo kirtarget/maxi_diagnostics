@@ -67,9 +67,10 @@ def test_operator_documents_cover_deploy_operations_and_handoff_contracts():
 def test_content_format_has_complete_server_only_examples():
     content = read("docs/CONTENT_FORMAT.md")
 
-    for question_type in ("single", "multiple", "input", "matching"):
+    for question_type in ("single", "multiple", "input", "matching", "text"):
         assert f'"type": "{question_type}"' in content
     assert "Numeric input" in content
+    assert "Short free text" in content
     assert '"selection_limit"' in content
     assert '"items"' in content
     assert '"correct"' in content
@@ -79,7 +80,10 @@ def test_content_format_has_complete_server_only_examples():
     assert '"correct": ["3.5"]' in content
     assert "42" in content and "3.5" in content
     assert "comma or dot" in content
-    assert "arbitrary text" in content.casefold() and "not" in content.casefold()
+    assert "free-text answers use the `text` type" in content
+    assert '"max_length"' in content and '"correct": ["но", "однако"]' in content
+    for rule in ("Unicode NFC", "Lowercased", "ё` folded to `е", "unified to `-`"):
+        assert rule in content
 
 
 def test_content_format_documents_the_post_completion_review_boundary():

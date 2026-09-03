@@ -36,6 +36,14 @@ const input: Question = {
   prompt: "Найди значение выражения. Ответ дайте в виде десятичной дроби.",
 };
 
+const shortText: Question = {
+  ...base,
+  id: "q-text",
+  type: "text",
+  max_length: 40,
+  prompt: "Выпишите союз из предложения.",
+};
+
 const noop = () => undefined;
 
 describe("AnswerEditor", () => {
@@ -79,8 +87,26 @@ describe("AnswerEditor", () => {
     expect(html).toContain("Очистить");
   });
 
+  it("renders free text as a plain field bounded by max_length", () => {
+    const html = renderToStaticMarkup(
+      <AnswerEditor question={shortText} value="однако" onChange={noop} />,
+    );
+    expect(html).toContain('class="short-answer"');
+    expect(html).toContain('inputMode="text"');
+    expect(html).toContain('maxLength="40"');
+    expect(html).not.toContain("answer-numeric");
+    expect(html).not.toContain("цифры");
+  });
+
+  it("falls back to the default free-text length when the catalog omits it", () => {
+    const html = renderToStaticMarkup(
+      <AnswerEditor question={{ ...shortText, max_length: undefined }} value="" onChange={noop} />,
+    );
+    expect(html).toContain('maxLength="80"');
+  });
+
   it("disables every control when the answer is locked", () => {
-    for (const question of [single, multiple, matching, input]) {
+    for (const question of [single, multiple, matching, input, shortText]) {
       const html = renderToStaticMarkup(
         <AnswerEditor question={question} value={undefined} onChange={noop} disabled />,
       );

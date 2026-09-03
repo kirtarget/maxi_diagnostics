@@ -15,15 +15,23 @@ def test_review_snapshot_formats_every_question_type():
     questions = catalog.get("demo-math").questions
     snapshot = build_review_snapshot(
         questions,
-        {"q1": "1", "q2": ["1", "2"], "q3": {"a": "1", "b": "2"}, "q4": "41"},
+        {
+            "q1": "1",
+            "q2": ["1", "2"],
+            "q3": {"a": "1", "b": "2"},
+            "q4": "41",
+            "q5": "зато",
+        },
     )
 
-    assert [item["question_id"] for item in snapshot] == ["q1", "q2", "q3", "q4"]
+    assert [item["question_id"] for item in snapshot] == ["q1", "q2", "q3", "q4", "q5"]
     assert snapshot[0]["user_answer"] == "3"
     assert snapshot[0]["expected_answer"] == "4"
     assert snapshot[1]["expected_answer"] == "2/4, 3/6"
     assert snapshot[2]["expected_answer"] == "2 + 2: 4; 3 + 3: 6"
     assert snapshot[3]["expected_answer"] == "42"
+    assert snapshot[4]["expected_answer"] == "но / однако"
+    assert snapshot[4]["user_answer"] == "зато"
     assert all(item["is_correct"] is False for item in snapshot)
 
 
@@ -32,7 +40,13 @@ def test_individual_explanation_wins_and_public_review_drops_raw_values():
     questions = catalog.get("demo-math").questions
     snapshot = build_review_snapshot(
         questions,
-        {"q1": "2", "q2": ["1", "3"], "q3": {"a": "2", "b": "1"}, "q4": "42"},
+        {
+            "q1": "2",
+            "q2": ["1", "3"],
+            "q3": {"a": "2", "b": "1"},
+            "q4": "42",
+            "q5": "Однако",
+        },
     )
     payload = public_review_items({"review_snapshot": snapshot})
 

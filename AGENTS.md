@@ -54,7 +54,7 @@ worker для PDF и follow-up сообщений. `miniapp` — браузер�
   `correct` из публичной выдачи и версия контента.
 - `backend/diagnostic/school.py` — загрузка бренда, ссылок и безопасных публичных
   ресурсов.
-- `backend/diagnostic/scoring.py` — серверная проверка четырёх типов вопросов и
+- `backend/diagnostic/scoring.py` — серверная проверка пяти типов вопросов и
   расчёт сильных/слабых тем.
 - `backend/diagnostic/report.py`, `delivery.py`, `followups.py`, `worker.py` — PDF,
   доставка, напоминания и периодическая обработка очередей.
@@ -71,7 +71,8 @@ worker для PDF и follow-up сообщений. `miniapp` — браузер�
 
 Формат полностью описан в `docs/CONTENT_FORMAT.md`. JSON-файлы читаются как строгий
 UTF-8: запрещены дубли ключей, нестандартные числа и неизвестные поля. Поддерживаются
-вопросы `single`, `multiple`, `matching` и числовой `input`. Файлы и ресурсы имеют
+вопросы `single`, `multiple`, `matching`, числовой `input` и короткий
+свободный `text`. Файлы и ресурсы имеют
 жёсткие ограничения по размеру, количеству, путям и содержимому SVG/изображений.
 
 После изменения `school/brand.json`, `school/links.json`, диагностик или ресурсов

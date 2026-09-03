@@ -348,7 +348,7 @@ of unique IDs in `correct`.
 
 ## Numeric input
 
-The `input` type is numeric only; arbitrary text answers are not supported. A comma or dot
+The `input` type is numeric only; free-text answers use the `text` type below. A comma or dot
 decimal separator is accepted: `3.5` and `3,5` compare equally, as do `42`,
 `42.0`, and `42,0`. Values are 1–64 characters and use an optional sign, digits,
 comma/dot, and optional scientific exponent with 1–3 digits (for example `1e999`).
@@ -363,6 +363,42 @@ allowed.
   "title": "Task 3",
   "prompt": "Enter 7 divided by 2.",
   "correct": ["3.5"]
+}
+```
+
+## Short free text
+
+The `text` type accepts a short written answer such as a conjunction or a single
+term. `correct` holds 1–20 accepted variants and `max_length` (a strict integer from
+1 through 200, default `80`) is the only public field of the type: it tells the Mini
+App how long the answer field may be. Every variant is 1–`max_length` characters,
+must not be blank or control-bearing, and must render with the bundled PDF fonts.
+Two variants that normalize to the same string are a duplicate and rejected.
+
+Both sides of the comparison pass through the same normalization before they are
+compared:
+
+1. Unicode NFC.
+2. Leading and trailing whitespace removed.
+3. Lowercased.
+4. `ё` folded to `е`.
+5. Runs of internal whitespace collapsed to a single space.
+6. Trailing `.`, `,`, `;`, `!`, and `?` dropped.
+7. `–` and `—` unified to `-`.
+
+So `"  ОДНАКО.  "`, `"Однако"`, and `"однако"` all match a stored `"однако"`, and
+`"всё-таки"`, `"ВСЁ–ТАКИ!"`, and `"все—таки"` all match one another. Word order and
+internal spelling are not normalized: `"но однако"` does not match `"однако"`.
+
+```json
+{
+  "id": "q-text",
+  "type": "text",
+  "topic": "Союзы",
+  "title": "Task 5",
+  "prompt": "Выпишите подчинительный союз из предложения.",
+  "max_length": 40,
+  "correct": ["но", "однако"]
 }
 ```
 

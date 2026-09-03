@@ -2,6 +2,7 @@ import { answerInputConfig } from "./math-text";
 import { FormattedMathText } from "./math-display";
 import { updateMatchingAnswer } from "./answer-values";
 import { cleanAnswerLabel } from "./question-prompt";
+import { DEFAULT_TEXT_ANSWER_LENGTH } from "./answer-values";
 import type {
   AnswerValue,
   InputQuestion,
@@ -9,6 +10,7 @@ import type {
   MultipleQuestion,
   Question,
   SingleQuestion,
+  TextQuestion,
 } from "./types";
 
 export type AnswerEditorLabels = {
@@ -43,6 +45,9 @@ export function AnswerEditor({ question, value, onChange, disabled = false, labe
   if (question.type === "matching") {
     const pairs = value && typeof value === "object" && !Array.isArray(value) ? value : {};
     return <MatchingEditor question={question} value={pairs} disabled={disabled} chooseLabel={text.choose} onChange={onChange} />;
+  }
+  if (question.type === "text") {
+    return <ShortTextEditor question={question} value={asText} disabled={disabled} label={text.answer} placeholder={text.placeholder} onChange={onChange} />;
   }
   return <InputEditor question={question} value={asText} disabled={disabled} label={text.answer} placeholder={text.placeholder} onChange={onChange} />;
 }
@@ -179,6 +184,38 @@ function InputEditor({ question, value, disabled, label, placeholder, onChange }
         {value && <button type="button" disabled={disabled} onClick={() => onChange("")}>Очистить</button>}
       </span>
       <small>{config.hint}</small>
+    </label>
+  );
+}
+
+/** Free text: the same field as InputEditor, without the numeric mode or its digit hint. */
+function ShortTextEditor({ question, value, disabled, label, placeholder, onChange }: {
+  question: TextQuestion;
+  value: string;
+  disabled: boolean;
+  label: string;
+  placeholder: string;
+  onChange: (value: AnswerValue) => void;
+}) {
+  return (
+    <label className="short-answer">
+      <span>{label}</span>
+      <span className="short-answer-control">
+        <input
+          autoCapitalize="off"
+          autoComplete="off"
+          enterKeyHint="done"
+          inputMode="text"
+          disabled={disabled}
+          maxLength={question.max_length ?? DEFAULT_TEXT_ANSWER_LENGTH}
+          spellCheck={false}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+        />
+        {value && <button type="button" disabled={disabled} onClick={() => onChange("")}>Очистить</button>}
+      </span>
+      <small>Введите только ответ — без пояснений и лишних слов.</small>
     </label>
   );
 }

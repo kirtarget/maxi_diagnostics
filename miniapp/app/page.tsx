@@ -260,7 +260,7 @@ export default function Home() {
             subject={diagnostic?.subject}
             index={questionIndex}
             total={questions.length}
-            answer={questions[questionIndex].type === "input"
+            answer={questions[questionIndex].type === "input" || questions[questionIndex].type === "text"
               ? inputDrafts[questions[questionIndex].id] ?? answers[questions[questionIndex].id]
               : answers[questions[questionIndex].id]}
             onAnswer={session.actions.answerQuestion}

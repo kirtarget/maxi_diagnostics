@@ -14,8 +14,10 @@ from diagnostic.catalog import (
     MultipleQuestion,
     Question,
     SingleQuestion,
+    TextQuestion,
 )
 from diagnostic.numeric import normalize_numeric_answer
+from diagnostic.text_answers import is_valid_text_answer, normalize_text_answer
 from diagnostic.school import GradeScale, TestScoreScale
 
 
@@ -160,6 +162,14 @@ def is_answer_correct(question: Question, answer: Any) -> bool:
         return isinstance(answer, list) and sorted(answer) == sorted(question.correct)
     if isinstance(question, MatchingQuestion):
         return isinstance(answer, dict) and answer == question.correct
+    if isinstance(question, TextQuestion):
+        if not is_valid_text_answer(answer, question.max_length):
+            return False
+        normalized_text = normalize_text_answer(answer)
+        return any(
+            normalized_text == normalize_text_answer(variant)
+            for variant in question.correct
+        )
     normalized_answer = _normalize_decimal(answer)
     return normalized_answer is not None and any(
         normalized_answer == _normalize_decimal(variant) for variant in question.correct

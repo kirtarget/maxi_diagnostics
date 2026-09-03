@@ -19,14 +19,18 @@ import type { OfferPlacement } from "./offer-ux";
 import { parseLeagueResponse, type LeagueResponse } from "./league-model";
 import {
   isValidNumericInput,
+  isValidTextInput,
   updateMatchingAnswer,
   updateNumericInputAnswer,
+  updateTextInputAnswer,
 } from "./answer-values";
 
 export {
   isValidNumericInput,
+  isValidTextInput,
   updateMatchingAnswer,
   updateNumericInputAnswer,
+  updateTextInputAnswer,
 };
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_DIAGNOSTIC_API_URL ?? "").replace(/\/$/, "");
@@ -510,6 +514,9 @@ function isValidAnswer(
   }
   if (question.type === "input") {
     return isValidNumericInput(answer);
+  }
+  if (question.type === "text") {
+    return isValidTextInput(answer, question.max_length);
   }
   if (question.type === "multiple") {
     if (!Array.isArray(answer) || answer.length > question.selection_limit) return false;

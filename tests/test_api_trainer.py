@@ -314,6 +314,51 @@ def test_answer_returns_feedback_only_after_submission(monkeypatch):
     assert submit.await_args.kwargs["public_feedback"]["correct_answer"] == "4"
 
 
+def test_answer_accepts_a_normalized_free_text_answer(monkeypatch):
+    from diagnostic.api import trainer
+
+    catalog = load_catalog(load_school(SAMPLE_SCHOOL))
+    monkeypatch.setattr(trainer.trainer, "get_session", AsyncMock(return_value={
+        "diagnostic_id": "demo-math",
+        "content_version": catalog.content_version("demo-math", APPLICATION_SECRET),
+    }))
+    submit = AsyncMock(return_value={
+        "ok": True, "question_id": "q5", "is_correct": True, "correct_answer": None,
+        "explanation": None,
+    })
+    monkeypatch.setattr(trainer.trainer, "answer_question", submit)
+    client = make_client(monkeypatch)
+
+    response = client.post(
+        "/api/diagnostics/trainer/answer",
+        json=answer_body(question_id="q5", answer="  ОДНАКО.  "),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["is_correct"] is True
+    assert submit.await_args.kwargs["public_feedback"]["correct_answer"] == "но / однако"
+
+
+@pytest.mark.parametrize("answer", ["", "   ", ["но"], "с" * 41])
+def test_answer_rejects_unusable_free_text_shapes(monkeypatch, answer):
+    from diagnostic.api import trainer
+
+    catalog = load_catalog(load_school(SAMPLE_SCHOOL))
+    monkeypatch.setattr(trainer.trainer, "get_session", AsyncMock(return_value={
+        "diagnostic_id": "demo-math",
+        "content_version": catalog.content_version("demo-math", APPLICATION_SECRET),
+    }))
+    client = make_client(monkeypatch)
+
+    response = client.post(
+        "/api/diagnostics/trainer/answer",
+        json=answer_body(question_id="q5", answer=answer),
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "invalid_answer_value"
+
+
 @pytest.mark.parametrize("error", ["trainer_answer_conflict", "trainer_revision_stale"])
 def test_answer_conflicts_map_to_safe_http_errors(monkeypatch, error):
     from diagnostic.api import trainer

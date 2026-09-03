@@ -86,12 +86,13 @@ def base_completion() -> dict:
 def full_completion() -> dict:
     return base_completion() | {
         "mode": "full",
-        "question_count": 4,
+        "question_count": 5,
         "answers": {
             "q1": "2",
             "q2": ["1", "3"],
             "q3": {"a": "2", "b": "1"},
             "q4": "42",
+            "q5": "однако",
         },
     }
 
@@ -142,7 +143,7 @@ def test_catalog_detail_requires_current_session_and_returns_sanitized_questions
     assert response.status_code == 200
     diagnostic = response.json()["diagnostic"]
     assert diagnostic["id"] == "demo-math"
-    assert len(diagnostic["questions"]) == 4
+    assert len(diagnostic["questions"]) == 5
     assert diagnostic["question_count"] == len(diagnostic["questions"])
     serialized = json.dumps(diagnostic, ensure_ascii=False)
     assert '"correct"' not in serialized
@@ -312,12 +313,16 @@ def test_progress_and_completion_reject_unbounded_revision_churn(monkeypatch):
         ("quick", 2, {"q2": ["1", "1"]}),
         ("quick", 2, {"q2": ["1", "2", "3"]}),
         ("quick", 2, {"q2": ["unknown"]}),
-        ("full", 4, {"q3": {"unknown": "1"}}),
-        ("full", 4, {"q3": {"a": "unknown"}}),
-        ("full", 4, {"q4": " "}),
-        ("full", 4, {"q4": "not-a-number"}),
-        ("full", 4, {"q4": "42\x00"}),
-        ("full", 4, {"q4": "x" * 257}),
+        ("full", 5, {"q3": {"unknown": "1"}}),
+        ("full", 5, {"q3": {"a": "unknown"}}),
+        ("full", 5, {"q4": " "}),
+        ("full", 5, {"q4": "not-a-number"}),
+        ("full", 5, {"q4": "42\x00"}),
+        ("full", 5, {"q4": "x" * 257}),
+        ("full", 5, {"q5": "   "}),
+        ("full", 5, {"q5": "но\x00"}),
+        ("full", 5, {"q5": "с" * 41}),
+        ("full", 5, {"q5": ["но"]}),
     ],
 )
 def test_progress_rejects_values_that_cannot_be_restored(

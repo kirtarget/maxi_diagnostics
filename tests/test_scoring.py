@@ -18,13 +18,19 @@ def test_server_scores_all_question_types():
         sample_catalog(),
         "demo-math",
         "full",
-        {"q1": "2", "q2": ["1", "3"], "q3": {"a": "2", "b": "1"}, "q4": "42,0"},
+        {
+            "q1": "2",
+            "q2": ["1", "3"],
+            "q3": {"a": "2", "b": "1"},
+            "q4": "42,0",
+            "q5": "  ОДНАКО.  ",
+        },
     )
 
-    assert result.correct_count == 4
+    assert result.correct_count == 5
     assert result.score == 100
-    assert result.primary_score == 4
-    assert result.max_primary_score == 4
+    assert result.primary_score == 5
+    assert result.max_primary_score == 5
 
 
 def test_server_weights_accuracy_by_primary_score():
@@ -101,11 +107,11 @@ def test_score_result_is_immutable_and_exposes_ranked_topics():
     with pytest.raises(Exception):
         result.score = 0
     assert len(result.strong_topics) == 2
-    assert len(result.growth_topics) == 1
+    assert len(result.growth_topics) == 2
     assert {item.topic for item in result.strong_topics}.isdisjoint(
         item.topic for item in result.growth_topics
     )
-    assert result.growth_topics[0].topic == "Уравнения"
+    assert result.growth_topics[0].topic == "Союзы"
 
 
 @pytest.mark.parametrize("topic_count", [1, 2, 3])
@@ -168,12 +174,12 @@ def test_result_projects_the_sample_onto_the_exam_scale():
     )
 
     assert result.primary_score == 2
-    assert result.max_primary_score == 4
+    assert result.max_primary_score == 5
     assert result.estimate is not None
-    assert result.estimate.scaled_primary == 4
-    assert result.estimate.value == 50
-    assert result.estimate.sample_size == 4
-    assert result.estimate.sample_max_primary == 4
+    assert result.estimate.scaled_primary == 3
+    assert result.estimate.value == 35
+    assert result.estimate.sample_size == 5
+    assert result.estimate.sample_max_primary == 5
     assert result.estimate.exam_max_primary == 8
     assert result.estimate.min_pass == 27
 
@@ -185,7 +191,7 @@ def test_growth_topics_carry_the_primary_points_still_on_the_table():
 
     assert [topic.topic for topic in result.growth_topics] == [
         "Соответствия",
-        "Уравнения",
+        "Союзы",
     ]
     assert all(topic.primary_score == 0 for topic in result.growth_topics)
     assert all(topic.max_primary_score == 1 for topic in result.growth_topics)
@@ -197,7 +203,13 @@ def test_recoverable_points_are_zero_for_a_perfect_attempt():
         sample_catalog(),
         "demo-math",
         "full",
-        {"q1": "2", "q2": ["1", "3"], "q3": {"a": "2", "b": "1"}, "q4": "42"},
+        {
+            "q1": "2",
+            "q2": ["1", "3"],
+            "q3": {"a": "2", "b": "1"},
+            "q4": "42",
+            "q5": "но",
+        },
     )
 
     assert result.growth_topics == ()

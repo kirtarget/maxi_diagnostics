@@ -12,6 +12,7 @@ from diagnostic.catalog import (
     MultipleQuestion,
     Question,
     SingleQuestion,
+    TextQuestion,
 )
 from diagnostic.scoring import is_answer_correct
 
@@ -54,7 +55,7 @@ def format_answer(question: Question, answer: Any) -> str:
             f"{item.label}: {options.get(str(values.get(item.id, '')), 'Не отвечено')}"
             for item in question.items
         )
-    if isinstance(question, InputQuestion) and isinstance(answer, (list, tuple)):
+    if isinstance(question, (InputQuestion, TextQuestion)) and isinstance(answer, (list, tuple)):
         return " / ".join(str(value) for value in answer)
     return str(answer)
 
