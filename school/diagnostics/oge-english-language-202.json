@@ -47,6 +47,363 @@
     {"id":"f26-oge-eng-a10","type":"input","topic":"Чтение: отношение автора","title":"Задание 10","prompt":"Read the text. I was nervous before the school play, but the audience smiled and I soon enjoyed every minute. How did the writer feel in the end? 1) Pleased 2) Angry 3) Bored. Enter the number.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"10","official_criteria_url":"https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/aya_9_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Enjoying every minute shows that the writer ended the event pleased, option 1.","correct":["1"]},
     {"id":"f26-oge-eng-a11","type":"input","topic":"Чтение: количественная информация","title":"Задание 9","prompt":"Read the text. Each box holds six cups. The café ordered three boxes. How many cups did it order? 1) 9 2) 18 3) 36. Enter the number.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"9","official_criteria_url":"https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/aya_9_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Three boxes of six cups contain 3 × 6 = 18 cups, which is option 2.","correct":["2"]},
     {"id":"f26-oge-eng-a12","type":"input","topic":"Чтение: значение слова в контексте","title":"Задание 10","prompt":"Read the text. The path was steep, so we climbed slowly and stopped twice to rest. What does steep describe? 1) A path rising sharply 2) A crowded path 3) A brightly lit path. Enter the number.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"10","official_criteria_url":"https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/aya_9_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Climbing slowly and resting indicate a path that rises sharply, so steep corresponds to option 1.","correct":["1"]},
-    {"id":"f26-oge-eng-a13","type":"input","topic":"Чтение: выбор заголовка","title":"Задание 9","prompt":"Read the text. Students measured rainfall for a month, compared the results and presented a weather chart. Choose the best title. 1) A Music Lesson 2) A Weather Project 3) A Lost Map. Enter the number.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"9","official_criteria_url":"https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/aya_9_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Measuring rainfall and presenting a chart are parts of a weather project, so option 2 is the best title.","correct":["2"]}
+    {"id":"f26-oge-eng-a13","type":"input","topic":"Чтение: выбор заголовка","title":"Задание 9","prompt":"Read the text. Students measured rainfall for a month, compared the results and presented a weather chart. Choose the best title. 1) A Music Lesson 2) A Weather Project 3) A Lost Map. Enter the number.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"9","official_criteria_url":"https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/aya_9_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Measuring rainfall and presenting a chart are parts of a weather project, so option 2 is the best title.","correct":["2"]},
+    {
+      "id": "sp-english-language-oge-2022-q1",
+      "type": "input",
+      "topic": "Задание 1",
+      "title": "Задание 1",
+      "prompt": "Вы проводите информационный поиск в ходе выполнения проектной работы. Определите, в каком из текстов A–F содержатся ответы на интересующие Вас вопросы 1–7. Один из вопросов останется без ответа.\nВопросы:\n1. What is the most unusual way to get to church on Christmas night?\n2. Who can bring Christmas presents instead of Santa?\n3. Why is the first guest on Christmas Day so important?\n4. What creature helped to decorate a Christmas tree?\n5. What transport does Santa use in warm countries?\n6. How do people celebrate Christmas in hot climate?\n7. Why is Christmas celebrated on another date in this country?\nТексты:\nА) For people who live in the northern hemisphere, the thought of celebrating Christmas with great heat and bright sun seems strange and exotic. But in Australia, where the holiday falls in summer, it’s completely normal. Though most of the traditions of celebrating Christmas in Australia are the same as in European countries, there is still a little variation. On Christmas Day, most Australians have the holiday midday dinner outside. The dinner is often followed by some backyard cricket or a swim in the pool.\nB) In Italy, children do not ask Santa Claus for presents. In their country an ugly, yet kind old witch named Befana performs Santa’s duties. The witch flies around the world on her broomstick and entersthe houses down the chimney. She delivers toys, clothing and candy to well-behaved children and puts coal — or dark candy — in bad kids’ socks.\nC) A legend tells us about children from a poor family. Unfortunately, their parents could not afford any Christmas decorations and the kids were upset. However, on Christmas morning when the children woke up, they saw that spiders had spun webs of shiny silk around the tree’s branches. The sun turned each thread into silver and gold. Even nowadays the people decorate their trees with spider webs to welcome good luck.\nD) Different celebrations take place over Christmas in Scotland. One of the most important traditions is called First-Footing. Once midnight strikes, all eyes await the arrival of the year’s first visitor. The person who crosses the home’s threshold first is said to bring good fortune for the year ahead. Top of the lucky list: a male, dark-haired visitor. Women or blonde men are believed to be unlucky.\nE) According to tradition, on Christmas Eve some Russian people don’t eat anything until the first star has appeared in the sky. In Russia, Christmas is celebrated on the 7th of January, not on the 25th of December like in most other countries. The different date of the holiday is because the Orthodox Church uses the old ‘Julian’ calendar for religious celebration days.\nF) Like in most countries the locals of Venezuela, especially in their capital city, Caracas, go to church on Christmas Eve to celebrate the birth of Jesus. However, in Caracas, people of all ages don’t just walk to church, they usually roller skate to church. The streets of Caracas are closed to vehicles up to 8am on Christmas Day to make way for their citizens who use roller skates to travel to and from church.\nВ ответ запишите последовательность цифр, соответствующую буквам ABCDEF.\nA | B | C | D | E | F",
+      "max_primary_score": 1,
+      "correct": [
+        "624371"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q2",
+      "type": "input",
+      "topic": "Задание 2",
+      "title": "Задание 2",
+      "prompt": "Прочитайте текст. Определите, какие из приведённых утверждений соответствуют содержанию текста (1 – True), какие не соответствуют (2 – False) и о чём в тексте не сказано, то есть на основании текста нельзя дать ни положительного, ни отрицательного ответа (3 – Not stated). Запишите в поле ответа цифру 1, 2 или 3, соответствующую выбранному Вами варианту ответа.\nLouis Armstrong\nLouis Armstrong played jazz, sang jazz and wrote jazz. He recorded hit songs for fifty years and his music is still heard today on television, radio and in movies.\nLouis Armstrong was born in New Orleans, in the state of Louisiana on August 4th, 1901. His father was a factory worker and left the family soon after Louis's birth. Young Louis was desperately poor. He lived with his sister, mother and grandmother in the poorest area of New Orleans known as ‘the Battlefield’ because of the fighting and shooting that often happened there.\nWhen Louis was eleven years old, he was arrested for firing a gun into the air on New Year's Eve. He was sent to a reform school, where he learned to play the trumpet in the school's band. Eighteen months later Louis was back home and already dreaming of the life of a musician. He sold newspapers, unloaded boats and sold coal. However, in the evenings Louis played the trumpet with local groups or went to clubs to listen to jazz bands. He soon became friends with one of the greatest musicians of the time, Joe Oliver, who became young Louis's teacher. As Louis's skills developed, he began to perform professionally.\nHe was soon able to stop working on manual labour jobs and began concentrating full-time on music, playing at parties, dances, and at local cafés. He joined Joe Oliver's band and moved to Chicago. Later, Louis organised his own band and began to record one of the greatest series of songs in the history of jazz. Louis developed a unique style of singing: he could make his voice sound like a musical instrument and he could make an instrument sound like a singer's voice. Louis enjoyed singing improvised melodies and rhythms. Armstrong was an easy-going and communicative person. His fellow musicians called him ‘Satchelmouth’ because of his wide smile. Later, it was shortened to ‘Satchmo’.\nArmstrong's biggest hits came later in his life. In 1964, his version of the song ‘Hello Dolly’ was a top hit around the world. It even replaced a top-selling hit by the hugely popular British group, the Beatles. Three years later, he appeared in the film version of ‘Hello Dolly’ with the singer Barbra Streisand. The song ‘What a Wonderful World’, recorded in 1968, was his final big hit.\nLouis Armstrong never finished the fifth grade in school, yet he wrote two books about his life and many stories for magazines. He appeared in more than thirty movies. He composed many jazz pieces. He won several gold records and many other awards. Armstrong performed about three hundred concerts each year, travelling all over the world. He became known as the legend and symbol of jazz.\nА) Louis Armstrong spent his childhood in a peaceful and respectable part of New Orleans.\nB) Louis Armstrong did well at school.\nC) As a teenager Louis Armstrong did several jobs.\nD) Joe Oliver taught Louis Armstrong to play the trumpet.\nE) Louis Armstrong got his nickname due to his smile.\nF) Louis Armstrong never performed in a film.\nG) Louis Armstrong was sorry that he had not completed his school course.\nВ ответ запишите последовательность чисел (1 – True; 2 – False; 3 – Not stated), соответствующую буквам ABCDEFG.\nA | B | C | D | E | F | G",
+      "max_primary_score": 1,
+      "correct": [
+        "2312132"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q3",
+      "type": "text",
+      "topic": "Задание 3",
+      "title": "Задание 3",
+      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы оно грамматически соответствовало содержанию текста.\n3 | Linda was looking forward to her holidays. First of all, she ______________ really tired from school and wanted to have a break. | FEEL",
+      "max_primary_score": 1,
+      "correct": [
+        "Felt"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q4",
+      "type": "text",
+      "topic": "Задание 4",
+      "title": "Задание 4",
+      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы оно грамматически соответствовало содержанию текста.\n4 | The __________________ reason was that they were going to take a trip to the mountains. | TWO",
+      "max_primary_score": 1,
+      "correct": [
+        "Second"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q5",
+      "type": "text",
+      "topic": "Задание 5",
+      "title": "Задание 5",
+      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы оно грамматически соответствовало содержанию текста.\n5 | Linda enjoyed it very much when they went somewhere all together as a family. They __________________ it very often since her parents were very busy people. | NOT DO",
+      "max_primary_score": 1,
+      "correct": [
+        "Didnotdo"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q6",
+      "type": "text",
+      "topic": "Задание 6",
+      "title": "Задание 6",
+      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы оно грамматически соответствовало содержанию текста.\n6 | Linda __________________ ski but the prospect didn’t scare her. | NOT CAN",
+      "max_primary_score": 1,
+      "correct": [
+        "Couldnot"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q7",
+      "type": "text",
+      "topic": "Задание 7",
+      "title": "Задание 7",
+      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы оно грамматически соответствовало содержанию текста.\n7 | She learnt everything very quickly, especially when her father taught __________________. | SHE",
+      "max_primary_score": 1,
+      "correct": [
+        "Her"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q8",
+      "type": "text",
+      "topic": "Задание 8",
+      "title": "Задание 8",
+      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы оно грамматически соответствовало содержанию текста.\n8 | He was the __________________ teacher in the world! | GOOD",
+      "max_primary_score": 1,
+      "correct": [
+        "best"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q9",
+      "type": "text",
+      "topic": "Понимание запрашиваемой информации и основного содержания письменного текста",
+      "title": "Задание 9",
+      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы оно грамматически соответствовало содержанию текста.\n9 | “I __________________ special sunglasses for skiing,” Linda boasted to her father. “Have a look! Nice, aren’t they?” | BUY",
+      "max_primary_score": 1,
+      "correct": [
+        "Havebought"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "9",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q10",
+      "type": "text",
+      "topic": "Понимание запрашиваемой информации и основного содержания письменного текста",
+      "title": "Задание 10",
+      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы оно грамматически соответствовало содержанию текста.\n10 | “They are,” he gave Linda a quick look and turned back to his computer. He __________________ a presentation or something else equally important. | PREPARE",
+      "max_primary_score": 1,
+      "correct": [
+        "Waspreparing"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "10",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q11",
+      "type": "text",
+      "topic": "Задание 11",
+      "title": "Задание 11",
+      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы оно грамматически соответствовало содержанию текста.\n11 | Linda could see diagrams on the screen. They __________________ in different colours which made them look complicated. | DRAW",
+      "max_primary_score": 1,
+      "correct": [
+        "Weredrawn"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q12",
+      "type": "text",
+      "topic": "Задание 12",
+      "title": "Задание 12",
+      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы они грамматически и лексически соответствовали содержанию текста.\n12 | My first job was working at a bakery. When I walked from my house to the bakery I could smell the __________________ aroma of the fresh bread. | WONDER",
+      "max_primary_score": 1,
+      "correct": [
+        "Wonderful"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q13",
+      "type": "text",
+      "topic": "Задание 13",
+      "title": "Задание 13",
+      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы они грамматически и лексически соответствовали содержанию текста.\n13 | I loved it. I worked __________________ after school and at weekends. It made about twenty hours a week. | DAY",
+      "max_primary_score": 1,
+      "correct": [
+        "Daily"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q14",
+      "type": "text",
+      "topic": "Задание 14",
+      "title": "Задание 14",
+      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы они грамматически и лексически соответствовали содержанию текста.\n14 | One of the most __________________ things about the bakery was that I could eat all I wanted there. | FANTASY",
+      "max_primary_score": 1,
+      "correct": [
+        "Fantastic"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q15",
+      "type": "text",
+      "topic": "Задание 15",
+      "title": "Задание 15",
+      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы они грамматически и лексически соответствовали содержанию текста.\n15 | I really couldn't stop eating the fresh buns, rolls and cakes. They were so __________________. | TASTE",
+      "max_primary_score": 1,
+      "correct": [
+        "Tasty"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q16",
+      "type": "text",
+      "topic": "Задание 16",
+      "title": "Задание 16",
+      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы они грамматически и лексически соответствовали содержанию текста.\n16 | Mrs. Bradley, the __________________ of the bakery, was a very nice woman. She had no children and she treated me like her own granddaughter. | OWN",
+      "max_primary_score": 1,
+      "correct": [
+        "Owner"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-oge-2022-q17",
+      "type": "text",
+      "topic": "Задание 17",
+      "title": "Задание 17",
+      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы они грамматически и лексически соответствовали содержанию текста.\n17 | I liked her too and did my best to be as __________________ as possible. | HELP",
+      "max_primary_score": 1,
+      "correct": [
+        "Helpful"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    }
   ]
 }

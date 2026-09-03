@@ -231,6 +231,357 @@
     {"id":"f26-ege-eng-a04","type":"input","topic":"Выбор слова по смыслу","title":"Задание 34","prompt":"Выберите слово: The scientist ___ a careful record of every temperature change. 1) did 2) held 3) kept 4) took. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"34","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Выражение keep a record означает «вести запись». В прошедшем времени это kept, вариант 3.","correct":["3"]},
     {"id":"f26-ege-eng-a05","type":"input","topic":"Фразовые глаголы в контексте","title":"Задание 35","prompt":"Выберите вариант: We had to ___ the picnic because of the storm. 1) turn up 2) call off 3) look after 4) bring in. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"35","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Call off означает «отменить». Именно это пришлось сделать из-за шторма, ответ 2.","correct":["2"]},
     {"id":"f26-ege-eng-a06","type":"input","topic":"Лексический выбор в авторском тексте","title":"Задание 36","prompt":"Выберите слово: After several rehearsals, the actors felt ___ about the opening night. 1) confident 2) ordinary 3) narrow 4) silent. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"36","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Репетиции дают актёрам уверенность перед премьерой. По смыслу подходит confident, вариант 1.","correct":["1"]},
-    {"id":"f26-ege-eng-a07","type":"input","topic":"Логика абзаца в авторском тексте","title":"Задание 11","prompt":"Расставьте фрагменты 1–4 в пропуски A–D. Omar decided to grow herbs on the balcony. A ____. Then he planted the seeds. The first week was unusually hot. B ____. Soon small green shoots appeared. C ____. By August he had enough basil for the whole family. D ____. 1) He moved the pots into the shade at midday. 2) He chose containers with holes for drainage. 3) He shared some leaves with his neighbours. 4) He photographed them each morning. Введите последовательность цифр.","max_primary_score":2,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"11","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"До посадки Омар выбирает ёмкости с дренажом. В жару он переставляет их в тень, после появления всходов фотографирует растения и в конце делится урожаем. Ответ 2143.","correct":["2143"]}
+    {"id":"f26-ege-eng-a07","type":"input","topic":"Логика абзаца в авторском тексте","title":"Задание 11","prompt":"Расставьте фрагменты 1–4 в пропуски A–D. Omar decided to grow herbs on the balcony. A ____. Then he planted the seeds. The first week was unusually hot. B ____. Soon small green shoots appeared. C ____. By August he had enough basil for the whole family. D ____. 1) He moved the pots into the shade at midday. 2) He chose containers with holes for drainage. 3) He shared some leaves with his neighbours. 4) He photographed them each morning. Введите последовательность цифр.","max_primary_score":2,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"11","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"До посадки Омар выбирает ёмкости с дренажом. В жару он переставляет их в тень, после появления всходов фотографирует растения и в конце делится урожаем. Ответ 2143.","correct":["2143"]},
+    {
+      "id": "sp-english-language-ege-2022-q1",
+      "type": "input",
+      "topic": "Задание 1",
+      "title": "Задание 1",
+      "prompt": "Установите соответствие заголовков 1–8 абзацам текста А–G. Используйте каждую цифру только один раз. В задании одна тема лишняя. В ответ запишите последовательность цифр, соответствующую заголовкам ABCDEFG.\n1. The best viewpoints\n2. Plan beforehand\n3. Carnival roots\n4. The time to attend the Carnival\n5. Carnival’s music\n6. Styles of dancing\n7. A music group for a street\n8. The time for pleasure\nCarnival World Capital\nA | Carnival is the most famous holiday in Brazil and has become a world-famous annual celebration. It is celebrated in towns and villages throughout Brazil for almost a week 40 days before Easter, which is usually in February, the hottest month in the Southern Hemisphere. Officially, it starts on Saturday and finishes on Fat Tuesday with the beginning of Lent on Ash Wednesday, during which some Christians give up something that they enjoy.\nB | The most colourful events take place in the Carnival World Capital, Rio de Janeiro. It was the original place where, in 1723, Portuguese immigrants went out onto the streets soaking each other with buckets of water and throwing mud and food, often ending up in street brawls and riots. The concept kept changing throughout the 1800s with more organized parades, where the Emperor with a group of aristocrats joined in masks with luxurious costumes and music.\nC | Now the parade varies from state to state. It is a mixture of arts. The music played during Rio Carnival is samba — a unique Brazilian music originating from Rio. It’s also a dance form that was invented by the poor Afro-Brazilians as a type of ritual music. The word “samba” meant to pray to the spirits of the ancestors and the gods of the African Pantheon. As a noun, it could mean a complaint or a cry.\nD | Even today, the most involved groups in Rio Carnival are the poorest, the so-called “favelas”, where houses are made of cardboard or other metal remains, and there is often no water, electricity or sewage system. However, the favelas’ residents always join in the festivities and actually make the Carnival, which really means a lot to them. Because, for once during the year, they get to go out and have as much fun as they can.\nE | Residents of the favelas are often members of local samba schools and are deeply involved with the performance and costumes of their groups. Each neighborhood in Rio has its favorite Carnival street band. There are more than 300 of them in Rio nowadays, and each year this number increases. Each band has its place or street for its parade and the big ones usually close the streets to the traffic.\nF | Rio de Janeiro is usually divided into three zones. The so-called Zona Sul is by far the most pleasant place to stay in Rio, as it is by the sea and is the most civilized part of the city. Districts Copacabana and Ipanema together form a big stage offering a carnival happening at every corner. Leblon, being a bit more upscale, is also an excellent location.\nG | Except the industries, malls and the carnival-related workers, the country stops completely for almost a week and festivities are intense, day and night. If you plan to go to watch the Carnival, you should organize your trip well in advance. The best hotels, especially in the Zona Sul, are booked up early, so it’s a good idea to make a reservation at least 3 or 4 months in advance.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "4358712"
+      ],
+      "explanation": "A — 4: В абзаце рассказывается о том, когда начинается Карнавал и как долго он проходит. Поэтому можно понять, когда лучше всего на него приехать.\nB — 3: В абзаце немного говорится об истории возникновения Карнавала. Обращаем внимание на слова original place, kept changing.\nC — 5: В абзаце говорится о специфически карнавальной музыке — самбе.\nD — 8: В абзаце говорится, что большую часть участников Карнавала составляли бедняки, для которых этот фестиваль был возможностью развлечься и отвлечься от проблем.\nE — 7: В абзаце говорится, что в Рио существует множество школ музыки самба, каждая из которых принимает участие в фестивале. Для каждой группы выделяется конкретное место или целая улица для представления.\nF — 1: В абзаце говорится о районах Рио, но нам нужна была эта фраза: Districts Copacabana and Ipanema together form a big stage offering a carnival happening at every corner. То есть вот оно, идеальное место, ведь отсюда видно все события Карнавала.\nG — 2: В абзаце легко найти фразу, точно соотносящуюся с одним из заголовков. If you plan to go to watch the Carnival, you should organize your trip well in advance. Так как во время карнавала почти все закрывается, лучше запланировать путешествие заранее.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q2",
+      "type": "input",
+      "topic": "Задание 2",
+      "title": "Задание 2",
+      "prompt": "Прочитайте текст и заполните пропуски A–F частями предложений 1–7. Одна из частей в списке 1–7 лишняя. В ответ запишите последовательность цифр, соответствующую пропускам ABCDEF.\nThe relationship between the study of literature and job prospects\nLiterature students are often concerned about the utilitarian value of what they are doing. This is understandable, but it is misguided. It is undoubtedly true A _____ or to consider the influence of one 19th-century novelist on another. But life is about more than simply one's employment prospects. Literature teaches us B ______ and why we behave as we do. It encourages us not just to read, C ______, and this makes us much more rounded people. It achieves this by helping us to examine our assumptions and the ways in which we relate to the world. The lessons of literature have a profound impact on our minds and souls, and surely this is as significant as any of the practical skills D ______.\nWhen students are worried about the job market, when they perceive an urgent need for job skills and training, how do I argue for the value of the study of literature and the humanities more broadly? Well, I do what any judicious participant in the neoliberal university does: I tell them that the study of literature will make them entrepreneurial. It will make them attractive to employers E ______. They will have good critical thinking skills and be better writers F _______. They will become creative problem-solvers, which is so crucial in the 21st-century knowledge economy.\n1. But to reflect on what we have read.\n2. That few jobs will require an employee to discuss a poem's rhyme scheme.\n3. Which will help them deal with people from a wide range of backgrounds.\n4. About ourselves and other people.\n5. Because they will be adaptable and flexible.\n6. Than most of the people competing for those same positions.\n7. Whose importance no one questions.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "241756"
+      ],
+      "explanation": "A — 2: Необходимо посмотреть на однородное придаточное и весь текст в целом. Говорится о том, что никто из работодателей не будет просить обсудить стихосложение или авторов. Грамматически мы понимаем, что в пропуске будет полноценное придаточное, так как конструкция it’s true предполагает такое.\nB — 4: После глагола teach предполагается либо отсутствие предлога, либо предлог about. По смыслу так же подходит: учит о людях и их поведении.\nC — 1: По конструкции not just понимаем, что дальше будет but.\nD — 7: Можно подумать, что подойдет 3, потому что по союзу подходит; но в нем не к чему привязать местоимение. Зато через whose хорошо связываются умения и важность.\nE — 5: Из всех вариантов лучше всего подойдет придаточное причины.\nF — 6: Есть прилагательное в сравнительной степени, поэтому логично подставить часть с than.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q10",
+      "type": "text",
+      "topic": "Задание 10",
+      "title": "Задание 10",
+      "prompt": "Прочитайте приведённый ниже текст. Преобразуйте, если необходимо, слово, напечатанное заглавными буквами в конце строки так, чтобы оно грамматически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову. В ответ запишите полученное слово (без пробелов).\n10 | In ancient Greece there were many temples built for Apollo. He was the god of youth, beauty, music and poetry. Besides, Apollo had one very special skill - he could see the future. The Temple in Troy was one of the _______ of all Apollo's Temples. | GREAT",
+      "max_primary_score": 1,
+      "correct": [
+        "greatest"
+      ],
+      "max_length": 80,
+      "explanation": "Greatest — Дано прилагательное, перед пропуском определенный артикль, значит преобразуем в превосходную степень.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q11",
+      "type": "text",
+      "topic": "Понимание структурно-смысловых связей в письменном тексте",
+      "title": "Задание 11",
+      "prompt": "Прочитайте приведённый ниже текст. Преобразуйте, если необходимо, слово, напечатанное заглавными буквами в конце строки так, чтобы оно грамматически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову. В ответ запишите полученное слово (без пробелов).\n11 | One day, having nothing better to do, Apollo came to the temple in Troy. Among other ________ he saw Cassandra, a young and beautiful priestess, who worked at the temple. | WOMAN",
+      "max_primary_score": 2,
+      "correct": [
+        "women"
+      ],
+      "max_length": 80,
+      "explanation": "Women — Единственное преобразование существительных в данном форматном задании — изменение числа.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "11",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q12",
+      "type": "text",
+      "topic": "Задание 12",
+      "title": "Задание 12",
+      "prompt": "Прочитайте приведённый ниже текст. Преобразуйте, если необходимо, слово, напечатанное заглавными буквами в конце строки так, чтобы оно грамматически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову. В ответ запишите полученное слово (без пробелов).\n12 | Apollo ________ by her grace. | IMPRESS",
+      "max_primary_score": 1,
+      "correct": [
+        "wasimpressed"
+      ],
+      "max_length": 80,
+      "explanation": "Wasimpressed — Текст весь в Past Tenses. Есть предлог by, указывающий на пассивный залог.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q13",
+      "type": "text",
+      "topic": "Задание 13",
+      "title": "Задание 13",
+      "prompt": "Прочитайте приведённый ниже текст. Преобразуйте, если необходимо, слово, напечатанное заглавными буквами в конце строки так, чтобы оно грамматически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову. В ответ запишите полученное слово (без пробелов).\n13 | The minute Apollo saw Cassandra, he ______ in love. It was love at first sight. Apollo offered her a deal. He would give Cassandra the gift of being able to see the future, if she gave him a kiss. Cassandra agreed. | FALL",
+      "max_primary_score": 1,
+      "correct": [
+        "fell"
+      ],
+      "max_length": 80,
+      "explanation": "Fell — Последовательность действий в прошлом. Опять же, используем нарративные времена.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q14",
+      "type": "text",
+      "topic": "Задание 14",
+      "title": "Задание 14",
+      "prompt": "Прочитайте приведённый ниже текст. Преобразуйте, если необходимо, слово, напечатанное заглавными буквами в конце строки так, чтобы оно грамматически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову. В ответ запишите полученное слово (без пробелов).\n14 | With a laugh, Apollo gave her the gift, ________ about the reward. Instantly, Cassandra could see the future. She saw Apollo, in the future, helping the Greeks destroy Troy. When Apollo bent his head to gently kiss her, she angrily spat in his face. | DREAM",
+      "max_primary_score": 1,
+      "correct": [
+        "dreaming"
+      ],
+      "max_length": 80,
+      "explanation": "Dreaming — Видим, что перед пропуском запятая, значит это придаточное. В данном случае глагол требуется поставить в форму причастия настоящего времени.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q15",
+      "type": "text",
+      "topic": "Задание 15",
+      "title": "Задание 15",
+      "prompt": "Прочитайте приведённый ниже текст. Преобразуйте, если необходимо, слово, напечатанное заглавными буквами в конце строки так, чтобы оно грамматически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову. В ответ запишите полученное слово (без пробелов).\n15 | Apollo got very angry. He __________ take away his gift, but he was able to add to it. So, whatever Cassandra said, no one would believe her. That was his second gift. | NOT CAN",
+      "max_primary_score": 1,
+      "correct": [
+        "couldnot"
+      ],
+      "max_length": 80,
+      "explanation": "Couldnot — Продолжается наррация.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q16",
+      "type": "text",
+      "topic": "Задание 16",
+      "title": "Задание 16",
+      "prompt": "Прочитайте приведённый ниже текст. Преобразуйте, если необходимо, слово, напечатанное заглавными буквами в конце строки так, чтобы оно грамматически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову. В ответ запишите полученное слово (без пробелов).\n16 | When Cassandra begged her people in Troy to watch out for the Trojan horse, they _________ her. And that was the end of Troy. | NOT BELIEVE",
+      "max_primary_score": 1,
+      "correct": [
+        "didnotbelieve"
+      ],
+      "max_length": 80,
+      "explanation": "Didnotbelieve — Важно не запутаться, здесь действия происходят одно за другим, поэтому в обоих частях используем простые формы.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q17",
+      "type": "text",
+      "topic": "Задание 17",
+      "title": "Задание 17",
+      "prompt": "Прочитайте приведённый ниже текст. Преобразуйте от слова, напечатанного заглавными буквами в конце строки, однокоренное слово так, чтобы оно грамматически и лексически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову или словосочетанию. В ответ запишите слово (без пробелов).\nExploring the world by sea\n17 | People have been carrying out _______ by sea for thousands of years. | EXPLORE",
+      "max_primary_score": 1,
+      "correct": [
+        "explorations"
+      ],
+      "max_length": 80,
+      "explanation": "Explorations — Дан глагол. Пропуск после аналитической глагольной формы, поэтому требуется дополнение в виде существительного.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q18",
+      "type": "text",
+      "topic": "Задание 18",
+      "title": "Задание 18",
+      "prompt": "Прочитайте приведённый ниже текст. Преобразуйте от слова, напечатанного заглавными буквами в конце строки, однокоренное слово так, чтобы оно грамматически и лексически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову или словосочетанию. В ответ запишите слово (без пробелов).\n18 | Our distant ancestors set out on _______ voyages on primitive rafts and ships with no guarantee of ever seeing land again. | PERIL",
+      "max_primary_score": 1,
+      "correct": [
+        "perilous"
+      ],
+      "max_length": 80,
+      "explanation": "Perilous — Ситуация как в предыдущем, но после пропуска стоит существительное, значит преобразуем исходное существительное в прилагательное.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q19",
+      "type": "text",
+      "topic": "Задание 19",
+      "title": "Задание 19",
+      "prompt": "Прочитайте приведённый ниже текст. Преобразуйте от слова, напечатанного заглавными буквами в конце строки, однокоренное слово так, чтобы оно грамматически и лексически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову или словосочетанию. В ответ запишите слово (без пробелов).\n19 | _______ though it may seem, there is evidence to suggest that sailors from Polynesia began to undertake long and risky journeys, as far back as 1200 BC. They may even have travelled as far as South America. | BELIEVE",
+      "max_primary_score": 1,
+      "correct": [
+        "unbelievable"
+      ],
+      "max_length": 80,
+      "explanation": "Unbelievable — Пропуск является частью вводной фразы. Можно было запутаться и поставить наречие, как мы обычно их используем в вводных фразах. Но в данном случае используется безличная конструкция и глагол seem, с которыми по правилам мы используем прилагательное. (У нас есть урок про это в ОГЭ). Можно было просто инвертировать конструкцию обратно, возможно это помогло бы не сделать ошибку.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q20",
+      "type": "text",
+      "topic": "Задание 20",
+      "title": "Задание 20",
+      "prompt": "Прочитайте приведённый ниже текст. Преобразуйте от слова, напечатанного заглавными буквами в конце строки, однокоренное слово так, чтобы оно грамматически и лексически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову или словосочетанию. В ответ запишите слово (без пробелов).\n20 | _______ of fossilised chicken bones found in Chile suggests that Polynesian sailors had made their way to South America long before the arrival of the Spanish. While Polynesians were exploring the Pacific, Vikings were sailing the Atlantic. Viking explorers reached North America but did not establish a permanent settlement there. | ANALYSE",
+      "max_primary_score": 1,
+      "correct": [
+        "analysis"
+      ],
+      "max_length": 80,
+      "explanation": "Analysis — Конструкция «что-то чего-то», нужно существительное.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q21",
+      "type": "text",
+      "topic": "Задание 21",
+      "title": "Задание 21",
+      "prompt": "Прочитайте приведённый ниже текст. Преобразуйте от слова, напечатанного заглавными буквами в конце строки, однокоренное слово так, чтобы оно грамматически и лексически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову или словосочетанию. В ответ запишите слово (без пробелов).\n21 | They returned home with tales of a land where grapes grew in profusion and fish were _______ too. | PLENTY",
+      "max_primary_score": 1,
+      "correct": [
+        "plentiful"
+      ],
+      "max_length": 80,
+      "explanation": "Plentiful — В пропуске может быть существительное или прилагательное, но у нас исходное слово — существительное, значит делаем прилагательное. Это понятно еще и по смыслу предложения.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q22",
+      "type": "text",
+      "topic": "Задание 22",
+      "title": "Задание 22",
+      "prompt": "Прочитайте приведённый ниже текст. Преобразуйте от слова, напечатанного заглавными буквами в конце строки, однокоренное слово так, чтобы оно грамматически и лексически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову или словосочетанию. В ответ запишите слово (без пробелов).\n22 | It is impossible not to feel great respect for the ______ of these intrepid early explorers. | BRAVE",
+      "max_primary_score": 1,
+      "correct": [
+        "bravery"
+      ],
+      "max_length": 80,
+      "explanation": "Bravery — Конструкция «что-то чего-то» и перед пропуском определенный артикль, нужно существительное.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q23",
+      "type": "input",
+      "topic": "Задание 23",
+      "title": "Задание 23",
+      "prompt": "Прочитайте текст с пропусками, обозначенными буквами A–G. Эти буквы соответствуют заданиям A–G, в таблице ниже, в которых представлены возможные варианты ответов.\nВ ответ запишите последовательность цифр. соответствующую пропускам ABCDEFG.\nThree theories about sleep\nPeople spend about one-third of their lives asleep. It seems certain, therefore, that sleep has a (A) _______ function. However, what that function might be is still in (B) _________ Scientists are far from being in agreement about (C) _______ why so much of our precious time is given over to sleep.\nThere seem to be three main theories. The most popular states that the functions and (D) _______ of sleep are primarily physiological. It claims that we sleep in order to (E) _______ the health of our body. In other words, biological processes work hard as we sleep to repair any damage done during the day and to restore ourselves to full efficiency. However, a second theory places more emphasis on the learning benefits of sleep. This theory holds that sleep allows us to process the information that we (F) _______ during the day, and asserts that, without sleep, learning would not take place. A third popular theory is based on ideas about energy, saying that we need (G) _______ of sleep in order to, in a sense, recharge our batteries and so have an adequate supply of energy for the coming day.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "2241241"
+      ],
+      "explanation": "A. 2 — Так как речь о сне и здоровье, то функция будет жизненно важной.\nB. 2 — In discussion могут быть люди, а тема может быть under discussion/debate.\nC. 4 — Precisely имеет коллокацию только с why, чего не имеют другие наречия.\nD. 1 — Слова functions и purposes часто используются как устойчивая фраза, когда речь идет о научных или социальных феноменах.\nE. 2 — Maintain образует коллокацию с health в значении сохранения в таком состоянии.\nF. 4 — Мы acquire information через чтение или общение, achieve/reach цели, complete задачи.\nG. 1 — Moments слишком короткий период, eras, наоборот, слишком длинный. Episodes обычно используются в негативном значении (episodes of madness/violence).",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      },
+      "asset": "assets/questions/sp-english-language-ege-2022-q23-1.png"
+    }
   ]
 }
