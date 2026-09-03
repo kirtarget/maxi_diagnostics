@@ -213,6 +213,17 @@ def test_miniapp_runtime_retains_direct_production_dependency_licenses():
         assert "Permission is hereby granted" in text
 
 
+def test_production_override_pulls_ghcr_images_instead_of_building():
+    override = read("deploy/docker-compose.production.yml")
+
+    assert "image: ghcr.io/kirtarget/maxi_diagnostics/backend:${IMAGE_TAG:?Set IMAGE_TAG in .env}" in override
+    assert "image: ghcr.io/kirtarget/maxi_diagnostics/miniapp:${IMAGE_TAG:?Set IMAGE_TAG in .env}" in override
+    assert override.count("build: !reset null") == 3
+    for service in ("api:", "bot:", "miniapp:"):
+        assert service in override
+    assert "IMAGE_TAG=" in read(".env.example")
+
+
 def test_backend_runtime_license_inventory_is_fail_closed_with_audited_fallbacks():
     collector = read("scripts/collect_python_licenses.py")
     dockerfile = read("backend/Dockerfile")

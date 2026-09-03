@@ -1,8 +1,16 @@
 services:
   api:
+    image: ghcr.io/kirtarget/maxi_diagnostics/backend:${IMAGE_TAG:?Set IMAGE_TAG in .env}
+    build: !reset null
     ports: !override
       - "127.0.0.1:18082:8080"
 
+  bot:
+    image: ghcr.io/kirtarget/maxi_diagnostics/backend:${IMAGE_TAG:?Set IMAGE_TAG in .env}
+    build: !reset null
+
   miniapp:
+    image: ghcr.io/kirtarget/maxi_diagnostics/miniapp:${IMAGE_TAG:?Set IMAGE_TAG in .env}
+    build: !reset null
     ports: !override
       - "127.0.0.1:13002:3000"

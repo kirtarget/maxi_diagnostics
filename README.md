@@ -42,10 +42,12 @@ brand, domain, and public links for `maxi.kirtarget.ru`.
    Do not commit `.env`.
 7. Create a school-owned bot in **BotFather**, connect the verified HTTPS **domain**
    as its Mini App URL, and place the bot token only in `.env`.
-8. Start the installation from the repository root:
+8. Set `IMAGE_TAG` in `.env` to the commit SHA of a green CI run on `main`, then pull
+   and start the installation from the repository root:
 
    ```text
-   docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml up -d --build
+   docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml pull
+   docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml up -d
    ```
 
 Next, follow [deployment](docs/DEPLOYMENT.md), [operations](docs/OPERATIONS.md), and

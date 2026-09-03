@@ -61,6 +61,7 @@ POSTGRES_USER=diagnostic
 POSTGRES_PASSWORD=<generated-secret>
 DATABASE_URL=postgresql://diagnostic:<generated-secret>@db:5432/diagnostic
 IMAGE_NAMESPACE=maximum-diagnostic
+IMAGE_TAG=<release-commit-sha>
 INSTALLATION_ID=<initializer-generated-uuid>
 BOT_TOKEN=<BotFather-token>
 BOT_POLLING_ENABLED=true
@@ -77,11 +78,17 @@ Keep `.env` mode-restricted and outside Git. Back up `APPLICATION_SECRET` with t
 deployment secrets: changing it invalidates browser session namespaces and active
 diagnostic content versions. Rotate it only as a planned security operation.
 Preserve `INSTALLATION_ID` with backups: restore rejects an archive created by a
-different installation even when both use the default database name. Start the stack:
+different installation even when both use the default database name. Set `IMAGE_TAG`
+to the commit SHA of a green CI run on `main`. The `.github/workflows/release.yml`
+workflow builds and pushes `ghcr.io/kirtarget/maxi_diagnostics/backend` and
+`ghcr.io/kirtarget/maxi_diagnostics/miniapp` for every such commit, tagged with the
+full SHA and with `main`; prefer the full SHA so an update is an explicit, reviewable
+step. Pull and start the stack:
 
 ```sh
 docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml config --quiet
-docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml up -d --build
+docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml pull
+docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml up -d
 docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml ps
 ```
 
@@ -97,40 +104,39 @@ Then check `https://maxi.kirtarget.ru/healthz` through Nginx.
 
 ## Updating a running installation
 
-The production directory `/opt/maxi_diagnostics` is a source snapshot, not a Git
-checkout. Never run `git pull` there. Update it from a reviewed commit that has a
-green CI run:
+Images are built and pushed by `.github/workflows/release.yml` on every push to
+`main` that passes CI, so `/opt/maxi_diagnostics` never needs the source tree to
+update: it pulls a published image instead of rebuilding one. Never run `git pull`
+there.
 
 1. Create a backup (see operations).
-2. On the server, download the commit archive, unpack it into a fresh directory
-   and swap it in. Unpacking over the old directory leaves files the release
-   deleted in place, and the catalog refuses to start with unreferenced assets:
-
-   ```sh
-   SHA=<full-commit-sha>
-   cd /root && wget -q "https://github.com/kirtarget/maxi_diagnostics/archive/${SHA}.tar.gz"
-   rm -rf /opt/maxi_diagnostics.next && mkdir /opt/maxi_diagnostics.next
-   tar -xzf "${SHA}.tar.gz" --strip-components=1 -C /opt/maxi_diagnostics.next
-   cp -p /opt/maxi_diagnostics/.env /opt/maxi_diagnostics.next/.env
-   mv /opt/maxi_diagnostics /opt/maxi_diagnostics.prev && mv /opt/maxi_diagnostics.next /opt/maxi_diagnostics
-   ```
-
-   Remove `/opt/maxi_diagnostics.prev` after the health checks pass.
-
-3. Record the release in `/opt/maxi_diagnostics/.release-revision` with `commit=`,
-   `branch=` and `archive_sha256=` lines. The checksum comes from
-   `sha256sum "${SHA}.tar.gz"`.
-4. Rebuild and restart the production Compose pair:
+2. Confirm CI is green for the commit and note its full SHA.
+3. On the server, set `IMAGE_TAG=<full-commit-sha>` in `/opt/maxi_diagnostics/.env`.
+4. Pull the images and restart the production Compose pair:
 
    ```sh
    cd /opt/maxi_diagnostics
-   docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml up -d --build
+   docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml pull
+   docker compose -f docker-compose.yml -f deploy/docker-compose.production.yml up -d
    ```
 
 5. Check `curl --fail http://127.0.0.1:18082/healthz`, `curl --fail http://127.0.0.1:13002/`,
    then the public `/healthz`, admin sign-in and `/start` in the bot.
 
-Rollback is the same procedure with the previous commit SHA from `.release-revision`.
+`school/` content is baked into the backend and miniapp images at build time, so a
+content-only change ships through a new image and `IMAGE_TAG`, the same as any code
+change; there is no separate content sync step.
+
+Rollback is the same procedure with the previous `IMAGE_TAG` value.
+
+### First-time switch to image-based deploys
+
+An installation still running from a source snapshot needs only three files on the
+server going forward: `docker-compose.yml`, `deploy/docker-compose.production.yml`,
+and `.env` (with `IMAGE_TAG` set). Copy the current pair of Compose files into
+`/opt/maxi_diagnostics` if they came from an older snapshot, add `IMAGE_TAG` to
+`.env`, then follow the update steps above. The rest of the source tree can be left
+in place or removed; it is no longer read at deploy time.
 
 ## BotFather Mini App
 
