@@ -16,6 +16,12 @@ describe("answerTypeLabel", () => {
     expect(answerTypeLabel({ ...base, type: "multiple", options: [], selection_limit: 2 } as unknown as Question)).toBe("несколько ответов");
     expect(answerTypeLabel({ ...base, type: "matching", items: [], options: [] } as unknown as Question)).toBe("сопоставление");
     expect(answerTypeLabel({ ...base, type: "input" } as Question)).toBe("короткий ответ");
+    expect(answerTypeLabel({ ...base, type: "text" } as Question)).toBe("короткий ответ словом");
+  });
+
+  it("never mistakes a free-text prompt for a table or sequence layout", () => {
+    const table = "Соотнеси событие и год.";
+    expect(answerTypeLabel({ ...base, type: "text", prompt: table } as Question)).toBe("короткий ответ словом");
   });
 
   it("recognizes matching and table prompts hidden inside input questions", () => {

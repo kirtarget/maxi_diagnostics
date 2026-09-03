@@ -93,8 +93,16 @@ const diagnostics: PublicDiagnostic[] = [{
       title: "Задание 4",
       prompt: "Введите ответ",
     },
+    {
+      id: "q5",
+      type: "text",
+      topic: "Тема 5",
+      title: "Задание 5",
+      prompt: "Выпишите союз",
+      max_length: 40,
+    },
   ],
-  question_count: 4,
+  question_count: 5,
 }];
 const SESSION_SCOPE = "account-scope-1";
 
@@ -120,7 +128,7 @@ const serverAttempt: ServerAttempt = {
   mode: "full",
   status: "in_progress",
   question_index: 0,
-  question_count: 4,
+  question_count: 5,
   progress_revision: 1,
   answers: { q1: "a" },
 };
@@ -764,7 +772,7 @@ describe("diagnostic API payloads", () => {
     ["negative revision", { revision: -1 }],
     ["fractional revision", { revision: 1.5 }],
     ["unbounded revision", { revision: 1001 }],
-    ["out-of-range question index", { questionIndex: 4 }],
+    ["out-of-range question index", { questionIndex: 5 }],
     ["stale question key", { answers: { ...validSession.answers, stale: "x" } }],
     ["unknown single option", { answers: { ...validSession.answers, q1: "missing" } }],
     ["numeric multiple value", { answers: { ...validSession.answers, q2: ["x", 2] } }],
@@ -776,6 +784,12 @@ describe("diagnostic API payloads", () => {
     ["numeric input value", { answers: { ...validSession.answers, q4: 42 } }],
     ["nonnumeric input text", { answers: { ...validSession.answers, q4: "forty-two" } }],
     ["control character input", { answers: { ...validSession.answers, q4: "42\u0000" } }],
+    ["numeric text value", { answers: { ...validSession.answers, q5: 42 } }],
+    ["array text value", { answers: { ...validSession.answers, q5: ["но"] } }],
+    ["blank text answer", { answers: { ...validSession.answers, q5: "   " } }],
+    ["punctuation-only text answer", { answers: { ...validSession.answers, q5: "..." } }],
+    ["control character text", { answers: { ...validSession.answers, q5: "но\u0000" } }],
+    ["text answer past max_length", { answers: { ...validSession.answers, q5: "с".repeat(41) } }],
   ])("clears an invalid cached session with %s", (_name, patch) => {
     const storage = memoryStorage();
     storage.setItem(storageKey("north-school", SESSION_SCOPE), JSON.stringify({ ...validSession, ...patch }));

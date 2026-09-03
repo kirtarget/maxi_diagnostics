@@ -17,7 +17,7 @@ export type Screen =
   | "trainer";
 
 export type DiagnosticMode = "quick" | "full";
-export type QuestionType = "single" | "multiple" | "matching" | "input";
+export type QuestionType = "single" | "multiple" | "matching" | "input" | "text";
 
 export type QuestionOption = {
   id: string;
@@ -71,11 +71,18 @@ export type InputQuestion = BaseQuestion & {
   type: "input";
 };
 
+/** Short written answer. The server holds every accepted spelling; `max_length` only sizes the field. */
+export type TextQuestion = BaseQuestion & {
+  type: "text";
+  max_length?: number;
+};
+
 export type Question =
   | SingleQuestion
   | MultipleQuestion
   | MatchingQuestion
-  | InputQuestion;
+  | InputQuestion
+  | TextQuestion;
 
 export type AnswerValue = string | string[] | Record<string, string>;
 export type AnswerMap = Record<string, AnswerValue>;

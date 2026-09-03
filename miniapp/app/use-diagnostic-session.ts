@@ -17,6 +17,7 @@ import {
   saveLocalSession,
   saveProgress,
   updateNumericInputAnswer,
+  updateTextInputAnswer,
 } from "./api";
 import type { ProgressPayload, ProgressSaveQueue } from "./api";
 import {
@@ -447,9 +448,11 @@ export function useDiagnosticSession({
   const answerQuestion = (value: AnswerValue) => {
     if (!diagnostic || !brand || !sessionScope) return;
     const question = questions[questionIndex];
-    if (question.type === "input" && typeof value === "string") {
+    if ((question.type === "input" || question.type === "text") && typeof value === "string") {
       setInputDrafts((current) => ({ ...current, [question.id]: value }));
-      const nextAnswers = updateNumericInputAnswer(answers, question.id, value);
+      const nextAnswers = question.type === "text"
+        ? updateTextInputAnswer(answers, question.id, value, question.max_length)
+        : updateNumericInputAnswer(answers, question.id, value);
       latestAnswers.current = nextAnswers;
       setAnswers(nextAnswers);
       return;

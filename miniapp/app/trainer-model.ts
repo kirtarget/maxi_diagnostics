@@ -1,5 +1,5 @@
 import type { AnswerValue, PlanReason, Question } from "./types";
-import { isValidNumericInput } from "./answer-values";
+import { isValidNumericInput, isValidTextInput } from "./answer-values";
 
 /** Plan context the server attaches when a session runs today's plan. */
 export type TrainerPlanInfo = {
@@ -126,6 +126,7 @@ export function isTrainerAnswerComplete(question: Question, answer: AnswerValue 
     return Boolean(answer && !Array.isArray(answer) && typeof answer === "object"
       && question.items.every((item) => Boolean(answer[item.id])));
   }
+  if (question.type === "text") return isValidTextInput(answer, question.max_length);
   return isValidNumericInput(answer);
 }
 

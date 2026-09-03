@@ -45,6 +45,7 @@ export function answerTypeLabel(question: Question): string {
   if (question.type === "single") return "один ответ";
   if (question.type === "multiple") return "несколько ответов";
   if (question.type === "matching") return "сопоставление";
+  if (question.type === "text") return "короткий ответ словом";
   if (parseTableGapPrompt(question.prompt)) return "таблица с пропусками";
   if (parseSequenceMatchingPrompt(question.prompt)) return "сопоставление";
   return "короткий ответ";

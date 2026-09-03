@@ -14,6 +14,7 @@ const questions: Question[] = [
   { id: "multiple", type: "multiple", topic: "t", title: "2", prompt: "p", selection_limit: 2, options: [{ id: "a", label: "A" }, { id: "b", label: "B" }] },
   { id: "matching", type: "matching", topic: "t", title: "3", prompt: "p", items: [{ id: "i", label: "I" }], options: [{ id: "a", label: "A" }] },
   { id: "input", type: "input", topic: "t", title: "4", prompt: "p" },
+  { id: "text", type: "text", topic: "t", title: "5", prompt: "p", max_length: 40 },
 ];
 const start: TrainerStartResponse = { trainer_session_id: "s1", diagnostic_id: "d1", content_version: "v1", mode: "normal", question_ids: questions.map(({ id }) => id), current_index: 0, revision: 1, status: "in_progress", questions, lives_remaining: 3 };
 
@@ -23,6 +24,14 @@ describe("trainer model", () => {
     expect(isTrainerAnswerComplete(questions[1], ["a", "b"])).toBe(true);
     expect(isTrainerAnswerComplete(questions[2], { i: "a" })).toBe(true);
     expect(isTrainerAnswerComplete(questions[3], "42")).toBe(true);
+    expect(isTrainerAnswerComplete(questions[4], " Однако ")).toBe(true);
+  });
+
+  it("treats a blank or oversized free-text draft as incomplete", () => {
+    expect(isTrainerAnswerComplete(questions[4], "   ")).toBe(false);
+    expect(isTrainerAnswerComplete(questions[4], undefined)).toBe(false);
+    expect(isTrainerAnswerComplete(questions[4], "с".repeat(41))).toBe(false);
+    expect(isTrainerAnswerComplete(questions[4], ["но"])).toBe(false);
   });
 
   it("keeps correctness out of the start payload", () => {
