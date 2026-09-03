@@ -24,7 +24,7 @@ from diagnostic.settings import _normalize_miniapp_url  # noqa: E402
 
 
 _BOT_USERNAME = re.compile(r"(?=.{5,32}\Z)[A-Za-z][A-Za-z0-9_]*[Bb][Oo][Tt]\Z")
-_TEMPLATE_BRAND_HASH = "58b6e5151011bb5805ea04f8a5fde6f924d690e68aa989375ca8cb22c20355d8"
+_TEMPLATE_BRAND_HASH = "022fbcab8dc60d75745ad6afa77653244dcf3a44f9040f11135e0cefc291bb9e"
 _TEMPLATE_LINKS_HASH = "77e52ab4d3694466275cfc9ff2e7ca4ee09de34429c71a94d04a9f6acad438c7"
 _MARKER_NAME = ".initialized.json"
 _MAX_CONFIG_BYTES = 1024 * 1024

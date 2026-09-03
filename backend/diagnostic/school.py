@@ -372,7 +372,7 @@ class MessageTemplates(BaseModel):
     day_followup: str
     quick_to_full: str
     month_retest: str
-    lives_refill: str = "Жизни в тренажёре восстановились — можно продолжать подготовку."
+    lives_refill: str = "Жизни в тренажёре восстановились — продолжай готовиться!"
     generic: str
 
     @field_validator("*")
