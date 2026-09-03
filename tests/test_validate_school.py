@@ -270,3 +270,47 @@ def test_validator_rejects_unexpected_diagnostics_files(tmp_path: Path, capsys):
 
     assert result == 1
     assert "ERROR catalog_unexpected_entry" in capsys.readouterr().out
+
+
+def _add_text_question(root: Path) -> None:
+    path = root / "school/diagnostics/demo-math.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["questions"].append(
+        {
+            "id": "sp-demo-text",
+            "type": "text",
+            "topic": "Термины",
+            "title": "Задание 9",
+            "prompt": "Впишите термин.",
+            "max_primary_score": 1,
+            "correct": ["возгонка", "сублимация"],
+            "max_length": 80,
+        }
+    )
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+def test_validator_rejects_the_unreleased_text_type_by_default(tmp_path: Path, capsys):
+    root = sample_root(tmp_path)
+    _add_text_question(root)
+
+    result = load_tool().main([], root=root)
+
+    assert result == 1
+    assert "ERROR catalog_invalid: diagnostics/demo-math.json" in capsys.readouterr().out
+
+
+def test_skip_text_validates_everything_else_and_counts_what_it_ignored(
+    tmp_path: Path, capsys
+):
+    root = sample_root(tmp_path)
+    _add_text_question(root)
+
+    result = load_tool().main(["--skip-text"], root=root)
+
+    assert result == 0
+    assert capsys.readouterr().out.endswith(" skipped_text=1\n")

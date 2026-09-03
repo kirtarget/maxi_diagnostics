@@ -425,6 +425,29 @@ Every item ID maps to one valid option ID in `correct`.
 }
 ```
 
+## Free short text (in progress)
+
+`scripts/import_sharepoint_diagnostics.py` appends editor-approved MAXIMUM
+diagnostics to the existing catalogs. Tasks whose key is a word or a `#`-joined
+list of accepted wordings are emitted as `text`:
+
+```json
+{
+  "id": "sp-chemistry-oge-2022-q6",
+  "type": "text",
+  "topic": "Задание 6",
+  "title": "Задание 6",
+  "prompt": "Впишите название процесса.",
+  "correct": ["возгонка", "сублимация"],
+  "max_length": 80
+}
+```
+
+The runtime models do not carry this type yet, so a catalog containing it fails
+`validate_school.py`. Until the type lands, validate everything else with
+`python scripts/validate_school.py --skip-text`, which ignores `text` questions
+and reports how many it skipped. Drop the flag once the type is released.
+
 Run `python scripts/validate_school.py` and `python scripts/check_brand_isolation.py`
 after every brand, link, content, or asset change. Both commands must print `OK`
 before deployment. They use the same runtime validation contract as the API and bot.

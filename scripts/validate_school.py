@@ -120,7 +120,9 @@ def _validation_error(label: str, path: str, exc: ValidationError) -> str:
     return f"ERROR {label}_invalid: {path} field={location} reason={reason}"
 
 
-def validate_repository(root: Path) -> tuple[list[str], dict[str, int | str]]:
+def validate_repository(
+    root: Path, *, skip_text: bool = False
+) -> tuple[list[str], dict[str, int | str]]:
     root, errors = _safe_root(root)
     if root is None:
         return errors, {}
@@ -178,6 +180,7 @@ def validate_repository(root: Path) -> tuple[list[str], dict[str, int | str]]:
             errors.append("ERROR score_scales_invalid: score_scales.json")
 
     diagnostics: list[Diagnostic] = []
+    skipped_text = 0
     diagnostics_root = school_root / "diagnostics"
     if not diagnostics_root.exists() or not diagnostics_root.is_dir() or diagnostics_root.is_symlink():
         errors.append("ERROR diagnostics_directory_invalid")
@@ -215,8 +218,24 @@ def validate_repository(root: Path) -> tuple[list[str], dict[str, int | str]]:
                 raw_diagnostic = _load_json(path)
                 if isinstance(raw_diagnostic, dict):
                     for question in raw_diagnostic.get("questions", []):
-                        if isinstance(question, dict) and isinstance(question.get("asset"), str):
+                        if not isinstance(question, dict):
+                            continue
+                        if isinstance(question.get("asset"), str):
                             declared_assets.add(question["asset"])
+                        for asset in question.get("assets") or ():
+                            if isinstance(asset, str):
+                                declared_assets.add(asset)
+                    if skip_text:
+                        kept = [
+                            question
+                            for question in raw_diagnostic.get("questions", [])
+                            if not (
+                                isinstance(question, dict)
+                                and question.get("type") == "text"
+                            )
+                        ]
+                        skipped_text += len(raw_diagnostic.get("questions", [])) - len(kept)
+                        raw_diagnostic = {**raw_diagnostic, "questions": kept}
                 diagnostics.append(Diagnostic.model_validate(raw_diagnostic))
                 diagnostic = diagnostics[-1]
                 for question in diagnostic.questions:
@@ -285,7 +304,9 @@ def validate_repository(root: Path) -> tuple[list[str], dict[str, int | str]]:
         "assets": len(assets),
         "scales": len(scales),
     }
-    if not errors:
+    if skip_text:
+        stats["skipped_text"] = skipped_text
+    if not errors and not skip_text:
         try:
             load_catalog(load_school(school_root))
         except (OSError, UnicodeError, ValueError) as exc:
@@ -299,10 +320,15 @@ def validate_repository(root: Path) -> tuple[list[str], dict[str, int | str]]:
 def main(argv: list[str] | None = None, *, root: Path | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate school configuration")
     parser.add_argument("--root", help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--skip-text",
+        action="store_true",
+        help="Ignore questions of the not-yet-released text type",
+    )
     try:
         arguments = parser.parse_args(argv)
         selected_root = root or (Path(arguments.root) if arguments.root else REPOSITORY_ROOT)
-        errors, stats = validate_repository(selected_root)
+        errors, stats = validate_repository(selected_root, skip_text=arguments.skip_text)
     except (OSError, UnicodeError, ValueError):
         print("ERROR validation_failed")
         return 1
@@ -310,11 +336,14 @@ def main(argv: list[str] | None = None, *, root: Path | None = None) -> int:
         for error in errors:
             print(error)
         return 1
-    print(
+    summary = (
         f"OK school={stats['school']} diagnostics={stats['diagnostics']} "
         f"questions={stats['questions']} assets={stats['assets']} "
         f"scales={stats['scales']}"
     )
+    if "skipped_text" in stats:
+        summary = f"{summary} skipped_text={stats['skipped_text']}"
+    print(summary)
     return 0
 
 
