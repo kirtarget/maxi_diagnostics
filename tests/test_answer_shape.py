@@ -28,6 +28,11 @@ def question(question_id: str):
         ("q3", {"a": "2", "zzz": "1"}, False, False),
         ("q4", "42,0", True, True),
         ("q4", "abc", False, False),
+        ("q5", "Однако", True, True),
+        ("q5", "од", True, True),
+        ("q5", "", False, False),
+        ("q5", "с" * 41, False, False),
+        ("q5", ["но"], False, False),
     ],
 )
 def test_partial_answers_pass_only_while_in_progress(question_id, answer, in_progress, complete):

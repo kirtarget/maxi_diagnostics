@@ -7,6 +7,7 @@ from diagnostic.catalog import (
     MatchingQuestion,
     MultipleQuestion,
     SingleQuestion,
+    TextQuestion,
     load_catalog,
     public_question,
     server_only_fields,
@@ -14,7 +15,9 @@ from diagnostic.catalog import (
 from diagnostic.school import load_school
 
 SAMPLE_SCHOOL = Path(__file__).resolve().parents[1] / "tests/fixtures/sample-school"
-QUESTION_TYPES = (SingleQuestion, MultipleQuestion, MatchingQuestion, InputQuestion)
+QUESTION_TYPES = (
+    SingleQuestion, MultipleQuestion, MatchingQuestion, InputQuestion, TextQuestion,
+)
 
 
 @pytest.mark.parametrize("model", QUESTION_TYPES)
@@ -29,3 +32,5 @@ def test_public_question_never_contains_a_server_only_field():
             payload = public_question(question)
             assert not server_only_fields(type(question)) & set(payload), question.id
             assert payload["id"] == question.id and payload["type"] == question.type
+            if question.type == "text":
+                assert payload["max_length"] == question.max_length
