@@ -22,6 +22,8 @@ DEFAULT_MANIFEST = (
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z")
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _QUESTION_TYPES = {"input", "single", "multiple", "matching"}
+_CAMPAIGN_SCOPE_PROVIDERS = frozenset({None, "maximum"})
+"""Providers this campaign owns: its own drafts plus the sourceless baseline."""
 
 
 class CampaignError(ValueError):
@@ -70,6 +72,62 @@ def _list(value: Any, code: str) -> list[Any]:
     if not isinstance(value, list):
         _fail(code)
     return value
+
+
+def _is_external(question: Any) -> bool:
+    """Whether a question was appended by a later, non-campaign import."""
+    if not isinstance(question, dict):
+        return False
+    source = question.get("source")
+    provider = source.get("provider") if isinstance(source, dict) else None
+    return provider not in _CAMPAIGN_SCOPE_PROVIDERS
+
+
+def _question_spans(text: str) -> list[tuple[dict[str, Any], int, int]]:
+    """Byte-exact span of every question object inside the catalog array."""
+    opening = text.index("[", text.index('"questions"'))
+    decoder = json.JSONDecoder()
+    position = opening + 1
+    spans: list[tuple[dict[str, Any], int, int]] = []
+    while text[position] in " \n\r\t,":
+        position += 1
+    while text[position] != "]":
+        question, end = decoder.raw_decode(text, position)
+        spans.append((question, position, end))
+        position = end
+        while text[position] in " \n\r\t,":
+            position += 1
+    return spans
+
+
+def _split_external(
+    document: dict[str, Any], payload: bytes
+) -> tuple[dict[str, Any], bytes, int]:
+    """Drop appended non-campaign questions from the document and its bytes.
+
+    The remaining bytes are the untouched prefix of the file, so the manifest
+    hash keeps pinning the baseline and campaign questions exactly as written.
+    """
+    questions = document["questions"]
+    external = [index for index, item in enumerate(questions) if _is_external(item)]
+    if not external:
+        return document, payload, 0
+    keep = len(questions) - len(external)
+    if keep == 0 or external != list(range(keep, len(questions))):
+        _fail("campaign.catalog.external_not_appended")
+    try:
+        text = payload.decode("utf-8")
+        spans = _question_spans(text)
+    except (IndexError, ValueError):
+        _fail("campaign.catalog.invalid_shape")
+    if len(spans) != len(questions):
+        _fail("campaign.catalog.invalid_shape")
+    trimmed = text[: spans[keep - 1][2]] + text[spans[-1][2]:]
+    return (
+        {**document, "questions": questions[:keep]},
+        trimmed.encode("utf-8"),
+        len(external),
+    )
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -148,12 +206,22 @@ def validate_campaign(manifest_path: Path, diagnostics_root: Path) -> dict[str, 
     existing_question_ids: set[str] = set()
     question_owner: dict[str, str] = {}
     actual: dict[str, tuple[str, int, list[str], dict[str, Any]]] = {}
+    external_ids: set[str] = set()
+    external_additions = 0
     for path in actual_paths:
         document, payload = _load_json(path, label="catalog")
         diagnostic_id = document.get("id")
-        questions = document.get("questions")
-        if not isinstance(diagnostic_id, str) or not isinstance(questions, list):
+        if not isinstance(diagnostic_id, str) or not isinstance(document.get("questions"), list):
             _fail("campaign.catalog.invalid_shape")
+        for question in document["questions"]:
+            if _is_external(question):
+                question_id = question.get("id") if isinstance(question, dict) else None
+                if not isinstance(question_id, str) or question_id in external_ids:
+                    _fail("campaign.catalog.question_id_invalid")
+                external_ids.add(question_id)
+        document, payload, external_count = _split_external(document, payload)
+        external_additions += external_count
+        questions = document["questions"]
         for question in questions:
             question_id = question.get("id") if isinstance(question, dict) else None
             if not isinstance(question_id, str) or question_id in existing_question_ids:
@@ -166,6 +234,8 @@ def validate_campaign(manifest_path: Path, diagnostics_root: Path) -> dict[str, 
             [question["id"] for question in questions],
             document,
         )
+    if external_ids & existing_question_ids:
+        _fail("campaign.catalog.question_id_invalid")
 
     slots_seen: set[str] = set()
     slot_partitions: Counter[str] = Counter()
@@ -388,6 +458,7 @@ def validate_campaign(manifest_path: Path, diagnostics_root: Path) -> dict[str, 
         "baseline_questions": baseline_count,
         "additions": additions,
         "projected_questions": projected_count,
+        "external_additions": external_additions,
         "partitions": partition_report,
         "blockers": len(blockers),
     }

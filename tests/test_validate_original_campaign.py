@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
+import shutil
 from pathlib import Path
 
 
@@ -36,6 +38,7 @@ def test_current_campaign_is_complete_deterministic_and_private_safe(capsys):
         "baseline_questions": 178,
         "additions": 123,
         "projected_questions": 301,
+        "external_additions": 327,
         "partitions": [
             {"id": "a-quantitative-ege", "slots": 41},
             {"id": "b-natural-humanities-ege", "slots": 41},
@@ -119,3 +122,86 @@ def test_validator_rejects_catalog_drift(tmp_path: Path, capsys):
 
     assert result == 2
     assert capsys.readouterr().out == "ERROR campaign.catalog.hash_changed\n"
+
+
+def _catalog_copy(tmp_path: Path) -> Path:
+    shutil.copytree(ROOT / "school" / "diagnostics", tmp_path / "school" / "diagnostics")
+    shutil.copytree(
+        ROOT / "authoring" / "campaigns", tmp_path / "authoring" / "campaigns"
+    )
+    return tmp_path
+
+
+def test_pinned_hash_covers_the_catalog_without_external_additions():
+    tool = load_tool()
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    spec = next(
+        item
+        for item in manifest["diagnostics"]
+        if item["diagnostic_id"] == "oge-mathematics-198"
+    )
+    path = ROOT / "school" / "diagnostics" / spec["catalog_file"]
+    document, payload = tool._load_json(path, label="catalog")
+
+    scoped, scoped_payload, external = tool._split_external(document, payload)
+
+    assert external == len(document["questions"]) - spec["expected_question_count"]
+    assert external > 0
+    assert len(scoped["questions"]) == spec["expected_question_count"]
+    assert all(
+        not question["id"].startswith("sp-") for question in scoped["questions"]
+    )
+    assert hashlib.sha256(scoped_payload).hexdigest() == spec["expected_catalog_sha256"]
+
+
+def test_external_additions_must_follow_the_campaign_questions(tmp_path: Path, capsys):
+    tool = load_tool()
+    root = _catalog_copy(tmp_path)
+    path = root / "school" / "diagnostics" / "ege-mathematics-1212.json"
+    document = json.loads(path.read_text(encoding="utf-8"))
+    questions = document["questions"]
+    external = next(item for item in questions if item["id"].startswith("sp-"))
+    document["questions"] = [external] + [
+        item for item in questions if item is not external
+    ]
+    path.write_text(
+        json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+    result = tool.main([], root=root)
+
+    assert result == 2
+    assert capsys.readouterr().out == "ERROR campaign.catalog.external_not_appended\n"
+
+
+def test_one_more_external_addition_leaves_the_campaign_counts_alone(
+    tmp_path: Path, capsys
+):
+    tool = load_tool()
+    root = _catalog_copy(tmp_path)
+    path = root / "school" / "diagnostics" / "oge-informatics-466.json"
+    document = json.loads(path.read_text(encoding="utf-8"))
+    extra = json.loads(json.dumps(document["questions"][0]))
+    extra["id"] = "sp-extra-probe"
+    extra["source"] = {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03",
+    }
+    document["questions"].append(extra)
+    path.write_text(
+        json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+    result = tool.main([], root=root)
+    report = json.loads(capsys.readouterr().out)
+
+    assert result == 0
+    assert report["baseline_questions"] == 178
+    assert report["additions"] == 123
+    assert report["projected_questions"] == 301
+    assert report["external_additions"] == 328

@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from campaign_catalog import load_campaign_catalog
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DIAGNOSTICS = ROOT / "school" / "diagnostics"
@@ -73,9 +75,7 @@ def test_partition_b_adds_exact_manifest_slots_with_draft_original_metadata():
     }
     seen: dict[str, dict] = {}
     for diagnostic_id, (baseline, additions, archive) in EXPECTED.items():
-        path = DIAGNOSTICS / f"{diagnostic_id}.json"
-        assert not path.read_bytes().startswith(b"\xef\xbb\xbf")
-        diagnostic = json.loads(path.read_text(encoding="utf-8"))
+        diagnostic = load_campaign_catalog(DIAGNOSTICS / f"{diagnostic_id}.json")
         assert len(diagnostic["questions"]) == baseline + additions == 15
         new_questions = diagnostic["questions"][baseline:]
         assert len(new_questions) == additions
@@ -104,9 +104,7 @@ def test_partition_b_adds_exact_manifest_slots_with_draft_original_metadata():
 def test_partition_b_answers_match_independently_recorded_fact_checks():
     actual: dict[str, list[str]] = {}
     for diagnostic_id in EXPECTED:
-        document = json.loads(
-            (DIAGNOSTICS / f"{diagnostic_id}.json").read_text(encoding="utf-8")
-        )
+        document = load_campaign_catalog(DIAGNOSTICS / f"{diagnostic_id}.json")
         for question in document["questions"]:
             if question["id"].startswith("f26-"):
                 actual[question["id"]] = _answer(question)
@@ -114,9 +112,7 @@ def test_partition_b_answers_match_independently_recorded_fact_checks():
 
 
 def test_literature_uses_only_short_answer_positions_and_no_long_extracts():
-    document = json.loads(
-        (DIAGNOSTICS / "ege-literature-1209.json").read_text(encoding="utf-8")
-    )
+    document = load_campaign_catalog(DIAGNOSTICS / "ege-literature-1209.json")
     new_questions = document["questions"][3:]
     assert {item["source"]["exam_position"] for item in new_questions} == {"2", "8"}
     assert all(len(item["prompt"]) < 1000 for item in new_questions)
@@ -125,9 +121,7 @@ def test_literature_uses_only_short_answer_positions_and_no_long_extracts():
 
 def test_reviewed_wording_keeps_historical_and_literary_distinctions_precise():
     documents = {
-        diagnostic_id: json.loads(
-            (DIAGNOSTICS / f"{diagnostic_id}.json").read_text(encoding="utf-8")
-        )
+        diagnostic_id: load_campaign_catalog(DIAGNOSTICS / f"{diagnostic_id}.json")
         for diagnostic_id in EXPECTED
     }
     questions = {
