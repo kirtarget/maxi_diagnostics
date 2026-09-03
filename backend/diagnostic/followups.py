@@ -28,6 +28,7 @@ _MESSAGE_KEYS: Final[dict[str, str]] = {
     "quick_to_full": "QUICK_TO_FULL",
     "month_retest": "MONTH_RETEST",
     "lives_refill": "LIVES_REFILL",
+    "streak_save": "STREAK_SAVE",
 }
 
 
@@ -46,6 +47,12 @@ def _eligible(row: Mapping[str, Any]) -> bool:
         return _value(row, "attempt_id") is None
     if kind == "lives_refill":
         return True
+    if kind == "streak_save":
+        # Re-checked at send time: the streak must still be alive and still idle today.
+        return (
+            int(_value(row, "streak_days", 0)) >= 2
+            and not _value(row, "streak_active_today", False)
+        )
     if kind == "incomplete":
         return status == "in_progress"
     if status != "completed":
@@ -60,11 +67,15 @@ def _eligible(row: Mapping[str, Any]) -> bool:
 def _keyboard(row: Mapping[str, Any], settings: Settings, school: SchoolConfig):
     kind = str(_value(row, "kind", ""))
     user_id = int(_value(row, "user_id"))
+    labels = school.brand.interface
+    if kind in {"day_followup", "streak_save"}:
+        # Both nudges point at today's plan rather than at a past result.
+        return webapp_keyboard(school, settings.miniapp_url, label=labels.plan)
     if kind in {"not_started", "incomplete", "quick_to_full", "month_retest", "lives_refill"}:
         label = (
-            school.brand.interface.take_full_diagnostic
+            labels.take_full_diagnostic
             if kind == "quick_to_full"
-            else school.brand.interface.start_diagnostic
+            else labels.start_diagnostic
         )
         return webapp_keyboard(school, settings.miniapp_url, label=label)
     attempt_id = _value(row, "attempt_id")
@@ -110,7 +121,9 @@ async def dispatch_followups(
             break
         processed.add(notification_id)
         lease = claim["locked_at"]
-        row = await attempts.get_claimed_notification(notification_id, lease)
+        row = await attempts.get_claimed_notification(
+            notification_id, lease, timezone_name=getattr(settings, "timezone", "UTC")
+        )
         if row is None:
             continue
         kind = str(_value(row, "kind", ""))

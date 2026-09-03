@@ -93,6 +93,7 @@ export default function Home() {
     resultStatus: brand.interface.result_in_telegram,
   } : BUILD_BRAND;
   const gameplayProfile = gameplayProfileView({ ...bootstrap?.progress_profile, ...bootstrap?.gameplay_profile });
+  const dailyPlan = bootstrap?.daily_plan ?? null;
   const forecastPoints = result ? forecastTrajectory(result) : [];
   const forecastValueKind = result ? forecastKind(result) : "accuracy_percent";
   const completedDiagnostics = (bootstrap?.progress_profile?.completion_count ?? 0) + sessionCompletions;
@@ -196,7 +197,11 @@ export default function Home() {
           diagnostics={bootstrap.diagnostics}
           labels={bootstrap.school.brand.interface}
           profile={gameplayProfile}
+          dailyPlan={dailyPlan}
           onStart={() => setScreen("mode")}
+          onStartPlan={dailyPlan?.diagnostic_id
+            ? () => void trainer.actions.start(dailyPlan.diagnostic_id!, "plan")
+            : undefined}
           onStartTrainer={() => void trainer.actions.start(bootstrap.diagnostics[0]?.id ?? "")}
           onOpenProfile={() => setScreen("profile")}
           onOpenLeague={() => void openLeague()}

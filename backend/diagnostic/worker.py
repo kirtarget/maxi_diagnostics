@@ -16,6 +16,7 @@ from diagnostic.settings import Settings
 PDF_BATCH_LIMIT = 20
 NOTIFICATION_BATCH_LIMIT = 20
 PENDING_PDF_ALERT_THRESHOLD = 50
+STREAK_SAVE_HOUR = 20
 
 
 async def dispatch_work(
@@ -58,6 +59,9 @@ async def _dispatch_work(
             break
         if outcome == "sent":
             pdfs += 1
+    await attempts.schedule_streak_save_notifications(
+        timezone_name=settings.timezone, send_hour=STREAK_SAVE_HOUR
+    )
     notifications = await dispatch_followups(
         bot, settings, school, limit=NOTIFICATION_BATCH_LIMIT
     )

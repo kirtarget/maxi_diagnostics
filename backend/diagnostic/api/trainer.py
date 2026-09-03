@@ -12,6 +12,7 @@ from diagnostic.catalog import (
     DiagnosticCatalog,
     public_question,
 )
+from diagnostic.daily_plan import ensure_today_plan, plan_status
 from diagnostic.db import trainer
 from diagnostic.db.gameplay import serialize_gameplay_profile
 from diagnostic.review import fallback_guidance, format_answer
@@ -19,6 +20,7 @@ from diagnostic.scoring import is_answer_correct
 
 from .dependencies import telegram_user
 from .models import (
+    DailyPlanRequest,
     TrainerAnswerRequest,
     TrainerFinishRequest,
     TrainerLivesReminderRequest,
@@ -56,6 +58,8 @@ def _error(exc: ValueError) -> HTTPException:
         "trainer_mistakes_source_not_found": 404,
         "trainer_mistakes_source_conflict": 409,
         "trainer_no_mistakes": 409,
+        "trainer_plan_unavailable": 409,
+        "trainer_plan_conflict": 409,
     }.get(str(exc), 409)
     return HTTPException(status_code=status, detail=str(exc))
 
@@ -76,7 +80,41 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
         )
         source_attempt_id = None
         resumable = None
-        if body.mode == "mistakes":
+        plan = None
+        if body.mode == "plan":
+            try:
+                plan = await ensure_today_plan(
+                    user_id=user["id"],
+                    catalog=catalog,
+                    application_secret=request.app.state.settings.application_secret,
+                    timezone_name=request.app.state.settings.timezone,
+                )
+            except ValueError as exc:
+                raise _error(exc) from exc
+            if plan is None:
+                raise HTTPException(status_code=409, detail="trainer_plan_unavailable")
+            if plan["diagnostic_id"] != diagnostic.id:
+                raise HTTPException(status_code=409, detail="trainer_plan_conflict")
+            if plan["content_version"] != content_version:
+                raise HTTPException(status_code=409, detail="trainer_content_changed")
+            try:
+                resumable = await trainer.get_resumable_session(
+                    user_id=user["id"], diagnostic_id=diagnostic.id,
+                    content_version=content_version, mode=body.mode,
+                )
+            except ValueError as exc:
+                raise _error(exc) from exc
+            question_ids = (
+                resumable[0]["question_ids"] if resumable is not None
+                else plan["question_ids"]
+            )
+            by_id = {question.id: question for question in diagnostic.questions}
+            questions = tuple(
+                by_id[question_id] for question_id in question_ids if question_id in by_id
+            )
+            if not questions:
+                raise HTTPException(status_code=409, detail="trainer_plan_unavailable")
+        elif body.mode == "mistakes":
             if body.source_attempt_id is None:
                 raise HTTPException(status_code=409, detail="trainer_mistakes_source_required")
             source_attempt_id = body.source_attempt_id
@@ -131,7 +169,10 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
                     questions = tuple(question for question in questions if question.topic == body.topic)
                 if body.count > len(questions):
                     raise HTTPException(status_code=422, detail="trainer_not_enough_questions")
-        selected = list(questions if resumable is not None else questions[: body.count])
+        selected = list(
+            questions if resumable is not None or body.mode == "plan"
+            else questions[: body.count]
+        )
         if not selected:
             raise HTTPException(status_code=409, detail="trainer_content_changed")
         session_id = secrets.token_urlsafe(24)
@@ -150,20 +191,79 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
                 raise _error(exc) from exc
         else:
             session, profile = resumable
-        session_question_ids = set(session.get("question_ids", ()))
+        # The stored session order is authoritative: the answer endpoint checks the
+        # question against `selected_question_ids[current_index]`.
+        by_id = {question.id: question for question in diagnostic.questions}
         selected = [
-            question for question in diagnostic.questions
-            if question.id in session_question_ids
+            by_id[question_id]
+            for question_id in session.get("question_ids", ())
+            if question_id in by_id
         ]
         if not selected:
             raise HTTPException(status_code=409, detail="trainer_content_changed")
         profile_payload = serialize_gameplay_profile(profile)
-        return {
+        payload = {
             "ok": True,
             **session,
             "questions": [public_question(question) for question in selected],
             "lives_remaining": profile_payload["lives_remaining"],
             "next_life_at": profile_payload["next_life_at"],
+        }
+        if plan is not None:
+            payload["plan"] = {
+                "plan_date": plan["plan_date"],
+                "total": plan["total"],
+                "completed": plan["completed"],
+                "reasons": plan["reasons"],
+            }
+        return payload
+
+    @router.post("/daily-plan")
+    async def daily_plan(body: DailyPlanRequest, request: Request) -> dict[str, Any]:
+        user = telegram_user(request, body.init_data)
+        await _require_current_session(request, user["id"], body.session_scope)
+        try:
+            plan = await ensure_today_plan(
+                user_id=user["id"],
+                catalog=catalog,
+                application_secret=request.app.state.settings.application_secret,
+                timezone_name=request.app.state.settings.timezone,
+            )
+        except ValueError as exc:
+            raise _error(exc) from exc
+        if plan is None:
+            return {
+                "plan_date": None, "diagnostic_id": None, "subject": None,
+                "exam": None, "total": 0, "completed": 0, "questions": [],
+                "status": "no_diagnostic",
+            }
+        try:
+            diagnostic = catalog.get(plan["diagnostic_id"])
+        except ValueError:
+            return {
+                "plan_date": plan["plan_date"], "diagnostic_id": None, "subject": None,
+                "exam": None, "total": 0, "completed": 0, "questions": [],
+                "status": "no_diagnostic",
+            }
+        topics = {question.id: question.topic for question in diagnostic.questions}
+        return {
+            "plan_date": plan["plan_date"],
+            "diagnostic_id": diagnostic.id,
+            "subject": diagnostic.subject,
+            "exam": diagnostic.exam,
+            "total": plan["total"],
+            "completed": plan["completed"],
+            "questions": [
+                {
+                    "question_id": question_id,
+                    "topic": topics.get(question_id, ""),
+                    "reason": plan["reasons"].get(question_id, "growth_topic"),
+                    "completed": question_id in set(plan["completed_question_ids"]),
+                }
+                for question_id in plan["question_ids"]
+                if question_id in topics
+            ],
+            "status": plan_status(plan["total"], plan["completed"]),
         }
 
     @router.post("/trainer/answer")

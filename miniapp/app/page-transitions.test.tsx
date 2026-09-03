@@ -303,4 +303,72 @@ describe("Home screen transitions", () => {
     expect(screenClasses()).toContain("trainer-screen");
     expect(requestedPaths).toContain("/api/diagnostics/trainer/start");
   });
+
+  it("moves from the home plan CTA into the plan trainer", async () => {
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      progress_profile: { completion_count: 1, achievement_keys: [] },
+      daily_plan: {
+        plan_date: "2026-09-02",
+        diagnostic_id: "demo-math",
+        subject: "Математика",
+        exam: "ЕГЭ",
+        total: 5,
+        completed: 2,
+        status: "ready",
+      },
+    }));
+    let startPayload: unknown;
+    routes["/api/diagnostics/trainer/start"] = async () => ({
+      trainer_session_id: "s".repeat(32),
+      diagnostic_id: "demo-math",
+      content_version: CONTENT_VERSION,
+      mode: "plan",
+      question_ids: ["q1"],
+      current_index: 0,
+      revision: 1,
+      status: "active",
+      questions: diagnostic.questions,
+      lives_remaining: 5,
+      plan: { plan_date: "2026-09-02", total: 5, completed: 2, reasons: { q1: "mistake_review" } },
+    });
+    const originalFetch = globalThis.fetch;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith("/api/diagnostics/trainer/start")) {
+        startPayload = JSON.parse(String(init?.body));
+      }
+      return originalFetch(input, init);
+    }));
+
+    await mountHome();
+    expect(container.querySelector(".gameplay-plan-cta")?.textContent).toContain("План на сегодня: 2 из 5");
+
+    await clickAndSettle(".gameplay-plan-cta");
+    await settle();
+
+    expect(screenClasses()).toContain("trainer-screen");
+    expect(startPayload).toMatchObject({ mode: "plan", diagnostic_id: "demo-math" });
+    expect(container.textContent).toContain("План: 2 из 5");
+    expect(container.textContent).toContain("повтор ошибки");
+  });
+
+  it("marks the plan done on the home screen once every question is answered", async () => {
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      progress_profile: { completion_count: 1, achievement_keys: [] },
+      daily_plan: {
+        plan_date: "2026-09-02",
+        diagnostic_id: "demo-math",
+        subject: "Математика",
+        exam: "ЕГЭ",
+        total: 5,
+        completed: 5,
+        status: "done",
+      },
+    }));
+
+    await mountHome();
+
+    expect(container.querySelector(".gameplay-plan-cta")).toBeNull();
+    expect(container.querySelector(".gameplay-plan-done")?.textContent).toContain("План выполнен");
+    expect(container.querySelector(".gameplay-home-cta")?.className).toContain("primary-button");
+  });
 });

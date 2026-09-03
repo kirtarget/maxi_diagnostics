@@ -373,6 +373,7 @@ class MessageTemplates(BaseModel):
     quick_to_full: str
     month_retest: str
     lives_refill: str = "Жизни в тренажёре восстановились — продолжай готовиться!"
+    streak_save: str = "Серия ещё держится. Открой план на сегодня и сохрани её."
     generic: str
 
     @field_validator("*")
@@ -397,6 +398,7 @@ class MessageTemplates(BaseModel):
             "QUICK_TO_FULL": self.quick_to_full,
             "MONTH_RETEST": self.month_retest,
             "LIVES_REFILL": self.lives_refill,
+            "STREAK_SAVE": self.streak_save,
         }
 
 

@@ -1,5 +1,13 @@
-import type { AnswerValue, Question } from "./types";
+import type { AnswerValue, PlanReason, Question } from "./types";
 import { isValidNumericInput } from "./answer-values";
+
+/** Plan context the server attaches when a session runs today's plan. */
+export type TrainerPlanInfo = {
+  plan_date: string;
+  total: number;
+  completed: number;
+  reasons: Partial<Record<string, PlanReason>>;
+};
 
 export type TrainerStartResponse = {
   trainer_session_id: string;
@@ -14,9 +22,28 @@ export type TrainerStartResponse = {
   questions: Question[];
   lives_remaining: number;
   next_life_at?: string | null;
+  plan?: TrainerPlanInfo | null;
 };
 
-export type TrainerMode = "normal" | "mistakes";
+export type TrainerMode = "normal" | "mistakes" | "plan";
+
+export const PLAN_REASON_LABELS: Record<PlanReason, string> = {
+  mistake_review: "повтор ошибки",
+  growth_topic: "зона роста",
+};
+
+/** Answered plan questions counted from the session, so the tag updates as you go. */
+export function planProgress(state: TrainerState): { completed: number; total: number } | null {
+  const session = state.session;
+  if (!session || session.mode !== "plan" || !session.plan) return null;
+  const answered = Math.max(state.currentIndex, session.plan.completed);
+  return { completed: Math.min(answered, session.plan.total), total: session.plan.total };
+}
+
+export function planReasonLabel(state: TrainerState, questionId: string): string | null {
+  const reason = state.session?.plan?.reasons[questionId];
+  return reason ? PLAN_REASON_LABELS[reason] : null;
+}
 
 export type TrainerAnswerResponse = {
   trainer_session_id: string;

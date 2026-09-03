@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   isTrainerAnswerComplete,
+  planProgress,
+  planReasonLabel,
   trainerInitialState,
   trainerReducer,
   type TrainerStartResponse,
@@ -70,5 +72,40 @@ describe("trainer model", () => {
     state = trainerReducer(state, { type: "set_answer", answer: "a" });
     state = trainerReducer(state, { type: "submit_answer" });
     expect(state.phase).toBe("awaiting_result");
+  });
+  it("reports no plan progress for a session that is not running the plan", () => {
+    const state = trainerReducer(trainerInitialState, { type: "start", response: start });
+    expect(planProgress(state)).toBeNull();
+    expect(planReasonLabel(state, "single")).toBeNull();
+  });
+
+  it("counts answered plan questions and names the reason for each", () => {
+    const plan: TrainerStartResponse = {
+      ...start,
+      mode: "plan",
+      plan: {
+        plan_date: "2026-09-02",
+        total: 5,
+        completed: 2,
+        reasons: { single: "mistake_review", multiple: "growth_topic" },
+      },
+    };
+    let state = trainerReducer(trainerInitialState, { type: "start", response: plan });
+    expect(planProgress(state)).toEqual({ completed: 2, total: 5 });
+    expect(planReasonLabel(state, "single")).toBe("повтор ошибки");
+    expect(planReasonLabel(state, "multiple")).toBe("зона роста");
+    expect(planReasonLabel(state, "matching")).toBeNull();
+
+    state = trainerReducer(state, { type: "set_answer", answer: "a" });
+    state = trainerReducer(state, { type: "submit_answer" });
+    state = trainerReducer(state, { type: "answer_result", response: { trainer_session_id: "s1", question_id: "single", is_correct: true, correct_answer: "a", explanation: null, xp_delta: 10, life_delta: 0, current_index: 3, revision: 2, status: "in_progress", lives_remaining: 3 } });
+    expect(planProgress(state)).toEqual({ completed: 3, total: 5 });
+  });
+
+  it("spends lives in plan mode just like a normal session", () => {
+    const plan: TrainerStartResponse = { ...start, mode: "plan", lives_remaining: 0 };
+    let state = trainerReducer(trainerInitialState, { type: "start", response: plan });
+    state = trainerReducer(state, { type: "set_answer", answer: "a" });
+    expect(trainerReducer(state, { type: "submit_answer" }).phase).toBe("answering");
   });
 });

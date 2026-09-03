@@ -12,6 +12,7 @@ from aiogram.types import CallbackQuery, Message
 
 from diagnostic.analytics import fire_event
 from diagnostic.catalog import DiagnosticCatalog
+from diagnostic.daily_plan import ensure_today_plan, plan_summary
 from diagnostic.db import attempts, funnel
 from diagnostic.messages import render_message
 from diagnostic.school import SchoolConfig
@@ -177,56 +178,57 @@ async def send_plan(
     )
 
 
+def task_count_text(count: int) -> str:
+    """Russian plural for the number of tasks in one day's plan."""
+    tail = count % 100
+    if 11 <= tail <= 14:
+        return f"{count} заданий"
+    last = count % 10
+    if last == 1:
+        return f"{count} задание"
+    if 2 <= last <= 4:
+        return f"{count} задания"
+    return f"{count} заданий"
+
+
 async def _send_plan_to(answer, user_id: int, settings, school, catalog) -> None:
-    rows = list(await attempts.list_completed_attempts(user_id))
-    if not rows:
-        text = await render_message("PLAN_EMPTY", school)
+    interface = school.brand.interface
+    try:
+        plan = await ensure_today_plan(
+            user_id=user_id,
+            catalog=catalog,
+            application_secret=settings.application_secret,
+            timezone_name=settings.timezone,
+        )
+    except (RuntimeError, ValueError):
+        plan = None
+    summary = plan_summary(plan, catalog)
+    if summary["status"] == "no_diagnostic":
         await answer(
-            text,
+            await render_message("PLAN_EMPTY", school),
             parse_mode="HTML",
             reply_markup=webapp_keyboard(school, settings.miniapp_url),
             disable_web_page_preview=True,
         )
         return
 
-    latest = rows[0]
-    interface = school.brand.interface
     subject = html.escape(
-        _diagnostic_value(latest, catalog, "subject", interface.diagnostic_fallback),
-        quote=True,
+        str(summary["subject"] or interface.diagnostic_fallback), quote=True
     )
-    strong = [html.escape(str(topic), quote=True) for topic in (_value(latest, "strong_topics", []) or [])]
-    growth = [html.escape(str(topic), quote=True) for topic in (_value(latest, "growth_topics", []) or [])]
-    lines = [f"<b>{html.escape(interface.plan_for, quote=True)} {subject}</b>"]
-    if strong:
-        lines.extend([
-            "",
-            f"<b>{html.escape(interface.keep_strong, quote=True)}:</b>",
-            *(f"✓ {topic}" for topic in strong),
-        ])
-    if growth:
-        lines.extend(
-            [
-                "",
-                f"<b>{html.escape(interface.focus_next, quote=True)}:</b>",
-                *(f"{index}. {topic}" for index, topic in enumerate(growth, 1)),
-            ]
-        )
-    if not strong and not growth:
-        lines.extend(["", html.escape(interface.open_result_hint, quote=True)])
+    lines = [
+        f"<b>{html.escape(interface.plan_for, quote=True)} {subject}</b>",
+        "",
+        f"Сегодня: {task_count_text(int(summary['total']))}, "
+        f"выполнено {int(summary['completed'])}.",
+    ]
+    if summary["status"] == "done":
+        lines.append(html.escape(interface.open_result_hint, quote=True))
     await answer(
         "\n".join(lines),
         parse_mode="HTML",
-        reply_markup=result_keyboard(
-            school,
-            user_id,
-            str(_value(latest, "attempt_id", "")),
-            str(_value(latest, "mode", "full")),
-            miniapp_url=settings.miniapp_url,
-        ),
+        reply_markup=webapp_keyboard(school, settings.miniapp_url, label=interface.plan),
         disable_web_page_preview=True,
     )
-    await _mark_viewed(str(_value(latest, "attempt_id", "")), user_id, settings)
 
 
 async def show_result(

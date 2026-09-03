@@ -59,6 +59,8 @@ export function trainerErrorMessage(error: unknown): string {
     case "trainer_session_incomplete": return "Сначала ответь на все вопросы.";
     case "session_expired": return "Сессия Telegram устарела. Перезагрузи приложение.";
     case "trainer_not_enough_questions": return "Для тренировки пока недостаточно заданий.";
+    case "trainer_plan_unavailable":
+    case "trainer_plan_conflict": return "План на сегодня пока не готов. Пройди диагностику.";
     default: return "Не удалось связаться с сервером. Повтори попытку.";
   }
 }
@@ -100,20 +102,16 @@ export function useTrainer({
     setLivesReminder({ status: "idle" });
     setScreen("trainer");
     try {
+      const scope = {
+        session_scope: sessionScope,
+        diagnostic_id: selected.id,
+        count: Math.min(5, selected.question_count),
+      };
       const payload = requestedMode === "mistakes" && requestedSourceAttemptId
-        ? {
-          session_scope: sessionScope,
-          diagnostic_id: selected.id,
-          count: Math.min(5, selected.question_count),
-          mode: "mistakes" as const,
-          source_attempt_id: requestedSourceAttemptId,
-        }
-        : {
-          session_scope: sessionScope,
-          diagnostic_id: selected.id,
-          count: Math.min(5, selected.question_count),
-          mode: "normal" as const,
-        };
+        ? { ...scope, mode: "mistakes" as const, source_attempt_id: requestedSourceAttemptId }
+        : requestedMode === "plan"
+          ? { ...scope, mode: "plan" as const }
+          : { ...scope, mode: "normal" as const };
       const response = await startTrainer(initData.current, payload);
       dispatch({ type: "start", response });
     } catch (startError) {

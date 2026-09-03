@@ -4,6 +4,7 @@ import { subjectIconKind, type SubjectIconKind } from "./subject-illustration";
 import type { GameplayProfileView } from "./gameplay-profile-model";
 import type {
   Brand,
+  DailyPlanSummary,
   DiagnosticMode,
   PublicDiagnosticSummary,
   SchoolLinks,
@@ -31,7 +32,9 @@ export type GameplayHomeScreenProps = {
   diagnostics: PublicDiagnosticSummary[];
   labels: Brand["interface"];
   profile: GameplayProfileView;
+  dailyPlan?: DailyPlanSummary | null;
   onStart: () => void;
+  onStartPlan?: () => void;
   onStartTrainer?: () => void;
   onOpenProfile: () => void;
   onOpenLeague?: () => void;
@@ -45,7 +48,9 @@ export function GameplayHomeScreen({
   diagnostics,
   labels,
   profile,
+  dailyPlan,
   onStart,
+  onStartPlan,
   onStartTrainer,
   onOpenProfile,
   onOpenLeague,
@@ -58,6 +63,7 @@ export function GameplayHomeScreen({
   const subjects = [...new Set(diagnostics.map((item) => item.subject))];
   const pathItems = diagnostics.slice(0, 3);
   const firstSubject = subjects[0] ?? "предмет";
+  const planReady = dailyPlan?.status === "ready" && Boolean(onStartPlan);
 
   return (
     <section className="screen gameplay-home" aria-labelledby="gameplay-home-title">
@@ -88,7 +94,17 @@ export function GameplayHomeScreen({
         {profile.serverBacked && profile.quest && (
           <div className="gameplay-quest"><div><small>Квест</small><strong>{profile.quest.progress}/{profile.quest.target} активностей</strong></div></div>
         )}
-        <button className="primary-button gameplay-home-cta" onClick={onStart} type="button">
+        {planReady && dailyPlan && (
+          <button className="primary-button gameplay-home-cta gameplay-plan-cta" onClick={onStartPlan} type="button">
+            План на сегодня: {dailyPlan.completed} из {dailyPlan.total} <span aria-hidden="true">→</span>
+          </button>
+        )}
+        {dailyPlan?.status === "done" && (
+          <p className="gameplay-plan-done" role="status">
+            <span aria-hidden="true">✓</span> План выполнен
+          </p>
+        )}
+        <button className={`${planReady ? "secondary-button" : "primary-button"} gameplay-home-cta`} onClick={onStart} type="button">
           {profile.completionCount > 0 ? "Продолжить диагностику" : labels.start_diagnostic} <span aria-hidden="true">→</span>
         </button>
         <div className="gameplay-cta-row">
