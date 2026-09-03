@@ -37,7 +37,7 @@ def test_public_summaries_contain_counts_without_questions():
             "subject": "Математика",
             "mark": "Демо",
             "quick_count": 2,
-            "question_count": 4,
+            "question_count": 5,
         }
     ]
     assert "questions" not in summaries[0]
@@ -114,6 +114,7 @@ def test_sample_catalog_covers_all_question_types():
         "multiple",
         "matching",
         "input",
+        "text",
     }
 
 

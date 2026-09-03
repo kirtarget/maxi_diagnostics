@@ -20,6 +20,12 @@ from diagnostic.font_support import validate_report_text
 from diagnostic.school import SchoolConfig, validate_asset_inventory, validate_asset_path
 from diagnostic.jsonutil import load_json_file
 from diagnostic.numeric import is_valid_numeric_answer
+from diagnostic.text_answers import (
+    DEFAULT_TEXT_ANSWER_LENGTH,
+    MAX_TEXT_ANSWER_LENGTH,
+    is_valid_text_answer,
+    normalize_text_answer,
+)
 
 
 _ID_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
@@ -366,8 +372,32 @@ class InputQuestion(QuestionBase):
         return self
 
 
+class TextQuestion(QuestionBase):
+    """Short free-text answer compared after shared normalization."""
+
+    type: Literal["text"]
+    max_length: int = Field(
+        default=DEFAULT_TEXT_ANSWER_LENGTH,
+        ge=1,
+        le=MAX_TEXT_ANSWER_LENGTH,
+        strict=True,
+    )
+    correct: tuple[str, ...] = Field(min_length=1, max_length=20, json_schema_extra=SERVER_ONLY)
+
+    @model_validator(mode="after")
+    def validate_text_variants(self) -> "TextQuestion":
+        normalized: list[str] = []
+        for variant in self.correct:
+            if not is_valid_text_answer(variant, self.max_length):
+                raise ValueError("invalid_text_variant")
+            normalized.append(validate_report_text(normalize_text_answer(variant)))
+        if len(set(normalized)) != len(normalized):
+            raise ValueError("duplicate_text_variant")
+        return self
+
+
 Question = Annotated[
-    SingleQuestion | MultipleQuestion | MatchingQuestion | InputQuestion,
+    SingleQuestion | MultipleQuestion | MatchingQuestion | InputQuestion | TextQuestion,
     Field(discriminator="type"),
 ]
 
@@ -511,6 +541,8 @@ def is_valid_answer_shape(question: Question, answer: Any, *, complete: bool) ->
         return isinstance(answer, str) and answer in {option.id for option in question.options}
     if isinstance(question, InputQuestion):
         return is_valid_numeric_answer(answer)
+    if isinstance(question, TextQuestion):
+        return is_valid_text_answer(answer, question.max_length)
     if isinstance(question, MultipleQuestion):
         allowed = {option.id for option in question.options}
         return (
