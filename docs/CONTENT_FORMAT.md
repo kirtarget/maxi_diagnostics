@@ -52,7 +52,7 @@ differ only by case. Each file contains one object with every field below:
 
 IDs use 1–64 ASCII letters, digits, `_`, or `-`, begin with a letter or digit, and a
 diagnostic ID has at least 3 characters. `exam` is at most 32 characters; `subject`,
-`mark`, `topic`, and `title` are at most 128; prompts are at most 4,000; option labels
+`mark`, `topic`, and `title` are at most 128; prompts are at most 10,000; option labels
 are at most 500. Prompts may contain LF line breaks for paragraphs and enumerated
 task parts; other control characters remain forbidden. Text cannot be blank.
 `quick_count` is a strict integer from 1

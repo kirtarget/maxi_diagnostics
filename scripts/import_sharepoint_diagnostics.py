@@ -43,7 +43,7 @@ from diagnostic.numeric import is_valid_numeric_answer  # noqa: E402
 
 
 ID_PREFIX = "sp-"
-MAX_PROMPT_CHARS = 4000
+MAX_PROMPT_CHARS = 10000
 MAX_EXPLANATION_CHARS = 2000
 MAX_OPTION_LABEL_CHARS = 500
 MAX_OPTIONS = 50
@@ -51,6 +51,7 @@ MAX_QUESTIONS_PER_DIAGNOSTIC = 200
 MAX_CATALOG_FILE_BYTES = 1024 * 1024
 MAX_QUESTION_ASSETS = 5
 MAX_TEXT_VARIANTS = 20
+MAX_ANSWER_VARIANTS = 20
 MAX_TEXT_ANSWER_CHARS = 80
 MAX_REFERENCED_ASSETS = 201
 MAX_ASSET_SIDE = 900
@@ -371,10 +372,21 @@ def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
         return "skip", "irregular_key"
     digit_parts = [part for part in parts if DIGITS.fullmatch(part)]
 
-    # A `#`-joined set of multi-digit groups packs several sub-answers into one
-    # task; the runtime has no shape for that.
+    # A `#`-joined set of multi-digit groups usually packs several sub-answers
+    # into one task, which the runtime has no shape for. The one reading that is
+    # not a guess is a set of reorderings of a single answer: the same digits in
+    # the same count, written out because their order is free.
     if len(parts) > 1 and len(digit_parts) == len(parts) and any(len(p) > 1 for p in parts):
-        return "skip", "irregular_key"
+        reorderings = (
+            not task.options
+            and len(set(parts)) == len(parts)
+            and len(parts) <= MAX_ANSWER_VARIANTS
+            and len({tuple(sorted(part)) for part in parts}) == 1
+            and all(is_valid_numeric_answer(part) for part in parts)
+        )
+        if not reorderings:
+            return "skip", "irregular_key"
+        return "input", {"correct": list(parts), "sequence": True}
 
     if task.options:
         if len(digit_parts) != len(parts) or any(len(part) != 1 for part in parts):
@@ -818,13 +830,22 @@ def write_report(
 
     lines.append("")
     for source, target, outcomes in per_file:
+        note = (
+            ""
+            if len(outcomes) == source.declared_tasks
+            else (
+                " Расхождение означает, что в документе заголовок «Задание N» "
+                "оформлен нестандартно и соседние задания слиплись в один блок; "
+                "такой блок уходит в пропуски с причиной `irregular_key`."
+            )
+        )
         lines.extend(
             [
                 f"## {source.path.name}",
                 "",
                 f"Каталог: `school/diagnostics/{target.name}`. "
                 f"Заявлено заданий в имени файла: {source.declared_tasks}, "
-                f"найдено блоков: {len(outcomes)}.",
+                f"найдено блоков: {len(outcomes)}.{note}",
                 "",
                 "| Задание | Итог | Тип | Причина | Рисунков |",
                 "|---:|---|---|---|---:|",

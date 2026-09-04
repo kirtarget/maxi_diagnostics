@@ -244,7 +244,7 @@ def test_catalog_accepts_structured_prompt_line_breaks():
         (lambda data: data.update(subject=" "), "blank_text"),
         (lambda data: data.update(subject="Math\u202e"), "unsafe_text"),
         (lambda data: data.update(subject="School \u5b66"), "unsupported_report_character"),
-        (lambda data: data["questions"][0].update(prompt="x" * 4001), "string_too_long"),
+        (lambda data: data["questions"][0].update(prompt="x" * 10001), "string_too_long"),
         (lambda data: data["questions"][0].update(prompt=" "), "blank_text"),
         (lambda data: data["questions"][0].update(prompt="Bad\tPrompt"), "unsafe_text"),
         (
