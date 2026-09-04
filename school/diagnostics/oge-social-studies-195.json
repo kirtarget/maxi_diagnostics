@@ -4,6 +4,7 @@
   "subject": "Обществознание",
   "mark": "Вариант 4",
   "quick_count": 3,
+  "full_count": 15,
   "scoring": {
     "max_score": 100,
     "score_unit": "accuracy_percent"
@@ -414,6 +415,515 @@
         "4312"
       ],
       "explanation": "И мораль, и религиозные нормы предусматривают санкции за нарушение и не обеспечиваются прямым государственным принуждением, поэтому сходства обозначены цифрами 3 и 4. Связь с религиозными обрядами и вера в сверхъестественное характерны для религиозных норм, но не для морали, поэтому различия обозначены цифрами 1 и 2."
+    },
+    {
+      "id": "sp-social-studies-oge-2022-q1",
+      "type": "single",
+      "topic": "Задание 1",
+      "title": "Задание 1",
+      "prompt": "Социальная сущность человека обусловлена:",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Темпераментом"
+        },
+        {
+          "id": "b",
+          "label": "Инстинктами"
+        },
+        {
+          "id": "c",
+          "label": "Рефлексами"
+        },
+        {
+          "id": "d",
+          "label": "Сознанием"
+        }
+      ],
+      "correct": "d",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-social-studies-oge-2022-q2",
+      "type": "single",
+      "topic": "Задание 2",
+      "title": "Задание 2",
+      "prompt": "Особенностью науки и научного познания является:",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Образность и наглядность"
+        },
+        {
+          "id": "b",
+          "label": "Духовность"
+        },
+        {
+          "id": "c",
+          "label": "Вера в сверхъестественное"
+        },
+        {
+          "id": "d",
+          "label": "Проверяемость, доказательность"
+        }
+      ],
+      "correct": "d",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-social-studies-oge-2022-q3",
+      "type": "single",
+      "topic": "Задание 3",
+      "title": "Задание 3",
+      "prompt": "Верны ли следующие суждения о взаимодействии общества и природы?\nА) Общество оказывает только положительное влияние на природу.\nБ) Позитивными примерами влияния природы на общество являются извержения вулканов, наводнения, цунами.",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Верно только А"
+        },
+        {
+          "id": "b",
+          "label": "Верно только Б"
+        },
+        {
+          "id": "c",
+          "label": "Верны оба суждения"
+        },
+        {
+          "id": "d",
+          "label": "Оба суждения неверны"
+        }
+      ],
+      "correct": "d",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-social-studies-oge-2022-q4",
+      "type": "single",
+      "topic": "Задание 4",
+      "title": "Задание 4",
+      "prompt": "Что из перечисленного относится к факторному доходу?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Земля"
+        },
+        {
+          "id": "b",
+          "label": "Труд"
+        },
+        {
+          "id": "c",
+          "label": "Рента"
+        },
+        {
+          "id": "d",
+          "label": "Капитал"
+        }
+      ],
+      "correct": "c",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-social-studies-oge-2022-q5",
+      "type": "single",
+      "topic": "Задание 5",
+      "title": "Задание 5",
+      "prompt": "В государстве V господствует частная собственность. Какие дополнительные сведения поспособствуют выводу о том, что экономика государства V является рыночной?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Ведущие предприятия находятся в государственной собственности."
+        },
+        {
+          "id": "b",
+          "label": "Цены на товары устанавливает государство."
+        },
+        {
+          "id": "c",
+          "label": "Производитель самостоятельно определяет объем и вид выпускаемой продукции."
+        },
+        {
+          "id": "d",
+          "label": "Полученной от торговли прибылью распоряжается министерство финансов."
+        }
+      ],
+      "correct": "c",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-social-studies-oge-2022-q6",
+      "type": "single",
+      "topic": "Задание 6",
+      "title": "Задание 6",
+      "prompt": "Верны ли следующие суждения о рынке и рыночном механизме?\nА) К факторам изменения спроса относятся мода и уровень дохода потребителей.\nБ) Цена используемых ресурсов и количество продавцов на рынке относится к факторам изменения предложения.",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Верно только А"
+        },
+        {
+          "id": "b",
+          "label": "Верно только Б"
+        },
+        {
+          "id": "c",
+          "label": "Верны оба суждения"
+        },
+        {
+          "id": "d",
+          "label": "Оба суждения неверны"
+        }
+      ],
+      "correct": "c",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-social-studies-oge-2022-q7",
+      "type": "single",
+      "topic": "Задание 7",
+      "title": "Задание 7",
+      "prompt": "Правило, переходящее из поколения в поколение называется:",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Обычай"
+        },
+        {
+          "id": "b",
+          "label": "Традиция"
+        },
+        {
+          "id": "c",
+          "label": "Мораль"
+        },
+        {
+          "id": "d",
+          "label": "Этикет"
+        }
+      ],
+      "correct": "b",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-social-studies-oge-2022-q8",
+      "type": "single",
+      "topic": "Задание 8",
+      "title": "Задание 8",
+      "prompt": "Верны ли следующие суждения о социальных конфликтах?\nА) Социальный конфликт — столкновение между несколькими субъектами общества, возникающее из-за несовпадения их интересов.\nБ) Субъектами социального конфликта могут быть только государства и социальные группы.",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Верно только А"
+        },
+        {
+          "id": "b",
+          "label": "Верно только Б"
+        },
+        {
+          "id": "c",
+          "label": "Верны оба суждения"
+        },
+        {
+          "id": "d",
+          "label": "Оба суждения неверны"
+        }
+      ],
+      "correct": "a",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-social-studies-oge-2022-q9",
+      "type": "single",
+      "topic": "Задание 9",
+      "title": "Задание 9",
+      "prompt": "К признакам правового государства относится:",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Территориальная целостность"
+        },
+        {
+          "id": "b",
+          "label": "Суверенитет"
+        },
+        {
+          "id": "c",
+          "label": "Наличие правоохранительных органов"
+        },
+        {
+          "id": "d",
+          "label": "Разделение властей"
+        }
+      ],
+      "correct": "d",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-social-studies-oge-2022-q10",
+      "type": "single",
+      "topic": "Задание 10",
+      "title": "Задание 10",
+      "prompt": "Верны ли следующие суждения о формах государственного устройства?\nА) Административные единицы унитарного государства обладают политической самостоятельностью.\nБ) Характерной чертой федерации является наличие двухпалатного парламента.",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Верно только А"
+        },
+        {
+          "id": "b",
+          "label": "Верно только Б"
+        },
+        {
+          "id": "c",
+          "label": "Верны оба суждения"
+        },
+        {
+          "id": "d",
+          "label": "Оба суждения неверны"
+        }
+      ],
+      "correct": "b",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-social-studies-oge-2022-q11",
+      "type": "input",
+      "topic": "Задание 11",
+      "title": "Задание 11",
+      "prompt": "Установите соответствие между видом правонарушения и отраслью права, к которой данное правонарушение относится: к каждому элементу первого столбца подберите соответствующий элемент из второго столбца.\nВ ответ запишите последовательность цифр, соответствующую буквам АБВГД.\nПРАВОНАРУШЕНИЕ | ОТРАСЛЬ ПРАВА\nА) Увольнение работников в связи с коллективным трудовым спором. Б) Систематические опоздания на работу. В) Хищение имущества стоимостью менее 1000 рублей. Г) Мошенничество. Д) Нарушение правил водопользования. | 1) Трудовое. 2) Административное. 3) Уголовное.",
+      "max_primary_score": 1,
+      "correct": [
+        "21232"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-social-studies-oge-2022-q12",
+      "type": "single",
+      "topic": "Задание 12",
+      "title": "Задание 12",
+      "prompt": "Конституционной обязанностью гражданина является:",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Участвовать в управлении государством"
+        },
+        {
+          "id": "b",
+          "label": "Уплачивать налоги"
+        },
+        {
+          "id": "c",
+          "label": "Мирно, без оружия проводить митинги"
+        },
+        {
+          "id": "d",
+          "label": "Участвовать в культурной жизни"
+        }
+      ],
+      "correct": "b",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-social-studies-oge-2022-q13",
+      "type": "single",
+      "topic": "Задание 13",
+      "title": "Задание 13",
+      "prompt": "Мария живет в собственной трехкомнатной квартире, исправно оплачивает коммунальные услуги. Данный пример характеризует право Марии как собственницы квартиры в отношении своего имущества:",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Пользоваться"
+        },
+        {
+          "id": "b",
+          "label": "Распоряжаться"
+        },
+        {
+          "id": "c",
+          "label": "Владеть"
+        },
+        {
+          "id": "d",
+          "label": "Наследовать"
+        }
+      ],
+      "correct": "a",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-social-studies-oge-2022-q14",
+      "type": "single",
+      "topic": "Задание 14",
+      "title": "Задание 14",
+      "prompt": "Верны ли следующие утверждения о принципах конституционного строя?\nА) Принцип социального государства гласит, что в государстве признаются различные формы собственности.\nБ) Принцип правового государства устанавливает верховенство закона в общественной жизни.",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Верно только А"
+        },
+        {
+          "id": "b",
+          "label": "Верно только Б"
+        },
+        {
+          "id": "c",
+          "label": "Верны оба суждения"
+        },
+        {
+          "id": "d",
+          "label": "Оба суждения неверны"
+        }
+      ],
+      "correct": "b",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-social-studies-oge-2022-q16",
+      "type": "text",
+      "topic": "Задание 16",
+      "title": "Задание 16",
+      "prompt": "Заполните пропуск в таблице.\nФакторы производства | Характеристика\n… | Сведения, используемые в процессе производства благ.\nЗемля | Все природные ресурсы, используемые в производстве.",
+      "max_primary_score": 1,
+      "correct": [
+        "информация"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
     }
   ]
 }

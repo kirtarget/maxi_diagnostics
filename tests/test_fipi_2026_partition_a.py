@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from campaign_catalog import load_campaign_catalog
+
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "authoring" / "campaigns" / "fipi-2026-min15" / "manifest.json"
@@ -73,7 +75,7 @@ def test_partition_a_matches_manifest_and_editorial_contract():
     seen = set()
 
     for diagnostic_id, path in FILES.items():
-        catalog = _load(path)
+        catalog = load_campaign_catalog(path)
         spec = specs[diagnostic_id]
         additions = {question["id"]: question for question in catalog["questions"] if question["id"].startswith("f26-")}
         assert len(catalog["questions"]) == spec["target_question_count"]

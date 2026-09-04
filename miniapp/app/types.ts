@@ -94,6 +94,7 @@ export type PublicDiagnosticSummary = {
   subject: string;
   mark: string;
   quick_count: number;
+  full_count: number;
   question_count: number;
 };
 
@@ -272,7 +273,7 @@ export type DailyPlanSummary = {
 };
 
 export type BootstrapResponse = {
-  catalog_contract: 2;
+  catalog_contract: 3;
   session_scope: string;
   latest_attempt_id: string | null;
   school: {

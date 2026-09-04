@@ -215,8 +215,13 @@ def validate_repository(root: Path) -> tuple[list[str], dict[str, int | str]]:
                 raw_diagnostic = _load_json(path)
                 if isinstance(raw_diagnostic, dict):
                     for question in raw_diagnostic.get("questions", []):
-                        if isinstance(question, dict) and isinstance(question.get("asset"), str):
+                        if not isinstance(question, dict):
+                            continue
+                        if isinstance(question.get("asset"), str):
                             declared_assets.add(question["asset"])
+                        for asset in question.get("assets") or ():
+                            if isinstance(asset, str):
+                                declared_assets.add(asset)
                 diagnostics.append(Diagnostic.model_validate(raw_diagnostic))
                 diagnostic = diagnostics[-1]
                 for question in diagnostic.questions:
@@ -310,11 +315,12 @@ def main(argv: list[str] | None = None, *, root: Path | None = None) -> int:
         for error in errors:
             print(error)
         return 1
-    print(
+    summary = (
         f"OK school={stats['school']} diagnostics={stats['diagnostics']} "
         f"questions={stats['questions']} assets={stats['assets']} "
         f"scales={stats['scales']}"
     )
+    print(summary)
     return 0
 
 

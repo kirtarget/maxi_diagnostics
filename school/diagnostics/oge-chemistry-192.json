@@ -4,6 +4,7 @@
   "subject": "Химия",
   "mark": "Вариант 3",
   "quick_count": 3,
+  "full_count": 19,
   "scoring": {
     "max_score": 100,
     "score_unit": "accuracy_percent"
@@ -449,6 +450,798 @@
       "correct": [
         "389"
       ]
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q1",
+      "type": "multiple",
+      "topic": "Задание 1",
+      "title": "Задание 1",
+      "prompt": "Выберите два утверждения, в которых говорится о железе как о химическом элементе.",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Железная окалина состоит из железа и кислорода"
+        },
+        {
+          "id": "b",
+          "label": "Оцинкованное железо устойчиво к атмосферным осадкам"
+        },
+        {
+          "id": "c",
+          "label": "Железо выплавляют из природных руд"
+        },
+        {
+          "id": "d",
+          "label": "Железо реагирует с кислородом"
+        },
+        {
+          "id": "e",
+          "label": "В состав пирита входит железо"
+        }
+      ],
+      "selection_limit": 2,
+      "correct": [
+        "a",
+        "e"
+      ],
+      "explanation": "Химический элемент — это то, что человек не видит, а может описать, только получив информацию из таблицы Менделеева или записав формулу сложного соединения. Такой характеристики соответствуют варианты «Железная окалина состоит из железа и кислорода» и «В состав пирита входит железо».",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q2",
+      "type": "input",
+      "topic": "Задание 2",
+      "title": "Задание 2",
+      "prompt": "На рисунке изображена модель строения ядра атома некоторого химического элемента.\nЗапишите в таблицу номер группы (X), в которой данный химический элемент расположен в Периодической системе Д. И. Менделеева, и массовое число (Y) данного атома. (Для записи ответа используйте арабские цифры).\nВ ответ запишите последовательность цифр, соответствующую буквам XY.\nХ | Y\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "16"
+      ],
+      "explanation": "Номер элемента в таблице Менделеева равен числу протонов в ядре, т. е. количеству «плюсов» на картинке. Это 3 — литий.\nОн находится в 1 группе, его массовое число равно шести (на схеме изображен изотоп).",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      },
+      "asset": "assets/questions/sp-chemistry-oge-2022-q2-1.jpg"
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q3",
+      "type": "input",
+      "topic": "Задание 3",
+      "title": "Задание 3",
+      "prompt": "Расположите химические элементы —\n1) Калий;\n2) Алюминий;\n3) Литий.\nв порядке ослабления металлических свойств образуемых ими простых веществ.\nЗапишите номера выбранных элементов в соответствующем порядке.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "132"
+      ],
+      "explanation": "Металлические свойства ослабевают в периоде слева направо, в группе снизу вверх.\nВ данном случае: калий, литий, алюминий.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q4",
+      "type": "matching",
+      "topic": "Задание 4",
+      "title": "Задание 4",
+      "prompt": "Установите соответствие между формулой соединения и степенью окисления йода в этом соединении.\nВ ответ запишите последовательность цифр, соответствующую буквам АБВ.",
+      "max_primary_score": 1,
+      "items": [
+        {
+          "id": "i1",
+          "label": "А) H5IO6"
+        },
+        {
+          "id": "i2",
+          "label": "Б) AlI3"
+        },
+        {
+          "id": "i3",
+          "label": "В) HIO3"
+        }
+      ],
+      "options": [
+        {
+          "id": "o1",
+          "label": "1) +7"
+        },
+        {
+          "id": "o2",
+          "label": "2) –1"
+        },
+        {
+          "id": "o3",
+          "label": "3) +3"
+        },
+        {
+          "id": "o4",
+          "label": "4) +5"
+        }
+      ],
+      "correct": {
+        "i1": "o1",
+        "i2": "o2",
+        "i3": "o4"
+      },
+      "explanation": "Зная, что степень окисления водорода равна +2, кислорода –2, алюминия +3, вычислим степень окисления йода.\nА) 5 + х – 12 = 0; х = +7\nБ) 3 – 3х = 0; х = –1\nВ) 1 + х – 6 = 0; х = +5",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q5",
+      "type": "multiple",
+      "topic": "Задание 5",
+      "title": "Задание 5",
+      "prompt": "Из предложенного перечня выберите два вещества с ковалентной полярной связью.",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "SCl4"
+        },
+        {
+          "id": "b",
+          "label": "Na3N"
+        },
+        {
+          "id": "c",
+          "label": "P2O5"
+        },
+        {
+          "id": "d",
+          "label": "CaBr2"
+        },
+        {
+          "id": "e",
+          "label": "C60"
+        }
+      ],
+      "selection_limit": 2,
+      "correct": [
+        "a",
+        "c"
+      ],
+      "explanation": "Ковалентная полярная связь реализуется между атомами разных неметаллов: SCl4; P2O5.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q6",
+      "type": "multiple",
+      "topic": "Задание 6",
+      "title": "Задание 6",
+      "prompt": "Из предложенного перечня выберите два утверждения, верные для характеристики как фтора, так и хлора.",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Химический элемент образует летучее водородное соединение состава Н2Э"
+        },
+        {
+          "id": "b",
+          "label": "Химический элемент образует высший оксид состава Э2О7"
+        },
+        {
+          "id": "c",
+          "label": "Является неметаллом"
+        },
+        {
+          "id": "d",
+          "label": "Соответствующее простое вещество при обычных условиях газообразно"
+        },
+        {
+          "id": "e",
+          "label": "На внешнем энергетическом уровне атома содержится пять электронов"
+        }
+      ],
+      "selection_limit": 2,
+      "correct": [
+        "c",
+        "d"
+      ],
+      "explanation": "Рассмотрим все варианты по порядку.\n1) Химический элемент образует летучее водородное соединение состава НЭ.\n2) Химический элемент хлор образует высший оксид состава Э2О7, фтор оксиды не образует.\n3) Является неметаллом.\n4) Соответствующее простое вещество при обычных условиях газообразно.\n5) На внешнем энергетическом уровне атома содержится семь электронов.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q7",
+      "type": "input",
+      "topic": "Задание 7",
+      "title": "Задание 7",
+      "prompt": "Из предложенного перечня веществ выберите кислотный оксид и соль.\n1) SO3\n2) Al2O3\n3) H2S\n4) K2SO4\n5) NH3\nВ ответ запишите последовательность цифр, соответствующую графам таблицы.\nКислотный оксид | Соль\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "14"
+      ],
+      "explanation": "Кислотный оксид — вещество, образованное неметаллом и кислородом в степени окисления — 2: SO3.\nСоль — вещество, образованное катионом и анионом кислотного остатка: K2SO4.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q8",
+      "type": "multiple",
+      "topic": "Задание 8",
+      "title": "Задание 8",
+      "prompt": "Какие два из перечисленных веществ не вступают в реакцию с оксидом железа (II)?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Al"
+        },
+        {
+          "id": "b",
+          "label": "CO"
+        },
+        {
+          "id": "c",
+          "label": "NaOH"
+        },
+        {
+          "id": "d",
+          "label": "CaCl2"
+        },
+        {
+          "id": "e",
+          "label": "H2SO4"
+        }
+      ],
+      "selection_limit": 2,
+      "correct": [
+        "c",
+        "d"
+      ],
+      "explanation": "Оксид железа (II) — FeO — основный оксид. Вступает в реакции с кислотами, кислотными оксидами и в реакцию замещения с Al и CO. Таким образом, он не реагирует с NaOH и CaCl2.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q9",
+      "type": "matching",
+      "topic": "Задание 9",
+      "title": "Задание 9",
+      "prompt": "Установите соответствие между реагирующими веществами и продуктами(-ом) их взаимодействия.\nВ ответ запишите последовательность цифр, соответствующую буквам АБВ.",
+      "max_primary_score": 1,
+      "items": [
+        {
+          "id": "i1",
+          "label": "А) Fe2(SO4)3 и BaCl"
+        },
+        {
+          "id": "i2",
+          "label": "Б) Fe и H2SO4 (pазб.)"
+        },
+        {
+          "id": "i3",
+          "label": "В) Fe2O3 и H2SO4 (pазб.)"
+        }
+      ],
+      "options": [
+        {
+          "id": "o1",
+          "label": "1) FeSO4 и H2O"
+        },
+        {
+          "id": "o2",
+          "label": "2) Fe2(SO4)3 и H2O"
+        },
+        {
+          "id": "o3",
+          "label": "3) FeCl3 и BaSO4"
+        },
+        {
+          "id": "o4",
+          "label": "4) FeSO4 и H2"
+        },
+        {
+          "id": "o5",
+          "label": "5) FeCl2 и BaSO4"
+        }
+      ],
+      "correct": {
+        "i1": "o3",
+        "i2": "o4",
+        "i3": "o2"
+      },
+      "explanation": "А) Fe2(SO4)3 + 3BaCl2 = 3BaSO4 + 2FeCl3\nБ) Fe + H2SO4 = FeSO4 + H2\nB) Fe2O3 + 3H2SO4 = Fe2(SO4)3 + 3H2O",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q10",
+      "type": "matching",
+      "topic": "Задание 10",
+      "title": "Задание 10",
+      "prompt": "Установите соответствие между формулой вещества и реагентами, с которыми это вещество может вступать в реакцию.\nВ ответ запишите последовательность цифр, соответствующую буквам АБВ.",
+      "max_primary_score": 1,
+      "items": [
+        {
+          "id": "i1",
+          "label": "А) С"
+        },
+        {
+          "id": "i2",
+          "label": "Б) Cl2"
+        },
+        {
+          "id": "i3",
+          "label": "В) Fe"
+        }
+      ],
+      "options": [
+        {
+          "id": "o1",
+          "label": "1) HCl, CuSO4"
+        },
+        {
+          "id": "o2",
+          "label": "2) KOH, H2"
+        },
+        {
+          "id": "o3",
+          "label": "3) Al2O3, NaCl"
+        },
+        {
+          "id": "o4",
+          "label": "4) CuO, O2"
+        }
+      ],
+      "correct": {
+        "i1": "o4",
+        "i2": "o2",
+        "i3": "o1"
+      },
+      "explanation": "А) C + CuO = Cu + CO\nC + O2 = CO2\nБ) Cl2 + 2KOH = KCl + KClO + H2O\nCl2 + H2 = 2HCl\nB) Fe + 2HCl = FeCl2 + H2\nFe + CuSO4 = Cu + FeSO4",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q11",
+      "type": "multiple",
+      "topic": "Задание 11",
+      "title": "Задание 11",
+      "prompt": "Из предложенного перечня выберите две окислительно-восстановительные реакции.",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Разложение гидроксида алюминия"
+        },
+        {
+          "id": "b",
+          "label": "Взаимодействие кальция и серы"
+        },
+        {
+          "id": "c",
+          "label": "Взаимодействие оксида серы (IV) и кислорода"
+        },
+        {
+          "id": "d",
+          "label": "Разложение карбоната магния"
+        },
+        {
+          "id": "e",
+          "label": "Взаимодействие оксида цинка и гидроксида калия"
+        }
+      ],
+      "selection_limit": 2,
+      "correct": [
+        "b",
+        "c"
+      ],
+      "explanation": "Реакции ОВР протекают всегда с участием простых веществ.\nCa + S = CaS\n2SO2 + O2 = 2SO3",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q12",
+      "type": "matching",
+      "topic": "Задание 12",
+      "title": "Задание 12",
+      "prompt": "Установите соответствие между реагирующими веществами и признаком протекающей между ними реакции.\nВ ответ запишите последовательность цифр, соответствующую буквам АБВ.",
+      "max_primary_score": 1,
+      "items": [
+        {
+          "id": "i1",
+          "label": "А) Fe2O3 и H2SO4"
+        },
+        {
+          "id": "i2",
+          "label": "Б) HCl (р-р) и Na2S"
+        },
+        {
+          "id": "i3",
+          "label": "В) NaOH и CuCl2"
+        }
+      ],
+      "options": [
+        {
+          "id": "o1",
+          "label": "1) Видимые признаки реакции отсутствуют;"
+        },
+        {
+          "id": "o2",
+          "label": "2) Выделение газа;"
+        },
+        {
+          "id": "o3",
+          "label": "3) Растворение твёрдого вещества;"
+        },
+        {
+          "id": "o4",
+          "label": "4) Образование осадка."
+        }
+      ],
+      "correct": {
+        "i1": "o3",
+        "i2": "o2",
+        "i3": "o4"
+      },
+      "explanation": "А) Fe2O3 + 3H2SO4 = Fe2(SO4)3 + 3H2O — растворение твердого вещества Fe2O3;\nБ) 2HCl + Na2S = 2NaCl + H2S — выделение газа H2S;\nB) 2NaOH + CuCl2 = Cu(OH)2 + 2NaCl — выпадение осадка Cu(OH)2.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q13",
+      "type": "multiple",
+      "topic": "Задание 13",
+      "title": "Задание 13",
+      "prompt": "Из предложенного перечня выберите два вещества, растворы которых не проводят электрический ток.",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Серная кислота"
+        },
+        {
+          "id": "b",
+          "label": "Глюкоза"
+        },
+        {
+          "id": "c",
+          "label": "Нитрат кальция"
+        },
+        {
+          "id": "d",
+          "label": "Гидроксид натрия"
+        },
+        {
+          "id": "e",
+          "label": "Этиловый спирт"
+        }
+      ],
+      "selection_limit": 2,
+      "correct": [
+        "b",
+        "e"
+      ],
+      "explanation": "Электрический ток не проводят органические вещества — глюкоза и этиловый спирт.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q14",
+      "type": "multiple",
+      "topic": "Задание 14",
+      "title": "Задание 14",
+      "prompt": "Выберите два исходных вещества, взаимодействию которых соответствует сокращённое ионное уравнение реакции:\nFe3+ + 3OH– = Fe(OH)3",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "FeCl2"
+        },
+        {
+          "id": "b",
+          "label": "Fe2O3"
+        },
+        {
+          "id": "c",
+          "label": "Fe2(SO4)3"
+        },
+        {
+          "id": "d",
+          "label": "KOH"
+        },
+        {
+          "id": "e",
+          "label": "Ba(OH)2"
+        },
+        {
+          "id": "f",
+          "label": "Mg(OH)2"
+        }
+      ],
+      "selection_limit": 2,
+      "correct": [
+        "c",
+        "d"
+      ],
+      "explanation": "На ионы расписываются сильные электролиты: растворимые соли и гидроксиды, сильные кислоты. Этой характеристике соответствуют Fe2(SO4)3 и KOH. Ba(OH)2 не подойдет, так как в результате такой реакции образуется нерастворимая соль BaSO4.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q15",
+      "type": "matching",
+      "topic": "Задание 15",
+      "title": "Задание 15",
+      "prompt": "Установите соответствие между схемой процесса, происходящего в окислительно-восстановительной реакции, и названием этого процесса.\nВ ответ запишите последовательность цифр, соответствующую буквам АБВ.",
+      "max_primary_score": 1,
+      "items": [
+        {
+          "id": "i1",
+          "label": "А) C–4 → C+4"
+        },
+        {
+          "id": "i2",
+          "label": "Б) Au0 → Au+3"
+        },
+        {
+          "id": "i3",
+          "label": "В) 2N+4 → N20"
+        }
+      ],
+      "options": [
+        {
+          "id": "o1",
+          "label": "1) Окисление;"
+        },
+        {
+          "id": "o2",
+          "label": "2) Восстановление."
+        }
+      ],
+      "correct": {
+        "i1": "o1",
+        "i2": "o1",
+        "i3": "o2"
+      },
+      "explanation": "Повышение степени окисления — процесс окисление.\nПонижение степени окисления — процесс восстановление.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q16",
+      "type": "multiple",
+      "topic": "Задание 16",
+      "title": "Задание 16",
+      "prompt": "Из перечисленных суждений о правилах работы с веществами в лаборатории и быту выберите верное(-ые) суждение(-я).",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Для определения наличия кислоты в растворе его следует понюхать и попробовать на вкус"
+        },
+        {
+          "id": "b",
+          "label": "Твёрдые вещества в лаборатории можно брать руками"
+        },
+        {
+          "id": "c",
+          "label": "Для проведения опытов в пробирку объёмом 10 мл наливают по 1–2 мл растворов реагентов"
+        },
+        {
+          "id": "d",
+          "label": "Для переливания жидких веществ из исходной склянки в пробирку можно использовать воронку"
+        }
+      ],
+      "selection_limit": 2,
+      "correct": [
+        "c",
+        "d"
+      ],
+      "explanation": "Для определения наличия кислоты в растворе его НЕЛЬЗЯ нюхать и пробовать на вкус.\nТвёрдые вещества в лаборатории НЕЛЬЗЯ брать руками.\nДля проведения опытов в пробирку объёмом 10 мл наливают по 1–2 мл растворов реагентов.\nДля переливания жидких веществ из исходной склянки в пробирку можно использовать воронку.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q17",
+      "type": "matching",
+      "topic": "Задание 17",
+      "title": "Задание 17",
+      "prompt": "Установите соответствие между двумя веществами и реактивом, с помощью которого можно различить эти вещества.\nВ ответ запишите последовательность цифр, соответствующую буквам АБВ.",
+      "max_primary_score": 1,
+      "items": [
+        {
+          "id": "i1",
+          "label": "А) Na2SO3 и Na2SiO3"
+        },
+        {
+          "id": "i2",
+          "label": "Б) CaCl2 и Mg(NO3)2"
+        },
+        {
+          "id": "i3",
+          "label": "В) FeSO4 и Na2SO4"
+        }
+      ],
+      "options": [
+        {
+          "id": "o1",
+          "label": "1) Ba(CH3COO)2"
+        },
+        {
+          "id": "o2",
+          "label": "2) Na3PO4"
+        },
+        {
+          "id": "o3",
+          "label": "3) AgNO3"
+        },
+        {
+          "id": "o4",
+          "label": "4) HCl"
+        }
+      ],
+      "correct": {
+        "i1": "o4",
+        "i2": "o3",
+        "i3": "o2"
+      },
+      "explanation": "А) Na2SO3 + 2HCl = 2NaCl + H2O + SO2 — выделение газа с неприятным запахом SO2.\nNa2SiO3 + 2HCl = H2SiO3 + 2NaCl — выпадение желеобразного осадка H2SiO3.\nБ) CaCl2 + 2AgNO3 = 2AgCl + Ca(NO3)2 — выпадение белого творожистого осадка AgCl.\nВ) 3FeSO4 + 2Na3PO4 = Fe3(PO4)2 + 3Na2SO4 — выпадение осадка Fe3(PO4)2.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q18",
+      "type": "input",
+      "topic": "Задание 18",
+      "title": "Задание 18",
+      "prompt": "Ацетат натрия представляет собой натриевую соль уксусной кислоты — СН3СOONa. В текстильной промышленности это вещество применяют при окрашивании тканей и дублении кожи. Ткань в процессе окрашивания необходимо обработать раствором ацетата натрия, в 1 л которого содержится 41 г этой соли.\nВычислите массовую долю (в процентах) натрия в ацетате натрия. Запишите число с точностью до целых.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "28"
+      ],
+      "explanation": "M = 12 + 3 + 12 + 32 + 23 = 82 г/моль\nw(Na) = 23 : 82 × 100 = 28%",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-chemistry-oge-2022-q19",
+      "type": "input",
+      "topic": "Задание 19",
+      "title": "Задание 19",
+      "prompt": "Ацетат натрия представляет собой натриевую соль уксусной кислоты — СН3СOONa. В текстильной промышленности это вещество применяют при окрашивании тканей и дублении кожи. Ткань в процессе окрашивания необходимо обработать раствором ацетата натрия, в 1 л которого содержится 41 г этой соли.\nОпределите массу (в граммах) натрия, который содержится в 20 л раствора для обработки тканей. Запишите число с точностью до целых.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "230"
+      ],
+      "explanation": "M = 12 + 3 + 12 + 32 + 23 = 82 г/моль\n1 л – 41 г соли\n20 л – х г соли\nх = 20 × 41 = 820 г\n820 г соли – y г натрия\n82 г соли – 23 г натрия\ny = 230 г",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
     }
   ]
 }

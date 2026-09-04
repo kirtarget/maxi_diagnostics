@@ -24,6 +24,7 @@ differ only by case. Each file contains one object with every field below:
   "subject": "Mathematics",
   "mark": "Grade 9",
   "quick_count": 1,
+  "full_count": 1,
   "scoring": {"max_score": 100, "score_unit": "accuracy_percent"},
   "questions": [
     {
@@ -56,6 +57,15 @@ task parts; other control characters remain forbidden. Text cannot be blank.
 `quick_count` is a strict integer from 1
 through the question count. Percentage accuracy is the only score unit, so
 `max_score` is exactly `100`.
+
+`full_count` is optional and defaults to the question count. When present it is a
+strict integer from `quick_count` through the question count, and the full mode
+asks exactly the first `full_count` questions. Everything the full mode produces
+follows that subset: the expected answer set on progress and completion, the
+review snapshot, the PDF, and the public `full_count` the Mini App slices by. The
+trainer and the daily plan keep drawing from every question in the file, so
+questions past `full_count` stay available as practice. Set it when a catalog
+gains extra questions that should not lengthen the diagnostic itself.
 
 `max_primary_score` is a strict integer from 1 through 100 and defaults to `1`.
 The result keeps `accuracy_percent` as its score unit, but calculates that percentage
@@ -422,6 +432,24 @@ Every item ID maps to one valid option ID in `correct`.
     {"id": "right-2", "label": "Two"}
   ],
   "correct": {"left-a": "right-2", "left-b": "right-1"}
+}
+```
+
+## Free short text (in progress)
+
+`scripts/import_sharepoint_diagnostics.py` appends editor-approved MAXIMUM
+diagnostics to the existing catalogs. Tasks whose key is a word or a `#`-joined
+list of accepted wordings are emitted as `text`:
+
+```json
+{
+  "id": "sp-chemistry-oge-2022-q6",
+  "type": "text",
+  "topic": "Задание 6",
+  "title": "Задание 6",
+  "prompt": "Впишите название процесса.",
+  "correct": ["возгонка", "сублимация"],
+  "max_length": 80
 }
 ```
 

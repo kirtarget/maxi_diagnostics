@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from campaign_catalog import campaign_questions, load_campaign_catalog
 from diagnostic.catalog import Diagnostic
 
 
@@ -48,10 +49,8 @@ def _manifest_diagnostics():
 def _added_questions():
     questions = {}
     for diagnostic_id, base_ids in BASE_IDS.items():
-        payload = json.loads(
-            (ROOT / "school/diagnostics" / f"{diagnostic_id}.json").read_text(
-                encoding="utf-8"
-            )
+        payload = load_campaign_catalog(
+            ROOT / "school/diagnostics" / f"{diagnostic_id}.json"
         )
         questions.update(
             (question["id"], question)
@@ -64,7 +63,7 @@ def test_partition_c_matches_manifest_and_preserves_existing_question_prefixes()
     manifest = _manifest_diagnostics()
     assert sum(len(item["slots"]) for item in manifest.values()) == 41
     for diagnostic_id, item in manifest.items():
-        payload = json.loads((ROOT / "school/diagnostics" / item["catalog_file"]).read_text(encoding="utf-8"))
+        payload = load_campaign_catalog(ROOT / "school/diagnostics" / item["catalog_file"])
         assert [question["id"] for question in payload["questions"][:len(BASE_IDS[diagnostic_id])]] == BASE_IDS[diagnostic_id]
         added = payload["questions"][len(BASE_IDS[diagnostic_id]):]
         assert [question["id"] for question in added] == [slot["question_id"] for slot in item["slots"]]
@@ -75,7 +74,7 @@ def test_partition_c_drafts_have_bounded_original_metadata_and_answer_keys():
     manifest = _manifest_diagnostics()
     explanations = set()
     for diagnostic_id, item in manifest.items():
-        payload = json.loads((ROOT / "school/diagnostics" / item["catalog_file"]).read_text(encoding="utf-8"))
+        payload = load_campaign_catalog(ROOT / "school/diagnostics" / item["catalog_file"])
         added = payload["questions"][len(BASE_IDS[diagnostic_id]):]
         slots = {slot["question_id"]: slot for slot in item["slots"]}
         for question in added:
@@ -159,6 +158,7 @@ def test_partition_c_review_fixes_have_independent_semantic_oracles():
 
 def test_partition_c_loads_in_production_catalog_without_oge_russian_position_one():
     diagnostics = []
+    campaign_scope = 0
     for diagnostic_id in BASE_IDS:
         payload = json.loads(
             (ROOT / "school/diagnostics" / f"{diagnostic_id}.json").read_text(
@@ -166,6 +166,7 @@ def test_partition_c_loads_in_production_catalog_without_oge_russian_position_on
             )
         )
         diagnostics.append(Diagnostic.model_validate(payload))
+        campaign_scope += len(campaign_questions(payload))
     russian = next(
         diagnostic
         for diagnostic in diagnostics
@@ -173,4 +174,5 @@ def test_partition_c_loads_in_production_catalog_without_oge_russian_position_on
     )
     added = [question for question in russian.questions if question.id.startswith("f26-")]
     assert {question.source.exam_position for question in added} == {"2", "3", "4", "5", "6", "8"}
-    assert sum(len(diagnostic.questions) for diagnostic in diagnostics) == 90
+    assert campaign_scope == 90
+    assert sum(len(diagnostic.questions) for diagnostic in diagnostics) >= campaign_scope

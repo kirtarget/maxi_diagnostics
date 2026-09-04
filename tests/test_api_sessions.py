@@ -1002,3 +1002,82 @@ def test_bootstrap_results_omit_the_estimate_for_older_attempts():
     }
 
     assert "estimate" not in serialize_attempt(row)
+
+
+def shortened_full_school(tmp_path: Path, full_count: int = 4):
+    """A sample school whose full mode stops before the last question."""
+    school_root = tmp_path / "school"
+    shutil.copytree(SAMPLE_SCHOOL, school_root)
+    path = school_root / "diagnostics" / "demo-math.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["full_count"] = full_count
+    path.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    school = load_school(school_root)
+    return school, load_catalog(school)
+
+
+def shortened_full_completion(catalog) -> dict:
+    return base_completion() | {
+        "content_version": catalog.content_version("demo-math", APPLICATION_SECRET),
+        "mode": "full",
+        "question_count": 4,
+        "answers": {
+            "q1": "2",
+            "q2": ["1", "3"],
+            "q3": {"a": "2", "b": "1"},
+            "q4": "42",
+        },
+    }
+
+
+def test_full_mode_scores_only_the_questions_full_count_covers(monkeypatch, tmp_path):
+    school, catalog = shortened_full_school(tmp_path)
+    recorded = {}
+
+    async def complete_attempt(completion):
+        recorded["completion"] = completion
+        return {
+            "attempt_id": completion.attempt_id,
+            "status": "completed",
+            "score": completion.score,
+            "correct_count": completion.correct_count,
+            "pdf_status": "pending",
+        }
+
+    client = make_client(
+        monkeypatch, complete_attempt=complete_attempt, catalog=catalog, school=school
+    )
+
+    response = client.post(
+        "/api/diagnostics/session/complete", json=shortened_full_completion(catalog)
+    )
+
+    assert response.status_code == 200
+    completion = recorded["completion"]
+    assert completion.question_count == 4
+    assert [
+        question["id"]
+        for question in completion.report_snapshot["diagnostic"]["questions"]
+    ] == ["q1", "q2", "q3", "q4"]
+    assert [
+        item["question_id"] for item in completion.report_snapshot["review_snapshot"]
+    ] == ["q1", "q2", "q3", "q4"]
+    assert catalog.public_summaries(APPLICATION_SECRET)[0]["full_count"] == 4
+    assert catalog.public_summaries(APPLICATION_SECRET)[0]["question_count"] == 5
+
+
+def test_full_mode_rejects_an_answer_beyond_full_count(monkeypatch, tmp_path):
+    school, catalog = shortened_full_school(tmp_path)
+    client = make_client(monkeypatch, catalog=catalog, school=school)
+    body = shortened_full_completion(catalog)
+    body["answers"]["q5"] = "однако"
+    body["question_count"] = 5
+
+    response = client.post("/api/diagnostics/session/complete", json=body)
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "invalid_question_count"

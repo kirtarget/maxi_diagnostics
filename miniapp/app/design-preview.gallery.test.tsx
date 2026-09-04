@@ -50,10 +50,10 @@ const q = (id: string, extra: Partial<Question> = {}): Question => ({
 } as Question);
 
 const diagnostics: PublicDiagnostic[] = [
-  { id: "math", content_version: "v1", exam: "ОГЭ", subject: "Математика", mark: "М", quick_count: 10, question_count: 24, questions: Array.from({ length: 24 }, (_, i) => q(String(i + 1))) },
-  { id: "rus", content_version: "v1", exam: "ОГЭ", subject: "Русский язык", mark: "Р", quick_count: 10, question_count: 20, questions: Array.from({ length: 20 }, (_, i) => q(`r${i + 1}`)) },
-  { id: "phys", content_version: "v1", exam: "ОГЭ", subject: "Физика", mark: "Ф", quick_count: 10, question_count: 24, questions: Array.from({ length: 24 }, (_, i) => q(`p${i + 1}`)) },
-  { id: "chem", content_version: "v1", exam: "ЕГЭ", subject: "Химия", mark: "Х", quick_count: 10, question_count: 22, questions: Array.from({ length: 22 }, (_, i) => q(`c${i + 1}`)) },
+  { id: "math", content_version: "v1", exam: "ОГЭ", subject: "Математика", mark: "М", quick_count: 10, full_count: 24, question_count: 24, questions: Array.from({ length: 24 }, (_, i) => q(String(i + 1))) },
+  { id: "rus", content_version: "v1", exam: "ОГЭ", subject: "Русский язык", mark: "Р", quick_count: 10, full_count: 20, question_count: 20, questions: Array.from({ length: 20 }, (_, i) => q(`r${i + 1}`)) },
+  { id: "phys", content_version: "v1", exam: "ОГЭ", subject: "Физика", mark: "Ф", quick_count: 10, full_count: 24, question_count: 24, questions: Array.from({ length: 24 }, (_, i) => q(`p${i + 1}`)) },
+  { id: "chem", content_version: "v1", exam: "ЕГЭ", subject: "Химия", mark: "Х", quick_count: 10, full_count: 22, question_count: 22, questions: Array.from({ length: 22 }, (_, i) => q(`c${i + 1}`)) },
 ];
 
 const profile = gameplayProfileView({

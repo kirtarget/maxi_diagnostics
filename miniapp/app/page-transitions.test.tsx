@@ -21,6 +21,7 @@ const diagnostic: PublicDiagnostic = {
   subject: "Математика",
   mark: "М",
   quick_count: 1,
+  full_count: 1,
   question_count: 1,
   questions: [{
     id: "q1",
@@ -58,7 +59,7 @@ const serverResult: ServerResult = {
 
 function bootstrapPayload(overrides: Partial<BootstrapResponse> = {}): BootstrapResponse {
   return {
-    catalog_contract: 2,
+    catalog_contract: 3,
     session_scope: SESSION_SCOPE,
     latest_attempt_id: null,
     school: {

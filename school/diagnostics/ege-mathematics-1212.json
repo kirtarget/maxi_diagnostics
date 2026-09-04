@@ -4,6 +4,7 @@
   "subject": "Математика",
   "mark": "Диагностика",
   "quick_count": 3,
+  "full_count": 15,
   "scoring": {
     "max_score": 100,
     "score_unit": "accuracy_percent"
@@ -119,6 +120,248 @@
     {"id":"f26-ege-math-a08","type":"input","topic":"Движение","title":"Задание 10","prompt":"Автобус прошёл 360 км с постоянной скоростью 72 км/ч. Сколько часов длилась поездка?","correct":["5"],"explanation":"Время равно отношению пути к скорости: 360 / 72 = 5 часов.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"10","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
     {"id":"f26-ege-math-a09","type":"input","topic":"Планиметрия","title":"Задание 1","prompt":"Радиус круга равен 5. Найдите отношение площади круга к числу π.","correct":["25"],"explanation":"Площадь круга равна πr². После деления на π остаётся r² = 5² = 25.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"1","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
     {"id":"f26-ege-math-a10","type":"input","topic":"Стереометрия","title":"Задание 3","prompt":"Объём куба равен 343. Найдите длину его ребра.","correct":["7"],"explanation":"Объём куба равен a³. Поскольку 343 = 7³, ребро куба равно 7.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"3","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
-    {"id":"f26-ege-math-a11","type":"input","topic":"Логарифмические уравнения","title":"Задание 6","prompt":"Решите уравнение log по основанию 2 от x = 6.","correct":["64"],"explanation":"По определению логарифма x = 2^6 = 64.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"6","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}}
+    {"id":"f26-ege-math-a11","type":"input","topic":"Логарифмические уравнения","title":"Задание 6","prompt":"Решите уравнение log по основанию 2 от x = 6.","correct":["64"],"explanation":"По определению логарифма x = 2^6 = 64.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"6","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/ma_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {
+      "id": "sp-mathematics-ege-2022-q1",
+      "type": "input",
+      "topic": "Решать планиметрические задачи, применять свойства фигур, факты и формулы для углов и площадей",
+      "title": "Задание 1",
+      "prompt": "Решите уравнение:\n4x – 3 = 1/8",
+      "max_primary_score": 1,
+      "correct": [
+        "1,5",
+        "1.5"
+      ],
+      "explanation": "4x – 3 = 1/8\n22(x – 3) = 2–3\n2(x – 3) = –3\nx – 3 = –1,5\nx = –1,5 + 3\nx = 1,5",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "1",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-mathematics-ege-2022-q2",
+      "type": "input",
+      "topic": "Задание 2",
+      "title": "Задание 2",
+      "prompt": "В магазине в среднем из 100 лампочек в коробке 5 оказываются бракованными. Какова вероятность, что случайно выбранная лампочка окажется рабочей?",
+      "max_primary_score": 1,
+      "correct": [
+        "0,95",
+        "0.95"
+      ],
+      "explanation": "100 – 5 = 95 — количество рабочих лампочек.\nВоспользуемся определением вероятности:\nP = (число подходящих вариантов)/(общее число вариантов) = 95/100 = 0,95",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-mathematics-ege-2022-q3",
+      "type": "input",
+      "topic": "Решать задачи стереометрии, находить объёмы, расстояния и углы в пространстве",
+      "title": "Задание 3",
+      "prompt": "В параллелограмме ABCD высота BH, проведенная к стороне AD, равна 16, а сторона AB = 20. Найдите косинус угла C.",
+      "max_primary_score": 1,
+      "correct": [
+        "0,6",
+        "0.6"
+      ],
+      "explanation": "Углы A и C равны по свойству параллелограмма, тогда cosA = cosC.\nРассмотрим прямоугольный треугольник ABH:\nAH : BH : AB = x:16:20 — это Пифагорова тройка 3 : 4 : 5| · 4 → x = 3 · 4 = 12.\nТогда искомый косинус равен:\ncosA = AH/AB = 12/20 = 0,6",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "3",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-mathematics-ege-2022-q4",
+      "type": "input",
+      "topic": "Задание 4",
+      "title": "Задание 4",
+      "prompt": "Найдите значение выражения:\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "3"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      },
+      "asset": "assets/questions/sp-mathematics-ege-2022-q4-1.png"
+    },
+    {
+      "id": "sp-mathematics-ege-2022-q5",
+      "type": "input",
+      "topic": "Задание 5",
+      "title": "Задание 5",
+      "prompt": "В прямоугольный параллелепипед вписан цилиндр. Радиус основания цилиндра равен 8 см, а высота — 10 см. Найдите объем параллелепипеда (в см3).\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "2560"
+      ],
+      "explanation": "Цилиндр вписан в параллелепипед, значит высота этого параллелепипеда равна высоте цилиндра, а основанием является квадрат.\nСторона квадрата a = 2R = 16 см.\nVпаррал. = abc = 16 · 16 · 10 = 2560",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      },
+      "asset": "assets/questions/sp-mathematics-ege-2022-q5-1.png"
+    },
+    {
+      "id": "sp-mathematics-ege-2022-q6",
+      "type": "input",
+      "topic": "Решать уравнения, неравенства и их системы",
+      "title": "Задание 6",
+      "prompt": "Тело движется по прямой так, что его расстояние изменяется по закону S(t) = t3 + 5t2 – 12t + 27 (где S — расстояние от точки отсчета в метрах, t — время в секундах, измеренное с начала движения). В какой момент времени ускорение тела было равно 22 м/с2?\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "2"
+      ],
+      "explanation": "Ускорение тела — вторая производная S(t) по времени t.\nS′(t) = 3t2 + 5 · 2t – 12 = 3t2 + 10t – 12\nS′′(t) = 3 · 2t + 10 = 6t + 10\n6t + 10 = 22\n6t = 12\nt = 2",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "6",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-mathematics-ege-2022-q7",
+      "type": "input",
+      "topic": "Задание 7",
+      "title": "Задание 7",
+      "prompt": "Компания Экомир изготавливает фильтры для воды и продает их по цене p = 300 руб. за штуку. Для производства каждой единицы товара требуется сырье, стоимость которого v = 200 руб. Расходы на аренду помещения и обслуживание оборудования f = 700 000 руб. компания оплачивает постоянно каждый месяц. Месячная прибыль (в рублях) определяется по формуле π(q) = q(p – v) – f. Какое минимальное количество фильтров q (в штуках) компания должна выпускать за месяц, чтобы её прибыль составляла не меньше 500 000 руб.?\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "12000"
+      ],
+      "explanation": "π(q) = q(p – v) – f ≥ 500 000\nq(300 – 200) – 700 000 ≥ 500 000\n100q ≥ 1 200 000\nq ≥ 12 000\nq = 12 000",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-mathematics-ege-2022-q8",
+      "type": "input",
+      "topic": "Задание 8",
+      "title": "Задание 8",
+      "prompt": "Летом стоимость свежих овощей уменьшается на 8% по сравнению с их ценой весной. Осенью овощи становятся еще на 12% дешевле, чем летом. На сколько процентов изменяется стоимость овощей осенью по сравнению с весной?",
+      "max_primary_score": 1,
+      "correct": [
+        "19,04",
+        "19.04"
+      ],
+      "explanation": "Для удобства счета возьмем стоимость овощей весной за 100 руб. Тогда стоимость овощей летом равна 92 руб. (уменьшилась на 8%). Найдем стоимость овощей осенью, когда они подешевеют еще на 12%:\nЗначит овощи осенью подешевели на 19,04% по сравнению с их ценой весной.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-mathematics-ege-2022-q9",
+      "type": "input",
+      "topic": "Задание 9",
+      "title": "Задание 9",
+      "prompt": "Прямая проходит через точки A (–1; –6) и B (2; –9). Найдите значение функции в точке x = 15.",
+      "max_primary_score": 1,
+      "correct": [
+        "-22"
+      ],
+      "explanation": "Подставим координаты заданных точек в уравнение прямой y = kx + b.\nТогда уравнение функции имеет вид y = –x – 7.\nПолучим, что y(15) = –15 – 7 = –22.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-mathematics-ege-2022-q10",
+      "type": "input",
+      "topic": "Строить математическую модель текстовой задачи, решать её и оценивать правдоподобие результата",
+      "title": "Задание 10",
+      "prompt": "Монетку подбрасывают 4 раза. Найдите вероятность того, что орел при этом выпадет не менее двух раз.",
+      "max_primary_score": 1,
+      "correct": [
+        "0,6875",
+        "0.6875"
+      ],
+      "explanation": "Рассмотрим возможные варианты развития событий:\nВсего получилось 16 возможных комбинаций выпадения орла и решки. Вариантов, в которых выпало не менее 2 орлов — 11.\nТогда искомая вероятность по определению равна:\nP = 11/16 = 0,6875",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "10",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-mathematics-ege-2022-q11",
+      "type": "input",
+      "topic": "Задание 11",
+      "title": "Задание 11",
+      "prompt": "Найдите наибольшее значение функции y = 13x + 6 sinx – 9 на отрезке .",
+      "max_primary_score": 1,
+      "correct": [
+        "-9"
+      ],
+      "explanation": "1 способ:\nНайдем производную функции и приравняем её нулю:\ny′ = 13 + 6cosx\n13 + 6cosx = 0\ncosx = –13/6 → x = Ø\nТ. к. мы не получили критических точек, то найдем значения функции в крайних точках заданного промежутка:\ny(0) = 13 · 0 + 6sin0 – 9 = –9\nНаибольшим значение функции является y(0) = –9.\n2 способ:\nВоспользуемся ограничениями экзамена. Ответ должен быть таким, чтобы его можно было записать в бланк ответов, т. е. не содержать π и другие обозначения. Единственное число из заданного промежутка, которое будет удовлетворять этому условия это x = 0.\ny(0) = 13 · 0 + 6sin0 – 9 = –9",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      },
+      "asset": "assets/questions/sp-mathematics-ege-2022-q11-1.png"
+    }
   ]
 }

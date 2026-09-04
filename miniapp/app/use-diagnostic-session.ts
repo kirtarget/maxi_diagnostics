@@ -81,7 +81,9 @@ export type DiagnosticSession = {
 };
 
 function questionsFor(diagnostic: PublicDiagnostic, mode: DiagnosticMode): Question[] {
-  return mode === "quick" ? diagnostic.questions.slice(0, diagnostic.quick_count) : diagnostic.questions;
+  return diagnostic.questions.slice(
+    0, mode === "quick" ? diagnostic.quick_count : diagnostic.full_count,
+  );
 }
 
 export function useDiagnosticSession({

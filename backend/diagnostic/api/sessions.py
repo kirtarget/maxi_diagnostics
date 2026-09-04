@@ -78,10 +78,7 @@ def build_completion(
         "unassessed_part": school.brand.interface.unassessed_full if body.mode == "quick" else None,
         "forecast": forecast,
     }
-    selected_questions = (
-        diagnostic.questions[: diagnostic.quick_count]
-        if body.mode == "quick" else diagnostic.questions
-    )
+    selected_questions = diagnostic.questions_for_mode(body.mode)
     review_snapshot = build_review_snapshot(selected_questions, body.answers)
     public_review_snapshot = public_review_items({"review_snapshot": review_snapshot})
     report_snapshot = {
@@ -379,7 +376,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
             session_subject_key(secret, user["id"])
         )
         return {
-            "catalog_contract": 2,
+            "catalog_contract": 3,
             "session_scope": _session_scope(
                 secret, user["id"], generation
             ),

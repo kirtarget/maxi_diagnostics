@@ -130,6 +130,7 @@ def _report(catalog, raw: dict[str, dict[str, Any]], selected: set[str]) -> dict
                     "exam": diagnostic.exam,
                     "subject": diagnostic.subject,
                     "question_id": question.id,
+                    "provider": "none" if question.source is None else question.source.provider,
                     "status": "draft" if gaps else "reviewed",
                     "complete": not gaps,
                     "gaps": gaps,
@@ -137,6 +138,9 @@ def _report(catalog, raw: dict[str, dict[str, Any]], selected: set[str]) -> dict
                 }
             )
     complete = sum(item["complete"] for item in items)
+    providers: dict[str, int] = {}
+    for item in items:
+        providers[item["provider"]] = providers.get(item["provider"], 0) + 1
     return {
         "schema_version": 1,
         "approval_policy": "human_only",
@@ -146,6 +150,7 @@ def _report(catalog, raw: dict[str, dict[str, Any]], selected: set[str]) -> dict
             "complete": complete,
             "incomplete": len(items) - complete,
             "approved": 0,
+            "by_provider": dict(sorted(providers.items())),
         },
         "items": items,
     }

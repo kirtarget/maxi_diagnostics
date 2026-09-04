@@ -4,6 +4,7 @@
   "subject": "История",
   "mark": "Вариант 1",
   "quick_count": 3,
+  "full_count": 15,
   "scoring": {
     "max_score": 100,
     "score_unit": "accuracy_percent"
@@ -262,6 +263,464 @@
         "4"
       ]
     },
-    {"id":"f26-oge-hist-a01","type":"input","topic":"Хронология преобразований Петра I","title":"Задание 2","prompt":"Какое событие произошло раньше? 1) учреждение Сената 2) основание Академии наук 3) принятие Табели о рангах 4) учреждение Святейшего синода. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"2","official_criteria_url":"https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/is_9_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Сенат был учреждён в 1711 году. Синод появился в 1721 году, Табель о рангах в 1722 году, Академия наук в 1724 году. Ответ 1.","correct":["1"]}
+    {"id":"f26-oge-hist-a01","type":"input","topic":"Хронология преобразований Петра I","title":"Задание 2","prompt":"Какое событие произошло раньше? 1) учреждение Сената 2) основание Академии наук 3) принятие Табели о рангах 4) учреждение Святейшего синода. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"2","official_criteria_url":"https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/is_9_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Сенат был учреждён в 1711 году. Синод появился в 1721 году, Табель о рангах в 1722 году, Академия наук в 1724 году. Ответ 1.","correct":["1"]},
+    {
+      "id": "sp-history-oge-2022-q1",
+      "type": "matching",
+      "topic": "Задание 1",
+      "title": "Задание 1",
+      "prompt": "Установите соответствие между событиями и годами: к каждой позиции из первого столбца подберите соответствующую позицию из второго столбца.\nВ ответ запишите последовательность цифр, соответствующую буквам АБВ.",
+      "max_primary_score": 1,
+      "items": [
+        {
+          "id": "i1",
+          "label": "А) Учреждение Государственного совета;"
+        },
+        {
+          "id": "i2",
+          "label": "Б) Ледовое побоище;"
+        },
+        {
+          "id": "i3",
+          "label": "В) Принятие Соборного уложения в России."
+        }
+      ],
+      "options": [
+        {
+          "id": "o1",
+          "label": "1) 1242 г."
+        },
+        {
+          "id": "o2",
+          "label": "2) 1480 г."
+        },
+        {
+          "id": "o3",
+          "label": "3) 1649 г."
+        },
+        {
+          "id": "o4",
+          "label": "4) 1783 г."
+        },
+        {
+          "id": "o5",
+          "label": "5) 1810 г."
+        }
+      ],
+      "correct": {
+        "i1": "o5",
+        "i2": "o1",
+        "i3": "o3"
+      },
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-history-oge-2022-q2",
+      "type": "input",
+      "topic": "Хронология, термины, аргументы, карта, источник, изображения, история культуры и зарубежная история",
+      "title": "Задание 2",
+      "prompt": "Расположите в хронологической последовательности исторические события. В ответ запишите цифры, которыми обозначены исторические события в правильной последовательности.\n1) Присоединение Крыма к Российской империи;\n2) Учреждение уроков и погостов княгиней Ольгой;\n3) Заключение Андрусовского перемирия;\n4) Отмена крепостного права в России.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "2314"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "2",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-history-oge-2022-q3",
+      "type": "text",
+      "topic": "Задание 3",
+      "title": "Задание 3",
+      "prompt": "Запишите термин, о котором идёт речь.\nДокумент, выдаваемый русским князьям ордынскими ханами, подтверждавший их право на княжение.",
+      "max_primary_score": 1,
+      "correct": [
+        "ярлык"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-history-oge-2022-q4",
+      "type": "multiple",
+      "topic": "Задание 4",
+      "title": "Задание 4",
+      "prompt": "Какие события относятся ко времени правления Петра I? Найдите в приведённом ниже списке два события.",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Учреждение Правительствующего Сената"
+        },
+        {
+          "id": "b",
+          "label": "Отмена местничества"
+        },
+        {
+          "id": "c",
+          "label": "Учреждение патриаршества в России"
+        },
+        {
+          "id": "d",
+          "label": "Введение рекрутской повинности"
+        },
+        {
+          "id": "e",
+          "label": "Издание манифеста о трёхдневной барщине"
+        }
+      ],
+      "selection_limit": 2,
+      "correct": [
+        "a",
+        "d"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-history-oge-2022-q5",
+      "type": "single",
+      "topic": "Задание 5",
+      "title": "Задание 5",
+      "prompt": "Ниже приведён перечень терминов. Все они, за исключением одного, относятся периоду правления Алексея Михайловича в 1645–1676 гг. Найдите термин, «выпадающий» из данного ряда.",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Новоторговый устав"
+        },
+        {
+          "id": "b",
+          "label": "Церковный раскол"
+        },
+        {
+          "id": "c",
+          "label": "Губернии"
+        },
+        {
+          "id": "d",
+          "label": "Соляной бунт"
+        },
+        {
+          "id": "e",
+          "label": "Соборное уложение"
+        }
+      ],
+      "correct": "c",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-history-oge-2022-q7",
+      "type": "matching",
+      "topic": "Задание 7",
+      "title": "Задание 7",
+      "prompt": "Используя данные таблицы, завершите представленные ниже суждения, соотнеся их начала и варианты завершения.\nГосударственные расходы при Екатерине II (в %).\nВ ответ запишите последовательность цифр, соответствующую буквам АБВ.",
+      "max_primary_score": 1,
+      "items": [
+        {
+          "id": "i1",
+          "label": "А) К концу правления Екатерины II расходы на управление…"
+        },
+        {
+          "id": "i2",
+          "label": "Б) За годы правления Екатерины II сократилась доля расходов…"
+        },
+        {
+          "id": "i3",
+          "label": "В) Наименьшей статьёй расходов при Екатерине II были расходы…"
+        }
+      ],
+      "options": [
+        {
+          "id": "o1",
+          "label": "1) На флот."
+        },
+        {
+          "id": "o2",
+          "label": "2) На двор."
+        },
+        {
+          "id": "o3",
+          "label": "3) Составляли более половины всех расходов государства."
+        },
+        {
+          "id": "o4",
+          "label": "4) На армию."
+        },
+        {
+          "id": "o5",
+          "label": "5) Перестали быть главной расходной статьёй."
+        }
+      ],
+      "correct": {
+        "i1": "o3",
+        "i2": "o4",
+        "i3": "o1"
+      },
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-history-oge-2022-q8",
+      "type": "text",
+      "topic": "Задание 8",
+      "title": "Задание 8",
+      "prompt": "Укажите имя императора, при котором к России была присоединена территория под цифрой «2», (если необходимо, в ответе цифры записывайте словами).",
+      "max_primary_score": 1,
+      "correct": [
+        "Александрпервый"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      },
+      "asset": "assets/questions/sp-history-oge-2022-q8-1.png"
+    },
+    {
+      "id": "sp-history-oge-2022-q9",
+      "type": "text",
+      "topic": "Задание 9",
+      "title": "Задание 9",
+      "prompt": "Укажите название государства, которое передало России территорию под «1» по условиям Фридрихсгамского мирного договора.",
+      "max_primary_score": 1,
+      "correct": [
+        "Швеция"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      },
+      "asset": "assets/questions/sp-history-oge-2022-q8-1.png"
+    },
+    {
+      "id": "sp-history-oge-2022-q10",
+      "type": "input",
+      "topic": "Задание 10",
+      "title": "Задание 10",
+      "prompt": "Прочитайте сочинение историка и укажите в ответе цифру, которой на схеме обозначен объект, о котором говорится в отрывке.\n«Движение на отдельных участках железной дороги началось уже в 1846 г., а в 1851 г. состоялось официальное открытие всей магистрали. Из Петербурга в _________ отправился первый «всенародный» поезд. «Санкт-Петербургские ведомости» написали тогда: «1-е ноября останется днем, навсегда памятным для России: в этот день происходило... открытие для публики железной дороги, соединяющей две наши столицы — голову и сердце России».\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "4"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      },
+      "asset": "assets/questions/sp-history-oge-2022-q8-1.png"
+    },
+    {
+      "id": "sp-history-oge-2022-q11",
+      "type": "single",
+      "topic": "Задание 11",
+      "title": "Задание 11",
+      "prompt": "Рассмотрите изображение и ответьте на вопросы.\nЧто из перечисленного относится к тому же десятилетию, когда был учреждён государственный орган, юбилею которого посвящена данная памятная медаль?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Издание указа о единонаследии"
+        },
+        {
+          "id": "b",
+          "label": "Заключение Ништадтского мира"
+        },
+        {
+          "id": "c",
+          "label": "Основание Санкт-Петербурга"
+        },
+        {
+          "id": "d",
+          "label": "Битва при Лесной"
+        }
+      ],
+      "correct": "a",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      },
+      "asset": "assets/questions/sp-history-oge-2022-q11-1.png"
+    },
+    {
+      "id": "sp-history-oge-2022-q12",
+      "type": "text",
+      "topic": "Задание 12",
+      "title": "Задание 12",
+      "prompt": "Заполните пропуск в схеме.",
+      "max_primary_score": 1,
+      "correct": [
+        "Пропагандистское"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      },
+      "asset": "assets/questions/sp-history-oge-2022-q12-1.png"
+    },
+    {
+      "id": "sp-history-oge-2022-q14",
+      "type": "single",
+      "topic": "Задание 14",
+      "title": "Задание 14",
+      "prompt": "Создателем какого из приведённых памятников культуры является Сильвестр?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "«Житие протопопа Аввакума»"
+        },
+        {
+          "id": "b",
+          "label": "«Слово о законе и благодати»"
+        },
+        {
+          "id": "c",
+          "label": "«Домострой»"
+        }
+      ],
+      "correct": "c",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-history-oge-2022-q15",
+      "type": "input",
+      "topic": "Задание 15",
+      "title": "Задание 15",
+      "prompt": "Участником какого из перечисленных событий, процессов был Дж. Вашингтон? Укажите порядковый номер этого события или процесса.\n1) Возникновение Римской империи;\n2) Гуситское движение в Чехии;\n3) Реформация в Германии;\n4) Война за независимость США.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "4"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-history-oge-2022-q16",
+      "type": "input",
+      "topic": "Задание 16",
+      "title": "Задание 16",
+      "prompt": "С каким из перечисленных событий, процессов связано издание М. Лютером «95 тезисов»? Укажите порядковый номер этого события или процесса.\n1) Возникновение Римской империи;\n2) Гуситское движение в Чехии;\n3) Реформация в Германии;\n4) Война за независимость США.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "3"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    },
+    {
+      "id": "sp-history-oge-2022-q17",
+      "type": "input",
+      "topic": "Задание 17",
+      "title": "Задание 17",
+      "prompt": "1) Возникновение Римской империи;\n2) Гуситское движение в Чехии;\n3) Реформация в Германии;\n4) Война за независимость США.\nК какому событию или процессу имеет непосредственное отношение данный исторический источник? Укажите порядковый номер этого события или процесса.\n«Первоначально сторонники проповедника Яна сплочённо воевали против католиков, организовавших против них серию крестовых походов, позднее их движение разделилось на умеренных («чашников»), примирившихся с католиками, и радикалов («таборитов»), потерпевших поражение.\nВ этой войне, в отличие от всех предыдущих крупных вооружённых конфликтов на территории Европы, широко использовалось ручное огнестрельное оружие. Армия восставших, состоявшая в основном из добровольцев, нанесла множество поражений более крупным профессиональным армиям и отрядам тяжело вооружённых рыцарей немецких, австрийских, венгерских, польских и итальянских феодалов, защищавших интересы Папы Римского».\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "2"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-03"
+      }
+    }
   ]
 }

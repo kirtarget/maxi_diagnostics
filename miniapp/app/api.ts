@@ -197,7 +197,7 @@ function readLocalSessionEnvelope(
       (syncedQuestionIndex !== undefined && (!Number.isInteger(syncedQuestionIndex))) ||
       (syncedAnswers !== undefined && !isRecord(syncedAnswers))
     ) return null;
-    const questionCount = mode === "quick" ? diagnostic.quick_count : diagnostic.question_count;
+    const questionCount = mode === "quick" ? diagnostic.quick_count : diagnostic.full_count;
     if (questionIndex < 0 || questionIndex >= questionCount) return null;
     if (typeof syncedQuestionIndex === "number" && (
       syncedQuestionIndex < 0 || syncedQuestionIndex >= questionCount
@@ -280,9 +280,9 @@ export function validateSavedSession(
   const diagnostic = diagnostics.find((item) => item.id === diagnosticId);
   if (!diagnostic) return null;
   if (diagnostic.content_version !== contentVersion) return null;
-  const questions = mode === "quick"
-    ? diagnostic.questions.slice(0, diagnostic.quick_count)
-    : diagnostic.questions;
+  const questions = diagnostic.questions.slice(
+    0, mode === "quick" ? diagnostic.quick_count : diagnostic.full_count,
+  );
   if (questionIndex < 0 || questionIndex >= questions.length) return null;
   if (syncedQuestionIndex !== undefined && (
     syncedQuestionIndex < 0 || syncedQuestionIndex >= questions.length
@@ -488,7 +488,7 @@ function savedServerSession(
   if (!attempt || attempt.status !== "in_progress") return null;
   const diagnostic = diagnostics.find((item) => item.id === attempt.diagnostic_id);
   if (!diagnostic) return null;
-  const questionCount = attempt.mode === "quick" ? diagnostic.quick_count : diagnostic.questions.length;
+  const questionCount = attempt.mode === "quick" ? diagnostic.quick_count : diagnostic.full_count;
   if (attempt.question_count !== questionCount) return null;
   return validateSavedSession({
     attemptId: attempt.attempt_id,
