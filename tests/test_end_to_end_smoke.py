@@ -68,7 +68,7 @@ async def test_full_configured_diagnostic_persists_one_result_and_queues_one_pdf
         answers = {
             question.id: (
                 question.correct[0]
-                if question.type == "input"
+                if question.type in ("input", "text")
                 else list(question.correct)
                 if question.type == "multiple"
                 else question.correct
