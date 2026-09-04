@@ -42,6 +42,7 @@ from diagnostic.numeric import is_valid_numeric_answer  # noqa: E402
 
 
 ID_PREFIX = "sp-"
+_QUICK_COUNT_LINE = re.compile(r'^([ \t]*)"quick_count": \d+,\n', re.MULTILINE)
 MAX_PROMPT_CHARS = 4000
 MAX_EXPLANATION_CHARS = 2000
 MAX_OPTION_LABEL_CHARS = 500
@@ -773,9 +774,22 @@ def read_target(path: Path) -> Target:
     return Target(path, payload, text[: opening + 1], chunks, text[position:])
 
 
-def render_target(target: Target, chunks: list[tuple[str, str]]) -> str:
+def render_target(target: Target, chunks: list[tuple[str, str]], kept: int) -> str:
+    """Rewrite the file, pinning the full diagnostic to the questions it had.
+
+    Appended `sp-` questions feed daily practice, not the full run, so a catalog
+    that gains them declares `full_count`. An existing declaration is left alone,
+    which keeps a re-import byte-identical.
+    """
+    head = target.head
+    if kept < len(chunks) and "full_count" not in target.payload:
+        head = _QUICK_COUNT_LINE.sub(
+            lambda match: f'{match.group(0)}{match.group(1)}"full_count": {kept},\n',
+            head,
+            count=1,
+        )
     body = ",".join(f"\n    {chunk}" for _, chunk in chunks)
-    return f"{target.head}{body}\n  {target.tail}"
+    return f"{head}{body}\n  {target.tail}"
 
 
 def render_question(question: dict[str, Any]) -> str:
@@ -933,7 +947,9 @@ def main(argv: list[str] | None = None) -> int:
             raise ImportError(f"Too many questions in {target.path.name}: {len(chunks)}")
         written.append((target.path.name, len(kept), len(additions)))
         if not arguments.dry_run:
-            write_diagnostic(target.path, render_target(target, chunks))
+            write_diagnostic(
+                target.path, render_target(target, chunks, len(kept))
+            )
 
     if not arguments.dry_run:
         assets_root.mkdir(parents=True, exist_ok=True)

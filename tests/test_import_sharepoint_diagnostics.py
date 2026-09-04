@@ -295,9 +295,34 @@ def test_dry_run_leaves_the_repository_untouched(tmp_path):
 def test_repository_catalogs_round_trip_without_reformatting():
     for path in sorted((ROOT / "school" / "diagnostics").glob("*.json")):
         target = importer.read_target(path)
-        assert importer.render_target(target, target.chunks) == path.read_text(
-            encoding="utf-8"
-        )
+        rendered = importer.render_target(target, target.chunks, len(target.chunks))
+        assert rendered == path.read_text(encoding="utf-8")
+
+
+def test_appended_questions_pin_the_full_diagnostic_to_the_previous_length(imported):
+    _, catalog_path, _ = imported
+    document = json.loads(catalog_path.read_text(encoding="utf-8"))
+
+    assert document["full_count"] == 1
+    assert document["questions"][0]["id"] == "seed1"
+    assert len(document["questions"]) > document["full_count"]
+    assert '"quick_count": 1,\n  "full_count": 1,' in catalog_path.read_text(
+        encoding="utf-8"
+    )
+
+
+def test_every_catalog_with_appended_questions_declares_full_count():
+    for path in sorted((ROOT / "school" / "diagnostics").glob("*.json")):
+        document = json.loads(path.read_text(encoding="utf-8"))
+        appended = [
+            question for question in document["questions"]
+            if question["id"].startswith(importer.ID_PREFIX)
+        ]
+        if not appended:
+            assert "full_count" not in document, path.name
+            continue
+        assert document["full_count"] == len(document["questions"]) - len(appended), path.name
+        assert document["quick_count"] <= document["full_count"], path.name
 
 
 def test_unsupported_pdf_glyphs_are_normalized_instead_of_dropping_the_task():

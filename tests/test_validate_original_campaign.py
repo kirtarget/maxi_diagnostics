@@ -174,6 +174,24 @@ def test_external_additions_must_follow_the_campaign_questions(tmp_path: Path, c
     assert capsys.readouterr().out == "ERROR campaign.catalog.external_not_appended\n"
 
 
+def test_full_count_must_name_the_campaign_owned_question_count(
+    tmp_path: Path, capsys
+):
+    tool = load_tool()
+    root = _catalog_copy(tmp_path)
+    path = root / "school" / "diagnostics" / "ege-mathematics-1212.json"
+    document = json.loads(path.read_text(encoding="utf-8"))
+    document["full_count"] = document["full_count"] + 1
+    path.write_text(
+        json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+    result = tool.main([], root=root)
+
+    assert result == 2
+    assert capsys.readouterr().out == "ERROR campaign.catalog.full_count_invalid\n"
+
+
 def test_one_more_external_addition_leaves_the_campaign_counts_alone(
     tmp_path: Path, capsys
 ):

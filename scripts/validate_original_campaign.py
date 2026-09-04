@@ -22,6 +22,7 @@ DEFAULT_MANIFEST = (
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z")
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _QUESTION_TYPES = {"input", "single", "multiple", "matching"}
+_FULL_COUNT_LINE = re.compile(r'^[ \t]*"full_count": \d+,\n', re.MULTILINE)
 _CAMPAIGN_SCOPE_PROVIDERS = frozenset({None, "maximum"})
 """Providers this campaign owns: its own drafts plus the sourceless baseline."""
 
@@ -105,16 +106,22 @@ def _split_external(
 ) -> tuple[dict[str, Any], bytes, int]:
     """Drop appended non-campaign questions from the document and its bytes.
 
-    The remaining bytes are the untouched prefix of the file, so the manifest
+    The remaining bytes are the file as the campaign wrote it, so the manifest
     hash keeps pinning the baseline and campaign questions exactly as written.
+    A catalog that ends its full diagnostic before the appended questions
+    declares `full_count`; that count must be the campaign-owned question count,
+    and its line is dropped along with the questions it delimits.
     """
     questions = document["questions"]
     external = [index for index, item in enumerate(questions) if _is_external(item)]
-    if not external:
-        return document, payload, 0
     keep = len(questions) - len(external)
-    if keep == 0 or external != list(range(keep, len(questions))):
+    if external and (keep == 0 or external != list(range(keep, len(questions)))):
         _fail("campaign.catalog.external_not_appended")
+    full_count = document.get("full_count")
+    if full_count is not None and full_count != keep:
+        _fail("campaign.catalog.full_count_invalid")
+    if not external and full_count is None:
+        return document, payload, 0
     try:
         text = payload.decode("utf-8")
         spans = _question_spans(text)
@@ -122,12 +129,15 @@ def _split_external(
         _fail("campaign.catalog.invalid_shape")
     if len(spans) != len(questions):
         _fail("campaign.catalog.invalid_shape")
-    trimmed = text[: spans[keep - 1][2]] + text[spans[-1][2]:]
-    return (
-        {**document, "questions": questions[:keep]},
-        trimmed.encode("utf-8"),
-        len(external),
-    )
+    if external:
+        text = text[: spans[keep - 1][2]] + text[spans[-1][2]:]
+    scoped = {**document, "questions": questions[:keep]}
+    if full_count is not None:
+        text, replaced = _FULL_COUNT_LINE.subn("", text, count=1)
+        if replaced != 1:
+            _fail("campaign.catalog.full_count_invalid")
+        scoped.pop("full_count")
+    return scoped, text.encode("utf-8"), len(external)
 
 
 def _parser() -> argparse.ArgumentParser:

@@ -4,6 +4,7 @@
   "subject": "Физика",
   "mark": "Диагностика",
   "quick_count": 3,
+  "full_count": 15,
   "scoring": {
     "max_score": 100,
     "score_unit": "accuracy_percent"
