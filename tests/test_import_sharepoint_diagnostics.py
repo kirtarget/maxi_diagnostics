@@ -305,7 +305,16 @@ def test_the_repository_catalog_holds_only_sharepoint_questions():
 
     for path in paths:
         document = json.loads(path.read_text(encoding="utf-8"))
-        assert "full_count" not in document, path.name
+        if "full_count" in document:
+            # A file that merges several source variants runs only the first
+            # variant in full mode; the rest feeds the trainer and daily plan.
+            first_prefix = document["questions"][0]["id"].rsplit("-q", 1)[0]
+            first_variant = [
+                question for question in document["questions"]
+                if question["id"].rsplit("-q", 1)[0] == first_prefix
+            ]
+            assert document["full_count"] == len(first_variant), path.name
+            assert document["full_count"] < len(document["questions"]), path.name
         assert all(
             question["id"].startswith(importer.ID_PREFIX)
             for question in document["questions"]

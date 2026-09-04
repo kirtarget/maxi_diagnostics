@@ -4,6 +4,7 @@
   "subject": "Русский язык",
   "mark": "Диагностика",
   "quick_count": 3,
+  "full_count": 26,
   "scoring": {
     "max_score": 100,
     "score_unit": "accuracy_percent"
