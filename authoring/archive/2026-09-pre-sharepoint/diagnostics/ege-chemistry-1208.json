@@ -1,0 +1,175 @@
+{
+  "id": "ege-chemistry-1208",
+  "exam": "ЕГЭ",
+  "subject": "Химия",
+  "mark": "Диагностика",
+  "quick_count": 3,
+  "scoring": {
+    "max_score": 100,
+    "score_unit": "accuracy_percent"
+  },
+  "questions": [
+    {
+      "id": "q9868",
+      "type": "multiple",
+      "topic": "Взаимосвязь свойств неорганических веществ",
+      "learning_material_text": "Определите класс каждого вещества и составьте цепочку превращений по характерным реакциям. Проверяйте, какие реагенты дают осадок, газ или воду, затем уравняйте выбранные реакции.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/khimiya",
+      "title": "Задание 9",
+      "prompt": "Задана следующая цепочка химических превращений\nОпределите, какие из указанных веществ являются веществами X и Y.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "соляная кислота"
+        },
+        {
+          "id": "o2",
+          "label": "кислород"
+        },
+        {
+          "id": "o3",
+          "label": "хлор"
+        },
+        {
+          "id": "o4",
+          "label": "железо"
+        },
+        {
+          "id": "o5",
+          "label": "хлорид железа (II)"
+        }
+      ],
+      "selection_limit": 2,
+      "correct": [
+        "o3",
+        "o5"
+      ],
+      "explanation": "Для получения FeCl3 из железа нужен хлор: 2Fe + 3Cl2 = 2FeCl3. Медь восстанавливает Fe3+ до Fe2+, поэтому вторым продуктом будет FeCl2.",
+      "asset": "assets/questions/q9868.png"
+    },
+    {
+      "id": "q9869",
+      "type": "input",
+      "topic": "Периодический закон",
+      "learning_material_text": "Найдите элементы в таблице и сравните их положение в периоде и группе. После этого определите требуемое свойство по закономерности изменения строения атома и степени окисления.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/khimiya",
+      "title": "Задание 2",
+      "prompt": "Выберите три элемента, которые находятся в одном периоде. Расположите выбранные элементы в порядке возрастания окислительных свойств. Запишите в поле ответа номера выбранных элементов в нужной последовательности.\n1) K\n2) As\n3) N\n4) Br\n5) P",
+      "correct": [
+        "124"
+      ],
+      "explanation": "Калий, мышьяк и бром находятся в четвёртом периоде. В периоде окислительные свойства усиливаются слева направо, поэтому порядок K, As, Br даёт последовательность 124."
+    },
+    {
+      "id": "q9870",
+      "type": "multiple",
+      "topic": "Электролитическая диссоциация и реакции ионного обмена",
+      "learning_material_text": "Распишите сильные электролиты на ионы и определите, появляется ли в реакции осадок, газ или слабый электролит. Эти признаки показывают, что ионный обмен идёт до конца.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/9-klass/khimiya/elektroliticheskaya-dissotsiatsiya",
+      "title": "Задание 6",
+      "prompt": "Даны две пробирки с раствором гидроксида натрия. В первую пробирку добавили фиолетовые кристаллы вещества Х. Во вторую пробирку добавили раствор вещества Y. Протекающую реакцию можно описать сокращённым ионным уравнением на рисунке.\nИз предложенного перечня выберите вещества X и Y, которые могут вступать в описанную реакцию.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "медь"
+        },
+        {
+          "id": "o2",
+          "label": "бром"
+        },
+        {
+          "id": "o3",
+          "label": "йод"
+        },
+        {
+          "id": "o4",
+          "label": "сульфид меди (II)"
+        },
+        {
+          "id": "o5",
+          "label": "хлорид меди (II)"
+        }
+      ],
+      "selection_limit": 2,
+      "correct": [
+        "o3",
+        "o5"
+      ],
+      "asset": "assets/questions/q9870.png",
+      "explanation": "Фиолетовые кристаллы йода реагируют со щёлочью в реакции диспропорционирования. Раствор CuCl2 даёт с OH− голубой осадок Cu(OH)2, что соответствует приведённому ионному уравнению."
+    },
+    {
+      "id": "q9871",
+      "type": "input",
+      "topic": "Классификация и номенклатура органических веществ",
+      "learning_material_text": "Найдите функциональную группу и тип углеродной цепи в формуле. По ним определите класс вещества и проверьте название: оно должно отражать главную функциональную группу и число атомов углерода.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/khimiya",
+      "title": "Задание 10",
+      "prompt": "Установите соответствие между формулой вещества и классом/группой органических соединений, к которому (-ой) оно принадлежит: к каждой позиции, обозначенной буквой, подберите соответствующую позицию, обозначенную цифрой.\nВведите последовательность цифр без пробелов.",
+      "correct": [
+        "213"
+      ],
+      "asset": "assets/questions/q9871.png",
+      "explanation": "В веществе А группа OH связана с первичным атомом углерода, поэтому это первичный спирт. Б является фенолом, а В содержит вторичный спиртовой атом углерода; последовательность классов равна 213."
+    },
+    {
+      "id": "q9872",
+      "type": "multiple",
+      "topic": "Строение органических веществ. Понятие «гибридизация»",
+      "learning_material_text": "Рассмотрите связи каждого атома углерода: четыре одинарные связи соответствуют sp3, двойная связь — sp2, тройная — sp. Считайте области электронных связей, а не только число соседних атомов.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/khimiya",
+      "title": "Задание 11",
+      "prompt": "Из предложенного перечня выберите два вещества, у которых есть атомы углерода в состоянии sp 2 - гибридизации.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "бензол"
+        },
+        {
+          "id": "o2",
+          "label": "пропин"
+        },
+        {
+          "id": "o3",
+          "label": "циклопропан"
+        },
+        {
+          "id": "o4",
+          "label": "пентен-2"
+        },
+        {
+          "id": "o5",
+          "label": "глицерин"
+        }
+      ],
+      "selection_limit": 2,
+      "correct": [
+        "o1",
+        "o4"
+      ],
+      "explanation": "Атомы углерода при двойной связи и в ароматическом кольце имеют sp2-гибридизацию. Поэтому подходят бензол и пентен-2, а пропин содержит sp-гибридизацию, циклопропан и глицерин только sp3."
+    },
+    {
+      "id": "q9873",
+      "type": "input",
+      "topic": "Закон объемных отношений",
+      "learning_material_text": "Составьте и уравняйте реакцию, затем используйте коэффициенты как отношение объёмов газов при одинаковых условиях. Перед расчётом проверьте, что все сравниваемые вещества находятся в газовой фазе.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/khimiya",
+      "title": "Задание 27",
+      "prompt": "Вычислите объём газа (л), который образуется при полном сжигании 100 л аммиака ( н.у .). Запишите ответ с точностью до целых.",
+      "correct": [
+        "50"
+      ],
+      "explanation": "Уравнение горения: 4NH3 + 3O2 = 2N2 + 6H2O. При одинаковых условиях объёмы газов относятся как коэффициенты, поэтому из 100 л NH3 образуется 100 × 2 / 4 = 50 л N2."
+    },
+    {"id":"f26-ege-chem-a01","type":"input","topic":"Строение атома","title":"Задание 2","prompt":"В ядре атома хлора находится 17 протонов. Запишите порядковый номер хлора.","correct":["17"],"explanation":"Порядковый номер элемента равен заряду ядра, то есть числу протонов. У хлора он равен 17.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"2","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/hi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-chem-a02","type":"input","topic":"Уравнения реакций","title":"Задание 6","prompt":"Расставьте минимальные целые коэффициенты в уравнении Al + HCl -> AlCl3 + H2. Запишите сумму всех коэффициентов.","correct":["13"],"explanation":"Уравнение имеет вид 2Al + 6HCl -> 2AlCl3 + 3H2. Сумма коэффициентов равна 2 + 6 + 2 + 3 = 13.","max_primary_score":2,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"6","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/hi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-chem-a03","type":"input","topic":"Неорганические реакции","title":"Задание 9","prompt":"В реакции CaO + H2O -> Ca(OH)2 расставьте минимальные целые коэффициенты. Запишите коэффициент перед Ca(OH)2.","correct":["1"],"explanation":"Уравнение уже уравнено: CaO + H2O -> Ca(OH)2. Перед гидроксидом кальция стоит коэффициент 1.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"9","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/hi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-chem-a04","type":"multiple","topic":"Скорость реакции","title":"Задание 10","prompt":"Выберите два изменения, которые обычно увеличивают скорость реакции цинка с раствором соляной кислоты.","options":[{"id":"o1","label":"Повышение температуры."},{"id":"o2","label":"Разбавление раствора кислоты."},{"id":"o3","label":"Увеличение концентрации кислоты."},{"id":"o4","label":"Уменьшение площади поверхности цинка."}],"selection_limit":2,"correct":["o1","o3"],"explanation":"Повышение температуры увеличивает энергию и частоту эффективных столкновений, а рост концентрации кислоты увеличивает число реагирующих частиц в объёме.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"10","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/hi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-chem-a05","type":"multiple","topic":"Химическое равновесие","title":"Задание 11","prompt":"Для равновесия N2 + 3H2 <-> 2NH3 + Q выберите два воздействия, смещающих равновесие вправо.","options":[{"id":"o1","label":"Повышение температуры."},{"id":"o2","label":"Повышение давления."},{"id":"o3","label":"Добавление аммиака."},{"id":"o4","label":"Понижение температуры."}],"selection_limit":2,"correct":["o2","o4"],"explanation":"Справа меньше молей газа, поэтому повышение давления смещает равновесие к аммиаку. Прямая реакция экзотермическая, поэтому понижение температуры также благоприятствует продуктам.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"11","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/hi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-chem-a06","type":"input","topic":"Молярный объём газа","title":"Задание 27","prompt":"Какой объём при н.у. занимает 1 моль водорода? Ответ дайте в литрах.","correct":["22,4","22.4"],"explanation":"При нормальных условиях молярный объём газа равен 22,4 л/моль. Один моль водорода занимает 22,4 л.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"27","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/hi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-chem-a07","type":"input","topic":"Электронное строение атома","title":"Задание 2","prompt":"В нейтральном атоме серы 16 электронов. Сколько электронов находится на третьем энергетическом уровне в основном состоянии?","correct":["6"],"explanation":"Электроны распределяются по уровням как 2, 8, 6. После заполнения первых двух уровней на третьем остаётся 16 − 2 − 8 = 6 электронов.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"2","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/hi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-chem-a08","type":"multiple","topic":"Ионный обмен","title":"Задание 6","prompt":"Выберите две пары растворов, реакция между которыми идёт до конца благодаря образованию газа или осадка.","options":[{"id":"o1","label":"HCl и Na2CO3."},{"id":"o2","label":"NaNO3 и KCl."},{"id":"o3","label":"AgNO3 и NaCl."},{"id":"o4","label":"KOH и NaOH."}],"selection_limit":2,"correct":["o1","o3"],"explanation":"Кислота с карбонатом даёт углекислый газ, а ионы серебра с хлорид-ионами образуют осадок AgCl. В остальных парах нет движущей силы обмена.","max_primary_score":2,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"6","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/hi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}},
+    {"id":"f26-ege-chem-a09","type":"multiple","topic":"Амфотерные соединения","title":"Задание 9","prompt":"Выберите два вещества, с которыми реагирует оксид алюминия Al2O3.","options":[{"id":"o1","label":"NaCl."},{"id":"o2","label":"HCl."},{"id":"o3","label":"O2."},{"id":"o4","label":"NaOH."}],"selection_limit":2,"correct":["o2","o4"],"explanation":"Al2O3 амфотерен: он реагирует и с кислотой HCl, и со щёлочью NaOH. С хлоридом натрия и кислородом при обычных условиях реакции нет.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"9","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/hi_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"}}
+  ]
+}

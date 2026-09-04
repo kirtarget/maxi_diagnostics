@@ -1,0 +1,236 @@
+{
+  "id": "ege-english-language-1204",
+  "exam": "ЕГЭ",
+  "subject": "Английский язык",
+  "mark": "Диагностика",
+  "quick_count": 3,
+  "scoring": {
+    "max_score": 100,
+    "score_unit": "accuracy_percent"
+  },
+  "questions": [
+    {
+      "id": "q9842",
+      "type": "single",
+      "topic": "Лексико-грамматические навыки",
+      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 30",
+      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "30) healthy"
+        },
+        {
+          "id": "o2",
+          "label": "30) wholesome"
+        },
+        {
+          "id": "o3",
+          "label": "30) useful"
+        },
+        {
+          "id": "o4",
+          "label": "30) health"
+        }
+      ],
+      "correct": "o1",
+      "explanation": "Перед существительным bones требуется прилагательное со значением «здоровые». Healthy выражает именно это значение, тогда как health является существительным, а wholesome и useful не образуют нужного сочетания."
+    },
+    {
+      "id": "q9843",
+      "type": "single",
+      "topic": "Лексико-грамматические навыки",
+      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 31",
+      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "31) for"
+        },
+        {
+          "id": "o2",
+          "label": "31) to"
+        },
+        {
+          "id": "o3",
+          "label": "31) on"
+        },
+        {
+          "id": "o4",
+          "label": "31) in"
+        }
+      ],
+      "correct": "o4",
+      "explanation": "Устойчивое сочетание result in означает «приводить к результату». Остальные предлоги после result не передают в этой конструкции причинно-следственную связь."
+    },
+    {
+      "id": "q9844",
+      "type": "single",
+      "topic": "Лексико-грамматические навыки",
+      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 31",
+      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "32) depended"
+        },
+        {
+          "id": "o2",
+          "label": "32) linked"
+        },
+        {
+          "id": "o3",
+          "label": "32) led"
+        },
+        {
+          "id": "o4",
+          "label": "32) resulted"
+        }
+      ],
+      "correct": "o2",
+      "explanation": "В сообщениях об исследованиях сочетание be linked to означает «быть связанным с». Depended требует предлога on, resulted сочетается с in или from, а led to не выражает статистическую связь между уровнем вещества и заболеваниями."
+    },
+    {
+      "id": "q9845",
+      "type": "single",
+      "topic": "Лексико-грамматические навыки",
+      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 31",
+      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "33) just"
+        },
+        {
+          "id": "o2",
+          "label": "33) still"
+        },
+        {
+          "id": "o3",
+          "label": "33) even"
+        },
+        {
+          "id": "o4",
+          "label": "33) yet"
+        }
+      ],
+      "correct": "o4",
+      "explanation": "В отрицательном предложении yet показывает, что достаточных данных пока нет. Still заняло бы другую позицию, а just и even не передают значение незавершённости к настоящему моменту."
+    },
+    {
+      "id": "q9846",
+      "type": "single",
+      "topic": "Лексико-грамматические навыки",
+      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 34",
+      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "34) in"
+        },
+        {
+          "id": "o2",
+          "label": "34) of"
+        },
+        {
+          "id": "o3",
+          "label": "34) for"
+        },
+        {
+          "id": "o4",
+          "label": "34) on"
+        }
+      ],
+      "correct": "o1",
+      "explanation": "Сочетание be low in означает «содержать мало» какого-либо вещества. Предлоги of, for и on не употребляются с low в этом значении."
+    },
+    {
+      "id": "q9847",
+      "type": "single",
+      "topic": "Лексико-грамматические навыки",
+      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 35",
+      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "35) much"
+        },
+        {
+          "id": "o2",
+          "label": "35) many"
+        },
+        {
+          "id": "o3",
+          "label": "35) little"
+        },
+        {
+          "id": "o4",
+          "label": "35) few"
+        }
+      ],
+      "correct": "o1",
+      "explanation": "Exposure является неисчисляемым существительным, поэтому в отрицательной конструкции требуется much. Many и few сочетаются с исчисляемыми существительными, а little изменило бы смысл фразы."
+    },
+    {
+      "id": "q9848",
+      "type": "single",
+      "topic": "Лексико-грамматические навыки",
+      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 36",
+      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
+      "options": [
+        {
+          "id": "o1",
+          "label": "36) miss"
+        },
+        {
+          "id": "o2",
+          "label": "36) lack"
+        },
+        {
+          "id": "o3",
+          "label": "36) ignore"
+        },
+        {
+          "id": "o4",
+          "label": "36) run out of"
+        }
+      ],
+      "correct": "o2",
+      "explanation": "Глагол lack употребляется непосредственно с дополнением: lack a varied diet or opportunity. Miss и ignore имеют другое значение, а run out of описывает прекращение уже имевшегося запаса."
+    },
+    {
+      "id": "q9849",
+      "type": "input",
+      "topic": "Структурно-смысловые связи в тексте",
+      "learning_material_text": "Прочитайте предложения до и после пропуска и определите связь: причина, следствие, противопоставление, уточнение или ссылка на предыдущее слово. Выбирайте фрагмент, который грамматически и логически связывает оба контекста.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
+      "title": "Задание 11",
+      "prompt": "Прочитайте текст и заполните пропуски A–F частями предложений, обозначенными цифрами 1–7. Одна из частей в списке 1–7 лишняя. Занесите цифру, обозначающую соответствующую часть предложения, в таблицу.\nDo jellyfish sleep?\nWorms and fish do it. Birds and bees do it. But do jellyfish fall asleep? It was after midnight A _______________________ where the jellyfish were kept. They left the lights off and walked through the room by the glow of their cellphones. The students did not tell anyone that they were doing this. The secret they were keeping was a “totally crazy” experiment aimed at finding out whether jellyfish sleep. A few weeks before, B _______________________ whether jellyfish needed to sleep. “Of course not,” said one of them. “Sleep helps C _______________________. Jellyfish are so simple they don’t even have brains. How could they possibly share the need to sleep?” The others weren’t so sure, but they wanted to find out. The three students designed an experiment to test different behaviors and see if the jellyfish were asleep. They watched the animals to see how they moved, and D _______________________ when they were resting. It turned out that the jellyfish moved about 30 percent less at night. It was also harder to get their attention. Months of late-night studying led to amazing results. Young scientists reported E _______________________ sleeplike behavior. This made it the first animal without a brain known to do so. The results suggest F _______________________ life, as the jellyfish group of animals first arose about 700 million years ago, and has stuck with us ever since.\n1. how talkative they were in a situation close to\n2. that sleep evolved early in the history of animal\n3. that the upside-down jellyfish Cassiopea showed\n4. strengthen memory and keep the brain healthy\n5. the students were having coffee and started debating\n6. when three science students crept into the lab\n7. if they could get the jellies’ attention\nA\nB\nC\nD\nE\nF\nВведите последовательность цифр без пробелов.",
+      "correct": [
+        "654732"
+      ],
+      "explanation": "Связки восстанавливаются по смыслу и грамматике: A6, B5, C4, D7, E3, F2. Фрагменты последовательно описывают начало опыта, обсуждение, роль сна, привлечение внимания медуз, результат наблюдения и вывод учёных, поэтому ответ 654732."
+    },
+    {"id":"f26-ege-eng-a01","type":"input","topic":"Структурно-смысловые связи в авторском тексте","title":"Задание 11","prompt":"В авторском тексте расставьте фрагменты 1–4 в пропуски A–D. Mia arrived at the workshop early. A ____. By noon the first visitors arrived. B ____. At three the lights suddenly went out. C ____. Ten minutes later the hall was bright again. D ____. 1) She therefore checked every lamp before unlocking the door. 2) They thanked her for keeping the event open. 3) She used a battery lantern while an electrician worked. 4) They gathered around the demonstration table. Введите последовательность цифр A–D без пробелов.","max_primary_score":2,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"11","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"После прихода Миа проверяет лампы до открытия двери. Затем гости подходят к столу, во время отключения она использует фонарь, а после восстановления света гости благодарят её. Получается 1432.","correct":["1432"]},
+    {"id":"f26-ege-eng-a02","type":"input","topic":"Лексическая сочетаемость в контексте","title":"Задание 30","prompt":"Выберите слово для авторского предложения: The guide asked us to ___ attention to the narrow path. 1) pay 2) give 3) make 4) bring. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"30","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Устойчивое сочетание pay attention означает «обратить внимание», поэтому подходит вариант 1.","correct":["1"]},
+    {"id":"f26-ege-eng-a03","type":"input","topic":"Предлоги в устойчивых сочетаниях","title":"Задание 31","prompt":"Выберите слово: Lena succeeded ___ repairing the old radio without help. 1) at 2) in 3) on 4) for. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"31","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"После succeed используется предлог in и герундий, значит верен вариант 2.","correct":["2"]},
+    {"id":"f26-ege-eng-a04","type":"input","topic":"Выбор слова по смыслу","title":"Задание 34","prompt":"Выберите слово: The scientist ___ a careful record of every temperature change. 1) did 2) held 3) kept 4) took. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"34","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Выражение keep a record означает «вести запись». В прошедшем времени это kept, вариант 3.","correct":["3"]},
+    {"id":"f26-ege-eng-a05","type":"input","topic":"Фразовые глаголы в контексте","title":"Задание 35","prompt":"Выберите вариант: We had to ___ the picnic because of the storm. 1) turn up 2) call off 3) look after 4) bring in. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"35","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Call off означает «отменить». Именно это пришлось сделать из-за шторма, ответ 2.","correct":["2"]},
+    {"id":"f26-ege-eng-a06","type":"input","topic":"Лексический выбор в авторском тексте","title":"Задание 36","prompt":"Выберите слово: After several rehearsals, the actors felt ___ about the opening night. 1) confident 2) ordinary 3) narrow 4) silent. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"36","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Репетиции дают актёрам уверенность перед премьерой. По смыслу подходит confident, вариант 1.","correct":["1"]},
+    {"id":"f26-ege-eng-a07","type":"input","topic":"Логика абзаца в авторском тексте","title":"Задание 11","prompt":"Расставьте фрагменты 1–4 в пропуски A–D. Omar decided to grow herbs on the balcony. A ____. Then he planted the seeds. The first week was unusually hot. B ____. Soon small green shoots appeared. C ____. By August he had enough basil for the whole family. D ____. 1) He moved the pots into the shade at midday. 2) He chose containers with holes for drainage. 3) He shared some leaves with his neighbours. 4) He photographed them each morning. Введите последовательность цифр.","max_primary_score":2,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"11","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"До посадки Омар выбирает ёмкости с дренажом. В жару он переставляет их в тень, после появления всходов фотографирует растения и в конце делится урожаем. Ответ 2143.","correct":["2143"]}
+  ]
+}

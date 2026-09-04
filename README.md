@@ -27,7 +27,10 @@ brand, domain, and public links for `maxi.kirtarget.ru`.
 
 4. Review `school/brand.json` and `school/links.json`. Add or replace files in
    `school/diagnostics/` and `school/assets/`. Content schemas are documented in
-   [docs/CONTENT_FORMAT.md](docs/CONTENT_FORMAT.md).
+   [docs/CONTENT_FORMAT.md](docs/CONTENT_FORMAT.md). The shipped catalog is
+   generated from the editor-approved MAXIMUM diagnostics exported from SharePoint
+   by `scripts/import_sharepoint_diagnostics.py`; do not hand-edit the generated
+   `sp-` questions.
 5. Validate content and isolation before adding secrets. Run
    `scripts/validate_school.py` followed by `scripts/check_brand_isolation.py`:
 

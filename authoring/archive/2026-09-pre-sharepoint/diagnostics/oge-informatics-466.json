@@ -1,0 +1,292 @@
+{
+  "id": "oge-informatics-466",
+  "exam": "ОГЭ",
+  "subject": "Информатика",
+  "mark": "Диагностика",
+  "quick_count": 3,
+  "scoring": {
+    "max_score": 100,
+    "score_unit": "accuracy_percent"
+  },
+  "questions": [
+    {
+      "id": "q3889",
+      "type": "input",
+      "topic": "Кодирование текстовой информации",
+      "learning_material_text": "Найдите минимальное число бит на символ через мощность алфавита. Затем умножьте его на число символов и переведите биты в байты.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/11-klass/informatika/kodirovaniye-i-dekodirovaniye-informatsii",
+      "title": "Задание 1",
+      "prompt": "Текст содержит 160 символов. Для его записи используется алфавит из 64 символов, каждый символ кодируется одинаковым и минимально возможным числом бит. Определите информационный объём текста в байтах.",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "1",
+        "official_criteria_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
+      "explanation": "Для 64 символов достаточно 6 бит на символ, потому что 2^(6) = 64. В тексте 160 символов, значит его объём равен 160 · 6 = 960 бит. В одном байте 8 бит, поэтому 960 / 8 = 120 байт.",
+      "correct": [
+        "120"
+      ]
+    },
+    {
+      "id": "q3888",
+      "type": "input",
+      "topic": "Декодирование сообщений",
+      "learning_material_text": "При префиксном коде читайте строку слева направо. Как только накопленные биты совпали с кодом символа, запишите символ и начните чтение следующего кода.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/11-klass/informatika/kodirovaniye-i-dekodirovaniye-informatsii",
+      "title": "Задание 2",
+      "prompt": "Для передачи последовательностей из цифр 1, 2, 3 и 4 используется код: 1 - 0, 2 - 10, 3 - 110, 4 - 111. Декодируйте сообщение 0101101110110. В ответе запишите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "2",
+        "official_criteria_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
+      "explanation": "Разбиваем сообщение слева направо по кодовой таблице: 0 | 10 | 110 | 111 | 0 | 110. Эти группы соответствуют цифрам 1, 2, 3, 4, 1, 3. Поэтому декодированная последовательность равна 123413.",
+      "correct": [
+        "123413"
+      ]
+    },
+    {
+      "id": "q3892",
+      "type": "input",
+      "topic": "Логические выражения",
+      "learning_material_text": "Переведите каждую часть логического выражения в ограничение на число. Найдите пересечение ограничений, затем исключите значения, запрещённые отрицанием.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/9-klass/informatika/osnovy-logiki",
+      "title": "Задание 3",
+      "prompt": "Сколько существует натуральных чисел x, для которых истинно выражение (x >= 3) И (x < 9) И НЕ (x = 5)?",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "3",
+        "official_criteria_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
+      "explanation": "Первые два условия задают натуральные числа 3, 4, 5, 6, 7 и 8. Третье условие исключает число 5. Остаются числа 3, 4, 6, 7 и 8, всего пять значений.",
+      "correct": [
+        "5"
+      ]
+    },
+    {
+      "id": "q3893",
+      "type": "input",
+      "topic": "Кратчайший путь в графе",
+      "learning_material_text": "Для каждой вершины храните минимальную найденную длину пути от старта. Последовательно улучшайте расстояния через ближайшую ещё не обработанную вершину.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/informatika",
+      "title": "Задание 4",
+      "prompt": "Между пунктами проложены двусторонние дороги: A-B длиной 4, A-C длиной 2, C-B длиной 1, B-D длиной 5, C-D длиной 8, C-E длиной 10, D-E длиной 2. Найдите длину кратчайшего пути из A в E.",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "4",
+        "official_criteria_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
+      "explanation": "Путь A-C-B-D-E имеет длину 2 + 1 + 5 + 2 = 10. Для сравнения, A-B-D-E имеет длину 11, A-C-D-E - 12, а A-C-E - 12. Более короткого пути нет, поэтому ответ равен 10.",
+      "correct": [
+        "10"
+      ]
+    },
+    {
+      "id": "q3896",
+      "type": "input",
+      "topic": "Исполнитель и последовательность команд",
+      "learning_material_text": "Выполняйте команды строго слева направо и после каждого шага записывайте новое значение. Следующая команда работает уже с изменённым числом.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/informatika",
+      "title": "Задание 5",
+      "prompt": "Исполнитель получает целое число и умеет выполнять две команды: 1 - прибавить 3; 2 - умножить на 2. Какое число получится из числа 7 после выполнения программы 1212?",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "5",
+        "official_criteria_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
+      "explanation": "Выполняем команды по порядку. После первой команды получаем 7 + 3 = 10. После второй получаем 10 · 2 = 20. Затем 20 + 3 = 23 и 23 · 2 = 46. Итоговое число равно 46.",
+      "correct": [
+        "46"
+      ]
+    },
+    {
+      "id": "q3898",
+      "type": "input",
+      "topic": "Формальное исполнение программы",
+      "learning_material_text": "Проследите цикл по каждому значению переменной. Для чётных и нечётных значений применяются разные ветви, поэтому удобно отдельно посчитать их вклады.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/informatika",
+      "title": "Задание 6",
+      "prompt": "Определите значение переменной s после выполнения программы:\ns = 0\nдля i от 1 до 6 включительно:\n  если i делится на 2 без остатка, то s = s + i · i\n  иначе s = s + i",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "6",
+        "official_criteria_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
+      "explanation": "Нечётные значения дают вклад 1 + 3 + 5 = 9. Для чётных значений программа прибавляет квадраты: 2^(2) + 4^(2) + 6^(2) = 4 + 16 + 36 = 56. Общая сумма равна 9 + 56 = 65.",
+      "correct": [
+        "65"
+      ]
+    },
+    {
+      "id": "q3899",
+      "type": "input",
+      "topic": "Адресация в сети Интернет",
+      "learning_material_text": "Соберите адрес из фрагментов так, чтобы точки разделяли четыре десятичных числа. Сверьте получившуюся строку с адресом из условия и запишите номера фрагментов.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/informatika",
+      "title": "Задание 7",
+      "prompt": "IP-адрес 192.168.25.7 разбили на четыре фрагмента: 1) 168.  2) 192.  3) 25  4) .7. Запишите последовательность номеров фрагментов, которая восстанавливает исходный адрес.",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "7",
+        "official_criteria_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
+      "explanation": "Адрес начинается фрагментом 2: 192. Затем нужен фрагмент 1, получаем 192.168. После него ставим фрагмент 3 и завершаем фрагментом 4. Порядок фрагментов равен 2, 1, 3, 4, поэтому ответ 2134.",
+      "correct": [
+        "2134"
+      ]
+    },
+    {
+      "id": "q3901",
+      "type": "input",
+      "topic": "Логические операции в поисковых запросах",
+      "learning_material_text": "Для двух множеств используйте формулу включений и исключений. Размер объединения равен сумме размеров множеств без повторного учёта их пересечения.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/9-klass/informatika/zaprosy-dlya-poiskovykh-sistem",
+      "title": "Задание 8",
+      "prompt": "По запросу «алгоритм» найдено 420 страниц, по запросу «программа» - 310 страниц, а по запросу «алгоритм ИЛИ программа» - 590 страниц. Сколько страниц найдено по запросу «алгоритм И программа»?",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "8",
+        "official_criteria_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
+      "explanation": "При сложении 420 + 310 страницы из пересечения учитываются дважды. В объединении 590 страниц, поэтому размер пересечения равен 420 + 310 - 590 = 140 страниц.",
+      "correct": [
+        "140"
+      ]
+    },
+    {
+      "id": "q3904",
+      "type": "input",
+      "topic": "Подсчёт путей в ориентированном графе",
+      "learning_material_text": "Расположите вершины в порядке движения по стрелкам. Число путей в вершину равно сумме чисел путей во все вершины, из которых в неё входят стрелки.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/informatika",
+      "title": "Задание 9",
+      "prompt": "В ориентированном графе есть рёбра S-A, S-B, B-A, A-C, A-D, B-D, D-C, C-T и D-T. Сколько различных путей ведёт из S в T?",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "9",
+        "official_criteria_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
+      "explanation": "В S один начальный путь. В B приходит 1 путь, а в A приходят пути напрямую из S и через B, всего 2. В D приходят 2 пути из A и 1 из B, всего 3. В C приходят 2 пути из A и 3 из D, всего 5. В T приходят 5 путей из C и 3 из D, итого 8.",
+      "correct": [
+        "8"
+      ]
+    },
+    {
+      "id": "q3905",
+      "type": "input",
+      "topic": "Системы счисления",
+      "learning_material_text": "Для перевода десятичного числа в восьмеричную систему последовательно делите число на 8. Остатки прочитайте в обратном порядке.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/9-klass/informatika/sistemy-schisleniya",
+      "title": "Задание 10",
+      "prompt": "Переведите десятичное число 345 в восьмеричную систему счисления. В ответе запишите только цифры восьмеричной записи.",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "10",
+        "official_criteria_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
+      "explanation": "Делим число с остатком: 345 = 43 · 8 + 1, 43 = 5 · 8 + 3, 5 = 0 · 8 + 5. Читаем остатки снизу вверх и получаем 531. Проверка: 5 · 64 + 3 · 8 + 1 = 345.",
+      "correct": [
+        "531"
+      ]
+    },
+    {
+      "id": "q3909",
+      "type": "input",
+      "topic": "Отбор файлов и информационный объём",
+      "learning_material_text": "Сначала отберите имена, которые одновременно удовлетворяют условию по началу имени и расширению. Затем сложите размеры только выбранных файлов.",
+      "learning_material_url": "https://maximumtest.ru/uchebnik/informatika",
+      "title": "Задание 12",
+      "prompt": "В папке находятся файлы: task_01.txt - 14 КиБ; task_02.txt - 9 КиБ; task_notes.docx - 30 КиБ; task_03.txt - 17 КиБ; archive_task.txt - 50 КиБ; task_04.png - 21 КиБ. Найдите суммарный объём в КиБ всех файлов, имя которых начинается с task_ и имеет расширение .txt.",
+      "max_primary_score": 1,
+      "source": {
+        "provider": "maximum",
+        "official_year": 2026,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "exam_position": "12",
+        "official_criteria_url": "https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip",
+        "rights_status": "original",
+        "verified_at": "2026-09-01"
+      },
+      "explanation": "Условию соответствуют task_01.txt, task_02.txt и task_03.txt. Файл task_notes.docx имеет другое расширение, archive_task.txt не начинается с task_, а task_04.png имеет другое расширение. Складываем размеры выбранных файлов: 14 + 9 + 17 = 40 КиБ.",
+      "correct": [
+        "40"
+      ]
+    },
+    {"id":"f26-oge-inf-a01","type":"input","topic":"Кодирование текста в алфавите","title":"Задание 1","prompt":"Сообщение из 24 символов записано алфавитом из 16 символов. Каждый символ кодируется одинаковым минимальным числом бит. Сколько байт занимает сообщение?","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"1","official_criteria_url":"https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Для 16 символов нужно 4 бита. Сообщение занимает 24 × 4 = 96 бит, или 12 байт.","correct":["12"]},
+    {"id":"f26-oge-inf-a02","type":"input","topic":"Кратчайший путь в графе","title":"Задание 4","prompt":"Между пунктами проложены двусторонние дороги: A–B длиной 4, A–C длиной 2, C–B длиной 3, B–D длиной 2, C–D длиной 7. Найдите длину кратчайшего пути из A в D.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"4","official_criteria_url":"https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Путь A–B–D имеет длину 4 + 2 = 6. Путь A–C–D имеет длину 9, а A–C–B–D имеет длину 7. Минимальная длина равна 6.","correct":["6"]},
+    {"id":"f26-oge-inf-a03","type":"input","topic":"Логические операции в поисковых запросах","title":"Задание 8","prompt":"По запросу «робот» найдено 250 страниц, по запросу «алгоритм» 190 страниц, а по запросу «робот ИЛИ алгоритм» 360 страниц. Сколько страниц найдено по запросу «робот И алгоритм»?","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"8","official_criteria_url":"https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Используем формулу пересечения множеств: 250 + 190 − 360 = 80 страниц.","correct":["80"]},
+    {"id":"f26-oge-inf-a04","type":"input","topic":"Подсчёт файлов по условиям","title":"Задание 12","prompt":"В каталоге есть файлы: report.docx, report.pdf, plan.docx, photo.png, notes.docx. Сколько файлов имеют расширение docx?","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"12","official_criteria_url":"https://doc.fipi.ru/oge/demoversii-specifikacii-kodifikatory/2026/inf_9_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Расширение docx имеют report.docx, plan.docx и notes.docx. Всего 3 файла.","correct":["3"]}
+  ]
+}
