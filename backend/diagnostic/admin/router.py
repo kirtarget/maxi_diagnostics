@@ -242,7 +242,7 @@ async def content_index(
     request: Request,
     exam: str | None = Query(default=None, min_length=1, max_length=32),
     subject: str | None = Query(default=None, min_length=1, max_length=128),
-    question_type: str | None = Query(default=None, alias="type", pattern=r"^(single|multiple|matching|input)$"),
+    question_type: str | None = Query(default=None, alias="type", pattern=r"^(single|multiple|matching|input|text)$"),
     query: str | None = Query(default=None, min_length=1, max_length=128),
 ):
     draft_rows = await repository.list_content_drafts()

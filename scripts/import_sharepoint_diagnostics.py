@@ -124,7 +124,7 @@ MATH_ALPHANUMERIC = range(0x1D400, 0x1D800)
 BLANK_CELL = re.compile(r"^[_\s.·—–-]*$")
 
 
-class ImportError(RuntimeError):  # noqa: A001 - mirrors import_edcheck_export
+class ImportError(RuntimeError):  # noqa: A001 - a controlled failure, not the builtin
     """A controlled source or destination error."""
 
 
