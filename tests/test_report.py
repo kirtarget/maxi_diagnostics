@@ -136,6 +136,29 @@ def make_review_report_snapshot(school, diagnostic, review_snapshot):
     }
 
 
+def test_premium_report_paginates_a_reading_passage_prompt():
+    from diagnostic.report import build_report
+
+    school = load_school(SAMPLE_SCHOOL)
+    diagnostic = load_catalog(school).get("demo-math")
+    passage = " ".join(
+        f"Предложение {index} исходного текста для чтения." for index in range(1, 201)
+    )
+    assert 6000 < len(passage) <= 10000
+    review = make_review(prompt=passage, guidance="Разбор")
+    attempt = completed_attempt(
+        report_snapshot=make_review_report_snapshot(school, diagnostic, [review])
+    )
+
+    pages = PdfReader(BytesIO(build_report(attempt, school))).pages
+    text = "\n".join(page.extract_text() or "" for page in pages)
+
+    assert len(pages) > 2
+    assert "Предложение 1 исходного" in text
+    assert "Предложение 200 исходного" in text
+    assert "Как решать" in text
+
+
 def test_build_report_embeds_cyrillic_brand_catalog_and_persisted_result():
     from diagnostic.report import build_report
 

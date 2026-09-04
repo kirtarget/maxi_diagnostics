@@ -4,12 +4,13 @@ All files are UTF-8 strict JSON: duplicate keys, `NaN`, and `Infinity` are rejec
 Keep IDs stable after launch. Before completion, `correct` and `explanation` are
 server-only and excluded from bootstrap, TypeScript, HTML, and public assets.
 
-Original MAXIMUM tasks based on the current FIPI structure use the separate
-editorial workflow in [ORIGINAL_CONTENT_AUTHORING.md](ORIGINAL_CONTENT_AUTHORING.md).
-The 2026 position and score map is recorded in
-[FIPI_2026_CONTENT_MATRIX.md](FIPI_2026_CONTENT_MATRIX.md). Runtime JSON with
+The shipped catalog is generated from the editor-approved MAXIMUM diagnostics
+exported from SharePoint by `scripts/import_sharepoint_diagnostics.py`. Every
+question id starts with `sp-`; the catalog has no other source. Runtime JSON with
 `approval_status=draft` is only a review draft. It is not an expert-approved
-authoring package and must not be presented as approved content.
+authoring package and must not be presented as approved content. The pre-import
+catalog and the retired authoring workflow are kept for reference in
+`authoring/archive/2026-09-pre-sharepoint/`.
 
 ## Diagnostic file envelope
 
@@ -51,7 +52,7 @@ differ only by case. Each file contains one object with every field below:
 
 IDs use 1–64 ASCII letters, digits, `_`, or `-`, begin with a letter or digit, and a
 diagnostic ID has at least 3 characters. `exam` is at most 32 characters; `subject`,
-`mark`, `topic`, and `title` are at most 128; prompts are at most 4,000; option labels
+`mark`, `topic`, and `title` are at most 128; prompts are at most 10,000; option labels
 are at most 500. Prompts may contain LF line breaks for paragraphs and enumerated
 task parts; other control characters remain forbidden. Text cannot be blank.
 `quick_count` is a strict integer from 1
@@ -102,8 +103,8 @@ presented as a verified FIPI point value without approved attribution.
 Every source URL must use HTTPS without embedded credentials. For provider `fipi`,
 URLs must use `fipi.ru` or one of its subdomains and rights cannot be `original`.
 Open-bank content remains link-only until written permission or a license is recorded.
-The Edcheck converter never reads the FIPI website. It only preserves source metadata
-and primary scores already present in the supplied export.
+The SharePoint converter never reads the FIPI website. It only preserves source
+metadata already present in the supplied editorial documents.
 
 The public catalog may include `max_primary_score` and `source`. It never includes
 `correct`, `explanation`, or learning material fields before completion.

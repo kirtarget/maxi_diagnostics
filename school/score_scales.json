@@ -783,27 +783,6 @@
       }
     },
     {
-      "id": "oge-informatics",
-      "exam": "ОГЭ",
-      "subject": "Информатика",
-      "kind": "grade",
-      "max_primary": 21,
-      "min_pass": null,
-      "grades": {
-        "3": 5,
-        "4": 11,
-        "5": 17
-      },
-      "interpolated_primary": [],
-      "notes": "Рекомендуемый порог для профильных классов — 15 баллов.",
-      "source": {
-        "title": "Рособрнадзор. Рекомендации по переводу суммы первичных баллов ОГЭ 2026 в пятибалльную систему оценивания (Приложение 1)",
-        "url": "https://doc.fipi.ru/oge/normativno-pravovye-dokumenty/02-20_25.02.2026.pdf",
-        "date": "2026-02-25",
-        "confidence": "official"
-      }
-    },
-    {
       "id": "oge-mathematics",
       "exam": "ОГЭ",
       "subject": "Математика",

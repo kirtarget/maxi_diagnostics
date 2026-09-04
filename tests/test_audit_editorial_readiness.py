@@ -35,8 +35,8 @@ def test_current_catalog_report_is_deterministic_private_safe_and_filterable(cap
     assert first_output == second_output
     report = json.loads(first_output)
     assert report["summary"]["diagnostics"] == 1
-    assert report["summary"]["questions"] == 26
-    assert report["summary"]["by_provider"] == {"maximum": 15, "maximum_editorial": 11}
+    assert report["summary"]["questions"] == 11
+    assert report["summary"]["by_provider"] == {"maximum_editorial": 11}
     assert all(item["diagnostic_id"] == "ege-mathematics-1212" for item in report["items"])
     assert all(item["status"] == "draft" for item in report["items"])
     assert "correct" not in first_output
@@ -52,7 +52,7 @@ def test_require_complete_returns_one_when_machine_gaps_remain(capsys):
     )
 
     assert result == 1
-    assert json.loads(capsys.readouterr().out)["summary"]["incomplete"] == 26
+    assert json.loads(capsys.readouterr().out)["summary"]["incomplete"] == 11
 
 
 def test_complete_runtime_metadata_becomes_reviewed_but_never_approved(tmp_path: Path, capsys):

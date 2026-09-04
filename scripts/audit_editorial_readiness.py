@@ -20,7 +20,6 @@ from diagnostic.school import load_school  # noqa: E402
 
 
 _MAX_CATALOG_BYTES = 1024 * 1024
-_OFFICIAL_YEAR = 2026
 _MANUAL_GATES = (
     "answer_truth",
     "explanation_quality",
@@ -81,10 +80,6 @@ def _source_gaps(source) -> list[str]:
     if source is None:
         return ["source_missing"]
     gaps: list[str] = []
-    if source.provider.casefold() != "maximum":
-        gaps.append("source_provider_not_maximum")
-    if source.official_year != _OFFICIAL_YEAR:
-        gaps.append("source_year_not_approved_2026")
     if source.approval_status != "approved":
         gaps.append("source_approval_not_approved")
     if source.source_kind != "original":

@@ -36,6 +36,8 @@ _MAX_PUBLIC_PAYLOAD_BYTES = 2 * 1024 * 1024
 _MAX_DIAGNOSTICS = 20
 _MAX_QUESTIONS = 200
 _MAX_OPTIONS = 50
+# Reading-passage tasks in the editorial diagnostics run to about 6,500 characters.
+_MAX_PROMPT_CHARS = 10000
 _BROAD_QUESTION_TOPICS = frozenset(
     {
         "Английский язык",
@@ -203,7 +205,7 @@ class QuestionBase(BaseModel):
     type: str
     topic: str = Field(min_length=1, max_length=128)
     title: str = Field(min_length=1, max_length=128)
-    prompt: str = Field(min_length=1, max_length=4000)
+    prompt: str = Field(min_length=1, max_length=_MAX_PROMPT_CHARS)
     max_primary_score: int = Field(default=1, ge=1, le=100, strict=True)
     source: QuestionSource | None = None
     explanation: str | None = Field(

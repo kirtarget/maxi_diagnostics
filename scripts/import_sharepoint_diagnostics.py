@@ -6,8 +6,9 @@ tables, an optional `Решение:` and a mandatory `Ответ:` key. This co
 the machine-checkable subset onto catalog question types, extracts inline
 figures, and records every skipped task with a reason in a Markdown report.
 
-The import only ever appends. Questions already in a target catalog stay in
-place, and a re-run replaces exactly the questions whose id starts with `sp-`.
+Every catalog question comes from these documents. A re-run replaces exactly the
+questions whose id starts with `sp-`, leaves every other byte of the file alone,
+and must produce byte-identical output.
 
     python scripts/import_sharepoint_diagnostics.py <docx-dir>
 """
@@ -42,8 +43,7 @@ from diagnostic.numeric import is_valid_numeric_answer  # noqa: E402
 
 
 ID_PREFIX = "sp-"
-_QUICK_COUNT_LINE = re.compile(r'^([ \t]*)"quick_count": \d+,\n', re.MULTILINE)
-MAX_PROMPT_CHARS = 4000
+MAX_PROMPT_CHARS = 10000
 MAX_EXPLANATION_CHARS = 2000
 MAX_OPTION_LABEL_CHARS = 500
 MAX_OPTIONS = 50
@@ -51,6 +51,7 @@ MAX_QUESTIONS_PER_DIAGNOSTIC = 200
 MAX_CATALOG_FILE_BYTES = 1024 * 1024
 MAX_QUESTION_ASSETS = 5
 MAX_TEXT_VARIANTS = 20
+MAX_ANSWER_VARIANTS = 20
 MAX_TEXT_ANSWER_CHARS = 80
 MAX_REFERENCED_ASSETS = 201
 MAX_ASSET_SIDE = 900
@@ -123,7 +124,7 @@ MATH_ALPHANUMERIC = range(0x1D400, 0x1D800)
 BLANK_CELL = re.compile(r"^[_\s.·—–-]*$")
 
 
-class ImportError(RuntimeError):  # noqa: A001 - mirrors import_edcheck_export
+class ImportError(RuntimeError):  # noqa: A001 - a controlled failure, not the builtin
     """A controlled source or destination error."""
 
 
@@ -174,7 +175,6 @@ class Outcome:
     status: Literal["imported", "skipped"]
     question_type: str = ""
     reason: str = ""
-    topic_unmapped: bool = False
     images: int = 0
 
 
@@ -308,53 +308,6 @@ def read_source_file(path: Path) -> SourceFile:
 
 
 # --------------------------------------------------------------------------
-# FIPI 2026 position mapping
-# --------------------------------------------------------------------------
-
-
-def load_position_matrix(path: Path) -> dict[str, dict[int, tuple[str, int]]]:
-    """Read `docs/FIPI_2026_CONTENT_MATRIX.md` into diagnostic-id keyed rows.
-
-    The matrix only records positions that already exist in the catalog, and
-    every row is marked `предварительно`. A row is therefore applied to an
-    imported task only when the target catalog already asserts the same KIM
-    position for its own `Задание N` (see `_matrix_topic`).
-    """
-    matrix: dict[str, dict[int, tuple[str, int]]] = {}
-    current: dict[int, tuple[str, int]] | None = None
-    for line in path.read_text(encoding="utf-8").splitlines():
-        heading = re.match(r"^### .*`([a-z0-9-]+)`\s*$", line)
-        if heading:
-            current = matrix.setdefault(heading.group(1), {})
-            continue
-        if current is None or not line.startswith("|"):
-            continue
-        columns = [column.strip() for column in line.strip("|").split("|")]
-        if len(columns) < 4:
-            continue
-        positions = re.findall(r"\d+", columns[0].replace("–", "-"))
-        score = re.match(r"(\d+)", columns[3])
-        if not positions or score is None or not columns[1]:
-            continue
-        topic = columns[1][:128].rstrip()
-        for position in positions:
-            current[int(position)] = (topic, int(score.group(1)))
-    return matrix
-
-
-def _catalog_positions(diagnostic: dict[str, Any]) -> dict[int, int]:
-    """Map `Задание N` to the KIM position the existing catalog asserts for it."""
-    positions: dict[int, int] = {}
-    for question in diagnostic.get("questions", []):
-        title = re.match(r"^Задание\s*(\d+)$", str(question.get("title", "")))
-        declared = (question.get("source") or {}).get("exam_position")
-        if title is None or not isinstance(declared, str) or not declared.isdigit():
-            continue
-        positions[int(title.group(1))] = int(declared)
-    return positions
-
-
-# --------------------------------------------------------------------------
 # Answer-key classification
 # --------------------------------------------------------------------------
 
@@ -419,10 +372,21 @@ def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
         return "skip", "irregular_key"
     digit_parts = [part for part in parts if DIGITS.fullmatch(part)]
 
-    # A `#`-joined set of multi-digit groups packs several sub-answers into one
-    # task; the runtime has no shape for that.
+    # A `#`-joined set of multi-digit groups usually packs several sub-answers
+    # into one task, which the runtime has no shape for. The one reading that is
+    # not a guess is a set of reorderings of a single answer: the same digits in
+    # the same count, written out because their order is free.
     if len(parts) > 1 and len(digit_parts) == len(parts) and any(len(p) > 1 for p in parts):
-        return "skip", "irregular_key"
+        reorderings = (
+            not task.options
+            and len(set(parts)) == len(parts)
+            and len(parts) <= MAX_ANSWER_VARIANTS
+            and len({tuple(sorted(part)) for part in parts}) == 1
+            and all(is_valid_numeric_answer(part) for part in parts)
+        )
+        if not reorderings:
+            return "skip", "irregular_key"
+        return "input", {"correct": list(parts), "sequence": True}
 
     if task.options:
         if len(digit_parts) != len(parts) or any(len(part) != 1 for part in parts):
@@ -480,9 +444,6 @@ def build_question(
     kind: str,
     payload: dict[str, Any],
     *,
-    topic: str,
-    max_primary_score: int,
-    exam_position: int | None,
     verified_at: str,
 ) -> dict[str, Any] | str:
     prompt = build_prompt(task, skip_tables=kind == "matching")
@@ -496,10 +457,10 @@ def build_question(
     question: dict[str, Any] = {
         "id": f"{ID_PREFIX}{source.slug}-q{task.number}",
         "type": kind,
-        "topic": topic,
+        "topic": f"Задание {task.number}",
         "title": f"Задание {task.number}",
         "prompt": prompt,
-        "max_primary_score": max_primary_score,
+        "max_primary_score": 1,
     }
 
     if kind in {"single", "multiple"}:
@@ -553,7 +514,6 @@ def build_question(
         "approval_status": "draft",
         "source_kind": "original",
         "source_url": SOURCE_URL,
-        **({"exam_position": str(exam_position)} if exam_position is not None else {}),
         "rights_status": "original",
         "verified_at": verified_at,
     }
@@ -636,10 +596,7 @@ class Candidate:
 
 
 def convert_file(
-    source: SourceFile,
-    positions: dict[int, int],
-    matrix: dict[int, tuple[str, int]],
-    verified_at: str,
+    source: SourceFile, verified_at: str
 ) -> tuple[list[Candidate], list[Outcome]]:
     candidates: list[Candidate] = []
     outcomes: list[Outcome] = []
@@ -648,18 +605,7 @@ def convert_file(
         if kind == "skip":
             outcomes.append(Outcome(task.number, "skipped", reason=str(payload)))
             continue
-        position = positions.get(task.number)
-        mapped = matrix.get(position) if position is not None else None
-        topic = mapped[0] if mapped else f"Задание {task.number}"
-        max_primary_score = mapped[1] if mapped else 1
-
-        question = build_question(
-            source, task, kind, payload,
-            topic=topic,
-            max_primary_score=max_primary_score,
-            exam_position=position if mapped else None,
-            verified_at=verified_at,
-        )
+        question = build_question(source, task, kind, payload, verified_at=verified_at)
         if isinstance(question, str):
             outcomes.append(Outcome(task.number, "skipped", kind, question))
             continue
@@ -673,11 +619,7 @@ def convert_file(
         candidates.append(
             Candidate(
                 source, task, question, images,
-                Outcome(
-                    task.number, "imported", kind,
-                    topic_unmapped=mapped is None,
-                    images=len(images),
-                ),
+                Outcome(task.number, "imported", kind, images=len(images)),
             )
         )
     return candidates, outcomes
@@ -774,22 +716,13 @@ def read_target(path: Path) -> Target:
     return Target(path, payload, text[: opening + 1], chunks, text[position:])
 
 
-def render_target(target: Target, chunks: list[tuple[str, str]], kept: int) -> str:
-    """Rewrite the file, pinning the full diagnostic to the questions it had.
+def render_target(target: Target, chunks: list[tuple[str, str]]) -> str:
+    """Rewrite the questions array, leaving every other byte of the file alone.
 
-    Appended `sp-` questions feed daily practice, not the full run, so a catalog
-    that gains them declares `full_count`. An existing declaration is left alone,
-    which keeps a re-import byte-identical.
+    The full diagnostic is the whole file, so nothing here writes `full_count`.
     """
-    head = target.head
-    if kept < len(chunks) and "full_count" not in target.payload:
-        head = _QUICK_COUNT_LINE.sub(
-            lambda match: f'{match.group(0)}{match.group(1)}"full_count": {kept},\n',
-            head,
-            count=1,
-        )
     body = ",".join(f"\n    {chunk}" for _, chunk in chunks)
-    return f"{head}{body}\n  {target.tail}"
+    return f"{target.head}{body}\n  {target.tail}"
 
 
 def render_question(question: dict[str, Any]) -> str:
@@ -824,13 +757,13 @@ def write_report(
         f"Сгенерировано `python scripts/import_sharepoint_diagnostics.py <docx-dir>` "
         f"({verified_at}).",
         "",
-        "Текст задания, вариантов и ключ взяты из редакционно утверждённых документов "
-        "MAXIMUM без правок. Тема и первичный балл проставлены автоматически: они "
-        "переносятся из `docs/FIPI_2026_CONTENT_MATRIX.md` только тогда, когда целевая "
-        "диагностика уже утверждает ту же позицию КИМ для своего «Задание N». В "
-        "остальных случаях тема равна «Задание N», балл равен 1, и строка помечена "
-        "`topic_unmapped`. Все импортированные вопросы имеют "
-        "`approval_status = draft` и требуют предметной редактуры.",
+        "Каталог школы состоит только из этих заданий. Текст задания, вариантов и "
+        "ключ взяты из редакционно утверждённых документов MAXIMUM без правок. Тема "
+        "не выводится ни из какого источника: каждому вопросу проставлена тема "
+        "«Задание N» и первичный балл 1. Раздел «Темы, требующие сопоставления» "
+        "перечисляет их по предметам, чтобы методист заполнил таблицу «позиция КИМ → "
+        "тема». Все импортированные вопросы имеют `approval_status = draft` и требуют "
+        "предметной редактуры.",
         "",
         "## Итоги",
         "",
@@ -844,26 +777,84 @@ def write_report(
             f"{SUBJECT_NAMES[source.subject_code]} | {target.name} | "
             f"{len(outcomes)} | {imported} | {len(outcomes) - imported} |"
         )
+
+    lines.extend(
+        [
+            "",
+            "## Пропущенные задания",
+            "",
+            "Каждое задание, которое конвертер не перенёс, и причина.",
+            "",
+            "| Файл | Задание | Тип | Причина |",
+            "|---|---:|---|---|",
+        ]
+    )
+    skipped = [
+        (source, outcome)
+        for source, _, outcomes in per_file
+        for outcome in sorted(outcomes, key=lambda item: item.number)
+        if outcome.status == "skipped"
+    ]
+    for source, outcome in skipped:
+        lines.append(
+            f"| {source.path.name} | {outcome.number} "
+            f"| {outcome.question_type or '-'} | {outcome.reason} |"
+        )
+    if not skipped:
+        lines.append("| - | - | - | - |")
+
+    lines.extend(
+        [
+            "",
+            "## Темы, требующие сопоставления",
+            "",
+            "У всех импортированных заданий тема равна «Задание N». Заполните "
+            "позицию КИМ и тему для каждого номера в списке.",
+            "",
+            "| Каталог | Экзамен | Предмет | Документ | Задания |",
+            "|---|---|---|---|---|",
+        ]
+    )
+    for source, target, outcomes in sorted(per_file, key=lambda item: item[1].name):
+        numbers = [
+            str(outcome.number)
+            for outcome in sorted(outcomes, key=lambda item: item.number)
+            if outcome.status == "imported"
+        ]
+        if not numbers:
+            continue
+        lines.append(
+            f"| {target.name} | {source.exam} | {SUBJECT_NAMES[source.subject_code]} "
+            f"| {source.path.name} | {', '.join(numbers)} |"
+        )
+
     lines.append("")
     for source, target, outcomes in per_file:
+        note = (
+            ""
+            if len(outcomes) == source.declared_tasks
+            else (
+                " Расхождение означает, что в документе заголовок «Задание N» "
+                "оформлен нестандартно и соседние задания слиплись в один блок; "
+                "такой блок уходит в пропуски с причиной `irregular_key`."
+            )
+        )
         lines.extend(
             [
                 f"## {source.path.name}",
                 "",
                 f"Каталог: `school/diagnostics/{target.name}`. "
                 f"Заявлено заданий в имени файла: {source.declared_tasks}, "
-                f"найдено блоков: {len(outcomes)}.",
+                f"найдено блоков: {len(outcomes)}.{note}",
                 "",
-                "| Задание | Итог | Тип | Причина | Рисунков | Тема |",
-                "|---:|---|---|---|---:|---|",
+                "| Задание | Итог | Тип | Причина | Рисунков |",
+                "|---:|---|---|---|---:|",
             ]
         )
         for outcome in sorted(outcomes, key=lambda item: item.number):
-            topic = "topic_unmapped" if outcome.topic_unmapped else "по матрице ФИПИ"
             lines.append(
                 f"| {outcome.number} | {outcome.status} | {outcome.question_type or '-'} "
-                f"| {outcome.reason or '-'} | {outcome.images} "
-                f"| {topic if outcome.status == 'imported' else '-'} |"
+                f"| {outcome.reason or '-'} | {outcome.images} |"
             )
         lines.append("")
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -883,7 +874,6 @@ def main(argv: list[str] | None = None) -> int:
     report_path = root / "authoring" / "sharepoint-import" / "report.md"
     verified_at = date.today().isoformat()
 
-    matrix = load_position_matrix(root / "docs" / "FIPI_2026_CONTENT_MATRIX.md")
     targets = load_targets(diagnostics_root)
     kept_assets = {
         path.relative_to(root / "school").as_posix()
@@ -907,12 +897,7 @@ def main(argv: list[str] | None = None) -> int:
             raise ImportError(f"No catalog diagnostic for {key}")
         target = targets[key]
         target_by_source[source.path] = target.path
-        file_candidates, file_outcomes = convert_file(
-            source,
-            _catalog_positions(target.payload),
-            matrix.get(target.payload["id"], {}),
-            verified_at,
-        )
+        file_candidates, file_outcomes = convert_file(source, verified_at)
         candidates.extend(file_candidates)
         outcomes_by_source[source.path] = file_outcomes
 
@@ -947,9 +932,7 @@ def main(argv: list[str] | None = None) -> int:
             raise ImportError(f"Too many questions in {target.path.name}: {len(chunks)}")
         written.append((target.path.name, len(kept), len(additions)))
         if not arguments.dry_run:
-            write_diagnostic(
-                target.path, render_target(target, chunks, len(kept))
-            )
+            write_diagnostic(target.path, render_target(target, chunks))
 
     if not arguments.dry_run:
         assets_root.mkdir(parents=True, exist_ok=True)

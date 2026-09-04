@@ -125,15 +125,6 @@ def build_repository(root: Path) -> Path:
         encoding="utf-8",
         newline="\n",
     )
-    (root / "docs" / "FIPI_2026_CONTENT_MATRIX.md").write_text(
-        "## ОГЭ\n\n"
-        "### Химия, `oge-chemistry-1`\n\n"
-        "| Позиция КИМ | Проверяемое умение | Формат | Макс. балл | Надёжность |\n"
-        "|---|---|---:|---:|---|\n"
-        "| 4 | Периодический закон и строение атома | К, число | 2 | предварительно |\n",
-        encoding="utf-8",
-        newline="\n",
-    )
     return path
 
 
@@ -204,18 +195,17 @@ def test_source_metadata_marks_editorial_drafts(imported):
     }
 
 
-def test_matrix_topic_applies_only_where_the_catalog_asserts_that_position(imported):
+def test_every_topic_is_a_placeholder_a_methodologist_still_has_to_map(imported):
     _, catalog_path, _ = imported
-    questions = _questions(catalog_path)
-    mapped = questions["sp-chemistry-oge-2022-q4"]
-    assert mapped["topic"] == "Периодический закон и строение атома"
-    assert mapped["max_primary_score"] == 2
-    assert mapped["source"]["exam_position"] == "4"
 
-    unmapped = questions["sp-chemistry-oge-2022-q1"]
-    assert unmapped["topic"] == "Задание 1"
-    assert unmapped["max_primary_score"] == 1
-    assert "exam_position" not in unmapped["source"]
+    for question in _questions(catalog_path).values():
+        if not question["id"].startswith(importer.ID_PREFIX):
+            continue
+        expected = f"Задание {question['id'].rsplit('-q', 1)[1]}"
+        assert question["topic"] == expected
+        assert question["title"] == expected
+        assert question["max_primary_score"] == 1
+        assert "exam_position" not in question["source"]
 
 
 def test_irregular_key_is_skipped_and_explained_in_the_report(imported):
@@ -225,9 +215,10 @@ def test_irregular_key_is_skipped_and_explained_in_the_report(imported):
         encoding="utf-8"
     )
     assert SOURCE_NAME in report
-    assert "| 7 | skipped | - | irregular_key | 0 | - |" in report
-    assert "| 1 | imported | single | - | 0 | topic_unmapped |" in report
-    assert "| 4 | imported | input | - | 0 | по матрице ФИПИ |" in report
+    assert "| 7 | skipped | - | irregular_key | 0 |" in report
+    assert "| 1 | imported | single | - | 0 |" in report
+    assert f"| {SOURCE_NAME} | 7 | - | irregular_key |" in report
+    assert "## Темы, требующие сопоставления" in report
 
 
 def test_inline_figure_becomes_a_deduplicated_question_asset(imported):
@@ -295,34 +286,59 @@ def test_dry_run_leaves_the_repository_untouched(tmp_path):
 def test_repository_catalogs_round_trip_without_reformatting():
     for path in sorted((ROOT / "school" / "diagnostics").glob("*.json")):
         target = importer.read_target(path)
-        rendered = importer.render_target(target, target.chunks, len(target.chunks))
+        rendered = importer.render_target(target, target.chunks)
         assert rendered == path.read_text(encoding="utf-8")
 
 
-def test_appended_questions_pin_the_full_diagnostic_to_the_previous_length(imported):
+def test_the_import_never_shortens_the_full_diagnostic(imported):
     _, catalog_path, _ = imported
     document = json.loads(catalog_path.read_text(encoding="utf-8"))
 
-    assert document["full_count"] == 1
+    assert "full_count" not in document
     assert document["questions"][0]["id"] == "seed1"
-    assert len(document["questions"]) > document["full_count"]
-    assert '"quick_count": 1,\n  "full_count": 1,' in catalog_path.read_text(
-        encoding="utf-8"
-    )
+    assert len(document["questions"]) > 1
 
 
-def test_every_catalog_with_appended_questions_declares_full_count():
-    for path in sorted((ROOT / "school" / "diagnostics").glob("*.json")):
+def test_the_repository_catalog_holds_only_sharepoint_questions():
+    paths = sorted((ROOT / "school" / "diagnostics").glob("*.json"))
+    assert paths
+
+    for path in paths:
         document = json.loads(path.read_text(encoding="utf-8"))
-        appended = [
-            question for question in document["questions"]
-            if question["id"].startswith(importer.ID_PREFIX)
-        ]
-        if not appended:
-            assert "full_count" not in document, path.name
-            continue
-        assert document["full_count"] == len(document["questions"]) - len(appended), path.name
-        assert document["quick_count"] <= document["full_count"], path.name
+        if "full_count" in document:
+            # A file that merges several source variants runs only the first
+            # variant in full mode; the rest feeds the trainer and daily plan.
+            first_prefix = document["questions"][0]["id"].rsplit("-q", 1)[0]
+            first_variant = [
+                question for question in document["questions"]
+                if question["id"].rsplit("-q", 1)[0] == first_prefix
+            ]
+            assert document["full_count"] == len(first_variant), path.name
+            assert document["full_count"] < len(document["questions"]), path.name
+        assert all(
+            question["id"].startswith(importer.ID_PREFIX)
+            for question in document["questions"]
+        ), path.name
+        assert 1 <= document["quick_count"] <= 5, path.name
+        assert document["quick_count"] <= len(document["questions"]), path.name
+
+
+def test_reordered_numeric_keys_become_accepted_input_variants():
+    task = importer.SourceTask(number=1, answer=["1234#2134#1243#2143"])
+    task.prompt_blocks.append("Заполните таблицу.")
+
+    kind, payload = importer.classify(task)
+
+    assert kind == "input"
+    assert payload["correct"] == ["1234", "2134", "1243", "2143"]
+    assert payload["sequence"] is True
+
+
+def test_packed_multi_digit_keys_are_still_skipped():
+    task = importer.SourceTask(number=1, answer=["12#345"])
+    task.prompt_blocks.append("Ответьте на два вопроса.")
+
+    assert importer.classify(task) == ("skip", "irregular_key")
 
 
 def test_unsupported_pdf_glyphs_are_normalized_instead_of_dropping_the_task():

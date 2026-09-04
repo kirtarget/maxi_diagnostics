@@ -4,235 +4,11 @@
   "subject": "Английский язык",
   "mark": "Диагностика",
   "quick_count": 3,
-  "full_count": 15,
   "scoring": {
     "max_score": 100,
     "score_unit": "accuracy_percent"
   },
   "questions": [
-    {
-      "id": "q9842",
-      "type": "single",
-      "topic": "Лексико-грамматические навыки",
-      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
-      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
-      "title": "Задание 30",
-      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
-      "options": [
-        {
-          "id": "o1",
-          "label": "30) healthy"
-        },
-        {
-          "id": "o2",
-          "label": "30) wholesome"
-        },
-        {
-          "id": "o3",
-          "label": "30) useful"
-        },
-        {
-          "id": "o4",
-          "label": "30) health"
-        }
-      ],
-      "correct": "o1",
-      "explanation": "Перед существительным bones требуется прилагательное со значением «здоровые». Healthy выражает именно это значение, тогда как health является существительным, а wholesome и useful не образуют нужного сочетания."
-    },
-    {
-      "id": "q9843",
-      "type": "single",
-      "topic": "Лексико-грамматические навыки",
-      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
-      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
-      "title": "Задание 31",
-      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
-      "options": [
-        {
-          "id": "o1",
-          "label": "31) for"
-        },
-        {
-          "id": "o2",
-          "label": "31) to"
-        },
-        {
-          "id": "o3",
-          "label": "31) on"
-        },
-        {
-          "id": "o4",
-          "label": "31) in"
-        }
-      ],
-      "correct": "o4",
-      "explanation": "Устойчивое сочетание result in означает «приводить к результату». Остальные предлоги после result не передают в этой конструкции причинно-следственную связь."
-    },
-    {
-      "id": "q9844",
-      "type": "single",
-      "topic": "Лексико-грамматические навыки",
-      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
-      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
-      "title": "Задание 31",
-      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
-      "options": [
-        {
-          "id": "o1",
-          "label": "32) depended"
-        },
-        {
-          "id": "o2",
-          "label": "32) linked"
-        },
-        {
-          "id": "o3",
-          "label": "32) led"
-        },
-        {
-          "id": "o4",
-          "label": "32) resulted"
-        }
-      ],
-      "correct": "o2",
-      "explanation": "В сообщениях об исследованиях сочетание be linked to означает «быть связанным с». Depended требует предлога on, resulted сочетается с in или from, а led to не выражает статистическую связь между уровнем вещества и заболеваниями."
-    },
-    {
-      "id": "q9845",
-      "type": "single",
-      "topic": "Лексико-грамматические навыки",
-      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
-      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
-      "title": "Задание 31",
-      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
-      "options": [
-        {
-          "id": "o1",
-          "label": "33) just"
-        },
-        {
-          "id": "o2",
-          "label": "33) still"
-        },
-        {
-          "id": "o3",
-          "label": "33) even"
-        },
-        {
-          "id": "o4",
-          "label": "33) yet"
-        }
-      ],
-      "correct": "o4",
-      "explanation": "В отрицательном предложении yet показывает, что достаточных данных пока нет. Still заняло бы другую позицию, а just и even не передают значение незавершённости к настоящему моменту."
-    },
-    {
-      "id": "q9846",
-      "type": "single",
-      "topic": "Лексико-грамматические навыки",
-      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
-      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
-      "title": "Задание 34",
-      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
-      "options": [
-        {
-          "id": "o1",
-          "label": "34) in"
-        },
-        {
-          "id": "o2",
-          "label": "34) of"
-        },
-        {
-          "id": "o3",
-          "label": "34) for"
-        },
-        {
-          "id": "o4",
-          "label": "34) on"
-        }
-      ],
-      "correct": "o1",
-      "explanation": "Сочетание be low in означает «содержать мало» какого-либо вещества. Предлоги of, for и on не употребляются с low в этом значении."
-    },
-    {
-      "id": "q9847",
-      "type": "single",
-      "topic": "Лексико-грамматические навыки",
-      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
-      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
-      "title": "Задание 35",
-      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
-      "options": [
-        {
-          "id": "o1",
-          "label": "35) much"
-        },
-        {
-          "id": "o2",
-          "label": "35) many"
-        },
-        {
-          "id": "o3",
-          "label": "35) little"
-        },
-        {
-          "id": "o4",
-          "label": "35) few"
-        }
-      ],
-      "correct": "o1",
-      "explanation": "Exposure является неисчисляемым существительным, поэтому в отрицательной конструкции требуется much. Many и few сочетаются с исчисляемыми существительными, а little изменило бы смысл фразы."
-    },
-    {
-      "id": "q9848",
-      "type": "single",
-      "topic": "Лексико-грамматические навыки",
-      "learning_material_text": "Прочитайте предложение целиком и определите, какая грамматическая форма или слово требуется по смыслу. Проверьте время, залог, число, управление и сочетаемость; затем перечитайте заполненное предложение.",
-      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
-      "title": "Задание 36",
-      "prompt": "Прочитайте текст с пропусками, обозначенными номерами 30-36 . Эти номера соответствуют заданиям 30-36 , в которых представлены возможные варианты ответов.\nBritain in winter is not a sunny place. And our levels of vitamin D, the “sunshine vitamin” produced by the action of light on skin, tend to run low. The government is now recommending that we all take a daily supplement throughout the winter. But do we really need it?\nVitamin D is essential for ( 30)_ _________ bones, teeth and muscles. Around one in five adults have low levels throughout the year. Severe deficiency is much rarer, but can result ( 31)_ _______ rickets in kids and osteomalacia in kids and adults, which cause bone deformity and pain. Vitamin D also plays an important role in the immune system. Low levels have been ( 32) _ _________ to cancers, multiple sclerosis and heart disease. A recent report by the Scientific Advisory Committee on Nutrition (SACN) said there isn’t enough evidence ( 33)_ ___________to draw any firm conclusions about these links.\nMost of us get a bit low (34) ___________vitamin D in the winter months but some groups are at risk of more serious deficiency. The at-risk groups include: pregnant women; children under five (because they need more vitamin D for bone growth); anyone who doesn’t get (35)___________exposure to sun; people over 65 who are frail and (36)___________a varied diet or opportunity to get outdoors much; and people with darker skin tones, which block UV rays more effectively than paler ones.",
-      "options": [
-        {
-          "id": "o1",
-          "label": "36) miss"
-        },
-        {
-          "id": "o2",
-          "label": "36) lack"
-        },
-        {
-          "id": "o3",
-          "label": "36) ignore"
-        },
-        {
-          "id": "o4",
-          "label": "36) run out of"
-        }
-      ],
-      "correct": "o2",
-      "explanation": "Глагол lack употребляется непосредственно с дополнением: lack a varied diet or opportunity. Miss и ignore имеют другое значение, а run out of описывает прекращение уже имевшегося запаса."
-    },
-    {
-      "id": "q9849",
-      "type": "input",
-      "topic": "Структурно-смысловые связи в тексте",
-      "learning_material_text": "Прочитайте предложения до и после пропуска и определите связь: причина, следствие, противопоставление, уточнение или ссылка на предыдущее слово. Выбирайте фрагмент, который грамматически и логически связывает оба контекста.",
-      "learning_material_url": "https://maximumtest.ru/uchebnik/angliysky-yazyk",
-      "title": "Задание 11",
-      "prompt": "Прочитайте текст и заполните пропуски A–F частями предложений, обозначенными цифрами 1–7. Одна из частей в списке 1–7 лишняя. Занесите цифру, обозначающую соответствующую часть предложения, в таблицу.\nDo jellyfish sleep?\nWorms and fish do it. Birds and bees do it. But do jellyfish fall asleep? It was after midnight A _______________________ where the jellyfish were kept. They left the lights off and walked through the room by the glow of their cellphones. The students did not tell anyone that they were doing this. The secret they were keeping was a “totally crazy” experiment aimed at finding out whether jellyfish sleep. A few weeks before, B _______________________ whether jellyfish needed to sleep. “Of course not,” said one of them. “Sleep helps C _______________________. Jellyfish are so simple they don’t even have brains. How could they possibly share the need to sleep?” The others weren’t so sure, but they wanted to find out. The three students designed an experiment to test different behaviors and see if the jellyfish were asleep. They watched the animals to see how they moved, and D _______________________ when they were resting. It turned out that the jellyfish moved about 30 percent less at night. It was also harder to get their attention. Months of late-night studying led to amazing results. Young scientists reported E _______________________ sleeplike behavior. This made it the first animal without a brain known to do so. The results suggest F _______________________ life, as the jellyfish group of animals first arose about 700 million years ago, and has stuck with us ever since.\n1. how talkative they were in a situation close to\n2. that sleep evolved early in the history of animal\n3. that the upside-down jellyfish Cassiopea showed\n4. strengthen memory and keep the brain healthy\n5. the students were having coffee and started debating\n6. when three science students crept into the lab\n7. if they could get the jellies’ attention\nA\nB\nC\nD\nE\nF\nВведите последовательность цифр без пробелов.",
-      "correct": [
-        "654732"
-      ],
-      "explanation": "Связки восстанавливаются по смыслу и грамматике: A6, B5, C4, D7, E3, F2. Фрагменты последовательно описывают начало опыта, обсуждение, роль сна, привлечение внимания медуз, результат наблюдения и вывод учёных, поэтому ответ 654732."
-    },
-    {"id":"f26-ege-eng-a01","type":"input","topic":"Структурно-смысловые связи в авторском тексте","title":"Задание 11","prompt":"В авторском тексте расставьте фрагменты 1–4 в пропуски A–D. Mia arrived at the workshop early. A ____. By noon the first visitors arrived. B ____. At three the lights suddenly went out. C ____. Ten minutes later the hall was bright again. D ____. 1) She therefore checked every lamp before unlocking the door. 2) They thanked her for keeping the event open. 3) She used a battery lantern while an electrician worked. 4) They gathered around the demonstration table. Введите последовательность цифр A–D без пробелов.","max_primary_score":2,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"11","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"После прихода Миа проверяет лампы до открытия двери. Затем гости подходят к столу, во время отключения она использует фонарь, а после восстановления света гости благодарят её. Получается 1432.","correct":["1432"]},
-    {"id":"f26-ege-eng-a02","type":"input","topic":"Лексическая сочетаемость в контексте","title":"Задание 30","prompt":"Выберите слово для авторского предложения: The guide asked us to ___ attention to the narrow path. 1) pay 2) give 3) make 4) bring. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"30","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Устойчивое сочетание pay attention означает «обратить внимание», поэтому подходит вариант 1.","correct":["1"]},
-    {"id":"f26-ege-eng-a03","type":"input","topic":"Предлоги в устойчивых сочетаниях","title":"Задание 31","prompt":"Выберите слово: Lena succeeded ___ repairing the old radio without help. 1) at 2) in 3) on 4) for. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"31","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"После succeed используется предлог in и герундий, значит верен вариант 2.","correct":["2"]},
-    {"id":"f26-ege-eng-a04","type":"input","topic":"Выбор слова по смыслу","title":"Задание 34","prompt":"Выберите слово: The scientist ___ a careful record of every temperature change. 1) did 2) held 3) kept 4) took. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"34","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Выражение keep a record означает «вести запись». В прошедшем времени это kept, вариант 3.","correct":["3"]},
-    {"id":"f26-ege-eng-a05","type":"input","topic":"Фразовые глаголы в контексте","title":"Задание 35","prompt":"Выберите вариант: We had to ___ the picnic because of the storm. 1) turn up 2) call off 3) look after 4) bring in. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"35","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Call off означает «отменить». Именно это пришлось сделать из-за шторма, ответ 2.","correct":["2"]},
-    {"id":"f26-ege-eng-a06","type":"input","topic":"Лексический выбор в авторском тексте","title":"Задание 36","prompt":"Выберите слово: After several rehearsals, the actors felt ___ about the opening night. 1) confident 2) ordinary 3) narrow 4) silent. Введите номер.","max_primary_score":1,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"36","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"Репетиции дают актёрам уверенность перед премьерой. По смыслу подходит confident, вариант 1.","correct":["1"]},
-    {"id":"f26-ege-eng-a07","type":"input","topic":"Логика абзаца в авторском тексте","title":"Задание 11","prompt":"Расставьте фрагменты 1–4 в пропуски A–D. Omar decided to grow herbs on the balcony. A ____. Then he planted the seeds. The first week was unusually hot. B ____. Soon small green shoots appeared. C ____. By August he had enough basil for the whole family. D ____. 1) He moved the pots into the shade at midday. 2) He chose containers with holes for drainage. 3) He shared some leaves with his neighbours. 4) He photographed them each morning. Введите последовательность цифр.","max_primary_score":2,"source":{"provider":"maximum","official_year":2026,"approval_status":"draft","source_kind":"original","source_url":"https://maximumtest.ru/","exam_position":"11","official_criteria_url":"https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/aya_11_2026.zip","rights_status":"original","verified_at":"2026-09-01"},"explanation":"До посадки Омар выбирает ёмкости с дренажом. В жару он переставляет их в тень, после появления всходов фотографирует растения и в конце делится урожаем. Ответ 2143.","correct":["2143"]},
     {
       "id": "sp-english-language-ege-2022-q1",
       "type": "input",
@@ -251,7 +27,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -272,7 +48,154 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q3",
+      "type": "input",
+      "topic": "Задание 3",
+      "title": "Задание 3",
+      "prompt": "Прочитайте текст и ответьте на вопрос.\nBreaking down the language barrier?\nWe are supposed to live in a 'globalised' world, or so we are increasingly taught in school. Many of us share elements of a globalised culture, at least, perhaps watching Japanese movies, listening to K-pop, or eating Indian food. Why is it, then, that so many of us tussle with the basics of global communication in this age of instant messaging, email and video conferencing? English may certainly be the (self-appointed) lingua franca of the globalised world, with millions of students struggling daily to learn its phrasal verbs and idioms. But English is the mother tongue of only a relatively small percentage of the global population, so wouldn't it be easier if we all spoke a simpler language? Perhaps what is needed is an international language.\nWhat is interesting is that, over a hundred years ago, a Dr Ludwig Zamenhof published a book about a new language that he had developed, with the intention of providing an appropriate international means of communication. He called this language 'Esperanto', and it is said that hundreds of thousands of people have learned to speak it, with about one thousand today even using it as their first language. It is claimed to be easy to master and, more significantly, as an artificial language, it is appreciated as being devoid of any of the ideological or political connotations that accompany languages of former colonial powers, such as English. It is said to be learnt much faster than English, with a one symbol-one-sound writing system (making spelling easier) and a grammar with a limited number of rules. Vocabulary even borrows a number of words that are already shared internationally, such as telefono (telephone) and matematiko (mathematics). In short, Esperanto may well be the answer that second-language learners have been seeking.\nThe problem is that it is likely that, before reading this article, you might never have heard of Esperanto, and you would almost certainly not be alone on that point. The main criticism of Esperanto is that, despite its lofty ideals, the language never really caught on among the global population in the way its creator intended. Whether there was a vested interest in preventing the language from spreading is hard to say. The key factor is that the language does, in fact, look rather similar to Romance languages such as French, Spanish or Italian, at the expense of other popular languages such as Arabic or Mandarin. As such, the 'international' language is perhaps not international enough, and may even be considered as maintaining a primarily Western point of view, something the creator of Esperanto initially set out to mitigate.\nAs mentioned, Esperanto is what is known as an 'artificial language'. Those involved with the development of its vocabulary and structures were well aware that the language they were creating had few ties with languages of the past, and so one of the basic features of any other language - that of a cultural heritage - can be considered missing for speakers of Esperanto. However, advocates of Esperanto would counter this criticism by claiming that all languages can be considered as artificial, in the sense that the creators of any language were human. What Esperanto lacks in culture, it makes up for in efficiency, and as language learners in the busy modern world are constantly under pressure of time, it is possible that, for some, it is worth developing communicative efficiency at the expense of a certain prestige. In addition, as Esperanto itself is now over a century old, one might argue that this language, too, has built up a history of its own, one shared by the thousands who speak it and use it as an international means of communication.\nWhether we consider the Esperanto experiment a success or failure, one thing is for certain: an international language should reflect all aspects of global society, while at the same time be easy to learn, free from ambiguity, and neutral in terms of ideology. Critics of Esperanto c1aim its failure in each of these aspects, while proponents of the language assert that it has succeeded in areas where English might have failed. While there may not be enough global uptake of Esperanto to eventually topple English from its perch, there is no doubt that it has provoked increased interest in the debate on language in the shadow of globalisation, and this debate is far from over.\nWhat is the main point the writer is making in the first paragraph?\n1) English has difficult features, but can still be an effective global language.\n2) Schools tend to exaggerate the extent of globalisation in the world today.\n3) Global communication is less straightforward than it should be.\n4) World culture continues to become increasingly globalised.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "3"
+      ],
+      "explanation": "3 — Автор отмечает, что коммуникация становится более глобальной. Несмотря на то, что английский используется для общения часто, он все равно проблематичен для многих изучающих. Поэтому лучше, если будет более простой способ коммуникации.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q4",
+      "type": "input",
+      "topic": "Задание 4",
+      "title": "Задание 4",
+      "prompt": "Прочитайте текст и ответьте на вопрос.\nBreaking down the language barrier?\nWe are supposed to live in a 'globalised' world, or so we are increasingly taught in school. Many of us share elements of a globalised culture, at least, perhaps watching Japanese movies, listening to K-pop, or eating Indian food. Why is it, then, that so many of us tussle with the basics of global communication in this age of instant messaging, email and video conferencing? English may certainly be the (self-appointed) lingua franca of the globalised world, with millions of students struggling daily to learn its phrasal verbs and idioms. But English is the mother tongue of only a relatively small percentage of the global population, so wouldn't it be easier if we all spoke a simpler language? Perhaps what is needed is an international language.\nWhat is interesting is that, over a hundred years ago, a Dr Ludwig Zamenhof published a book about a new language that he had developed, with the intention of providing an appropriate international means of communication. He called this language 'Esperanto', and it is said that hundreds of thousands of people have learned to speak it, with about one thousand today even using it as their first language. It is claimed to be easy to master and, more significantly, as an artificial language, it is appreciated as being devoid of any of the ideological or political connotations that accompany languages of former colonial powers, such as English. It is said to be learnt much faster than English, with a one symbol-one-sound writing system (making spelling easier) and a grammar with a limited number of rules. Vocabulary even borrows a number of words that are already shared internationally, such as telefono (telephone) and matematiko (mathematics). In short, Esperanto may well be the answer that second-language learners have been seeking.\nThe problem is that it is likely that, before reading this article, you might never have heard of Esperanto, and you would almost certainly not be alone on that point. The main criticism of Esperanto is that, despite its lofty ideals, the language never really caught on among the global population in the way its creator intended. Whether there was a vested interest in preventing the language from spreading is hard to say. The key factor is that the language does, in fact, look rather similar to Romance languages such as French, Spanish or Italian, at the expense of other popular languages such as Arabic or Mandarin. As such, the 'international' language is perhaps not international enough, and may even be considered as maintaining a primarily Western point of view, something the creator of Esperanto initially set out to mitigate.\nAs mentioned, Esperanto is what is known as an 'artificial language'. Those involved with the development of its vocabulary and structures were well aware that the language they were creating had few ties with languages of the past, and so one of the basic features of any other language - that of a cultural heritage - can be considered missing for speakers of Esperanto. However, advocates of Esperanto would counter this criticism by claiming that all languages can be considered as artificial, in the sense that the creators of any language were human. What Esperanto lacks in culture, it makes up for in efficiency, and as language learners in the busy modern world are constantly under pressure of time, it is possible that, for some, it is worth developing communicative efficiency at the expense of a certain prestige. In addition, as Esperanto itself is now over a century old, one might argue that this language, too, has built up a history of its own, one shared by the thousands who speak it and use it as an international means of communication.\nWhether we consider the Esperanto experiment a success or failure, one thing is for certain: an international language should reflect all aspects of global society, while at the same time be easy to learn, free from ambiguity, and neutral in terms of ideology. Critics of Esperanto c1aim its failure in each of these aspects, while proponents of the language assert that it has succeeded in areas where English might have failed. While there may not be enough global uptake of Esperanto to eventually topple English from its perch, there is no doubt that it has provoked increased interest in the debate on language in the shadow of globalisation, and this debate is far from over.\nWhat does the writer suggest is the main reason why Esperanto appeals to learners?\n1) Its spelling accurately reflects its pronunciation.\n2) Its grammar and vocabulary are relatively simple.\n3) It is becoming increasingly widely spoken.\n4) It lacks associations with a specific culture.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "4"
+      ],
+      "explanation": "4 — Чтобы отметить важность отсутствия у языка политических коннотаций, автор использует фразу more significantly.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q5",
+      "type": "input",
+      "topic": "Задание 5",
+      "title": "Задание 5",
+      "prompt": "Прочитайте текст и ответьте на вопрос.\nBreaking down the language barrier?\nWe are supposed to live in a 'globalised' world, or so we are increasingly taught in school. Many of us share elements of a globalised culture, at least, perhaps watching Japanese movies, listening to K-pop, or eating Indian food. Why is it, then, that so many of us tussle with the basics of global communication in this age of instant messaging, email and video conferencing? English may certainly be the (self-appointed) lingua franca of the globalised world, with millions of students struggling daily to learn its phrasal verbs and idioms. But English is the mother tongue of only a relatively small percentage of the global population, so wouldn't it be easier if we all spoke a simpler language? Perhaps what is needed is an international language.\nWhat is interesting is that, over a hundred years ago, a Dr Ludwig Zamenhof published a book about a new language that he had developed, with the intention of providing an appropriate international means of communication. He called this language 'Esperanto', and it is said that hundreds of thousands of people have learned to speak it, with about one thousand today even using it as their first language. It is claimed to be easy to master and, more significantly, as an artificial language, it is appreciated as being devoid of any of the ideological or political connotations that accompany languages of former colonial powers, such as English. It is said to be learnt much faster than English, with a one symbol-one-sound writing system (making spelling easier) and a grammar with a limited number of rules. Vocabulary even borrows a number of words that are already shared internationally, such as telefono (telephone) and matematiko (mathematics). In short, Esperanto may well be the answer that second-language learners have been seeking.\nThe problem is that it is likely that, before reading this article, you might never have heard of Esperanto, and you would almost certainly not be alone on that point. The main criticism of Esperanto is that, despite its lofty ideals, the language never really caught on among the global population in the way its creator intended. Whether there was a vested interest in preventing the language from spreading is hard to say. The key factor is that the language does, in fact, look rather similar to Romance languages such as French, Spanish or Italian, at the expense of other popular languages such as Arabic or Mandarin. As such, the 'international' language is perhaps not international enough, and may even be considered as maintaining a primarily Western point of view, something the creator of Esperanto initially set out to mitigate.\nAs mentioned, Esperanto is what is known as an 'artificial language'. Those involved with the development of its vocabulary and structures were well aware that the language they were creating had few ties with languages of the past, and so one of the basic features of any other language - that of a cultural heritage - can be considered missing for speakers of Esperanto. However, advocates of Esperanto would counter this criticism by claiming that all languages can be considered as artificial, in the sense that the creators of any language were human. What Esperanto lacks in culture, it makes up for in efficiency, and as language learners in the busy modern world are constantly under pressure of time, it is possible that, for some, it is worth developing communicative efficiency at the expense of a certain prestige. In addition, as Esperanto itself is now over a century old, one might argue that this language, too, has built up a history of its own, one shared by the thousands who speak it and use it as an international means of communication.\nWhether we consider the Esperanto experiment a success or failure, one thing is for certain: an international language should reflect all aspects of global society, while at the same time be easy to learn, free from ambiguity, and neutral in terms of ideology. Critics of Esperanto c1aim its failure in each of these aspects, while proponents of the language assert that it has succeeded in areas where English might have failed. While there may not be enough global uptake of Esperanto to eventually topple English from its perch, there is no doubt that it has provoked increased interest in the debate on language in the shadow of globalisation, and this debate is far from over.\nWhat does the word lofty in paragraph 3 mean?\n1) High in standard.\n2) Pretentious.\n3) Unclear.\n4) Extravagant.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "1"
+      ],
+      "explanation": "1 — Догадаться о значении слова можно было по контексту или узнав в слове денотат loft.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q6",
+      "type": "input",
+      "topic": "Задание 6",
+      "title": "Задание 6",
+      "prompt": "Прочитайте текст и ответьте на вопрос.\nBreaking down the language barrier?\nWe are supposed to live in a 'globalised' world, or so we are increasingly taught in school. Many of us share elements of a globalised culture, at least, perhaps watching Japanese movies, listening to K-pop, or eating Indian food. Why is it, then, that so many of us tussle with the basics of global communication in this age of instant messaging, email and video conferencing? English may certainly be the (self-appointed) lingua franca of the globalised world, with millions of students struggling daily to learn its phrasal verbs and idioms. But English is the mother tongue of only a relatively small percentage of the global population, so wouldn't it be easier if we all spoke a simpler language? Perhaps what is needed is an international language.\nWhat is interesting is that, over a hundred years ago, a Dr Ludwig Zamenhof published a book about a new language that he had developed, with the intention of providing an appropriate international means of communication. He called this language 'Esperanto', and it is said that hundreds of thousands of people have learned to speak it, with about one thousand today even using it as their first language. It is claimed to be easy to master and, more significantly, as an artificial language, it is appreciated as being devoid of any of the ideological or political connotations that accompany languages of former colonial powers, such as English. It is said to be learnt much faster than English, with a one symbol-one-sound writing system (making spelling easier) and a grammar with a limited number of rules. Vocabulary even borrows a number of words that are already shared internationally, such as telefono (telephone) and matematiko (mathematics). In short, Esperanto may well be the answer that second-language learners have been seeking.\nThe problem is that it is likely that, before reading this article, you might never have heard of Esperanto, and you would almost certainly not be alone on that point. The main criticism of Esperanto is that, despite its lofty ideals, the language never really caught on among the global population in the way its creator intended. Whether there was a vested interest in preventing the language from spreading is hard to say. The key factor is that the language does, in fact, look rather similar to Romance languages such as French, Spanish or Italian, at the expense of other popular languages such as Arabic or Mandarin. As such, the 'international' language is perhaps not international enough, and may even be considered as maintaining a primarily Western point of view, something the creator of Esperanto initially set out to mitigate.\nAs mentioned, Esperanto is what is known as an 'artificial language'. Those involved with the development of its vocabulary and structures were well aware that the language they were creating had few ties with languages of the past, and so one of the basic features of any other language - that of a cultural heritage - can be considered missing for speakers of Esperanto. However, advocates of Esperanto would counter this criticism by claiming that all languages can be considered as artificial, in the sense that the creators of any language were human. What Esperanto lacks in culture, it makes up for in efficiency, and as language learners in the busy modern world are constantly under pressure of time, it is possible that, for some, it is worth developing communicative efficiency at the expense of a certain prestige. In addition, as Esperanto itself is now over a century old, one might argue that this language, too, has built up a history of its own, one shared by the thousands who speak it and use it as an international means of communication.\nWhether we consider the Esperanto experiment a success or failure, one thing is for certain: an international language should reflect all aspects of global society, while at the same time be easy to learn, free from ambiguity, and neutral in terms of ideology. Critics of Esperanto c1aim its failure in each of these aspects, while proponents of the language assert that it has succeeded in areas where English might have failed. While there may not be enough global uptake of Esperanto to eventually topple English from its perch, there is no doubt that it has provoked increased interest in the debate on language in the shadow of globalisation, and this debate is far from over.\nHow does the writer explain the fact that Esperanto has been less successful than initially hoped?\n1) Esperanto is too closely associated with European languages.\n2) Many learners find English more interesting than Esperanto.\n3) Speakers of Arabic and Chinese find Esperanto difficult.\n4) Esperanto has not been promoted widely enough.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "1"
+      ],
+      "explanation": "1 — Ответ находится в последних двух предложениях третьего абзаца. Эсперанто слишком похож на европейские языки, поэтому претендовать на некую универсальность для изучающих не может.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q7",
+      "type": "input",
+      "topic": "Задание 7",
+      "title": "Задание 7",
+      "prompt": "Прочитайте текст и ответьте на вопрос.\nBreaking down the language barrier?\nWe are supposed to live in a 'globalised' world, or so we are increasingly taught in school. Many of us share elements of a globalised culture, at least, perhaps watching Japanese movies, listening to K-pop, or eating Indian food. Why is it, then, that so many of us tussle with the basics of global communication in this age of instant messaging, email and video conferencing? English may certainly be the (self-appointed) lingua franca of the globalised world, with millions of students struggling daily to learn its phrasal verbs and idioms. But English is the mother tongue of only a relatively small percentage of the global population, so wouldn't it be easier if we all spoke a simpler language? Perhaps what is needed is an international language.\nWhat is interesting is that, over a hundred years ago, a Dr Ludwig Zamenhof published a book about a new language that he had developed, with the intention of providing an appropriate international means of communication. He called this language 'Esperanto', and it is said that hundreds of thousands of people have learned to speak it, with about one thousand today even using it as their first language. It is claimed to be easy to master and, more significantly, as an artificial language, it is appreciated as being devoid of any of the ideological or political connotations that accompany languages of former colonial powers, such as English. It is said to be learnt much faster than English, with a one symbol-one-sound writing system (making spelling easier) and a grammar with a limited number of rules. Vocabulary even borrows a number of words that are already shared internationally, such as telefono (telephone) and matematiko (mathematics). In short, Esperanto may well be the answer that second-language learners have been seeking.\nThe problem is that it is likely that, before reading this article, you might never have heard of Esperanto, and you would almost certainly not be alone on that point. The main criticism of Esperanto is that, despite its lofty ideals, the language never really caught on among the global population in the way its creator intended. Whether there was a vested interest in preventing the language from spreading is hard to say. The key factor is that the language does, in fact, look rather similar to Romance languages such as French, Spanish or Italian, at the expense of other popular languages such as Arabic or Mandarin. As such, the 'international' language is perhaps not international enough, and may even be considered as maintaining a primarily Western point of view, something the creator of Esperanto initially set out to mitigate.\nAs mentioned, Esperanto is what is known as an 'artificial language'. Those involved with the development of its vocabulary and structures were well aware that the language they were creating had few ties with languages of the past, and so one of the basic features of any other language - that of a cultural heritage - can be considered missing for speakers of Esperanto. However, advocates of Esperanto would counter this criticism by claiming that all languages can be considered as artificial, in the sense that the creators of any language were human. What Esperanto lacks in culture, it makes up for in efficiency, and as language learners in the busy modern world are constantly under pressure of time, it is possible that, for some, it is worth developing communicative efficiency at the expense of a certain prestige. In addition, as Esperanto itself is now over a century old, one might argue that this language, too, has built up a history of its own, one shared by the thousands who speak it and use it as an international means of communication.\nWhether we consider the Esperanto experiment a success or failure, one thing is for certain: an international language should reflect all aspects of global society, while at the same time be easy to learn, free from ambiguity, and neutral in terms of ideology. Critics of Esperanto c1aim its failure in each of these aspects, while proponents of the language assert that it has succeeded in areas where English might have failed. While there may not be enough global uptake of Esperanto to eventually topple English from its perch, there is no doubt that it has provoked increased interest in the debate on language in the shadow of globalisation, and this debate is far from over.\nHow does the writer suggest that Esperanto is now changing?\n1) lt can no longer be considered artificial.\n2) It is developing its own culture.\n3) Its vocabulary is rapidly expanding.\n4) Its prestige is beginning to increase.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "2"
+      ],
+      "explanation": "2 — Автор говорит, что язык уже сам со себе старый, а значит «оброс историей», некоторые люди его все равно использую/вали, создавая культуру языка.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q8",
+      "type": "input",
+      "topic": "Задание 8",
+      "title": "Задание 8",
+      "prompt": "Прочитайте текст и ответьте на вопрос.\nBreaking down the language barrier?\nWe are supposed to live in a 'globalised' world, or so we are increasingly taught in school. Many of us share elements of a globalised culture, at least, perhaps watching Japanese movies, listening to K-pop, or eating Indian food. Why is it, then, that so many of us tussle with the basics of global communication in this age of instant messaging, email and video conferencing? English may certainly be the (self-appointed) lingua franca of the globalised world, with millions of students struggling daily to learn its phrasal verbs and idioms. But English is the mother tongue of only a relatively small percentage of the global population, so wouldn't it be easier if we all spoke a simpler language? Perhaps what is needed is an international language.\nWhat is interesting is that, over a hundred years ago, a Dr Ludwig Zamenhof published a book about a new language that he had developed, with the intention of providing an appropriate international means of communication. He called this language 'Esperanto', and it is said that hundreds of thousands of people have learned to speak it, with about one thousand today even using it as their first language. It is claimed to be easy to master and, more significantly, as an artificial language, it is appreciated as being devoid of any of the ideological or political connotations that accompany languages of former colonial powers, such as English. It is said to be learnt much faster than English, with a one symbol-one-sound writing system (making spelling easier) and a grammar with a limited number of rules. Vocabulary even borrows a number of words that are already shared internationally, such as telefono (telephone) and matematiko (mathematics). In short, Esperanto may well be the answer that second-language learners have been seeking.\nThe problem is that it is likely that, before reading this article, you might never have heard of Esperanto, and you would almost certainly not be alone on that point. The main criticism of Esperanto is that, despite its lofty ideals, the language never really caught on among the global population in the way its creator intended. Whether there was a vested interest in preventing the language from spreading is hard to say. The key factor is that the language does, in fact, look rather similar to Romance languages such as French, Spanish or Italian, at the expense of other popular languages such as Arabic or Mandarin. As such, the 'international' language is perhaps not international enough, and may even be considered as maintaining a primarily Western point of view, something the creator of Esperanto initially set out to mitigate.\nAs mentioned, Esperanto is what is known as an 'artificial language'. Those involved with the development of its vocabulary and structures were well aware that the language they were creating had few ties with languages of the past, and so one of the basic features of any other language - that of a cultural heritage - can be considered missing for speakers of Esperanto. However, advocates of Esperanto would counter this criticism by claiming that all languages can be considered as artificial, in the sense that the creators of any language were human. What Esperanto lacks in culture, it makes up for in efficiency, and as language learners in the busy modern world are constantly under pressure of time, it is possible that, for some, it is worth developing communicative efficiency at the expense of a certain prestige. In addition, as Esperanto itself is now over a century old, one might argue that this language, too, has built up a history of its own, one shared by the thousands who speak it and use it as an international means of communication.\nWhether we consider the Esperanto experiment a success or failure, one thing is for certain: an international language should reflect all aspects of global society, while at the same time be easy to learn, free from ambiguity, and neutral in terms of ideology. Critics of Esperanto c1aim its failure in each of these aspects, while proponents of the language assert that it has succeeded in areas where English might have failed. While there may not be enough global uptake of Esperanto to eventually topple English from its perch, there is no doubt that it has provoked increased interest in the debate on language in the shadow of globalisation, and this debate is far from over.\nThe writer concludes that…\n1) Esperanto is in some ways superior to English.\n2) Esperanto meets all the criteria for an international language.\n3) it is hard to predict what the future fate of Esperanto will be.\n4) Esperanto has prompted useful discussions about language.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "4"
+      ],
+      "explanation": "4 — Автор в последнем абзаце отмечает, что эсперанто породил плодотворную дискуссию о роли языка в современном мире.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-english-language-ege-2022-q9",
+      "type": "input",
+      "topic": "Задание 9",
+      "title": "Задание 9",
+      "prompt": "Прочитайте текст и ответьте на вопрос.\nBreaking down the language barrier?\nWe are supposed to live in a 'globalised' world, or so we are increasingly taught in school. Many of us share elements of a globalised culture, at least, perhaps watching Japanese movies, listening to K-pop, or eating Indian food. Why is it, then, that so many of us tussle with the basics of global communication in this age of instant messaging, email and video conferencing? English may certainly be the (self-appointed) lingua franca of the globalised world, with millions of students struggling daily to learn its phrasal verbs and idioms. But English is the mother tongue of only a relatively small percentage of the global population, so wouldn't it be easier if we all spoke a simpler language? Perhaps what is needed is an international language.\nWhat is interesting is that, over a hundred years ago, a Dr Ludwig Zamenhof published a book about a new language that he had developed, with the intention of providing an appropriate international means of communication. He called this language 'Esperanto', and it is said that hundreds of thousands of people have learned to speak it, with about one thousand today even using it as their first language. It is claimed to be easy to master and, more significantly, as an artificial language, it is appreciated as being devoid of any of the ideological or political connotations that accompany languages of former colonial powers, such as English. It is said to be learnt much faster than English, with a one symbol-one-sound writing system (making spelling easier) and a grammar with a limited number of rules. Vocabulary even borrows a number of words that are already shared internationally, such as telefono (telephone) and matematiko (mathematics). In short, Esperanto may well be the answer that second-language learners have been seeking.\nThe problem is that it is likely that, before reading this article, you might never have heard of Esperanto, and you would almost certainly not be alone on that point. The main criticism of Esperanto is that, despite its lofty ideals, the language never really caught on among the global population in the way its creator intended. Whether there was a vested interest in preventing the language from spreading is hard to say. The key factor is that the language does, in fact, look rather similar to Romance languages such as French, Spanish or Italian, at the expense of other popular languages such as Arabic or Mandarin. As such, the 'international' language is perhaps not international enough, and may even be considered as maintaining a primarily Western point of view, something the creator of Esperanto initially set out to mitigate.\nAs mentioned, Esperanto is what is known as an 'artificial language'. Those involved with the development of its vocabulary and structures were well aware that the language they were creating had few ties with languages of the past, and so one of the basic features of any other language - that of a cultural heritage - can be considered missing for speakers of Esperanto. However, advocates of Esperanto would counter this criticism by claiming that all languages can be considered as artificial, in the sense that the creators of any language were human. What Esperanto lacks in culture, it makes up for in efficiency, and as language learners in the busy modern world are constantly under pressure of time, it is possible that, for some, it is worth developing communicative efficiency at the expense of a certain prestige. In addition, as Esperanto itself is now over a century old, one might argue that this language, too, has built up a history of its own, one shared by the thousands who speak it and use it as an international means of communication.\nWhether we consider the Esperanto experiment a success or failure, one thing is for certain: an international language should reflect all aspects of global society, while at the same time be easy to learn, free from ambiguity, and neutral in terms of ideology. Critics of Esperanto c1aim its failure in each of these aspects, while proponents of the language assert that it has succeeded in areas where English might have failed. While there may not be enough global uptake of Esperanto to eventually topple English from its perch, there is no doubt that it has provoked increased interest in the debate on language in the shadow of globalisation, and this debate is far from over.\nWhat does 'it' (… it has provoked) in the last paragraph refer to?\n1) Esperanto.\n2) Uptake.\n3) Perch.\n4) English.\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "1"
+      ],
+      "explanation": "1 — Эсперанто – единственный ответ, который имеет смысл в данном случае.",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -294,16 +217,16 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
       "id": "sp-english-language-ege-2022-q11",
       "type": "text",
-      "topic": "Понимание структурно-смысловых связей в письменном тексте",
+      "topic": "Задание 11",
       "title": "Задание 11",
       "prompt": "Прочитайте приведённый ниже текст. Преобразуйте, если необходимо, слово, напечатанное заглавными буквами в конце строки так, чтобы оно грамматически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову. В ответ запишите полученное слово (без пробелов).\n11 | One day, having nothing better to do, Apollo came to the temple in Troy. Among other ________ he saw Cassandra, a young and beautiful priestess, who worked at the temple. | WOMAN",
-      "max_primary_score": 2,
+      "max_primary_score": 1,
       "correct": [
         "women"
       ],
@@ -315,9 +238,8 @@
         "approval_status": "draft",
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
-        "exam_position": "11",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -339,7 +261,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -361,7 +283,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -383,7 +305,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -405,7 +327,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -427,7 +349,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -449,7 +371,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -471,7 +393,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -493,7 +415,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -515,7 +437,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -537,7 +459,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -559,7 +481,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -580,7 +502,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       },
       "asset": "assets/questions/sp-english-language-ege-2022-q23-1.png"
     }
