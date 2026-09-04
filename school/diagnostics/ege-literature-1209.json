@@ -4,281 +4,11 @@
   "subject": "Литература",
   "mark": "Диагностика",
   "quick_count": 3,
-  "full_count": 15,
   "scoring": {
     "max_score": 100,
     "score_unit": "accuracy_percent"
   },
   "questions": [
-    {
-      "id": "q9876",
-      "type": "input",
-      "topic": "Содержание произведений",
-      "learning_material_text": "Вспомните, как каждый персонаж выражает свою позицию в произведении, а не только его имя. Сопоставляйте героя с его рассуждением, поступком или репликой и проверяйте, не принадлежит ли мысль другому персонажу.",
-      "learning_material_url": "https://maximumtest.ru/uchebnik/literatura",
-      "title": "Задание 2",
-      "prompt": "Установите соответствие между персонажами «Кому на Руси жить хорошо?» и теми, кого они считают счастливыми. К каждой позиции первого столбца подберите соответствующую позицию из второго столбца.\nПЕРСОНАЖИ\nКОГО СЧИТАЮТ СЧАСТЛИВЫМИ\nА) Лука\n1. Царь\nБ) Пров\n2. Поп\nВ) Братья Губины\n3. Купец\n4. Крестьянин\nА\nБ\nВ\nВведите последовательность цифр без пробелов.",
-      "correct": [
-        "213"
-      ],
-      "explanation": "В споре странников Лука называет счастливым попа, Пров выбирает царя, а братья Губины называют купца. В порядке А, Б, В получается последовательность 213."
-    },
-    {
-      "id": "q9877",
-      "type": "multiple",
-      "topic": "Теория литературы",
-      "learning_material_text": "Найдите в строках конкретный языковой признак: переносное значение, сравнение, повтор, обращение или особое построение фразы. Сначала назовите приём на примере из текста, затем выбирайте его термин из списка.",
-      "learning_material_url": "https://maximumtest.ru/uchebnik/11-klass/literatura/figury-rechi",
-      "title": "Задание 8",
-      "prompt": "Из приведённого ниже перечня выберите все названия художественных средств и приёмов, использованных поэтом в данном стихотворении. Запишите цифры, под которыми они указаны.\n«На закате»\nНа закате, у той же скамьи, как во дни молодые мои,\nна закате, ты знаешь каком, с яркой тучей и майским жуком,\nу скамьи с полусгнившей доской высоко над румяной рекой,\nкак тогда, в те далекие дни, улыбнись и лицо отверни,\nесли душам умерших давно возвращаться порою дано.\nВ.В. Набоков, 1935",
-      "options": [
-        {
-          "id": "o1",
-          "label": "1. инверсия"
-        },
-        {
-          "id": "o2",
-          "label": "2. эпитет"
-        },
-        {
-          "id": "o3",
-          "label": "3. оксюморон"
-        },
-        {
-          "id": "o4",
-          "label": "4. эпифора"
-        },
-        {
-          "id": "o5",
-          "label": "5. метафора"
-        },
-        {
-          "id": "o6",
-          "label": "6. гипербола"
-        },
-        {
-          "id": "o7",
-          "label": "7. парцелляция"
-        }
-      ],
-      "selection_limit": 2,
-      "correct": [
-        "o1",
-        "o2"
-      ],
-      "explanation": "Инверсия видна в необычном порядке слов «дни молодые мои». Сочетания «яркой тучей» и «румяной рекой» содержат образные эпитеты; остальных перечисленных приёмов в указанных строках нет."
-    },
-    {
-      "id": "q9878",
-      "type": "multiple",
-      "topic": "Сопоставительное сочинение",
-      "learning_material_text": "Сначала выберите произведение, которое действительно относится к указанной теме, и назовите автора. Затем сформулируйте один ясный критерий сопоставления, приведите доказательства из обоих текстов и сделайте вывод о сходстве или различии.",
-      "learning_material_url": "https://maximumtest.ru/uchebnik/literatura",
-      "title": "Задание 10",
-      "prompt": "« Назовите произведение отечественной поэзии (с указанием автора), которое относится к философской лирике . Сопоставьте выбранное Вами произведение со стихотворением В.В. Набокова , выявив сходства ИЛИ различия обоих произведений », – так звучит задание №10 ЕГЭ по литературе, которое требует от вас написания сопоставительного сочинения. Выберите среди представленных стихотворений те, которые можно было бы привести в качестве примера для сравнения.",
-      "options": [
-        {
-          "id": "o1",
-          "label": "1. С.А. Есенин – «Не жалею, не зову, не плачу…»"
-        },
-        {
-          "id": "o2",
-          "label": "2. Ф.И. Тютчев – «Silentium!»"
-        },
-        {
-          "id": "o3",
-          "label": "3. Монолог Гамлета из одноименной драмы У. Шекспира"
-        },
-        {
-          "id": "o4",
-          "label": "4. Т. Грей – «Элегия на сельском кладбище»"
-        },
-        {
-          "id": "o5",
-          "label": "5. А.А. Фет – «Шёпот, робкое дыханье…»"
-        }
-      ],
-      "selection_limit": 2,
-      "correct": [
-        "o1",
-        "o2"
-      ],
-      "explanation": "Оба выбранных текста относятся к отечественной философской лирике. Есенин размышляет о быстротечности жизни, а Тютчев в стихотворении «Silentium!» исследует внутренний мир человека и невозможность полностью выразить мысль; произведения Шекспира и Грея не относятся к отечественной поэзии, а стихотворение Фета является любовной лирикой."
-    },
-    {
-      "id": "f26-ege-lit-a01",
-      "type": "input",
-      "topic": "Персонажи русской литературы",
-      "title": "Авторское задание MAXIMUM. Позиция 2",
-      "prompt": "Установите соответствие между персонажем и произведением: А) Евгений Онегин; Б) Евгений Базаров; В) Родион Раскольников; Г) Андрей Болконский. Произведения: 1) «Евгений Онегин»; 2) «Отцы и дети»; 3) «Преступление и наказание»; 4) «Война и мир». Запишите четыре цифры.",
-      "correct": ["1234"],
-      "explanation": "Онегин является героем одноимённого романа Пушкина, Базаров действует в романе Тургенева, Раскольников в романе Достоевского, а Болконский в романе Толстого. Ответ 1234.",
-      "max_primary_score": 1,
-      "source": {"provider": "maximum", "official_year": 2026, "approval_status": "draft", "source_kind": "original", "source_url": "https://maximumtest.ru/", "exam_position": "2", "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/li_11_2026.zip", "rights_status": "original", "verified_at": "2026-09-01"}
-    },
-    {
-      "id": "f26-ege-lit-a02",
-      "type": "multiple",
-      "topic": "Изобразительно-выразительные средства",
-      "title": "Авторское задание MAXIMUM. Позиция 8",
-      "prompt": "Какие два средства выразительности использованы в авторской фразе MAXIMUM: «Сонный город укрылся серебряным одеялом тумана»?",
-      "options": [
-        {"id": "o1", "label": "метафора"},
-        {"id": "o2", "label": "анафора"},
-        {"id": "o3", "label": "эпитет"},
-        {"id": "o4", "label": "литота"}
-      ],
-      "selection_limit": 2,
-      "correct": ["o1", "o3"],
-      "explanation": "Туман образно назван серебряным одеялом, что создаёт метафору. Определения «сонный» и «серебряным» художественно характеризуют предметы и выступают эпитетами.",
-      "max_primary_score": 1,
-      "source": {"provider": "maximum", "official_year": 2026, "approval_status": "draft", "source_kind": "original", "source_url": "https://maximumtest.ru/", "exam_position": "8", "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/li_11_2026.zip", "rights_status": "original", "verified_at": "2026-09-01"}
-    },
-    {
-      "id": "f26-ege-lit-a03",
-      "type": "input",
-      "topic": "Авторы и произведения",
-      "title": "Авторское задание MAXIMUM. Позиция 2",
-      "prompt": "Установите соответствие между автором и произведением: А) А. С. Грибоедов; Б) Н. В. Гоголь; В) А. Н. Островский; Г) А. П. Чехов. Произведения: 1) «Горе от ума»; 2) «Мёртвые души»; 3) «Гроза»; 4) «Вишнёвый сад». Запишите четыре цифры.",
-      "correct": ["1234"],
-      "explanation": "Грибоедов написал «Горе от ума», Гоголь создал «Мёртвые души», Островский написал «Грозу», а Чехов является автором «Вишнёвого сада». Последовательность 1234.",
-      "max_primary_score": 1,
-      "source": {"provider": "maximum", "official_year": 2026, "approval_status": "draft", "source_kind": "original", "source_url": "https://maximumtest.ru/", "exam_position": "2", "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/li_11_2026.zip", "rights_status": "original", "verified_at": "2026-09-01"}
-    },
-    {
-      "id": "f26-ege-lit-a04",
-      "type": "multiple",
-      "topic": "Поэтическая речь",
-      "title": "Авторское задание MAXIMUM. Позиция 8",
-      "prompt": "Какие два средства выразительности использованы в авторской фразе MAXIMUM: «Неугомонный ветер-бродяга сердито стучал в окно»?",
-      "options": [
-        {"id": "o1", "label": "градация"},
-        {"id": "o2", "label": "олицетворение"},
-        {"id": "o3", "label": "инверсия"},
-        {"id": "o4", "label": "эпитет"}
-      ],
-      "selection_limit": 2,
-      "correct": ["o2", "o4"],
-      "explanation": "Ветру приписано человеческое действие и настроение, поэтому использовано олицетворение. Определение «неугомонный» является образным эпитетом.",
-      "max_primary_score": 1,
-      "source": {"provider": "maximum", "official_year": 2026, "approval_status": "draft", "source_kind": "original", "source_url": "https://maximumtest.ru/", "exam_position": "8", "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/li_11_2026.zip", "rights_status": "original", "verified_at": "2026-09-01"}
-    },
-    {
-      "id": "f26-ege-lit-a05",
-      "type": "input",
-      "topic": "Жанры произведений",
-      "title": "Авторское задание MAXIMUM. Позиция 2",
-      "prompt": "Установите соответствие между произведением и точным жанровым обозначением: А) «Евгений Онегин»; Б) «Ревизор»; В) «Судьба человека»; Г) «На дне». Жанры: 1) роман в стихах; 2) комедия; 3) рассказ; 4) социально-философская драма. Запишите четыре цифры.",
-      "correct": ["1234"],
-      "explanation": "«Евгений Онегин» является романом в стихах, «Ревизор» комедией, «Судьба человека» рассказом, а «На дне» социально-философской драмой. Соответствие даёт 1234.",
-      "max_primary_score": 1,
-      "source": {"provider": "maximum", "official_year": 2026, "approval_status": "draft", "source_kind": "original", "source_url": "https://maximumtest.ru/", "exam_position": "2", "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/li_11_2026.zip", "rights_status": "original", "verified_at": "2026-09-01"}
-    },
-    {
-      "id": "f26-ege-lit-a06",
-      "type": "multiple",
-      "topic": "Синтаксические средства выразительности",
-      "title": "Авторское задание MAXIMUM. Позиция 8",
-      "prompt": "Какие два приёма использованы в авторских строках MAXIMUM: «Мы помним тихий свет окна. Мы помним долгую дорогу. Мы помним первый разговор»?",
-      "options": [
-        {"id": "o1", "label": "анафора"},
-        {"id": "o2", "label": "оксюморон"},
-        {"id": "o3", "label": "литота"},
-        {"id": "o4", "label": "синтаксический параллелизм"}
-      ],
-      "selection_limit": 2,
-      "correct": ["o1", "o4"],
-      "explanation": "Каждое предложение начинается словами «Мы помним», что образует анафору. Одинаковое синтаксическое построение трёх предложений создаёт параллелизм.",
-      "max_primary_score": 1,
-      "source": {"provider": "maximum", "official_year": 2026, "approval_status": "draft", "source_kind": "original", "source_url": "https://maximumtest.ru/", "exam_position": "8", "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/li_11_2026.zip", "rights_status": "original", "verified_at": "2026-09-01"}
-    },
-    {
-      "id": "f26-ege-lit-a07",
-      "type": "input",
-      "topic": "Герои драматических и прозаических произведений",
-      "title": "Авторское задание MAXIMUM. Позиция 2",
-      "prompt": "Установите соответствие между героем и произведением: А) Чацкий; Б) Печорин; В) Катерина Кабанова; Г) Лопахин. Произведения: 1) «Горе от ума»; 2) «Герой нашего времени»; 3) «Гроза»; 4) «Вишнёвый сад». Запишите четыре цифры.",
-      "correct": ["1234"],
-      "explanation": "Чацкий действует в комедии Грибоедова, Печорин в романе Лермонтова, Катерина в драме Островского, а Лопахин в пьесе Чехова. Ответ 1234.",
-      "max_primary_score": 1,
-      "source": {"provider": "maximum", "official_year": 2026, "approval_status": "draft", "source_kind": "original", "source_url": "https://maximumtest.ru/", "exam_position": "2", "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/li_11_2026.zip", "rights_status": "original", "verified_at": "2026-09-01"}
-    },
-    {
-      "id": "f26-ege-lit-a08",
-      "type": "multiple",
-      "topic": "Лексические приёмы",
-      "title": "Авторское задание MAXIMUM. Позиция 8",
-      "prompt": "Какие два приёма использованы в авторской фразе MAXIMUM: «Богатый был беден дружбой, а бедняк был богат дружбой»?",
-      "options": [
-        {"id": "o1", "label": "гипербола"},
-        {"id": "o2", "label": "антитеза"},
-        {"id": "o3", "label": "лексический повтор"},
-        {"id": "o4", "label": "звукопись"}
-      ],
-      "selection_limit": 2,
-      "correct": ["o2", "o3"],
-      "explanation": "Материальное богатство противопоставлено богатству человеческих отношений, поэтому возникает антитеза. Слово «дружбой» дословно повторяется в обеих частях фразы.",
-      "max_primary_score": 1,
-      "source": {"provider": "maximum", "official_year": 2026, "approval_status": "draft", "source_kind": "original", "source_url": "https://maximumtest.ru/", "exam_position": "8", "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/li_11_2026.zip", "rights_status": "original", "verified_at": "2026-09-01"}
-    },
-    {
-      "id": "f26-ege-lit-a09",
-      "type": "input",
-      "topic": "Литературные направления",
-      "title": "Авторское задание MAXIMUM. Позиция 2",
-      "prompt": "Установите соответствие между автором и литературным направлением, с которым связано его творчество: А) В. А. Жуковский; Б) В. В. Маяковский; В) А. А. Ахматова; Г) М. В. Ломоносов. Направления: 1) романтизм; 2) футуризм; 3) акмеизм; 4) классицизм. Запишите четыре цифры.",
-      "correct": ["1234"],
-      "explanation": "Жуковский связан с романтизмом, Маяковский с футуризмом, Ахматова с акмеизмом, а Ломоносов с русским классицизмом. Последовательность ответов равна 1234.",
-      "max_primary_score": 1,
-      "source": {"provider": "maximum", "official_year": 2026, "approval_status": "draft", "source_kind": "original", "source_url": "https://maximumtest.ru/", "exam_position": "2", "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/li_11_2026.zip", "rights_status": "original", "verified_at": "2026-09-01"}
-    },
-    {
-      "id": "f26-ege-lit-a10",
-      "type": "multiple",
-      "topic": "Риторические фигуры",
-      "title": "Авторское задание MAXIMUM. Позиция 8",
-      "prompt": "Какие два средства использованы в авторской строке MAXIMUM: «О память, зачем ты возвращаешь меня к этому утру?»",
-      "options": [
-        {"id": "o1", "label": "риторическое обращение"},
-        {"id": "o2", "label": "градация"},
-        {"id": "o3", "label": "эпифора"},
-        {"id": "o4", "label": "риторический вопрос"}
-      ],
-      "selection_limit": 2,
-      "correct": ["o1", "o4"],
-      "explanation": "Говорящий обращается к отвлечённому понятию памяти, что создаёт риторическое обращение. Вопрос выражает переживание и не предполагает прямого ответа, поэтому он риторический.",
-      "max_primary_score": 1,
-      "source": {"provider": "maximum", "official_year": 2026, "approval_status": "draft", "source_kind": "original", "source_url": "https://maximumtest.ru/", "exam_position": "8", "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/li_11_2026.zip", "rights_status": "original", "verified_at": "2026-09-01"}
-    },
-    {
-      "id": "f26-ege-lit-a11",
-      "type": "input",
-      "topic": "Характеристики литературных героев",
-      "title": "Авторское задание MAXIMUM. Позиция 2",
-      "prompt": "Установите соответствие между характеристикой и героем: А) называет себя нигилистом; Б) проверяет идею о праве сильной личности; В) большую часть времени проводит дома в халате; Г) участвует в дуэли с Ленским. Герои: 1) Базаров; 2) Раскольников; 3) Обломов; 4) Онегин. Запишите четыре цифры.",
-      "correct": ["1234"],
-      "explanation": "Нигилизм связан с Базаровым, теория сильной личности с Раскольниковым, неподвижный домашний уклад с Обломовым, а дуэль с Ленским является эпизодом судьбы Онегина.",
-      "max_primary_score": 1,
-      "source": {"provider": "maximum", "official_year": 2026, "approval_status": "draft", "source_kind": "original", "source_url": "https://maximumtest.ru/", "exam_position": "2", "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/li_11_2026.zip", "rights_status": "original", "verified_at": "2026-09-01"}
-    },
-    {
-      "id": "f26-ege-lit-a12",
-      "type": "multiple",
-      "topic": "Выразительность авторской речи",
-      "title": "Авторское задание MAXIMUM. Позиция 8",
-      "prompt": "Какие два средства использованы в авторской фразе MAXIMUM: «Он сначала шептал, затем говорил, потом кричал и уверял, что ждал тысячу лет»?",
-      "options": [
-        {"id": "o1", "label": "аллитерация"},
-        {"id": "o2", "label": "градация"},
-        {"id": "o3", "label": "гипербола"},
-        {"id": "o4", "label": "инверсия"}
-      ],
-      "selection_limit": 2,
-      "correct": ["o2", "o3"],
-      "explanation": "Последовательность «шептал, говорил, кричал» усиливает действие и образует градацию. Выражение «ждал тысячу лет» намеренно преувеличивает длительность ожидания и является гиперболой.",
-      "max_primary_score": 1,
-      "source": {"provider": "maximum", "official_year": 2026, "approval_status": "draft", "source_kind": "original", "source_url": "https://maximumtest.ru/", "exam_position": "8", "official_criteria_url": "https://doc.fipi.ru/ege/demoversii-specifikacii-kodifikatory/2026/li_11_2026.zip", "rights_status": "original", "verified_at": "2026-09-01"}
-    },
     {
       "id": "sp-literature-ege-2022-q2",
       "type": "text",
@@ -298,7 +28,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -319,7 +49,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -342,7 +72,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -365,7 +95,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -387,7 +117,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     },
     {
@@ -433,7 +163,7 @@
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-03"
+        "verified_at": "2026-09-04"
       }
     }
   ]
