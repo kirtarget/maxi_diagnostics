@@ -181,7 +181,7 @@ export function WelcomeScreen({
   onStart,
 }: WelcomeScreenProps) {
   const minimumQuestions = Math.min(...diagnostics.map((item) => item.quick_count));
-  const maximumQuestions = Math.max(...diagnostics.map((item) => item.question_count));
+  const maximumQuestions = Math.max(...diagnostics.map((item) => item.full_count));
   const questionRange = minimumQuestions === maximumQuestions
     ? String(maximumQuestions)
     : `${minimumQuestions}–${maximumQuestions}`;
@@ -301,7 +301,7 @@ export function SubjectsScreen({
       )}
       <div className="subject-list">
         {visibleDiagnostics.map((item) => {
-          const count = mode === "quick" ? item.quick_count : item.question_count;
+          const count = mode === "quick" ? item.quick_count : item.full_count;
           return (
             <button className="subject-card" key={item.id} onClick={() => onSelect(item)} type="button">
               <SubjectIllustration subject={item.subject} />

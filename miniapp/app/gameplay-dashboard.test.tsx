@@ -12,6 +12,7 @@ describe("gameplay dashboard", () => {
     subject: "Математика",
     mark: "М",
     quick_count: 3,
+    full_count: 12,
     question_count: 12,
   }];
 

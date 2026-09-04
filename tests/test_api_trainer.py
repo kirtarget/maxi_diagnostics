@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import shutil
 import time
 from pathlib import Path
 from urllib.parse import urlencode
@@ -35,7 +36,9 @@ def signed_init_data(user_id: int = 42, *, valid: bool = True) -> str:
     return urlencode(pairs)
 
 
-def make_client(monkeypatch, *, generation: str = SESSION_GENERATION) -> TestClient:
+def make_client(
+    monkeypatch, *, generation: str = SESSION_GENERATION, school_root: Path | None = None
+) -> TestClient:
     from diagnostic.api import sessions
     from diagnostic.api import trainer
     from diagnostic.api.main import create_app
@@ -54,7 +57,7 @@ def make_client(monkeypatch, *, generation: str = SESSION_GENERATION) -> TestCli
         "https://app.example", "admin", "password", None,
         application_secret=APPLICATION_SECRET,
     )
-    school = load_school(SAMPLE_SCHOOL)
+    school = load_school(school_root or SAMPLE_SCHOOL)
     return TestClient(create_app(settings, school, load_catalog(school)))
 
 
@@ -425,3 +428,43 @@ def test_finish_incomplete_or_stale_revision_maps_to_conflict(monkeypatch, error
 
     assert response.status_code == 409
     assert response.json() == {"detail": error}
+
+
+def test_trainer_draws_from_every_question_even_past_full_count(monkeypatch, tmp_path):
+    from diagnostic.api import trainer
+
+    school_root = tmp_path / "school"
+    shutil.copytree(SAMPLE_SCHOOL, school_root)
+    path = school_root / "diagnostics" / "demo-math.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["full_count"] = 2
+    path.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    question_ids = [question["id"] for question in data["questions"]]
+    start_session = AsyncMock(return_value=(
+        {
+            "trainer_session_id": "A" * 32,
+            "diagnostic_id": "demo-math",
+            "content_version": "a" * 64,
+            "mode": "normal",
+            "question_ids": question_ids,
+            "current_index": 0,
+            "revision": 1,
+            "status": "active",
+        },
+        {"lives_remaining": 5},
+    ))
+    monkeypatch.setattr(trainer.trainer, "start_session", start_session)
+    client = make_client(monkeypatch, school_root=school_root)
+
+    response = client.post(
+        "/api/diagnostics/trainer/start", json=start_body(count=len(question_ids))
+    )
+
+    assert response.status_code == 200
+    assert start_session.await_args.kwargs["selected_question_ids"] == question_ids
+    assert [item["id"] for item in response.json()["questions"]] == question_ids
+    assert len(question_ids) > data["full_count"]

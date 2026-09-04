@@ -14,6 +14,7 @@ const summary = {
   subject: "Математика",
   mark: "М",
   quick_count: 5,
+  full_count: 15,
   question_count: 15,
 } satisfies PublicDiagnosticSummary;
 

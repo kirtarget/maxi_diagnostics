@@ -37,6 +37,7 @@ def test_public_summaries_contain_counts_without_questions():
             "subject": "Математика",
             "mark": "Демо",
             "quick_count": 2,
+            "full_count": 5,
             "question_count": 5,
         }
     ]
@@ -127,6 +128,40 @@ def test_quick_mode_is_stable():
 
     assert [question.id for question in first] == [question.id for question in second]
     assert len(first) == diagnostic.quick_count
+
+
+def test_full_mode_stops_at_full_count_and_defaults_to_every_question():
+    data = sample_diagnostic_data()
+    without = Diagnostic.model_validate(data)
+    shortened = Diagnostic.model_validate({**data, "full_count": 3})
+
+    assert without.full_count is None
+    assert without.full_question_count == len(without.questions)
+    assert without.questions_for_mode("full") == without.questions
+    assert [question.id for question in shortened.questions_for_mode("full")] == [
+        question.id for question in shortened.questions[:3]
+    ]
+    assert shortened.questions_for_mode("quick") == shortened.questions[
+        : shortened.quick_count
+    ]
+
+
+@pytest.mark.parametrize("value", [1, 6, 0, -1])
+def test_catalog_rejects_full_count_outside_quick_count_and_question_count(value: int):
+    data = sample_diagnostic_data()
+
+    with pytest.raises(ValueError, match="invalid_full_count|greater_than_equal"):
+        Diagnostic.model_validate({**data, "full_count": value})
+
+
+def test_full_count_accepts_its_own_bounds():
+    data = sample_diagnostic_data()
+
+    lower = Diagnostic.model_validate({**data, "full_count": 2})
+    upper = Diagnostic.model_validate({**data, "full_count": 5})
+
+    assert lower.full_question_count == lower.quick_count == 2
+    assert upper.full_question_count == len(upper.questions) == 5
 
 
 def test_catalog_rejects_diagnostic_with_invalid_option_reference(tmp_path: Path):

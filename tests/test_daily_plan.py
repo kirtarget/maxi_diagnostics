@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from pathlib import Path
 
 from diagnostic.daily_plan import (
     MistakeState,
@@ -163,3 +164,53 @@ def test_plan_summary_names_the_subject_and_progress():
         "subject": "Математика", "exam": "ЕГЭ",
         "total": 5, "completed": 2, "status": "ready",
     }
+
+
+def test_today_plan_practises_questions_the_full_diagnostic_leaves_out():
+    import asyncio
+
+    from diagnostic.catalog import load_catalog
+    from diagnostic.daily_plan import ensure_today_plan
+    from diagnostic.db import daily_plan as store
+    from diagnostic.school import load_school
+
+    root = Path(__file__).resolve().parents[1] / "tests/fixtures/sample-school"
+    catalog = load_catalog(load_school(root))
+    diagnostic = catalog.get("demo-math")
+    shortened = diagnostic.model_copy(update={"full_count": 2})
+    catalog = catalog.model_copy(update={"diagnostics": (shortened,)})
+    captured: dict[str, object] = {}
+
+    async def ensure_plan(*, user_id, plan_date, build):
+        captured["plan"] = build(
+            store.PlanInputs(
+                plan_date=plan_date,
+                source=PlanSource(
+                    attempt_id="attempt_1",
+                    diagnostic_id="demo-math",
+                    growth_topics=(),
+                    answered_question_ids=frozenset(),
+                ),
+                mistakes=(),
+            )
+        )
+        return None
+
+    original = store.ensure_plan
+    store.ensure_plan = ensure_plan
+    try:
+        asyncio.run(
+            ensure_today_plan(user_id=42, catalog=catalog, application_secret="s" * 32)
+        )
+    finally:
+        store.ensure_plan = original
+
+    plan = captured["plan"]
+    assert shortened.full_question_count == 2
+    assert len(shortened.questions) == 5
+    assert set(plan.question_ids) <= {question.id for question in shortened.questions}
+    assert any(
+        question_id
+        not in {question.id for question in shortened.questions_for_mode("full")}
+        for question_id in plan.question_ids
+    )

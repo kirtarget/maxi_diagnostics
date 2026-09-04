@@ -17,6 +17,7 @@ import {
   isValidNumericInput,
   loadDiagnostic,
   updateNumericInputAnswer,
+  validateSavedSession,
 } from "./api";
 import type {
   BootstrapResponse,
@@ -102,6 +103,7 @@ const diagnostics: PublicDiagnostic[] = [{
       max_length: 40,
     },
   ],
+  full_count: 5,
   question_count: 5,
 }];
 const SESSION_SCOPE = "account-scope-1";
@@ -143,7 +145,7 @@ function bootstrapPayload({
   latestAttemptId?: string | null;
 } = {}): BootstrapResponse {
   return {
-    catalog_contract: 2,
+    catalog_contract: 3,
     session_scope: SESSION_SCOPE,
     latest_attempt_id: latestAttemptId,
     school: {
@@ -796,5 +798,21 @@ describe("diagnostic API payloads", () => {
 
     expect(loadLocalSession("north-school", SESSION_SCOPE, diagnostics, storage)).toBeNull();
     expect(storage.getItem(storageKey("north-school", SESSION_SCOPE))).toBeNull();
+  });
+
+  it("keeps the full mode inside full_count when the catalog holds more questions", () => {
+    const shortened = [{ ...diagnostics[0], full_count: 3 }];
+    const inside = { ...validSession, questionIndex: 2, answers: { q1: "a", q2: ["x"] } };
+    const past = { ...validSession, questionIndex: 3, answers: { q1: "a" } };
+    const beyond = {
+      ...validSession,
+      questionIndex: 2,
+      answers: { q1: "a", q4: "42" },
+    };
+
+    expect(validateSavedSession(inside, shortened)).not.toBeNull();
+    expect(validateSavedSession(past, shortened)).toBeNull();
+    expect(validateSavedSession(beyond, shortened)).toBeNull();
+    expect(validateSavedSession(past, diagnostics)).not.toBeNull();
   });
 });

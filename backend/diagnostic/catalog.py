@@ -417,6 +417,7 @@ class Diagnostic(BaseModel):
     subject: str = Field(min_length=1, max_length=128)
     mark: str = Field(min_length=1, max_length=128)
     quick_count: int = Field(ge=1, le=_MAX_QUESTIONS, strict=True)
+    full_count: int | None = Field(default=None, ge=1, le=_MAX_QUESTIONS, strict=True)
     scoring: ScoringConfig
     questions: tuple[Question, ...] = Field(min_length=1, max_length=_MAX_QUESTIONS)
 
@@ -439,13 +440,30 @@ class Diagnostic(BaseModel):
             raise ValueError("duplicate_question_id")
         if self.quick_count > len(self.questions):
             raise ValueError("invalid_quick_count")
+        if self.full_count is not None and not (
+            self.quick_count <= self.full_count <= len(self.questions)
+        ):
+            raise ValueError("invalid_full_count")
         return self
+
+    @property
+    def full_question_count(self) -> int:
+        """How many leading questions the full mode asks; the rest are practice."""
+        return len(self.questions) if self.full_count is None else self.full_count
+
+    def questions_for_mode(self, mode: Literal["quick", "full"]) -> tuple[Question, ...]:
+        if mode == "quick":
+            return self.questions[: self.quick_count]
+        if mode == "full":
+            return self.questions[: self.full_question_count]
+        raise ValueError("invalid_mode")
 
 
 def _public_diagnostic(diagnostic: Diagnostic, content_version: str) -> dict[str, Any]:
     return {
         **diagnostic.model_dump(exclude={"questions", "scoring"}, mode="json"),
         "content_version": content_version,
+        "full_count": diagnostic.full_question_count,
         "question_count": len(diagnostic.questions),
         "questions": [public_question(question) for question in diagnostic.questions],
     }
@@ -478,12 +496,7 @@ class DiagnosticCatalog(BaseModel):
     def questions_for_mode(
         self, diagnostic_id: str, mode: Literal["quick", "full"]
     ) -> tuple[Question, ...]:
-        diagnostic = self.get(diagnostic_id)
-        if mode == "quick":
-            return diagnostic.questions[: diagnostic.quick_count]
-        if mode == "full":
-            return diagnostic.questions
-        raise ValueError("invalid_mode")
+        return self.get(diagnostic_id).questions_for_mode(mode)
 
     def public_summaries(self, version_secret: str) -> list[dict[str, Any]]:
         return [
@@ -571,6 +584,7 @@ def _public_summary(diagnostic: Diagnostic, content_version: str) -> dict[str, A
         "subject": diagnostic.subject,
         "mark": diagnostic.mark,
         "quick_count": diagnostic.quick_count,
+        "full_count": diagnostic.full_question_count,
         "question_count": len(diagnostic.questions),
     }
 
