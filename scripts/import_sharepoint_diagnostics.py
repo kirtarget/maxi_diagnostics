@@ -117,6 +117,14 @@ FIGURE_WORDS = re.compile(
 EXTERNAL_RESOURCE = re.compile(r"https?://|воспользуйтесь файлом|аудиозапис|прослушайте", re.IGNORECASE)
 SEQUENCE_MARKERS = re.compile(r"^[А-ЯЁ]\)", re.MULTILINE)
 SEQUENCE_HINT = "Введите последовательность цифр без пробелов."
+WORD_FORMATION_HINT = re.compile(r"\|\s*(?P<hint>[A-Z]+(?:\s+[A-Z]+)*)\s*\Z")
+AUXILIARY_WORDS = frozenset(
+    {
+        "am", "are", "is", "was", "were", "be", "been", "being", "do", "does",
+        "did", "have", "has", "had", "can", "could", "will", "would", "shall",
+        "should", "may", "might", "must", "not",
+    }
+)
 PDF_SAFE_REPLACEMENTS = str.maketrans(
     {
         "⋅": "·",
@@ -594,6 +602,30 @@ def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
 # --------------------------------------------------------------------------
 
 
+def _glued_answer(prompt: str, variants: list[str]) -> bool:
+    """Whether a word-formation key spells a phrase the student cannot type.
+
+    These tasks end with the source word after a `|`. A few editorial keys write
+    the expected phrase without its space (`wasimpressed`, `didnotbelieve`), so
+    the only accepted spelling is one no reader would produce. The key is the
+    editorial source and stays untouched; the task leaves the catalog instead.
+    """
+    last_line = prompt.rstrip().splitlines()[-1]
+    match = WORD_FORMATION_HINT.search(last_line)
+    if match is None or any(" " in variant for variant in variants):
+        return False
+    hint = match.group("hint").split()
+    if len(hint) > 1:
+        return True
+    stem = hint[0].lower()
+    for variant in variants:
+        lowered = variant.lower()
+        index = lowered.find(stem)
+        if index > 0 and lowered[:index] in AUXILIARY_WORDS:
+            return True
+    return False
+
+
 def _option_label(value: str) -> str | None:
     cleaned = clean_line(value)
     return cleaned if 1 <= len(cleaned) <= MAX_OPTION_LABEL_CHARS else None
@@ -660,6 +692,8 @@ def build_question(
             f"i{index + 1}": f"o{digit}" for index, digit in enumerate(payload["key"])
         }
     elif kind == "text":
+        if _glued_answer(prompt, payload["correct"]):
+            return "glued_answer"
         question["correct"] = payload["correct"]
         question["max_length"] = MAX_TEXT_ANSWER_CHARS
     else:

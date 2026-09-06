@@ -644,3 +644,41 @@ def test_a_multi_digit_key_still_carries_the_sequence_hint():
     assert importer.classify(task)[1]["sequence"] is True
 
 
+def _english_source() -> importer.SourceFile:
+    return importer.SourceFile(
+        path=Path("АЯ_ЕГЭ_Диагностика_21-22_Заданий 23.docx"),
+        exam="ЕГЭ",
+        subject_code="english-language",
+        year=2022,
+        declared_tasks=23,
+        tasks=(),
+    )
+
+
+def _word_formation(key: str, hint: str) -> importer.SourceTask:
+    task = importer.SourceTask(number=12, answer=[key])
+    task.prompt_blocks.append("Преобразуйте слово так, чтобы оно подошло по смыслу.")
+    task.prompt_blocks.append(f"12 | Apollo ________ by her grace. | {hint}")
+    return task
+
+
+def test_a_glued_multi_word_key_is_skipped_instead_of_shipping_unanswerable(tmp_path):
+    for key, hint in (("wasimpressed", "IMPRESS"), ("didnotbelieve", "NOT BELIEVE")):
+        task = _word_formation(key, hint)
+        kind, payload = importer.classify(task)
+        assert kind == "text"
+        assert importer.build_question(
+            _english_source(), task, kind, payload, verified_at="2026-09-04"
+        ) == "glued_answer"
+
+
+def test_a_regular_word_formation_key_still_ships(tmp_path):
+    for key, hint in (("greatest", "GREAT"), ("unbelievable", "BELIEVE"), ("women", "WOMAN")):
+        task = _word_formation(key, hint)
+        kind, payload = importer.classify(task)
+        question = importer.build_question(
+            _english_source(), task, kind, payload, verified_at="2026-09-04"
+        )
+        assert question["correct"] == [key]
+
+
