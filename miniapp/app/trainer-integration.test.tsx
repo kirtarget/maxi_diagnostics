@@ -129,7 +129,7 @@ describe("trainer integration contracts", () => {
       onForecast={() => undefined}
       onReplayMistakes={() => undefined}
     />);
-    expect(html).toContain("Повторить ошибки");
+    expect(html).toContain("Отработать ошибки");
   });
 
   it("exposes safe server conflict details for visible recovery", async () => {

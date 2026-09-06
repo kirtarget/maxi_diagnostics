@@ -259,7 +259,7 @@ describe("Home screen transitions", () => {
     expect(screenClasses()).toContain("result-screen");
     expect(container.textContent).toContain("Архивный предмет");
     expect(requestedPaths).not.toContain("/api/diagnostics/catalog");
-    expect(container.textContent).not.toContain("Повторить ошибки");
+    expect(container.textContent).not.toContain("Отработать ошибки");
   });
 
   it("moves from loading to welcome on a first visit", async () => {

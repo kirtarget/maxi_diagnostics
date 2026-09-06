@@ -84,8 +84,8 @@ export function ResultScreen({
         <span>Он останется в разделе «Мои результаты». Telegram присылает только короткое уведомление со ссылкой на этот экран.</span>
       </div>
       <div className="result-actions">
-        <button className="primary-button" onClick={onReview} type="button">Разобрать ошибки <span aria-hidden="true">→</span></button>
-        {onReplayMistakes && <button className="secondary-button" onClick={onReplayMistakes} type="button">Повторить ошибки</button>}
+        <button className="primary-button" onClick={onReview} type="button">Посмотреть разбор <span aria-hidden="true">→</span></button>
+        {onReplayMistakes && <button className="secondary-button" onClick={onReplayMistakes} type="button">Отработать ошибки</button>}
         <button className="secondary-button" onClick={onForecast} type="button">Мой план подготовки</button>
       </div>
       </div>
