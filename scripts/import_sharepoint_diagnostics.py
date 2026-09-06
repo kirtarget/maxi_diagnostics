@@ -568,7 +568,9 @@ def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
         variants = [key]
         if "," in key:
             variants.append(key.replace(",", "."))
-        return "input", {"correct": variants, "sequence": bool(DIGITS.fullmatch(key))}
+        # A one-digit key is a single number, not a sequence to type unspaced.
+        sequence = len(key) > 1 and bool(DIGITS.fullmatch(key))
+        return "input", {"correct": variants, "sequence": sequence}
 
     # Numeric-looking but ungrammatical, e.g. a value with its error margin
     # concatenated (`0,100,01`).

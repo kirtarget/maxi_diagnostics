@@ -627,3 +627,20 @@ def test_two_numbered_lines_are_too_few_to_be_an_option_list(tmp_path):
     assert importer.parse_document(source)[0].options == []
 
 
+def test_a_single_digit_key_carries_no_sequence_hint():
+    task = importer.SourceTask(number=1, answer=["3"])
+    task.prompt_blocks.append("Сколько молекул участвует в реакции?")
+
+    kind, payload = importer.classify(task)
+
+    assert kind == "input"
+    assert payload["sequence"] is False
+
+
+def test_a_multi_digit_key_still_carries_the_sequence_hint():
+    task = importer.SourceTask(number=1, answer=["134"])
+    task.prompt_blocks.append("Выпишите номера верных утверждений.")
+
+    assert importer.classify(task)[1]["sequence"] is True
+
+
