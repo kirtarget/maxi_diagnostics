@@ -105,6 +105,9 @@ TOPIC_SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 OPEN_ANSWER = re.compile(r"максимальный балл", re.IGNORECASE)
 MATCHING_ITEM = re.compile(r"^([А-ЯЁ])\)\s*(.*)$", re.DOTALL)
 MATCHING_OPTION = re.compile(r"^(\d)\)\s*(.*)$", re.DOTALL)
+INLINE_OPTION = re.compile(r"^(\d+)\)\s*\S")
+INLINE_OPTION_NUMBER = re.compile(r"^\d+\)\s*")
+MIN_INLINE_OPTIONS = 3
 DIGITS = re.compile(r"\d+\Z")
 NUMERIC_SHAPED = re.compile(r"[0-9,.+-]+\Z")
 FIGURE_WORDS = re.compile(
@@ -115,6 +118,14 @@ FIGURE_WORDS = re.compile(
 EXTERNAL_RESOURCE = re.compile(r"https?://|воспользуйтесь файлом|аудиозапис|прослушайте", re.IGNORECASE)
 SEQUENCE_MARKERS = re.compile(r"^[А-ЯЁ]\)", re.MULTILINE)
 SEQUENCE_HINT = "Введите последовательность цифр без пробелов."
+WORD_FORMATION_HINT = re.compile(r"\|\s*(?P<hint>[A-Z]+(?:\s+[A-Z]+)*)\s*\Z")
+AUXILIARY_WORDS = frozenset(
+    {
+        "am", "are", "is", "was", "were", "be", "been", "being", "do", "does",
+        "did", "have", "has", "had", "can", "could", "will", "would", "shall",
+        "should", "may", "might", "must", "not",
+    }
+)
 PDF_SAFE_REPLACEMENTS = str.maketrans(
     {
         "⋅": "·",
@@ -339,7 +350,44 @@ def parse_document(path: Path) -> tuple[SourceTask, ...]:
                           "solution": "solution", "answer": "answer"}[section]).append(text)
     for task in tasks:
         _fold_answer_explanation(task)
+        _adopt_inline_options(task)
     return tuple(tasks)
+
+
+def _adopt_inline_options(task: SourceTask) -> None:
+    """Move an option list typed as plain `N)` prompt lines into `options`.
+
+    Some editors skip the `Варианты:` marker, which leaves the choices inside the
+    prompt and turns a pick-one task into an empty input box. Only a run anchored
+    at one end of the prompt, numbered `1..N` without a gap, and answered by a
+    single digit inside that range can be the option list: a numbered run the key
+    reorders, or one the question text refers to, keeps its place.
+    """
+    if task.options or len(task.answer) != 1:
+        return
+    parts = [part.strip() for part in task.answer[0].strip().split("#")]
+    if not all(len(part) == 1 and part.isdigit() for part in parts):
+        return
+    blocks = task.prompt_blocks
+    head = 0
+    while head < len(blocks) and INLINE_OPTION.match(blocks[head]):
+        head += 1
+    tail = len(blocks)
+    while tail > 0 and INLINE_OPTION.match(blocks[tail - 1]):
+        tail -= 1
+    for start, stop in ((0, head), (tail, len(blocks))):
+        run = blocks[start:stop]
+        if len(run) < MIN_INLINE_OPTIONS or len(run) == len(blocks):
+            continue
+        numbers = [int(INLINE_OPTION.match(line).group(1)) for line in run]
+        if numbers != list(range(1, len(run) + 1)):
+            continue
+        if any(not 1 <= int(part) <= len(run) for part in parts):
+            continue
+        # `Варианты:` blocks carry no numbering, so neither do these.
+        task.options.extend(INLINE_OPTION_NUMBER.sub("", line) for line in run)
+        del blocks[start:stop]
+        return
 
 
 def _fold_answer_explanation(task: SourceTask) -> None:
@@ -530,7 +578,9 @@ def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
         variants = [key]
         if "," in key:
             variants.append(key.replace(",", "."))
-        return "input", {"correct": variants, "sequence": bool(DIGITS.fullmatch(key))}
+        # A one-digit key is a single number, not a sequence to type unspaced.
+        sequence = len(key) > 1 and bool(DIGITS.fullmatch(key))
+        return "input", {"correct": variants, "sequence": sequence}
 
     # Numeric-looking but ungrammatical, e.g. a value with its error margin
     # concatenated (`0,100,01`).
@@ -552,6 +602,30 @@ def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
 # --------------------------------------------------------------------------
 # Question construction
 # --------------------------------------------------------------------------
+
+
+def _glued_answer(prompt: str, variants: list[str]) -> bool:
+    """Whether a word-formation key spells a phrase the student cannot type.
+
+    These tasks end with the source word after a `|`. A few editorial keys write
+    the expected phrase without its space (`wasimpressed`, `didnotbelieve`), so
+    the only accepted spelling is one no reader would produce. The key is the
+    editorial source and stays untouched; the task leaves the catalog instead.
+    """
+    last_line = prompt.rstrip().splitlines()[-1]
+    match = WORD_FORMATION_HINT.search(last_line)
+    if match is None or any(" " in variant for variant in variants):
+        return False
+    hint = match.group("hint").split()
+    if len(hint) > 1:
+        return True
+    stem = hint[0].lower()
+    for variant in variants:
+        lowered = variant.lower()
+        index = lowered.find(stem)
+        if index > 0 and lowered[:index] in AUXILIARY_WORDS:
+            return True
+    return False
 
 
 def _option_label(value: str) -> str | None:
@@ -620,6 +694,8 @@ def build_question(
             f"i{index + 1}": f"o{digit}" for index, digit in enumerate(payload["key"])
         }
     elif kind == "text":
+        if _glued_answer(prompt, payload["correct"]):
+            return "glued_answer"
         question["correct"] = payload["correct"]
         question["max_length"] = MAX_TEXT_ANSWER_CHARS
     else:
@@ -992,6 +1068,11 @@ def main(argv: list[str] | None = None) -> int:
         help="JSON plan naming subject, exam, season and topic per source file",
     )
     parser.add_argument("--root", type=Path, default=REPOSITORY_ROOT)
+    parser.add_argument(
+        "--verified-at",
+        default=date.today().isoformat(),
+        help="Editorial verification date stamped on every imported question",
+    )
     parser.add_argument("--dry-run", action="store_true")
     arguments = parser.parse_args(argv)
 
@@ -999,7 +1080,7 @@ def main(argv: list[str] | None = None) -> int:
     diagnostics_root = root / "school" / "diagnostics"
     assets_root = root / "school" / "assets" / "questions"
     report_path = root / "authoring" / "sharepoint-import" / "report.md"
-    verified_at = date.today().isoformat()
+    verified_at = str(arguments.verified_at)
 
     targets = load_targets(diagnostics_root)
     kept_assets = {
