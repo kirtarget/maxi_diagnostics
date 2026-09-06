@@ -533,3 +533,173 @@ def test_base_diagnostic_questions_stay_ahead_of_bank_packages(tmp_path):
     )
     assert all("kisloty" not in identifier for identifier in identifiers[:topical_start])
     assert identifiers[0] == "sp-chemistry-oge-2022-q1"
+
+
+def _numbered_source(document, number: int, lines: list[str], *, leading: bool) -> None:
+    """A task whose option list is typed as plain `N)` prompt lines."""
+    _task(document, number)
+    stem = "Укажите порядковый номер верного утверждения."
+    blocks = lines + [stem] if leading else [stem] + lines
+    for block in blocks:
+        document.add_paragraph(block)
+
+
+OPTION_LINES = ["1) Первое;", "2) Второе;", "3) Третье;", "4) Четвёртое."]
+
+
+def test_a_trailing_numbered_block_becomes_the_option_list(tmp_path):
+    document = Document()
+    _numbered_source(document, 1, OPTION_LINES, leading=False)
+    _answer(document, None, "3")
+    source = tmp_path / "inline-options.docx"
+    document.save(str(source))
+
+    task = importer.parse_document(source)[0]
+
+    assert task.options == ["Первое;", "Второе;", "Третье;", "Четвёртое."]
+    assert task.prompt_blocks == ["Укажите порядковый номер верного утверждения."]
+    assert importer.classify(task) == ("single", {"indices": [3]})
+
+
+def test_a_leading_numbered_block_becomes_the_option_list(tmp_path):
+    """One editor typed the shared option list above the question stem."""
+    document = Document()
+    _numbered_source(document, 1, OPTION_LINES, leading=True)
+    _answer(document, None, "2")
+    source = tmp_path / "leading-options.docx"
+    document.save(str(source))
+
+    task = importer.parse_document(source)[0]
+
+    assert task.options == ["Первое;", "Второе;", "Третье;", "Четвёртое."]
+    assert task.prompt_blocks == ["Укажите порядковый номер верного утверждения."]
+    assert importer.classify(task) == ("single", {"indices": [2]})
+
+
+def test_a_numbered_block_stays_in_the_prompt_when_the_key_orders_it(tmp_path):
+    """`2314` reorders the four lines; they are not four answers to pick from."""
+    document = Document()
+    _numbered_source(document, 1, OPTION_LINES, leading=False)
+    _answer(document, None, "2314")
+    source = tmp_path / "ordering.docx"
+    document.save(str(source))
+
+    task = importer.parse_document(source)[0]
+
+    assert task.options == []
+    assert task.prompt_blocks[-1] == "4) Четвёртое."
+    assert importer.classify(task)[0] == "input"
+
+
+def test_a_numbered_block_stays_in_the_prompt_when_it_is_part_of_the_question(tmp_path):
+    """A numbered list the prompt wraps on both sides is condition text."""
+    document = Document()
+    _task(document, 1)
+    for block in ("Дан список величин.", *OPTION_LINES, "Сколько из них положительны?"):
+        document.add_paragraph(block)
+    _answer(document, None, "2")
+    source = tmp_path / "mid-prompt.docx"
+    document.save(str(source))
+
+    task = importer.parse_document(source)[0]
+
+    assert task.options == []
+    assert len(task.prompt_blocks) == 6
+
+
+def test_a_numbered_block_with_a_gap_is_not_an_option_list(tmp_path):
+    document = Document()
+    _numbered_source(document, 1, ["1) Первое;", "2) Второе;", "4) Четвёртое."], leading=False)
+    _answer(document, None, "2")
+    source = tmp_path / "gap.docx"
+    document.save(str(source))
+
+    assert importer.parse_document(source)[0].options == []
+
+
+def test_two_numbered_lines_are_too_few_to_be_an_option_list(tmp_path):
+    document = Document()
+    _numbered_source(document, 1, ["1) Первое;", "2) Второе."], leading=False)
+    _answer(document, None, "2")
+    source = tmp_path / "pair.docx"
+    document.save(str(source))
+
+    assert importer.parse_document(source)[0].options == []
+
+
+def test_a_single_digit_key_carries_no_sequence_hint():
+    task = importer.SourceTask(number=1, answer=["3"])
+    task.prompt_blocks.append("Сколько молекул участвует в реакции?")
+
+    kind, payload = importer.classify(task)
+
+    assert kind == "input"
+    assert payload["sequence"] is False
+
+
+def test_a_multi_digit_key_still_carries_the_sequence_hint():
+    task = importer.SourceTask(number=1, answer=["134"])
+    task.prompt_blocks.append("Выпишите номера верных утверждений.")
+
+    assert importer.classify(task)[1]["sequence"] is True
+
+
+def _english_source() -> importer.SourceFile:
+    return importer.SourceFile(
+        path=Path("АЯ_ЕГЭ_Диагностика_21-22_Заданий 23.docx"),
+        exam="ЕГЭ",
+        subject_code="english-language",
+        year=2022,
+        declared_tasks=23,
+        tasks=(),
+    )
+
+
+def _word_formation(key: str, hint: str) -> importer.SourceTask:
+    task = importer.SourceTask(number=12, answer=[key])
+    task.prompt_blocks.append("Преобразуйте слово так, чтобы оно подошло по смыслу.")
+    task.prompt_blocks.append(f"12 | Apollo ________ by her grace. | {hint}")
+    return task
+
+
+def test_a_glued_multi_word_key_is_skipped_instead_of_shipping_unanswerable(tmp_path):
+    for key, hint in (("wasimpressed", "IMPRESS"), ("didnotbelieve", "NOT BELIEVE")):
+        task = _word_formation(key, hint)
+        kind, payload = importer.classify(task)
+        assert kind == "text"
+        assert importer.build_question(
+            _english_source(), task, kind, payload, verified_at="2026-09-04"
+        ) == "glued_answer"
+
+
+def test_a_regular_word_formation_key_still_ships(tmp_path):
+    for key, hint in (("greatest", "GREAT"), ("unbelievable", "BELIEVE"), ("women", "WOMAN")):
+        task = _word_formation(key, hint)
+        kind, payload = importer.classify(task)
+        question = importer.build_question(
+            _english_source(), task, kind, payload, verified_at="2026-09-04"
+        )
+        assert question["correct"] == [key]
+
+
+def test_verified_at_can_be_pinned_to_a_given_day(tmp_path):
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    build_source_document(source_directory / SOURCE_NAME)
+    catalog_path = build_repository(tmp_path)
+
+    importer.main(
+        [str(source_directory), "--root", str(tmp_path), "--verified-at", "2026-09-04"]
+    )
+
+    questions = _questions(catalog_path)
+    imported_questions = [
+        question
+        for identifier, question in questions.items()
+        if identifier.startswith(importer.ID_PREFIX)
+    ]
+    assert imported_questions
+    assert all(
+        question["source"]["verified_at"] == "2026-09-04"
+        for question in imported_questions
+    )
