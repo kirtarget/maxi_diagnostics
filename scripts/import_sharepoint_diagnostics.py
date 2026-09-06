@@ -840,7 +840,7 @@ def read_target(path: Path) -> Target:
 def render_target(target: Target, chunks: list[tuple[str, str]]) -> str:
     """Rewrite the questions array, leaving every other byte of the file alone.
 
-    The full diagnostic is the whole file, so nothing here writes `full_count`.
+    `full_count` belongs to the editor, so nothing here writes or moves it.
     """
     body = ",".join(f"\n    {chunk}" for _, chunk in chunks)
     return f"{target.head}{body}\n  {target.tail}"
@@ -1047,7 +1047,14 @@ def main(argv: list[str] | None = None) -> int:
     for target in sorted(targets.values(), key=lambda item: item.path):
         additions = sorted(
             grouped.get(target.path, []),
-            key=lambda item: (item.source.year, item.source.path.name, item.task.number),
+            # Base diagnostics carry no topic slug and sort first, because the
+            # leading questions are the full diagnostic and the rest is bank.
+            key=lambda item: (
+                bool(item.source.topic_slug),
+                item.source.year,
+                item.source.path.name,
+                item.task.number,
+            ),
         )
         kept = [
             chunk for chunk in target.chunks if not chunk[0].startswith(ID_PREFIX)

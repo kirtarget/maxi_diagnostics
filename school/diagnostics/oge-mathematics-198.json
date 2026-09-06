@@ -4,6 +4,7 @@
   "subject": "Математика",
   "mark": "Вариант 1",
   "quick_count": 3,
+  "full_count": 19,
   "scoring": {
     "max_score": 100,
     "score_unit": "accuracy_percent"
