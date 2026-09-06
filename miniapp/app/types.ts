@@ -147,7 +147,7 @@ export type Brand = {
     choose_option: string;
     next_question: string;
     get_result: string;
-    result_in_telegram: string;
+    result_in_app: string;
     privacy_label: string;
     support_label: string;
     choose_label: string;

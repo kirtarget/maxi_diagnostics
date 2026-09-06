@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-import hashlib
 import hmac
 from datetime import datetime, timezone
-from io import BytesIO
 from typing import Any
-from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
@@ -51,7 +48,6 @@ def build_forecast(
 def build_completion(
     user: dict[str, Any], body: CompletionRequest, diagnostic: Diagnostic, result: ScoreResult,
     school: SchoolConfig,
-    report_asset_bundle_id: str,
     timezone_name: str = "Europe/Moscow",
 ) -> AttemptCompletion:
     forecast = build_forecast(diagnostic, result, school)
@@ -109,44 +105,9 @@ def build_completion(
         forecast=forecast,
         result_snapshot=result_snapshot,
         report_snapshot=report_snapshot,
-        report_asset_bundle_id=report_asset_bundle_id,
         supersedes_attempt_id=body.supersedes_attempt_id,
         activity_timezone=timezone_name,
     )
-
-
-def _build_report_assets(
-    school: SchoolConfig, questions: tuple[Any, ...]
-) -> bytes:
-    references = {school.brand.logo}
-    references.update(
-        asset
-        for question in questions
-        for asset in question.asset_paths
-    )
-    if len(references) > 201:
-        raise ValueError("too_many_report_assets")
-    output = BytesIO()
-    with ZipFile(output, "w", compression=ZIP_DEFLATED, compresslevel=6) as archive:
-        for relative in sorted(references):
-            info = ZipInfo(relative, date_time=(1980, 1, 1, 0, 0, 0))
-            info.compress_type = ZIP_DEFLATED
-            info.external_attr = 0o100644 << 16
-            archive.writestr(info, school.resolve_asset(relative).read_bytes())
-    payload = output.getvalue()
-    if len(payload) > 25 * 1024 * 1024:
-        raise ValueError("report_assets_too_large")
-    return payload
-
-
-def prepare_report_asset_bundles(
-    school: SchoolConfig, catalog: DiagnosticCatalog
-) -> dict[str, tuple[str, bytes]]:
-    bundles: dict[str, tuple[str, bytes]] = {}
-    for diagnostic in catalog.diagnostics:
-        payload = _build_report_assets(school, diagnostic.questions)
-        bundles[diagnostic.id] = (hashlib.sha256(payload).hexdigest(), payload)
-    return bundles
 
 
 def serialize_attempt(row: Mapping[str, Any] | None) -> dict[str, Any] | None:
@@ -155,7 +116,7 @@ def serialize_attempt(row: Mapping[str, Any] | None) -> dict[str, Any] | None:
     keys = (
         "attempt_id", "diagnostic_id", "content_version", "exam", "subject", "mode", "status", "question_index",
         "question_count", "progress_revision", "answers", "correct_count", "score", "max_score", "score_unit",
-        "unassessed_part", "strong_topics", "growth_topics", "forecast", "pdf_status",
+        "unassessed_part", "strong_topics", "growth_topics", "forecast",
         "completed_at", "result_viewed_at",
     )
     available = set(row.keys())
@@ -545,7 +506,6 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
                 diagnostic,
                 result,
                 school,
-                request.app.state.report_asset_bundles[diagnostic.id][0],
                 request.app.state.settings.timezone,
             )
             row = await attempts.complete_attempt(completion)
@@ -614,7 +574,6 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
             "ok": True,
             "available": items is not None,
             "items": items or [],
-            "pdf_status": row["pdf_status"],
         }
 
     @router.post("/session/viewed")

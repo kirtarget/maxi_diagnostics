@@ -138,7 +138,7 @@ async def test_full_configured_diagnostic_persists_one_result_and_queues_one_pdf
             "score": diagnostic.scoring.max_score,
             "pdf_status": "pending",
         }
-        claimed = await attempts.claim_pending_pdf(attempt_id)
+        claimed = await attempts.claim_pending_delivery(attempt_id)
         assert claimed is not None
         assert claimed["attempt_id"] == attempt_id
         assert claimed["pdf_status"] == "sending"

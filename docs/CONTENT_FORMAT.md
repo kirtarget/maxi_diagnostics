@@ -186,7 +186,7 @@ diagnostic-detail response is at most 2 MiB.
     "choose_option": "Choose option",
     "next_question": "Next question",
     "get_result": "Get result",
-    "result_in_telegram": "Result in Telegram",
+    "result_in_app": "Result in the app",
     "privacy_label": "Privacy",
     "support_label": "Support",
     "choose_label": "Choose",
@@ -194,7 +194,7 @@ diagnostic-detail response is at most 2 MiB.
     "illustration_alt": "Question illustration",
     "result_score": "Score",
     "result_correct": "Correct answers",
-    "delivery_note": "The detailed report will appear in Telegram."
+    "delivery_note": "The result and the answer review stay in the app."
   },
   "messages": {
     "welcome": "Welcome to {school_name}.",

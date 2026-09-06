@@ -18,8 +18,8 @@ ALLOWED_ACTIONS: Final[frozenset[str]] = frozenset(
         "diagnostic_started",
         "diagnostic_completed",
         "diagnostic_result_viewed",
-        "diagnostic_pdf_delivered",
-        "diagnostic_pdf_failed",
+        "diagnostic_result_delivered",
+        "diagnostic_result_delivery_failed",
         "diagnostic_followup_sent",
         "diagnostic_followup_failed",
     }

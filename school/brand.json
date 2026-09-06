@@ -53,7 +53,7 @@
     "choose_option": "Выбрать вариант",
     "next_question": "Следующее задание",
     "get_result": "Получить результат",
-    "result_in_telegram": "Результат в Telegram",
+    "result_in_app": "Результат в приложении",
     "privacy_label": "Конфиденциальность",
     "support_label": "Поддержка",
     "choose_label": "Выбрать",
@@ -61,7 +61,7 @@
     "illustration_alt": "Иллюстрация к заданию",
     "result_score": "Результат",
     "result_correct": "Верных ответов",
-    "delivery_note": "Подробный отчёт появится в Telegram."
+    "delivery_note": "Результат и разбор ответов остаются в приложении."
   },
   "messages": {
     "welcome": "Привет! Это {school_name} — начнём готовиться?",

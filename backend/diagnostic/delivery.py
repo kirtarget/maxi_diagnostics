@@ -1,29 +1,27 @@
-"""Reliable PDF delivery using the persisted exact-lease state machine."""
+"""Reliable result delivery using the persisted exact-lease state machine."""
 
 from __future__ import annotations
 
 import asyncio
-import hashlib
+import html
 import logging
-from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from aiogram import Bot
-from aiogram.types import BufferedInputFile
 
 from diagnostic import alerts
 from diagnostic.analytics import fire_event
-from diagnostic.catalog import DiagnosticCatalog, load_catalog
+from diagnostic.bot.keyboards import attempt_result_url, webapp_keyboard
 from diagnostic.db import attempts
 from diagnostic.delivery_state import reconcile_sent_finalizer
 from diagnostic.messages import render_message
-from diagnostic.report import build_report
 from diagnostic.school import SchoolConfig, load_school
 from diagnostic.settings import Settings
 
 
 logger = logging.getLogger(__name__)
 DeliveryOutcome = Literal["empty", "sent", "failed"]
+MESSAGE_LIMIT = 4096
 
 
 async def _delete_sent_message(bot: Bot, user_id: int, message_id: int) -> None:
@@ -32,30 +30,42 @@ async def _delete_sent_message(bot: Bot, user_id: int, message_id: int) -> None:
             bot.delete_message(chat_id=user_id, message_id=message_id), timeout=10
         )
     except BaseException:
-        logger.warning("diagnostic_pdf_cleanup_failed error=telegram_delete_failed")
+        logger.warning("diagnostic_result_cleanup_failed error=telegram_delete_failed")
 
 
 async def _alert_if_abandoned(attempt_id: str, error_status: str) -> None:
     """Alerting must never turn a handled delivery failure into an exception."""
     try:
-        if await attempts.pdf_delivery_is_abandoned(attempt_id):
+        if await attempts.delivery_is_abandoned(attempt_id):
             await alerts.notify(
-                "pdf_abandoned",
+                "delivery_abandoned",
                 f"attempt={attempt_id} attempts=8 error={error_status}",
             )
     except Exception:
-        logger.warning("diagnostic_pdf_alert_failed error=database_error")
+        logger.warning("diagnostic_result_alert_failed error=database_error")
+
+
+def _result_summary(row: Any, school: SchoolConfig) -> str:
+    """One escaped score line, so the chat says what the Mini App will show."""
+    labels = school.brand.interface
+    subject = str(row["subject"] or labels.diagnostic_fallback)
+    correct = int(row["correct_count"] or 0)
+    total = int(row["question_count"] or 0)
+    return (
+        f"<b>{html.escape(subject, quote=True)}</b>\n"
+        f"{html.escape(labels.result_correct, quote=True)}: {correct} из {total}"
+    )
 
 
 async def deliver_attempt(
     bot: Bot,
     attempt_id: str | None = None,
     *,
+    settings: Settings,
     school: SchoolConfig | None = None,
-    catalog: DiagnosticCatalog | None = None,
 ) -> DeliveryOutcome:
     """Claim one completed attempt, deliver it, and finalize its exact lease."""
-    row = await attempts.claim_pending_pdf(attempt_id)
+    row = await attempts.claim_pending_delivery(attempt_id)
     if row is None:
         return "empty"
     lease = row["pdf_locked_at"]
@@ -63,64 +73,39 @@ async def deliver_attempt(
     finalized = False
     finalizer_uncertain = False
     try:
-        actual_school = school
-        if actual_school is None:
-            snapshot = row.get("report_snapshot") or {}
-            frozen_school = snapshot.get("school") if isinstance(snapshot, dict) else None
-            if isinstance(frozen_school, dict):
-                actual_school = SchoolConfig(
-                    root=Path("school").resolve(),
-                    brand=frozen_school["brand"],
-                    links=frozen_school["links"],
-                )
-            else:
-                actual_school = load_school()
-        stored_pdf = row.get("pdf_document")
-        if stored_pdf:
-            pdf = bytes(stored_pdf)
-        else:
-            bundle_id = row.get("report_asset_bundle_id")
-            if bundle_id:
-                bundle = row.get("report_assets")
-                if not bundle:
-                    bundle = await attempts.get_report_asset_bundle(bundle_id)
-                if not isinstance(bundle, (bytes, bytearray, memoryview)):
-                    raise ValueError("report_assets_invalid")
-                bundle = bytes(bundle)
-                if hashlib.sha256(bundle).hexdigest() != bundle_id:
-                    raise ValueError("report_assets_invalid")
-                row = dict(row)
-                row["report_assets"] = bundle
-            actual_catalog = catalog
-            if not row.get("report_snapshot") and actual_catalog is None:
-                actual_catalog = load_catalog(actual_school)
-            pdf = await asyncio.to_thread(build_report, row, actual_school, actual_catalog)
-            if not await attempts.store_pdf_document(row["attempt_id"], lease, pdf):
-                return "failed"
+        actual_school = school if school is not None else load_school()
         key = "QUICK_COMPLETE" if row["mode"] == "quick" else "FULL_COMPLETE"
-        caption = await render_message(key, actual_school, subject=row["subject"])
-        document_kwargs = {
-            "chat_id": row["user_id"],
-            "document": BufferedInputFile(pdf, filename=f"diagnostic-{row['attempt_id']}.pdf"),
-            "disable_content_type_detection": True,
-        }
-        if len(caption) <= 1024:
-            document_kwargs.update({"caption": caption, "parse_mode": "HTML"})
-        if not await attempts.pdf_claim_is_active(row["attempt_id"], lease):
+        intro = await render_message(key, actual_school, subject=row["subject"])
+        text = f"{intro}\n\n{_result_summary(row, actual_school)}"
+        if len(text) > MESSAGE_LIMIT:
+            text = _result_summary(row, actual_school)
+        keyboard = webapp_keyboard(
+            actual_school,
+            attempt_result_url(settings.miniapp_url, row["attempt_id"]),
+            label=actual_school.brand.interface.result_in_app,
+        )
+        if not await attempts.delivery_claim_is_active(row["attempt_id"], lease):
             return "failed"
         message = await asyncio.wait_for(
-            bot.send_document(**document_kwargs), timeout=30
+            bot.send_message(
+                chat_id=row["user_id"],
+                text=text,
+                parse_mode="HTML",
+                disable_web_page_preview=True,
+                reply_markup=keyboard,
+            ),
+            timeout=30,
         )
         message_id = getattr(message, "message_id", None)
         if not isinstance(message_id, int) or isinstance(message_id, bool) or message_id <= 0:
             raise RuntimeError("telegram_message_id_missing")
         finalizer_uncertain = True
         finalizer = asyncio.create_task(
-            attempts.mark_pdf_delivered(row["attempt_id"], lease, message_id)
+            attempts.mark_delivery_sent(row["attempt_id"], lease, message_id)
         )
         finalizer_result = await reconcile_sent_finalizer(
             finalizer,
-            lambda: attempts.pdf_delivery_is_sent(row["attempt_id"], message_id),
+            lambda: attempts.delivery_is_sent(row["attempt_id"], message_id),
         )
         finalized = finalizer_result.sent
         finalizer_uncertain = finalizer_result.uncertain
@@ -129,14 +114,14 @@ async def deliver_attempt(
         if finalizer_result.error is not None:
             if finalized:
                 fire_event(
-                    "diagnostic_pdf_delivered", row["user_id"],
+                    "diagnostic_result_delivered", row["user_id"],
                     {"attempt_id": row["attempt_id"], "delivery_status": "sent"},
                 )
                 return "sent"
             raise finalizer_result.error
         if finalized:
             fire_event(
-                "diagnostic_pdf_delivered", row["user_id"],
+                "diagnostic_result_delivered", row["user_id"],
                 {"attempt_id": row["attempt_id"], "delivery_status": "sent"},
             )
             return "sent"
@@ -148,19 +133,19 @@ async def deliver_attempt(
         if message_id is not None and not finalized and not finalizer_uncertain:
             await asyncio.shield(_delete_sent_message(bot, row["user_id"], message_id))
         error_status = type(exc).__name__
-        logger.warning("diagnostic_pdf_delivery_failed error=%s", error_status)
+        logger.warning("diagnostic_result_delivery_failed error=%s", error_status)
         try:
             failed = await asyncio.shield(
-                attempts.mark_pdf_failed(row["attempt_id"], lease, error_status)
+                attempts.mark_delivery_failed(row["attempt_id"], lease, error_status)
             )
         except BaseException:
-            logger.warning("diagnostic_pdf_failure_finalize_failed error=database_error")
+            logger.warning("diagnostic_result_failure_finalize_failed error=database_error")
             failed = False
         if failed:
             if message_id is not None and not finalized and finalizer_uncertain:
                 await asyncio.shield(_delete_sent_message(bot, row["user_id"], message_id))
             fire_event(
-                "diagnostic_pdf_failed", row["user_id"],
+                "diagnostic_result_delivery_failed", row["user_id"],
                 {"attempt_id": row["attempt_id"], "delivery_status": "failed"},
             )
             # A cancelled task must not await anything else before re-raising.
@@ -178,6 +163,6 @@ async def deliver_attempt_by_id(attempt_id: str) -> None:
     settings = Settings.from_env(require_admin=False)
     bot = Bot(token=settings.bot_token)
     try:
-        await deliver_attempt(bot, attempt_id)
+        await deliver_attempt(bot, attempt_id, settings=settings)
     finally:
         await bot.session.close()

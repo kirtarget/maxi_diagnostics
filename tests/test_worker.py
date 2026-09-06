@@ -7,7 +7,7 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_dispatch_work_caps_pdf_and_notification_batches(monkeypatch):
+async def test_dispatch_work_caps_delivery_and_notification_batches(monkeypatch):
     from diagnostic import worker
 
     deliver = AsyncMock(return_value="sent")
@@ -20,7 +20,7 @@ async def test_dispatch_work_caps_pdf_and_notification_batches(monkeypatch):
     monkeypatch.setattr(worker.attempts, "purge_expired_erasure_tombstones", purge)
     retention = AsyncMock(return_value={})
     monkeypatch.setattr(worker.attempts, "purge_retained_diagnostic_data", retention)
-    monkeypatch.setattr(worker.attempts, "count_pending_pdfs", AsyncMock(return_value=0))
+    monkeypatch.setattr(worker.attempts, "count_pending_deliveries", AsyncMock(return_value=0))
     monkeypatch.setattr(
         worker.attempts, "schedule_streak_save_notifications", AsyncMock(return_value=0)
     )
@@ -31,7 +31,7 @@ async def test_dispatch_work_caps_pdf_and_notification_batches(monkeypatch):
     )
     counts = await worker.dispatch_work(SimpleNamespace(), settings, SimpleNamespace())
 
-    assert counts == {"pdfs": 20, "notifications": 20}
+    assert counts == {"deliveries": 20, "notifications": 20}
     abandonment.assert_awaited_once_with("stable-secret")
     assert deliver.await_count == 20
     followups.assert_awaited_once_with(ANY, ANY, ANY, limit=20)
@@ -40,7 +40,7 @@ async def test_dispatch_work_caps_pdf_and_notification_batches(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_dispatch_work_continues_after_poison_pdf_and_stops_only_when_empty(monkeypatch):
+async def test_dispatch_work_continues_after_a_poison_attempt_and_stops_only_when_empty(monkeypatch):
     from diagnostic import worker
 
     deliver = AsyncMock(side_effect=["failed", "sent", "empty"])
@@ -52,7 +52,7 @@ async def test_dispatch_work_continues_after_poison_pdf_and_stops_only_when_empt
     monkeypatch.setattr(
         worker.attempts, "purge_retained_diagnostic_data", AsyncMock(return_value={})
     )
-    monkeypatch.setattr(worker.attempts, "count_pending_pdfs", AsyncMock(return_value=0))
+    monkeypatch.setattr(worker.attempts, "count_pending_deliveries", AsyncMock(return_value=0))
     monkeypatch.setattr(
         worker.attempts, "schedule_streak_save_notifications", AsyncMock(return_value=0)
     )
@@ -64,7 +64,7 @@ async def test_dispatch_work_continues_after_poison_pdf_and_stops_only_when_empt
     counts = await worker.dispatch_work(SimpleNamespace(), settings, SimpleNamespace())
 
     assert deliver.await_count == 3
-    assert counts == {"pdfs": 1, "notifications": 0}
+    assert counts == {"deliveries": 1, "notifications": 0}
 
 
 @pytest.mark.asyncio
@@ -78,7 +78,7 @@ async def test_backlog_and_tick_failure_reach_the_operator_alert(monkeypatch):
 
     monkeypatch.setattr(worker.alerts, "notify", notify)
     monkeypatch.setattr(
-        worker.attempts, "count_pending_pdfs", AsyncMock(return_value=51)
+        worker.attempts, "count_pending_deliveries", AsyncMock(return_value=51)
     )
     monkeypatch.setattr(
         worker.attempts,
@@ -94,7 +94,7 @@ async def test_backlog_and_tick_failure_reach_the_operator_alert(monkeypatch):
         await worker.dispatch_work(SimpleNamespace(), settings, SimpleNamespace())
 
     assert alerted == [
-        ("pdf_queue_backlog", "pending=51 threshold=50"),
+        ("delivery_queue_backlog", "pending=51 threshold=50"),
         ("worker_tick_failed", "error=RuntimeError: database gone"),
     ]
 
@@ -111,7 +111,7 @@ async def test_dispatch_work_schedules_streak_saves_in_school_time(monkeypatch):
     monkeypatch.setattr(
         worker.attempts, "purge_retained_diagnostic_data", AsyncMock(return_value={})
     )
-    monkeypatch.setattr(worker.attempts, "count_pending_pdfs", AsyncMock(return_value=0))
+    monkeypatch.setattr(worker.attempts, "count_pending_deliveries", AsyncMock(return_value=0))
     schedule = AsyncMock(return_value=3)
     monkeypatch.setattr(worker.attempts, "schedule_streak_save_notifications", schedule)
 
@@ -127,7 +127,7 @@ async def test_dispatch_work_schedules_streak_saves_in_school_time(monkeypatch):
 def test_worker_scheduler_runs_every_minute_with_single_instance():
     from diagnostic.worker import build_worker_scheduler
 
-    scheduler = build_worker_scheduler(SimpleNamespace(), SimpleNamespace(timezone="Europe/Moscow"), SimpleNamespace(), SimpleNamespace())
+    scheduler = build_worker_scheduler(SimpleNamespace(), SimpleNamespace(timezone="Europe/Moscow"), SimpleNamespace())
     job = scheduler.get_job("diagnostic_delivery")
 
     assert str(job.trigger.interval) == "0:01:00"
