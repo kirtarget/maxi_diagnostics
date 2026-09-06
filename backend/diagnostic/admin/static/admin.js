@@ -45,7 +45,7 @@ async function loadSummary() {
   const labels = [
     ["Попытки", data.attempts],
     ["Завершены", data.completed],
-    ["PDF в работе", data.pending_pdfs],
+    ["Доставки в работе", data.pending_pdfs],
     ["Уведомления к отправке", data.due_notifications],
   ];
   replaceChildren(document.getElementById("summary"), labels.map(([label, value]) => {
@@ -76,7 +76,7 @@ async function loadIssues() {
     request("/notification-issues?limit=50&offset=0"),
   ]);
   const rows = delivery.items.map((item) => tableRow([
-    "PDF", item.attempt_id, item.user_id, item.pdf_status, item.pdf_attempts, displayDate(item.updated_at),
+    "Доставка", item.attempt_id, item.user_id, item.pdf_status, item.pdf_attempts, displayDate(item.updated_at),
   ]));
   notifications.items.forEach((item) => rows.push(tableRow([
     item.kind, item.id, item.user_id, item.status, item.attempts, displayDate(item.updated_at),

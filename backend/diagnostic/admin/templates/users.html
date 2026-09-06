@@ -9,7 +9,7 @@
 </form>
 <section class="card table-wrap">
 <table>
-  <thead><tr><th>Пользователь</th><th>Первый вход / последний вход</th><th>Предмет</th><th>Начато / завершено</th><th>Последний результат</th><th>Серия / дата</th><th>Жизни / восстановление</th><th>Напоминания</th><th>Ошибки PDF</th></tr></thead>
+  <thead><tr><th>Пользователь</th><th>Первый вход / последний вход</th><th>Предмет</th><th>Начато / завершено</th><th>Последний результат</th><th>Серия / дата</th><th>Жизни / восстановление</th><th>Напоминания</th><th>Ошибки доставки</th></tr></thead>
   <tbody>{% for user in users %}<tr>
     <td><a href="/admin/users?user_id={{ user.user_id }}">{{ user.user_id }}</a></td>
     <td>{{ user.opened_at }}<br>{{ user.last_opened_at }}</td>
