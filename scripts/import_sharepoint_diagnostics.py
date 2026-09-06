@@ -840,7 +840,7 @@ def read_target(path: Path) -> Target:
 def render_target(target: Target, chunks: list[tuple[str, str]]) -> str:
     """Rewrite the questions array, leaving every other byte of the file alone.
 
-    The full diagnostic is the whole file, so nothing here writes `full_count`.
+    `full_count` belongs to the editor, so nothing here writes or moves it.
     """
     body = ",".join(f"\n    {chunk}" for _, chunk in chunks)
     return f"{target.head}{body}\n  {target.tail}"

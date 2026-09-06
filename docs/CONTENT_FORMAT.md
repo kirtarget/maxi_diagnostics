@@ -66,7 +66,8 @@ follows that subset: the expected answer set on progress and completion, the
 review snapshot, the PDF, and the public `full_count` the Mini App slices by. The
 trainer and the daily plan keep drawing from every question in the file, so
 questions past `full_count` stay available as practice. Set it when a catalog
-gains extra questions that should not lengthen the diagnostic itself.
+gains extra questions that should not lengthen the diagnostic itself. Every
+catalog in `school/diagnostics/` pins it for that reason.
 
 `max_primary_score` is a strict integer from 1 through 100 and defaults to `1`.
 The result keeps `accuracy_percent` as its score unit, but calculates that percentage
