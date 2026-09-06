@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Пользователи · {{ school_name }}{% endblock %}
+{% block content %}
+<h2>Пользователи</h2>
+<p>Жизни и серия показаны на момент последней записи. Восстановление жизней рассчитывается при активности пользователя.</p>
+<form method="get" class="row">
+  <label>Telegram ID<input name="user_id" type="number" min="1" value="{{ selected_user_id or '' }}"></label>
+  <button type="submit">Найти</button><a href="/admin/users">Все пользователи</a>
+</form>
+<section class="card table-wrap">
+<table>
+  <thead><tr><th>Пользователь</th><th>Первый вход / последний вход</th><th>Предмет</th><th>Начато / завершено</th><th>Последний результат</th><th>Серия / дата</th><th>Жизни / восстановление</th><th>Напоминания</th><th>Ошибки PDF</th></tr></thead>
+  <tbody>{% for user in users %}<tr>
+    <td><a href="/admin/users?user_id={{ user.user_id }}">{{ user.user_id }}</a></td>
+    <td>{{ user.opened_at }}<br>{{ user.last_opened_at }}</td>
+    <td>{{ user.subject or 'Ещё не выбран' }}</td>
+    <td>{{ user.started }} / {{ user.completed }}</td>
+    <td>{% if user.correct_count is not none %}{{ user.result_subject }} · {{ user.correct_count }} из {{ user.question_count }}{% else %}Нет результата{% endif %}</td>
+    <td>{{ user.streak_days }} / {{ user.streak_last_date or 'Нет' }}</td>
+    <td>{{ user.lives_remaining }} / {{ user.lives_refill_at or 'Полный запас' }}</td>
+    <td>{{ 'Включены' if user.notifications_enabled else 'Отключены' }}</td>
+    <td>{{ user.errors }}</td>
+  </tr>{% else %}<tr><td colspan="9">Пользователи не найдены.</td></tr>{% endfor %}</tbody>
+</table>
+</section>
+{% if not selected_user_id %}<nav class="actions" aria-label="Страницы пользователей">
+{% if offset > 0 %}<a href="?offset={{ [0, offset - 50]|max }}">Назад</a>{% endif %}
+{% if users|length == 50 %}<a href="?offset={{ offset + 50 }}">Далее</a>{% endif %}
+</nav>{% endif %}
+{% endblock %}
+{% block scripts %}{% endblock %}

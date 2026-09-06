@@ -6,13 +6,11 @@ import { GameplayHomeScreen, GameplayProfileScreen, ModeScreen, NotTelegramScree
 import { safeAssetPath } from "./question-assets";
 import { QuestionView as TrainingQuestionView } from "./question-screen";
 import {
-  ForecastEmptyScreen,
-  ForecastScreen,
   ResultScreen,
   ReviewScreen,
   RouteScreen,
 } from "./result-flow";
-import { forecastKind, forecastTrajectory, pdfStatusCopy, personalRoute } from "./result-flow-model";
+import { pdfStatusCopy, personalRoute } from "./result-flow-model";
 import { gameplayProfileView } from "./gameplay-profile-model";
 import { TrainerScreen } from "./trainer-screen";
 import { LeagueScreen } from "./league-screen";
@@ -72,13 +70,14 @@ export default function Home() {
     initData: bootstrapSession.initData,
     sessionScope: bootstrapSession.sessionScope,
     setScreen,
+    refreshProgress: bootstrapSession.actions.refreshProgress,
   });
 
-  const { bootstrap, error, outsideTelegram, sessionCompletions, dismissedOfferPlacements, leagueState } = bootstrapSession.state;
+  const { bootstrap, error, outsideTelegram, dismissedOfferPlacements, leagueState } = bootstrapSession.state;
   const { dismissOfferPlacement, handleOfferEvent, openLeague } = bootstrapSession.actions;
   const {
     diagnostic, diagnosticLoad, questions, exam, mode, questionIndex,
-    answers, inputDrafts, result, review, reviewIndex, reviewError, syncWarning,
+    answers, inputDrafts, result, resultDiagnostic, review, reviewIndex, reviewError, syncWarning,
   } = session.state;
 
   useEffect(() => {
@@ -94,9 +93,14 @@ export default function Home() {
   } : BUILD_BRAND;
   const gameplayProfile = gameplayProfileView({ ...bootstrap?.progress_profile, ...bootstrap?.gameplay_profile });
   const dailyPlan = bootstrap?.daily_plan ?? null;
-  const forecastPoints = result ? forecastTrajectory(result) : [];
-  const forecastValueKind = result ? forecastKind(result) : "accuracy_percent";
-  const completedDiagnostics = (bootstrap?.progress_profile?.completion_count ?? 0) + sessionCompletions;
+  const onboardingComplete = bootstrap?.onboarding?.status === "completed"
+    || (!bootstrap?.onboarding && Boolean(bootstrap?.progress_profile?.completion_count));
+  const goHome = () => {
+    void bootstrapSession.actions.refreshProgress();
+    if (onboardingComplete) setScreen("home");
+    else if (bootstrap?.onboarding?.status === "selection") session.actions.chooseMode("quick", exam);
+    else setScreen("welcome");
+  };
   const routeItems = result ? personalRoute(result.growth_topics) : [];
   const currentPdfStatus = review?.pdf_status ?? "pending";
   const replayAttemptId = session.actions.persistedAttemptId();
@@ -138,8 +142,11 @@ export default function Home() {
       <BrandHeader
         brand={displayBrand}
         disabled={!brand || screen === "submitting"}
-        onHome={() => setScreen(bootstrap?.diagnostics.length ? "home" : "welcome")}
+        onHome={goHome}
       />
+      {error && bootstrap && screen !== "question" && (
+        <div role="alert" className="inline-warning">{error}<button type="button" onClick={() => void bootstrapSession.actions.refreshProgress()}>Обновить прогресс</button></div>
+      )}
 
       {screen === "loading" && (
         <section className="screen loading-screen" aria-busy="true" aria-live="polite">
@@ -187,12 +194,17 @@ export default function Home() {
         <WelcomeScreen
           diagnostics={bootstrap.diagnostics}
           labels={bootstrap.school.brand.interface}
-          onStart={() => setScreen("home")}
+          onStart={() => {
+            void bootstrapSession.actions.beginOnboarding().then((saved) => {
+              if (saved) session.actions.chooseMode("quick", bootstrap.diagnostics[0]?.exam ?? "");
+            });
+          }}
           links={bootstrap.school.links}
         />
       )}
 
       {screen === "home" && bootstrap && bootstrap.diagnostics.length > 0 && (
+        <>
         <GameplayHomeScreen
           diagnostics={bootstrap.diagnostics}
           labels={bootstrap.school.brand.interface}
@@ -210,6 +222,17 @@ export default function Home() {
           offerDismissed={Boolean(dismissedOfferPlacements.home)}
           onOfferDismiss={() => dismissOfferPlacement("home")}
         />
+        {bootstrap.results.some((attempt) => attempt.result) && (
+          <section className="screen" aria-label="Предыдущие результаты">
+            <h2>Мои результаты</h2>
+            {bootstrap.results.filter((attempt) => attempt.result).map((attempt) => (
+              <button key={attempt.attempt_id} type="button" className="secondary-button" onClick={() => session.actions.openSavedResult(attempt)}>
+                {attempt.exam} · {attempt.subject ?? "Диагностика"} · {attempt.result!.correct_count} из {attempt.result!.question_count}
+              </button>
+            ))}
+          </section>
+        )}
+        </>
       )}
 
       {screen === "profile" && bootstrap && (
@@ -245,7 +268,7 @@ export default function Home() {
           exam={exam}
           labels={bootstrap.school.brand.interface}
           mode={mode}
-          onBack={() => setScreen("mode")}
+          onBack={() => setScreen(onboardingComplete ? "mode" : "welcome")}
           onExam={session.actions.setExam}
           onSelect={session.actions.beginDiagnostic}
         />
@@ -281,15 +304,15 @@ export default function Home() {
       )}
 
       {screen === "result" && result && bootstrap && (
-        diagnostic && (
+        resultDiagnostic && (
           <ResultScreen
-            diagnostic={diagnostic}
+            diagnostic={resultDiagnostic}
             pdfStatus={currentPdfStatus}
             result={result}
             onReview={session.actions.openReview}
-            onForecast={() => setScreen("forecast")}
-            onReplayMistakes={replayAttemptId
-              ? () => void trainer.actions.start(diagnostic.id, "mistakes", replayAttemptId)
+            onForecast={() => setScreen("route")}
+            onReplayMistakes={replayAttemptId && bootstrap.diagnostics.some((item) => item.id === result.diagnostic_id)
+              ? () => void trainer.actions.start(result.diagnostic_id, "mistakes", replayAttemptId)
               : undefined}
           />
         )
@@ -301,7 +324,7 @@ export default function Home() {
           dispatch={trainer.actions.dispatch}
           onAnswer={(questionId, answer) => void trainer.actions.answer(questionId, answer)}
           onFinish={() => void trainer.actions.finish()}
-          onHome={() => setScreen(bootstrap?.diagnostics.length ? "home" : "welcome")}
+          onHome={goHome}
           onRetry={trainer.actions.retry}
           livesReminder={trainer.state.livesReminder}
           onRemindLives={() => void trainer.actions.remindLives()}
@@ -320,34 +343,13 @@ export default function Home() {
           legacy={review?.available === false}
           loading={!review && !reviewError}
           onBack={session.actions.reviewBack}
-          onForecast={() => setScreen("forecast")}
+          onForecast={() => setScreen("route")}
           onNext={session.actions.reviewNext}
           onRetry={() => {
             session.actions.clearReviewError();
             void session.actions.refreshReview();
           }}
         />
-      )}
-
-      {screen === "forecast" && result && (
-        completedDiagnostics >= 2 ? (
-          <ForecastScreen
-            points={forecastPoints}
-            kind={forecastValueKind}
-            offers={bootstrap?.school.links.offers}
-            offerDismissed={Boolean(dismissedOfferPlacements.forecast)}
-            onOfferDismiss={() => dismissOfferPlacement("forecast")}
-            onOfferEvent={handleOfferEvent}
-            onBack={() => setScreen(review ? "review" : "result")}
-            onRoute={() => setScreen("route")}
-          />
-        ) : (
-          <ForecastEmptyScreen
-            completedCount={completedDiagnostics}
-            onBack={() => setScreen(review ? "review" : "result")}
-            onStart={() => setScreen("mode")}
-          />
-        )
       )}
 
       {screen === "route" && result && bootstrap && (

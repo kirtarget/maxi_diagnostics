@@ -173,13 +173,13 @@ export function personalRoute(growthTopics: GrowthTopic[]): PersonalRouteAction[
     .map((topic, index) => index === 0
       ? {
         id: "close-topic" as const,
-        title: `Закрыть тему «${topic}»`,
-        description: "Повтори базовые конструкции и реши короткий набор заданий.",
+        title: `Разобрать «${topic}»`,
+        description: "Посмотри разбор ответа и повтори это задание.",
       }
       : {
         id: "strengthen-topic" as const,
-        title: `Укрепить тему «${topic}»`,
-        description: "Собери ключевые правила и закрепи их практикой.",
+        title: `Повторить «${topic}»`,
+        description: "Проверь решение и попробуй ответить самостоятельно.",
       });
 
   const recheck: PersonalRouteAction = {

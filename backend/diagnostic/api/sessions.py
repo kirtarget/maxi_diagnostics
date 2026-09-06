@@ -5,9 +5,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 import hashlib
 import hmac
+from datetime import datetime, timezone
 from io import BytesIO
 from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
@@ -17,13 +19,14 @@ from diagnostic.catalog import (
     DiagnosticCatalog,
 )
 from diagnostic.analytics import emit_event
+from diagnostic.notification_attribution import record_open as record_notification_open
 from diagnostic.daily_plan import ensure_today_plan, plan_summary
-from diagnostic.db import attempts, funnel
+from diagnostic.db import attempts, funnel, onboarding
 from diagnostic.db.attempts import AttemptCompletion, AttemptProgress
 from diagnostic.db.gameplay import serialize_gameplay_profile
 from diagnostic.review import build_review_snapshot, public_review_items
 from diagnostic.scoring import (
-    ScoreResult, estimate_for_primary, round_half_up, score_answers,
+    COVERAGE_LIMITATION, ScoreResult, round_half_up, score_answers,
 )
 from diagnostic.school import SchoolConfig
 from diagnostic.session_identity import (
@@ -34,37 +37,15 @@ from diagnostic.session_identity import (
 
 from .dependencies import telegram_user
 from .models import (
-    ApiRequest, CatalogRequest, CompletionRequest, ProgressRequest, SessionRequest,
+    ApiRequest, CatalogRequest, CompletionRequest, ProgressRequest, SessionRequest, OnboardingRequest,
 )
 
 
 def build_forecast(
     diagnostic: Diagnostic, result: ScoreResult, school: SchoolConfig
 ) -> dict[str, Any]:
-    """Project the offer's recovery share of the missed growth-topic points."""
-    scale = school.scale_for(diagnostic.exam, diagnostic.subject)
-    points = []
-    for offer in school.links.offers:
-        recovered = round_half_up(
-            result.recoverable_primary_score * offer.recovery_share / 100
-        )
-        forecast_primary = min(
-            result.primary_score + recovered, result.max_primary_score
-        )
-        value = (
-            estimate_for_primary(
-                scale, forecast_primary, result.max_primary_score, result.question_count
-            ).value
-            if scale is not None
-            else round_half_up(
-                forecast_primary / result.max_primary_score * result.max_score
-            )
-        )
-        points.append({"id": offer.id, "label": offer.label, "value": value})
-    return {
-        "kind": result.estimate.kind if result.estimate is not None else "accuracy_percent",
-        "points": points,
-    }
+    """Keep the persisted contract without inventing an improvement forecast."""
+    return {"kind": "accuracy_percent", "points": []}
 
 
 def build_completion(
@@ -75,7 +56,7 @@ def build_completion(
 ) -> AttemptCompletion:
     forecast = build_forecast(diagnostic, result, school)
     result_snapshot = result.model_dump(mode="json") | {
-        "unassessed_part": school.brand.interface.unassessed_full if body.mode == "quick" else None,
+        "unassessed_part": COVERAGE_LIMITATION,
         "forecast": forecast,
     }
     selected_questions = diagnostic.questions_for_mode(body.mode)
@@ -122,9 +103,7 @@ def build_completion(
         score=result.score,
         max_score=result.max_score,
         score_unit=result.score_unit,
-        unassessed_part=(
-            school.brand.interface.unassessed_full if body.mode == "quick" else None
-        ),
+        unassessed_part=COVERAGE_LIMITATION,
         strong_topics=[item.topic for item in result.strong_topics],
         growth_topics=[item.topic for item in result.growth_topics],
         forecast=forecast,
@@ -181,10 +160,16 @@ def serialize_attempt(row: Mapping[str, Any] | None) -> dict[str, Any] | None:
     )
     available = set(row.keys())
     serialized = {key: row[key] for key in keys if key in available}
+    if row.get("question_count") and row.get("correct_count") is not None:
+        serialized["accuracy_percent"] = round_half_up(
+            row["correct_count"] / row["question_count"] * 100
+        )
     snapshot = row["result_snapshot"] if "result_snapshot" in available else None
     estimate = snapshot.get("estimate") if isinstance(snapshot, Mapping) else None
     if isinstance(estimate, Mapping):
         serialized["estimate"] = dict(estimate)
+    if row.get("status") == "completed":
+        serialized["result"] = serialize_result(row, None)
     return serialized
 
 
@@ -296,6 +281,7 @@ def _funnel(
     action: str,
     exam: str | None = None,
     subject: str | None = None,
+    dedupe_key: str | None = None,
 ) -> None:
     """Queue one best-effort funnel row alongside the existing analytics event."""
     background_tasks.add_task(
@@ -305,7 +291,11 @@ def _funnel(
         action=action,
         exam=exam,
         subject=subject,
+        dedupe_key=dedupe_key,
     )
+    canonical = {"started": "diagnostic_started", "completed": "diagnostic_completed"}.get(action)
+    if canonical:
+        _funnel(background_tasks, request, user_id, canonical, exam, subject, dedupe_key)
 
 
 async def get_gameplay_profile(user_id: int):
@@ -314,6 +304,16 @@ async def get_gameplay_profile(user_id: int):
 
 def create_router(catalog: DiagnosticCatalog) -> APIRouter:
     router = APIRouter(prefix="/api/diagnostics")
+
+    @router.post("/onboarding")
+    async def begin_onboarding(
+        body: OnboardingRequest, request: Request, background_tasks: BackgroundTasks,
+    ) -> dict[str, str]:
+        user = telegram_user(request, body.init_data)
+        await _require_current_session(request, user["id"], body.session_scope)
+        if await onboarding.start_selection(user["id"]):
+            _funnel(background_tasks, request, user["id"], "onboarding_started")
+        return {"status": await onboarding.get_status(user["id"])}
 
     @router.post("/bootstrap")
     async def bootstrap(
@@ -326,9 +326,18 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
             if str(exc) == "diagnostic_user_erased":
                 raise HTTPException(status_code=410, detail="diagnostic_user_erased") from exc
             raise
+        background_tasks.add_task(
+            record_notification_open, getattr(body, "notification_token", None),
+            request.app.state.settings.application_secret, user["id"],
+        )
         if first_open:
             background_tasks.add_task(emit_event, "diagnostic_opened", user["id"], {})
             _funnel(background_tasks, request, user["id"], "opened")
+            for action in ("registration_started", "registration_completed"):
+                _funnel(background_tasks, request, user["id"], action, dedupe_key="registration")
+        else:
+            _funnel(background_tasks, request, user["id"], "user_returned",
+                    dedupe_key=datetime.now(timezone.utc).date().isoformat())
         resumable = await get_resumable_attempt(user["id"])
         if resumable is not None:
             resumable_diagnostic = next(
@@ -375,7 +384,9 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
         generation = await get_or_create_session_generation(
             session_subject_key(secret, user["id"])
         )
+        onboarding_status = await onboarding.get_status(user["id"])
         return {
+            "onboarding": {"status": onboarding_status},
             "catalog_contract": 3,
             "session_scope": _session_scope(
                 secret, user["id"], generation
@@ -471,6 +482,13 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
                 background_tasks, request, user["id"], "started",
                 diagnostic.exam, diagnostic.subject,
             )
+        question_by_id = {question.id: question for question in diagnostic.questions_for_mode(body.mode)}
+        for question_id, answer in body.answers.items():
+            if not is_valid_answer_shape(question_by_id[question_id], answer, complete=True):
+                continue
+            _funnel(background_tasks, request, user["id"], "question_answered",
+                    diagnostic.exam, diagnostic.subject,
+                    dedupe_key=f"diagnostic/{body.attempt_id}/{question_id}")
         return {"ok": True, "attempt": serialize_attempt(row)}
 
     @router.post("/session/complete")
@@ -542,6 +560,14 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
                 raise HTTPException(status_code=410, detail="diagnostic_user_erased") from exc
             raise
         if _transitioned(row, "completed_transition"):
+            _funnel(background_tasks, request, user["id"], "onboarding_completed",
+                    dedupe_key="onboarding")
+            _funnel(background_tasks, request, user["id"], "streak_updated",
+                    dedupe_key=datetime.now(ZoneInfo(request.app.state.settings.timezone)).date().isoformat())
+            for question_id in body.answers:
+                _funnel(background_tasks, request, user["id"], "question_answered",
+                        diagnostic.exam, diagnostic.subject,
+                        dedupe_key=f"diagnostic/{body.attempt_id}/{question_id}")
             if _transitioned(row, "started_transition"):
                 background_tasks.add_task(
                     emit_event, "diagnostic_started", user["id"],

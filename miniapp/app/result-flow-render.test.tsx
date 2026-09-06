@@ -163,17 +163,14 @@ describe("result flow screens", () => {
       />,
     );
 
-    expect(html).toContain("Текущий балл");
-    expect(html).toContain("<strong>0</strong>");
+    expect(html).toContain("Точность ответов");
+    expect(html).toContain("<strong>0%</strong>");
     expect(html).toContain("0 из 4");
-    expect(html).toContain("из 100 баллов");
-    expect(html).toContain("Очки за этот результат");
-    expect(html).toContain("MAXIMUM · эта диагностика");
-    expect(html).toContain("Первый шаг");
-    expect(html).toContain("Уровень 1");
+    expect(html).toContain("не предсказывает балл на экзамене");
+    expect(html).not.toContain("Очки за этот результат");
   });
 
-  it("leads with the estimated exam score and keeps the percent as a secondary line", () => {
+  it("ignores legacy exam estimates and shows factual answer accuracy", () => {
     const html = renderToStaticMarkup(
       <ResultScreen
         diagnostic={{ exam: "ЕГЭ", subject: "Физика" } as never}
@@ -201,10 +198,9 @@ describe("result flow screens", () => {
       />,
     );
 
-    expect(html).toContain("Ожидаемый результат");
-    expect(html).toContain("≈ 53 балла ЕГЭ");
-    expect(html).toContain("ориентировочно, по 10 заданиям");
-    expect(html).toContain("50 из 100");
+    expect(html).not.toContain("Ожидаемый результат");
+    expect(html).not.toContain("53 балла ЕГЭ");
+    expect(html).toContain("50%");
     expect(html).toContain("5 из 10");
   });
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState, type RefObject } from "react";
 
-import { loadBootstrap, loadWeeklyLeague, recordOfferEvent } from "./api";
+import { loadBootstrap, loadWeeklyLeague, recordOfferEvent, startOnboarding } from "./api";
 import type { LeagueScreenState } from "./league-model";
 import { dismissOffer, type OfferDismissalState, type OfferPlacement, type OfferTelemetryEvent } from "./offer-ux";
 import { initializeTelegram } from "./telegram-webapp";
@@ -12,7 +12,6 @@ export type BootstrapState = {
   bootstrap: BootstrapResponse | null;
   error: string | null;
   outsideTelegram: boolean;
-  sessionCompletions: number;
   dismissedOfferPlacements: OfferDismissalState;
   leagueState: LeagueScreenState;
 };
@@ -28,7 +27,8 @@ export type BootstrapLoad =
 export type BootstrapActions = {
   load(): Promise<BootstrapLoad>;
   setError(message: string | null): void;
-  countCompletion(): void;
+  refreshProgress(): Promise<void>;
+  beginOnboarding(): Promise<boolean>;
   dismissOfferPlacement(placement: OfferPlacement): void;
   handleOfferEvent(event: OfferTelemetryEvent): void;
   openLeague(): Promise<void>;
@@ -47,12 +47,12 @@ export function useBootstrap(setScreen: (screen: Screen) => void): BootstrapSess
   const [bootstrap, setBootstrap] = useState<BootstrapResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [outsideTelegram, setOutsideTelegram] = useState(false);
-  const [sessionCompletions, setSessionCompletions] = useState(0);
   const [dismissedOfferPlacements, setDismissedOfferPlacements] = useState<OfferDismissalState>({});
   const [leagueState, setLeagueState] = useState<LeagueScreenState>({ kind: "loading" });
   const initData = useRef("");
   const schoolId = useRef<string | null>(null);
   const sessionScopeRef = useRef<string | null>(null);
+  const refreshGeneration = useRef(0);
 
   const sessionScope = bootstrap?.session_scope;
 
@@ -69,6 +69,7 @@ export function useBootstrap(setScreen: (screen: Screen) => void): BootstrapSess
       status: "ready",
       data,
       apply: () => {
+        refreshGeneration.current += 1;
         setBootstrap(data);
         schoolId.current = data.school.brand.school_id;
         sessionScopeRef.current = data.session_scope;
@@ -78,8 +79,32 @@ export function useBootstrap(setScreen: (screen: Screen) => void): BootstrapSess
     };
   }, []);
 
-  const countCompletion = useCallback(() => {
-    setSessionCompletions((count) => count + 1);
+  const refreshProgress = useCallback(async () => {
+    if (!initData.current || !sessionScopeRef.current) return;
+    const generation = ++refreshGeneration.current;
+    const scope = sessionScopeRef.current;
+    try {
+      const data = await loadBootstrap(initData.current);
+      if (generation !== refreshGeneration.current || scope !== data.session_scope) return;
+      setBootstrap(data);
+      setError(null);
+    } catch {
+      setError("Не удалось обновить прогресс. Результат сохранён. Обнови прогресс ещё раз.");
+    }
+  }, []);
+
+  const beginOnboarding = useCallback(async () => {
+    if (!initData.current || !sessionScopeRef.current) return false;
+    setError(null);
+    try {
+      const onboarding = await startOnboarding(initData.current, sessionScopeRef.current);
+      refreshGeneration.current += 1;
+      setBootstrap((current) => current ? { ...current, onboarding } : current);
+      return true;
+    } catch {
+      setError("Не удалось сохранить начало диагностики. Повтори попытку.");
+      return false;
+    }
   }, []);
 
   const dismissOfferPlacement = useCallback((placement: OfferPlacement) => {
@@ -114,14 +139,14 @@ export function useBootstrap(setScreen: (screen: Screen) => void): BootstrapSess
       bootstrap,
       error,
       outsideTelegram,
-      sessionCompletions,
       dismissedOfferPlacements,
       leagueState,
     },
     actions: {
       load,
       setError,
-      countCompletion,
+      refreshProgress,
+      beginOnboarding,
       dismissOfferPlacement,
       handleOfferEvent,
       openLeague,

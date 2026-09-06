@@ -12,11 +12,17 @@ class ApiRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     init_data: str = Field(min_length=1, max_length=16384)
+    notification_token: str | None = Field(default=None, max_length=160)
 
 
 class SessionRequest(ApiRequest):
     attempt_id: str = Field(pattern=r"^[A-Za-z0-9_-]{8,48}$")
     session_scope: str = Field(pattern=r"^[0-9a-f]{24}$")
+
+
+class OnboardingRequest(ApiRequest):
+    session_scope: str = Field(pattern=r"^[0-9a-f]{24}$")
+    status: Literal["selection"]
 
 
 class CatalogRequest(ApiRequest):
