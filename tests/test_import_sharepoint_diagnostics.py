@@ -533,3 +533,97 @@ def test_base_diagnostic_questions_stay_ahead_of_bank_packages(tmp_path):
     )
     assert all("kisloty" not in identifier for identifier in identifiers[:topical_start])
     assert identifiers[0] == "sp-chemistry-oge-2022-q1"
+
+
+def _numbered_source(document, number: int, lines: list[str], *, leading: bool) -> None:
+    """A task whose option list is typed as plain `N)` prompt lines."""
+    _task(document, number)
+    stem = "Укажите порядковый номер верного утверждения."
+    blocks = lines + [stem] if leading else [stem] + lines
+    for block in blocks:
+        document.add_paragraph(block)
+
+
+OPTION_LINES = ["1) Первое;", "2) Второе;", "3) Третье;", "4) Четвёртое."]
+
+
+def test_a_trailing_numbered_block_becomes_the_option_list(tmp_path):
+    document = Document()
+    _numbered_source(document, 1, OPTION_LINES, leading=False)
+    _answer(document, None, "3")
+    source = tmp_path / "inline-options.docx"
+    document.save(str(source))
+
+    task = importer.parse_document(source)[0]
+
+    assert task.options == OPTION_LINES
+    assert task.prompt_blocks == ["Укажите порядковый номер верного утверждения."]
+    assert importer.classify(task) == ("single", {"indices": [3]})
+
+
+def test_a_leading_numbered_block_becomes_the_option_list(tmp_path):
+    """One editor typed the shared option list above the question stem."""
+    document = Document()
+    _numbered_source(document, 1, OPTION_LINES, leading=True)
+    _answer(document, None, "2")
+    source = tmp_path / "leading-options.docx"
+    document.save(str(source))
+
+    task = importer.parse_document(source)[0]
+
+    assert task.options == OPTION_LINES
+    assert task.prompt_blocks == ["Укажите порядковый номер верного утверждения."]
+    assert importer.classify(task) == ("single", {"indices": [2]})
+
+
+def test_a_numbered_block_stays_in_the_prompt_when_the_key_orders_it(tmp_path):
+    """`2314` reorders the four lines; they are not four answers to pick from."""
+    document = Document()
+    _numbered_source(document, 1, OPTION_LINES, leading=False)
+    _answer(document, None, "2314")
+    source = tmp_path / "ordering.docx"
+    document.save(str(source))
+
+    task = importer.parse_document(source)[0]
+
+    assert task.options == []
+    assert task.prompt_blocks[-1] == "4) Четвёртое."
+    assert importer.classify(task)[0] == "input"
+
+
+def test_a_numbered_block_stays_in_the_prompt_when_it_is_part_of_the_question(tmp_path):
+    """A numbered list the prompt wraps on both sides is condition text."""
+    document = Document()
+    _task(document, 1)
+    for block in ("Дан список величин.", *OPTION_LINES, "Сколько из них положительны?"):
+        document.add_paragraph(block)
+    _answer(document, None, "2")
+    source = tmp_path / "mid-prompt.docx"
+    document.save(str(source))
+
+    task = importer.parse_document(source)[0]
+
+    assert task.options == []
+    assert len(task.prompt_blocks) == 6
+
+
+def test_a_numbered_block_with_a_gap_is_not_an_option_list(tmp_path):
+    document = Document()
+    _numbered_source(document, 1, ["1) Первое;", "2) Второе;", "4) Четвёртое."], leading=False)
+    _answer(document, None, "2")
+    source = tmp_path / "gap.docx"
+    document.save(str(source))
+
+    assert importer.parse_document(source)[0].options == []
+
+
+def test_two_numbered_lines_are_too_few_to_be_an_option_list(tmp_path):
+    document = Document()
+    _numbered_source(document, 1, ["1) Первое;", "2) Второе."], leading=False)
+    _answer(document, None, "2")
+    source = tmp_path / "pair.docx"
+    document.save(str(source))
+
+    assert importer.parse_document(source)[0].options == []
+
+

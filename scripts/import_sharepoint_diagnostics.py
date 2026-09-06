@@ -105,6 +105,8 @@ TOPIC_SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 OPEN_ANSWER = re.compile(r"максимальный балл", re.IGNORECASE)
 MATCHING_ITEM = re.compile(r"^([А-ЯЁ])\)\s*(.*)$", re.DOTALL)
 MATCHING_OPTION = re.compile(r"^(\d)\)\s*(.*)$", re.DOTALL)
+INLINE_OPTION = re.compile(r"^(\d+)\)\s*\S")
+MIN_INLINE_OPTIONS = 3
 DIGITS = re.compile(r"\d+\Z")
 NUMERIC_SHAPED = re.compile(r"[0-9,.+-]+\Z")
 FIGURE_WORDS = re.compile(
@@ -339,7 +341,43 @@ def parse_document(path: Path) -> tuple[SourceTask, ...]:
                           "solution": "solution", "answer": "answer"}[section]).append(text)
     for task in tasks:
         _fold_answer_explanation(task)
+        _adopt_inline_options(task)
     return tuple(tasks)
+
+
+def _adopt_inline_options(task: SourceTask) -> None:
+    """Move an option list typed as plain `N)` prompt lines into `options`.
+
+    Some editors skip the `Варианты:` marker, which leaves the choices inside the
+    prompt and turns a pick-one task into an empty input box. Only a run anchored
+    at one end of the prompt, numbered `1..N` without a gap, and answered by a
+    single digit inside that range can be the option list: a numbered run the key
+    reorders, or one the question text refers to, keeps its place.
+    """
+    if task.options or len(task.answer) != 1:
+        return
+    parts = [part.strip() for part in task.answer[0].strip().split("#")]
+    if not all(len(part) == 1 and part.isdigit() for part in parts):
+        return
+    blocks = task.prompt_blocks
+    head = 0
+    while head < len(blocks) and INLINE_OPTION.match(blocks[head]):
+        head += 1
+    tail = len(blocks)
+    while tail > 0 and INLINE_OPTION.match(blocks[tail - 1]):
+        tail -= 1
+    for start, stop in ((0, head), (tail, len(blocks))):
+        run = blocks[start:stop]
+        if len(run) < MIN_INLINE_OPTIONS or len(run) == len(blocks):
+            continue
+        numbers = [int(INLINE_OPTION.match(line).group(1)) for line in run]
+        if numbers != list(range(1, len(run) + 1)):
+            continue
+        if any(not 1 <= int(part) <= len(run) for part in parts):
+            continue
+        task.options.extend(run)
+        del blocks[start:stop]
+        return
 
 
 def _fold_answer_explanation(task: SourceTask) -> None:
