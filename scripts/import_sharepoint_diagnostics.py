@@ -1047,7 +1047,14 @@ def main(argv: list[str] | None = None) -> int:
     for target in sorted(targets.values(), key=lambda item: item.path):
         additions = sorted(
             grouped.get(target.path, []),
-            key=lambda item: (item.source.year, item.source.path.name, item.task.number),
+            # Base diagnostics carry no topic slug and sort first, because the
+            # leading questions are the full diagnostic and the rest is bank.
+            key=lambda item: (
+                bool(item.source.topic_slug),
+                item.source.year,
+                item.source.path.name,
+                item.task.number,
+            ),
         )
         kept = [
             chunk for chunk in target.chunks if not chunk[0].startswith(ID_PREFIX)

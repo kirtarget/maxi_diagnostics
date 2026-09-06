@@ -512,3 +512,29 @@ def test_pdf_unsafe_degree_and_figure_dash_are_replaced():
     assert importer.clean_line("t = 30ᵒC") == "t = 30°C"
     assert importer.clean_line("5 ‒ 3") == "5 - 3"
     assert importer.renders(importer.clean_line("t = 30ᵒC"))
+
+
+def test_base_diagnostic_questions_stay_ahead_of_bank_packages(tmp_path):
+    """The leading questions are the diagnostic, so `full_count` keeps covering them."""
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    build_source_document(source_directory / SOURCE_NAME)
+    topical = source_directory / PLAN_SOURCE_NAME
+    build_source_document(topical)
+    catalog_path = build_repository(tmp_path)
+    plan = write_plan(
+        tmp_path / "plan.json", [plan_entry(topical, season="20-21")]
+    )
+
+    importer.main([str(source_directory), "--plan", str(plan), "--root", str(tmp_path)])
+
+    identifiers = [
+        question["id"]
+        for question in json.loads(catalog_path.read_text(encoding="utf-8"))["questions"]
+        if question["id"].startswith(importer.ID_PREFIX)
+    ]
+    topical_start = min(
+        index for index, identifier in enumerate(identifiers) if "kisloty" in identifier
+    )
+    assert all("kisloty" not in identifier for identifier in identifiers[:topical_start])
+    assert identifiers[0] == "sp-chemistry-oge-2022-q1"
