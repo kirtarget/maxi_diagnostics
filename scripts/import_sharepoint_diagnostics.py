@@ -8,14 +8,22 @@ figures, and records every skipped task with a reason in a Markdown report.
 
 Every catalog question comes from these documents. A re-run replaces exactly the
 questions whose id starts with `sp-`, leaves every other byte of the file alone,
-and must produce byte-identical output.
+and must produce byte-identical output. The source directory therefore has to
+hold the whole bank, the 20 base diagnostics included.
 
-    python scripts/import_sharepoint_diagnostics.py <docx-dir>
+Subject, exam, season and topic come from the source filename. Thematic packages
+are named too freely for that, so `--plan` supplies the same fields explicitly
+for the files it lists and checks each of them against a SHA-256 content hash.
+Their question ids carry the plan topic slug, which keeps two packages of one
+subject and season apart.
+
+    python scripts/import_sharepoint_diagnostics.py <docx-dir> [--plan plan.json]
 """
 
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date
 import hashlib
@@ -85,12 +93,16 @@ SUBJECT_NAMES = {
     "chemistry": "Химия",
 }
 EXAM_CODES = {"ЕГЭ": "ege", "ОГЭ": "oge"}
+EXAM_NAMES = {code: name for name, code in EXAM_CODES.items()}
 
 FILENAME = re.compile(
     r"^(?P<subject>[А-ЯЁ]+)_(?P<exam>ЕГЭ|ОГЭ)_.*?_(?P<start>\d{2})-(?P<end>\d{2})"
     r"_.*Заданий\s*(?P<tasks>\d+)$"
 )
 TASK_HEADING = re.compile(r"^Задание\s*(\d+)\.?$")
+SEASON = re.compile(r"^(?P<start>\d{2})-(?P<end>\d{2})$")
+TOPIC_SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+OPEN_ANSWER = re.compile(r"максимальный балл", re.IGNORECASE)
 MATCHING_ITEM = re.compile(r"^([А-ЯЁ])\)\s*(.*)$", re.DOTALL)
 MATCHING_OPTION = re.compile(r"^(\d)\)\s*(.*)$", re.DOTALL)
 DIGITS = re.compile(r"\d+\Z")
@@ -117,6 +129,8 @@ PDF_SAFE_REPLACEMENTS = str.maketrans(
         "́": "",
         "̆": "",
         "∠": "угол ",
+        "ᵒ": "°",
+        "‒": "-",
     }
 )
 # Liberation Sans has no Mathematical Alphanumeric Symbols; the compatibility
@@ -157,6 +171,20 @@ class SourceTask:
 
 
 @dataclass(frozen=True)
+class PlanEntry:
+    """One `--plan` record: the metadata a free-form filename cannot carry."""
+
+    file_name: str
+    content_hash: str
+    subject_code: str
+    exam: str
+    year: int
+    topic: str
+    topic_slug: str
+    declared_tasks: int
+
+
+@dataclass(frozen=True)
 class SourceFile:
     path: Path
     exam: str
@@ -164,10 +192,13 @@ class SourceFile:
     year: int
     declared_tasks: int
     tasks: tuple[SourceTask, ...]
+    topic: str = ""
+    topic_slug: str = ""
 
     @property
     def slug(self) -> str:
-        return f"{self.subject_code}-{EXAM_CODES[self.exam]}-{self.year}"
+        base = f"{self.subject_code}-{EXAM_CODES[self.exam]}-{self.year}"
+        return f"{base}-{self.topic_slug}" if self.topic_slug else base
 
 
 @dataclass
@@ -306,10 +337,77 @@ def parse_document(path: Path) -> tuple[SourceTask, ...]:
             continue
         getattr(current, {"prompt": "prompt_blocks", "options": "options",
                           "solution": "solution", "answer": "answer"}[section]).append(text)
+    for task in tasks:
+        _fold_answer_explanation(task)
     return tuple(tasks)
 
 
-def read_source_file(path: Path) -> SourceFile:
+def _fold_answer_explanation(task: SourceTask) -> None:
+    """Some documents put the explanation into the answer block, after the key."""
+    if len(task.answer) == 2 and task.answer[1].casefold().startswith("пояснени"):
+        task.solution.append(task.answer.pop())
+
+
+def file_digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def load_plan(path: Path) -> dict[str, PlanEntry]:
+    """Read the source plan, keyed by file name."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    entries: dict[str, PlanEntry] = {}
+    for record in payload.get("sources", []):
+        file_name = record["file_name"]
+        if file_name in entries:
+            raise ImportError(f"Duplicate plan entry: {file_name}")
+        subject_code = record["subject"]
+        if subject_code not in SUBJECT_NAMES:
+            raise ImportError(f"Unknown subject in plan entry {file_name}")
+        exam = EXAM_NAMES.get(record["exam"])
+        if exam is None:
+            raise ImportError(f"Unknown exam in plan entry {file_name}")
+        season = SEASON.match(record["season"])
+        if season is None:
+            raise ImportError(f"Unknown season in plan entry {file_name}")
+        topic_slug = record["topic_slug"]
+        if not TOPIC_SLUG.match(topic_slug):
+            raise ImportError(f"Unusable topic slug in plan entry {file_name}")
+        topic = clean_line(record["topic"])
+        if not topic:
+            raise ImportError(f"Empty topic in plan entry {file_name}")
+        entries[file_name] = PlanEntry(
+            file_name=file_name,
+            content_hash=record["content_hash"],
+            subject_code=subject_code,
+            exam=exam,
+            year=2000 + int(season.group("end")),
+            topic=topic,
+            topic_slug=topic_slug,
+            # The filename does not always name a count; the manifest block count
+            # is then the only declaration the report can compare against.
+            declared_tasks=int(
+                record.get("declared_question_count") or record["task_blocks"]
+            ),
+        )
+    if not entries:
+        raise ImportError(f"No sources in plan {path}")
+    return entries
+
+
+def read_source_file(path: Path, entry: PlanEntry | None = None) -> SourceFile:
+    if entry is not None:
+        if file_digest(path) != entry.content_hash:
+            raise ImportError(f"Source file does not match the plan hash: {path.name}")
+        return SourceFile(
+            path=path,
+            exam=entry.exam,
+            subject_code=entry.subject_code,
+            year=entry.year,
+            declared_tasks=entry.declared_tasks,
+            tasks=parse_document(path),
+            topic=entry.topic,
+            topic_slug=entry.topic_slug,
+        )
     match = FILENAME.match(path.stem)
     if match is None:
         raise ImportError(f"Unrecognized source filename: {path.name}")
@@ -383,9 +481,13 @@ def build_prompt(task: SourceTask, *, skip_tables: bool) -> str:
 
 def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
     """Return (question_type, payload) or ("skip", reason)."""
+    if any(OPEN_ANSWER.search(line) for line in (*task.answer, *task.solution)):
+        return "skip", "open_answer"
     if len(task.answer) != 1 or not task.answer[0].strip():
         return "skip", "irregular_key"
     key = task.answer[0].strip()
+    if key.endswith(".") and NUMERIC_SHAPED.fullmatch(key[:-1]):
+        key = key[:-1]
     parts = [part.strip() for part in key.split("#")]
     if any(not part for part in parts):
         return "skip", "irregular_key"
@@ -476,7 +578,7 @@ def build_question(
     question: dict[str, Any] = {
         "id": f"{ID_PREFIX}{source.slug}-q{task.number}",
         "type": kind,
-        "topic": f"Задание {task.number}",
+        "topic": source.topic or f"Задание {task.number}",
         "title": f"Задание {task.number}",
         "prompt": prompt,
         "max_primary_score": 1,
@@ -778,8 +880,9 @@ def write_report(
         "",
         "Каталог школы состоит только из этих заданий. Текст задания, вариантов и "
         "ключ взяты из редакционно утверждённых документов MAXIMUM без правок. Тема "
-        "не выводится ни из какого источника: каждому вопросу проставлена тема "
-        "«Задание N» и первичный балл 1. Раздел «Темы, требующие сопоставления» "
+        "берётся из плана источников, а без плана каждому вопросу проставлена "
+        "тема «Задание N». Первичный балл всегда 1. Раздел «Темы, требующие "
+        "сопоставления» "
         "перечисляет их по предметам, чтобы методист заполнил таблицу «позиция КИМ → "
         "тема». Все импортированные вопросы имеют `approval_status = draft` и требуют "
         "предметной редактуры.",
@@ -827,8 +930,8 @@ def write_report(
             "",
             "## Темы, требующие сопоставления",
             "",
-            "У всех импортированных заданий тема равна «Задание N». Заполните "
-            "позицию КИМ и тему для каждого номера в списке.",
+            "У импортированных заданий без записи в плане тема равна «Задание N». "
+            "Заполните позицию КИМ и тему для каждого номера в списке.",
             "",
             "| Каталог | Экзамен | Предмет | Документ | Задания |",
             "|---|---|---|---|---|",
@@ -883,6 +986,11 @@ def write_report(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", type=Path, help="Directory holding the source .docx files")
+    parser.add_argument(
+        "--plan",
+        type=Path,
+        help="JSON plan naming subject, exam, season and topic per source file",
+    )
     parser.add_argument("--root", type=Path, default=REPOSITORY_ROOT)
     parser.add_argument("--dry-run", action="store_true")
     arguments = parser.parse_args(argv)
@@ -900,8 +1008,9 @@ def main(argv: list[str] | None = None) -> int:
         if path.is_file() and not path.name.startswith(ID_PREFIX)
     }
 
+    plan = load_plan(arguments.plan) if arguments.plan else {}
     sources = [
-        read_source_file(path)
+        read_source_file(path, plan.get(path.name))
         for path in sorted(arguments.source.resolve().glob("*.docx"))
     ]
     if not sources:
@@ -947,6 +1056,16 @@ def main(argv: list[str] | None = None) -> int:
             (candidate.question["id"], render_question(candidate.question))
             for candidate in additions
         ]
+        collisions = [
+            identifier
+            for identifier, count in Counter(identifier for identifier, _ in chunks).items()
+            if count > 1
+        ]
+        if collisions:
+            raise ImportError(
+                f"Duplicate question ids in {target.path.name}: "
+                f"{', '.join(sorted(collisions)[:10])}"
+            )
         if len(chunks) > MAX_QUESTIONS_PER_DIAGNOSTIC:
             raise ImportError(f"Too many questions in {target.path.name}: {len(chunks)}")
         written.append((target.path.name, len(kept), len(additions)))
