@@ -31,6 +31,7 @@ from docx import Document
 from docx.oxml.ns import qn
 from docx.table import Table
 from docx.text.paragraph import Paragraph
+from docx.text.run import Run
 from PIL import Image
 
 
@@ -235,15 +236,33 @@ def _paragraph_images(paragraph: Paragraph, relationships) -> list[bytes]:
     return payloads
 
 
+def _paragraph_text(paragraph: Paragraph) -> str:
+    parts: list[str] = []
+    segment = ""
+    alignment = None
+    for element in paragraph._p.iter(qn("w:r")):
+        run = Run(element, paragraph)
+        if not run.text:
+            continue
+        current = "super" if run.font.superscript else "sub" if run.font.subscript else None
+        if current != alignment:
+            parts.append(f"^({segment})" if alignment == "super" else f"_({segment})" if alignment == "sub" else segment)
+            segment = ""
+            alignment = current
+        segment += run.text
+    parts.append(f"^({segment})" if alignment == "super" else f"_({segment})" if alignment == "sub" else segment)
+    return "".join(parts)
+
+
 def _read_table(table: Table) -> SourceTable:
     rows = []
     for row in table.rows:
         cells = []
         for cell in row.cells:
             lines = tuple(
-                clean_line(paragraph.text)
+                clean_line(_paragraph_text(paragraph))
                 for paragraph in cell.paragraphs
-                if clean_line(paragraph.text)
+                if clean_line(_paragraph_text(paragraph))
             )
             cells.append(lines)
         rows.append(tuple(cells))
@@ -261,7 +280,7 @@ def parse_document(path: Path) -> tuple[SourceTask, ...]:
             if current is not None and section == "prompt":
                 current.prompt_tables.append(_read_table(block))
             continue
-        text = clean_line(block.text)
+        text = clean_line(_paragraph_text(block))
         heading = TASK_HEADING.match(text)
         if heading:
             current = SourceTask(number=int(heading.group(1)))

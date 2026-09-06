@@ -214,6 +214,11 @@ export type ServerResult = {
 };
 
 export type ServerAttempt = {
+  result?: ServerResult;
+  exam?: string;
+  subject?: string;
+  completed_at?: string;
+  pdf_status?: ReviewResponse["pdf_status"];
   attempt_id: string;
   diagnostic_id: string;
   content_version: string;
@@ -273,6 +278,7 @@ export type DailyPlanSummary = {
 };
 
 export type BootstrapResponse = {
+  onboarding?: { status: "welcome" | "selection" | "completed" };
   catalog_contract: 3;
   session_scope: string;
   latest_attempt_id: string | null;

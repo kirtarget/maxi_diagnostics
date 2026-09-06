@@ -77,7 +77,7 @@ async def test_streak_save_is_sent_while_the_streak_is_alive_and_today_is_idle(m
     lease = claimed("streak_save") | {"attempt_id": None}
     context = lease | {
         "attempt_status": None, "result_viewed_at": None, "subject": "diagnostic",
-        "mode": "full", "payload": {}, "streak_days": 4, "streak_active_today": False,
+        "mode": "full", "payload": {}, "streak_days": 4, "streak_at_risk": True,
     }
     monkeypatch.setattr(followups.attempts, "claim_due_notifications", AsyncMock(return_value=[lease]))
     monkeypatch.setattr(followups.attempts, "get_claimed_notification", AsyncMock(return_value=context))
@@ -101,8 +101,9 @@ async def test_streak_save_is_sent_while_the_streak_is_alive_and_today_is_idle(m
 @pytest.mark.parametrize(
     "profile",
     [
-        {"streak_days": 4, "streak_active_today": True},
-        {"streak_days": 1, "streak_active_today": False},
+        {"streak_days": 4, "streak_at_risk": False},
+        {"streak_days": 1, "streak_at_risk": True},
+        {"streak_days": 4},
     ],
 )
 async def test_streak_save_is_cancelled_when_it_is_no_longer_needed(monkeypatch, profile):

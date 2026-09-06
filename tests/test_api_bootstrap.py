@@ -47,6 +47,7 @@ def make_client(monkeypatch) -> TestClient:
         return None
 
     monkeypatch.setattr(sessions.attempts, "mark_opened", mark_opened)
+    monkeypatch.setattr(sessions.onboarding, "get_status", AsyncMock(return_value="welcome"))
     monkeypatch.setattr(sessions, "get_resumable_attempt", get_resumable_attempt)
     monkeypatch.setattr(sessions, "list_completed_attempts", list_completed_attempts)
     monkeypatch.setattr(sessions, "get_latest_attempt_id", get_latest_attempt_id)
@@ -57,6 +58,25 @@ def make_client(monkeypatch) -> TestClient:
     settings = Settings("postgresql://unused", "token", "https://app.example", "https://app.example", "admin", "password", None)
     school = load_school(ROOT / "school")
     return TestClient(create_app(settings, school, load_catalog(school)))
+
+
+def test_bootstrap_attributes_notification_only_after_telegram_authentication(monkeypatch):
+    from diagnostic.api import sessions
+
+    client = make_client(monkeypatch)
+    record = AsyncMock(return_value=True)
+    monkeypatch.setattr(sessions, "record_notification_open", record)
+    response = client.post("/api/diagnostics/bootstrap", json={
+        "init_data": signed_init_data(), "notification_token": "9.123.signature",
+    })
+    assert response.status_code == 200
+    record.assert_awaited_once_with("9.123.signature", client.app.state.settings.application_secret, 42)
+    record.reset_mock()
+    response = client.post("/api/diagnostics/bootstrap", json={
+        "init_data": "invalid", "notification_token": "9.123.signature",
+    })
+    assert response.status_code == 403
+    record.assert_not_awaited()
 
 
 def test_bootstrap_returns_brand_and_sanitized_catalog(monkeypatch):

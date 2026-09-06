@@ -16,7 +16,7 @@ const question = (id: string) => ({
 });
 
 describe("Training Radar UI contracts", () => {
-  it("derives its question range from a catalog whose maximum is below 20", () => {
+  it("shows the quick diagnostic count rather than the full catalog size", () => {
     const diagnostics: PublicDiagnostic[] = [{
       id: "demo",
       content_version: "v1",
@@ -41,7 +41,8 @@ describe("Training Radar UI contracts", () => {
       />,
     );
 
-    expect(html).toContain("3–7");
+    expect(html).toContain("<strong>3</strong>");
+    expect(html).not.toContain("3–7");
     expect(html).toContain("Без таймера");
     expect(html).not.toContain(">20<");
     expect(html).not.toContain("≈10");

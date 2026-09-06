@@ -1,5 +1,30 @@
 # Operations
 
+## MVP user lifecycle
+
+First-session selection is stored on the engagement record. Completing a
+diagnostic makes the existing completion ledger authoritative for returning-user
+status. Schema startup adds onboarding and notification-preference columns
+idempotently. Keep the installation secret unchanged during this release.
+
+Users disable reminders with `/stop` and enable them with `/notifications`.
+Disabling reminders does not cancel requested PDF delivery. Engagement reminders
+share a 24-hour limit; unviewed-result reminders are separate. Only one bot worker
+may run for the installation. Reminder links include signed attribution tokens;
+do not copy complete link query strings into logs or analytics exports.
+
+`/admin/users` is protected by the existing admin authentication. It includes
+users who have opened the app but have not started a diagnostic. Stored lives and
+streaks are labelled as their last recorded values. `/admin/funnel` remains the
+product dashboard; its API also exposes counts for the MVP lifecycle events.
+
+For local browser checks, start the Mini App on `127.0.0.1:3000`, set
+`PYTHONPATH=backend` and `TEST_DATABASE_URL` to a disposable localhost database
+whose name ends in `_test`, then run `python scripts/serve_mvp_smoke.py`.
+Open `http://127.0.0.1:3002/?smoke_user=8000000001`. The harness uses a fake signed
+Telegram fixture and never starts polling or sends messages. It is not a mobile
+Telegram acceptance test and must never be used as a production entrypoint.
+
 ## Routine checks and logs
 
 Use the production Compose pair and request `/healthz` through HTTPS:

@@ -12,9 +12,10 @@ from aiogram import Bot
 from diagnostic import alerts
 from diagnostic.analytics import fire_event
 from diagnostic.bot.keyboards import home_keyboard, result_keyboard, webapp_keyboard
-from diagnostic.db import attempts
+from diagnostic.db import attempts, funnel
 from diagnostic.delivery_state import reconcile_sent_finalizer
 from diagnostic.messages import render_message
+from diagnostic.notification_attribution import notification_url
 from diagnostic.school import SchoolConfig
 from diagnostic.settings import Settings
 
@@ -51,7 +52,7 @@ def _eligible(row: Mapping[str, Any]) -> bool:
         # Re-checked at send time: the streak must still be alive and still idle today.
         return (
             int(_value(row, "streak_days", 0)) >= 2
-            and not _value(row, "streak_active_today", False)
+            and _value(row, "streak_at_risk", False)
         )
     if kind == "incomplete":
         return status == "in_progress"
@@ -68,16 +69,21 @@ def _keyboard(row: Mapping[str, Any], settings: Settings, school: SchoolConfig):
     kind = str(_value(row, "kind", ""))
     user_id = int(_value(row, "user_id"))
     labels = school.brand.interface
+    miniapp_url = settings.miniapp_url
+    if getattr(settings, "application_secret", None) and _value(row, "due_at"):
+        miniapp_url = notification_url(
+            miniapp_url, settings.application_secret, user_id, int(row["id"]), row["due_at"],
+        )
     if kind in {"day_followup", "streak_save"}:
         # Both nudges point at today's plan rather than at a past result.
-        return webapp_keyboard(school, settings.miniapp_url, label=labels.plan)
+        return webapp_keyboard(school, miniapp_url, label=labels.plan)
     if kind in {"not_started", "incomplete", "quick_to_full", "month_retest", "lives_refill"}:
         label = (
             labels.take_full_diagnostic
             if kind == "quick_to_full"
             else labels.start_diagnostic
         )
-        return webapp_keyboard(school, settings.miniapp_url, label=label)
+        return webapp_keyboard(school, miniapp_url, label=label)
     attempt_id = _value(row, "attempt_id")
     if attempt_id:
         return result_keyboard(
@@ -85,9 +91,9 @@ def _keyboard(row: Mapping[str, Any], settings: Settings, school: SchoolConfig):
             user_id,
             str(attempt_id),
             str(_value(row, "mode", "full")),
-            miniapp_url=settings.miniapp_url,
+            miniapp_url=miniapp_url,
         )
-    return home_keyboard(school, settings.miniapp_url, user_id)
+    return home_keyboard(school, miniapp_url, user_id)
 
 
 async def _alert_if_abandoned(
@@ -162,6 +168,12 @@ async def dispatch_followups(
                 lambda: attempts.notification_is_sent(notification_id),
             )
             finalized = finalizer_result.sent
+            if finalized and getattr(settings, "application_secret", None):
+                await funnel.record_event(
+                    application_secret=settings.application_secret,
+                    user_id=row["user_id"], action="notification_sent",
+                    dedupe_key=f"{notification_id}/{row['due_at']}",
+                )
             finalizer_uncertain = finalizer_result.uncertain
             if finalizer_result.cancelled:
                 raise asyncio.CancelledError

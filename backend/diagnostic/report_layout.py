@@ -25,7 +25,7 @@ from reportlab.platypus import (
 )
 
 from diagnostic.school import SchoolConfig
-from diagnostic.score_text import estimate_caption, estimate_headline
+from diagnostic.scoring import COVERAGE_LIMITATION, round_half_up
 
 
 _FONT_ROOT = Path(__file__).resolve().parent / "assets" / "fonts"
@@ -35,9 +35,6 @@ _LEGACY_REGULAR = "DiagnosticLiberationSans"
 _LEGACY_BOLD = "DiagnosticLiberationSansBold"
 _TWO_COLUMN_ANSWER_LIMIT = 500
 _NOT_SAVED = "не сохранена"
-_SCORE_UNIT_LABELS = {
-    "accuracy_percent": "баллов",
-}
 
 
 @dataclass(frozen=True)
@@ -236,10 +233,6 @@ def _display(value: Any) -> str:
     return _NOT_SAVED if value is None or value == "" else str(value)
 
 
-def _score_unit_label(value: Any) -> str:
-    return _SCORE_UNIT_LABELS.get(str(value), _NOT_SAVED)
-
-
 def _provenance_lines(attempt: Mapping[str, Any]) -> tuple[str, str, str]:
     attempt_id = _display(_provenance_value(attempt, "attempt_id"))
     diagnostic_id = _display(_provenance_value(attempt, "diagnostic_id"))
@@ -257,16 +250,16 @@ def summary_story(
     styles: Mapping[str, ParagraphStyle],
 ) -> list[Any]:
     result = _result_snapshot(attempt)
-    score = _result_value(attempt, "score")
-    max_score = _result_value(attempt, "max_score")
-    score_unit = _score_unit_label(_result_value(attempt, "score_unit"))
     correct_count = _result_value(attempt, "correct_count")
     question_count = _result_value(attempt, "question_count")
+    accuracy = (
+        round_half_up(correct_count / question_count * 100)
+        if isinstance(correct_count, int) and isinstance(question_count, int)
+        and question_count > 0 else None
+    )
     subject = _display(_provenance_value(attempt, "subject"))
     mode = _mode_label(_provenance_value(attempt, "mode"))
-    unassessed_part = _result_value(attempt, "unassessed_part")
-    if not isinstance(unassessed_part, str) or not unassessed_part:
-        unassessed_part = "автоматически проверяемая часть диагностики"
+    unassessed_part = COVERAGE_LIMITATION
     strong_topics = _topic_names(attempt, "strong_topics")
     growth_topics = _topic_names(attempt, "growth_topics")
     forecast = (
@@ -276,8 +269,6 @@ def summary_story(
     )
     points = forecast.get("points") if isinstance(forecast.get("points"), list) else []
     estimate = _result_value(attempt, "estimate")
-    headline = estimate_headline(estimate, _provenance_value(attempt, "exam"))
-    caption = estimate_caption(estimate)
     story: list[Any] = [
         Paragraph(escape(school.brand.name), styles["label"]),
         Paragraph("Ваша точка старта", styles["display"]),
@@ -285,17 +276,15 @@ def summary_story(
         Paragraph(f"Режим: {escape(mode)}", styles["muted"]),
         Paragraph(f"Дата завершения: {_completion_date(attempt)}", styles["muted"]),
     ]
-    if headline is not None and caption is not None:
+    if estimate is not None:
         story.extend(
             [
-                Paragraph(f"Ожидаемый результат: <b>{escape(headline)}</b>", styles["heading"]),
-                Paragraph(escape(caption), styles["muted"]),
+                Paragraph("Старый прогноз экзаменационного балла не подтверждён методикой и не используется.", styles["muted"]),
             ]
         )
     story.extend([
         Paragraph(
-            f"Текущий результат: <b>{escape(_display(score))} из "
-            f"{escape(_display(max_score))} {escape(_display(score_unit))}</b>",
+            f"Правильных ответов: <b>{escape(_display(accuracy))}%</b>",
             styles["heading"],
         ),
         Paragraph(
@@ -305,15 +294,15 @@ def summary_story(
         ),
         Paragraph(f"Границы проверки: {escape(unassessed_part)}", styles["muted"]),
         Paragraph(
-            f"Сильные темы: {escape(', '.join(strong_topics) if strong_topics else 'не выделены')}",
+            f"Получилось в этой проверке: {escape(', '.join(strong_topics) if strong_topics else 'не выделено')}",
             styles["body"],
         ),
         Paragraph(
-            f"Точки роста: {escape(', '.join(growth_topics) if growth_topics else 'не выделены')}",
+            f"Повторить по этой проверке: {escape(', '.join(growth_topics) if growth_topics else 'не выделено')}",
             styles["body"],
         ),
         Paragraph(
-            "Диагностика показывает, что уже получается и где быстрее всего вырастет балл.",
+            "Разбор ниже относится к заданиям этой диагностики.",
             styles["muted"],
         ),
     ])
@@ -325,7 +314,7 @@ def summary_story(
     if persisted_points:
         rows = [
             [
-                Paragraph("Прогноз", styles["label"]),
+                Paragraph("Исторический прогноз без методологического подтверждения", styles["label"]),
                 Paragraph(
                     "Отметка" if forecast.get("kind") == "grade" else "Баллы",
                     styles["label"],

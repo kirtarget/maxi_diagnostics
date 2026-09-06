@@ -30,7 +30,7 @@ from diagnostic.report_layout import (
     summary_story,
 )
 from diagnostic.school import SchoolConfig, validate_asset_bytes, validate_asset_path
-from diagnostic.score_text import estimate_caption, estimate_headline
+from diagnostic.scoring import COVERAGE_LIMITATION, round_half_up
 
 
 _FONT_REGULAR = "DiagnosticLiberationSans"
@@ -252,29 +252,23 @@ def _legacy_story(
             ),
         ]
     )
-    score = _value(attempt, "score", 0)
-    scoring = diagnostic.get("scoring", {})
-    default_max_score = scoring.get("max_score", 0) if isinstance(scoring, Mapping) else 0
-    max_score = _value(attempt, "max_score", default_max_score)
     correct = _value(attempt, "correct_count", 0)
+    question_count = _value(attempt, "question_count", 0)
+    accuracy = round_half_up(correct / question_count * 100) if question_count else 0
     result_snapshot = _value(attempt, "result_snapshot", {}) or {}
     estimate = (
         result_snapshot.get("estimate") if isinstance(result_snapshot, Mapping) else None
     )
-    headline = estimate_headline(estimate, _value(attempt, "exam", ""))
-    caption = estimate_caption(estimate)
-    if headline is not None and caption is not None:
+    if estimate is not None:
         story.extend(
             [
-                Paragraph(f"<b>{_text(headline)}</b>", styles["heading"]),
-                Paragraph(_text(caption), styles["small"]),
+                Paragraph("Старый прогноз экзаменационного балла не подтверждён методикой и не используется.", styles["small"]),
             ]
         )
     story.extend(
         [
             Paragraph(
-                f"{_text(school.brand.pdf.score_label)}: "
-                f"<b>{_text(score)} / {_text(max_score)}</b>",
+                f"Правильных ответов: <b>{accuracy}%</b>",
                 styles["heading"],
             ),
             Paragraph(
@@ -284,19 +278,20 @@ def _legacy_story(
             ),
         ]
     )
+    story.append(Paragraph(COVERAGE_LIMITATION, styles["small"]))
 
     strong_topics = list(_value(attempt, "strong_topics", []) or [])
     growth_topics = list(_value(attempt, "growth_topics", []) or [])
     if strong_topics:
         story.append(
-            Paragraph(_text(school.brand.pdf.strong_topics_label), styles["heading"])
+            Paragraph("Получилось в этой проверке", styles["heading"])
         )
         story.append(
             Paragraph(" + ".join(_text(topic) for topic in strong_topics), styles["body"])
         )
     if growth_topics:
         story.append(
-            Paragraph(_text(school.brand.pdf.growth_topics_label), styles["heading"])
+            Paragraph("Повторить по этой проверке", styles["heading"])
         )
         story.append(
             Paragraph(" - ".join(_text(topic) for topic in growth_topics), styles["body"])
@@ -309,7 +304,7 @@ def _legacy_story(
     )
     points = forecast.get("points", []) if isinstance(forecast, Mapping) else []
     if isinstance(points, list) and points:
-        story.append(Paragraph(_text(school.brand.pdf.forecast_label), styles["heading"]))
+        story.append(Paragraph("Исторический прогноз без методологического подтверждения", styles["heading"]))
         for point in points[:10]:
             if isinstance(point, Mapping):
                 story.append(

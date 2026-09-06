@@ -33,6 +33,37 @@ def _answer(document, solution: str | None, key: str) -> None:
     document.add_paragraph(key)
 
 
+def test_import_preserves_grouped_superscripts_and_subscripts(tmp_path):
+    document = Document()
+    _task(document, 1)
+    prompt = document.add_paragraph("Решите уравнение: 4")
+    prompt.add_run("x").font.superscript = True
+    prompt.add_run(" – 3").font.superscript = True
+    prompt.add_run(" = 1/8")
+    document.add_paragraph("Решение:")
+    solution = document.add_paragraph("2")
+    solution.add_run("2(x – 3)").font.superscript = True
+    solution.add_run(" = 2")
+    solution.add_run("–3").font.superscript = True
+    document.add_paragraph("Ответ:")
+    document.add_paragraph("1,5")
+    _task(document, 2)
+    table = document.add_table(rows=1, cols=1)
+    formula = table.cell(0, 0).paragraphs[0]
+    formula.add_run("H")
+    formula.add_run("2").font.subscript = True
+    formula.add_run("O")
+    _answer(document, None, "1")
+    source = tmp_path / "formula.docx"
+    document.save(source)
+
+    tasks = importer.parse_document(source)
+    assert tasks[0].prompt_blocks == ["Решите уравнение: 4^(x – 3) = 1/8"]
+    assert tasks[0].solution == ["2^(2(x – 3)) = 2^(–3)"]
+    assert tasks[0].answer == ["1,5"]
+    assert tasks[1].prompt_tables[0].rows == ((("H_(2)O",),),)
+
+
 def build_source_document(path: Path) -> None:
     """One task per supported mapping, plus an irregular key and a figure."""
     document = Document()

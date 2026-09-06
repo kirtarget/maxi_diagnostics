@@ -36,6 +36,43 @@ async def database():
     await close_db()
 
 
+@pytest.mark.asyncio
+async def test_notification_opt_out_cancels_claim_and_blocks_new_reminders():
+    await attempts.mark_opened(101)
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute("UPDATE diagnostic_notifications SET due_at=now() - interval '1 minute'")
+    claimed = (await attempts.claim_due_notifications())[0]
+    await attempts.set_notification_preference(101, False)
+    assert await attempts.get_claimed_notification(claimed["id"], claimed["locked_at"]) is None
+    async with pool.acquire() as connection:
+        await connection.execute(
+            "INSERT INTO diagnostic_notifications (dedupe_key,user_id,kind,due_at) VALUES ('new',101,'incomplete',now())"
+        )
+    assert await attempts.claim_due_notifications() == []
+    await attempts.set_notification_preference(101, True)
+    assert len(await attempts.claim_due_notifications()) == 1
+
+
+@pytest.mark.asyncio
+async def test_reminder_cooldown_preserves_result_delivery():
+    await attempts.mark_opened(101)
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute(
+            "UPDATE diagnostic_notifications SET status='sent',sent_at=now() WHERE user_id=101"
+        )
+        await connection.execute(
+            """
+            INSERT INTO diagnostic_notifications (dedupe_key,user_id,kind,due_at)
+            VALUES ('engagement',101,'streak_save',now()), ('result',101,'result_unviewed',now())
+            """
+        )
+    rows = await attempts.claim_due_notifications()
+    assert [row["kind"] for row in rows] == ["result_unviewed"]
+    assert await attempts.claim_due_notifications() == []
+
+
 def completion(
     attempt_id: str,
     *,
@@ -602,6 +639,16 @@ async def test_old_notification_failure_cannot_overwrite_terminal_states():
             "UPDATE diagnostic_notifications SET due_at=now() - interval '1 minute' WHERE attempt_id=$1",
             attempt_id,
         )
+        rows = await connection.fetch(
+            "SELECT id FROM diagnostic_notifications WHERE attempt_id=$1 ORDER BY id",
+            attempt_id,
+        )
+        for index, row in enumerate(rows):
+            await connection.execute(
+                "UPDATE diagnostic_notifications SET user_id=$2 WHERE id=$1",
+                row["id"],
+                8_050_000_000 + index,
+            )
     claims = []
     for _ in range(3):
         claims.extend(await attempts.claim_due_notifications())
@@ -852,6 +899,10 @@ async def test_notification_claim_tick_abandons_only_stale_exhausted_sending_lea
         await connection.execute(
             "UPDATE diagnostic_notifications SET status='sending', attempts=8, due_at=now() - interval '1 minute', locked_at=now() - interval '11 minutes' WHERE id=$1",
             ids[0],
+        )
+        await connection.execute(
+            "UPDATE diagnostic_notifications SET user_id=102 WHERE id=$1",
+            ids[2],
         )
         await connection.execute(
             "UPDATE diagnostic_notifications SET status='sending', attempts=8, due_at=now() - interval '1 minute', locked_at=now() WHERE id=$1",

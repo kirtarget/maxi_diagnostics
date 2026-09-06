@@ -199,6 +199,19 @@ def _content_error(exc: RuntimeError) -> HTTPException:
     return HTTPException(status_code=500, detail="content_operation_failed")
 
 
+@router.get("/admin/users", response_class=HTMLResponse)
+async def users_page(
+    request: Request, offset: int = Query(0, ge=0, le=100000),
+    user_id: int | None = Query(None, ge=1, le=9_223_372_036_854_775_807),
+):
+    rows = await repository.list_users(offset=offset, user_id=user_id)
+    return templates.TemplateResponse(
+        request=request, name="users.html",
+        context={**_admin_context(request), "users": rows, "offset": offset,
+                 "selected_user_id": user_id},
+    )
+
+
 @router.get("/admin/diagnostics", response_class=HTMLResponse)
 async def diagnostics_page(request: Request):
     return templates.TemplateResponse(

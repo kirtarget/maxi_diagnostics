@@ -167,7 +167,25 @@ def test_result_carries_no_estimate_without_a_scale():
     assert result.estimate is None
 
 
-def test_result_projects_the_sample_onto_the_exam_scale():
+def test_three_correct_answers_do_not_imply_a_perfect_exam():
+    catalog = load_catalog(load_school())
+    diagnostic = catalog.get("ege-mathematics-1212")
+    questions = diagnostic.questions_for_mode("quick")
+    result = score_answers(
+        catalog, diagnostic.id, "quick",
+        {
+            question.id: question.correct[0]
+            if question.type in {"input", "text"} else question.correct
+            for question in questions
+        },
+        load_school().scale_for(diagnostic.exam, diagnostic.subject),
+    )
+    assert result.correct_count == result.question_count == 3
+    assert result.accuracy_percent == 100
+    assert result.estimate is None
+
+
+def test_result_does_not_project_the_sample_onto_the_exam_scale():
     result = score_answers(
         sample_catalog(), "demo-math", "full", {"q1": "2", "q2": ["1", "3"]},
         demo_scale(),
@@ -175,13 +193,8 @@ def test_result_projects_the_sample_onto_the_exam_scale():
 
     assert result.primary_score == 2
     assert result.max_primary_score == 5
-    assert result.estimate is not None
-    assert result.estimate.scaled_primary == 3
-    assert result.estimate.value == 35
-    assert result.estimate.sample_size == 5
-    assert result.estimate.sample_max_primary == 5
-    assert result.estimate.exam_max_primary == 8
-    assert result.estimate.min_pass == 27
+    assert result.estimate is None
+    assert result.accuracy_percent == 40
 
 
 def test_growth_topics_carry_the_primary_points_still_on_the_table():

@@ -16,7 +16,7 @@ from diagnostic.daily_plan import ensure_today_plan, plan_summary
 from diagnostic.db import attempts, funnel
 from diagnostic.messages import render_message
 from diagnostic.school import SchoolConfig
-from diagnostic.score_text import estimate_caption, estimate_headline
+from diagnostic.scoring import COVERAGE_LIMITATION, round_half_up
 from diagnostic.settings import Settings
 
 from .keyboards import home_keyboard, result_keyboard, results_keyboard, webapp_keyboard
@@ -28,11 +28,6 @@ def _value(row: Mapping[str, Any], key: str, default: Any = None) -> Any:
     except (KeyError, TypeError):
         value = default
     return default if value is None else value
-
-
-def _estimate(row: Mapping[str, Any]) -> Any:
-    snapshot = _value(row, "result_snapshot")
-    return snapshot.get("estimate") if isinstance(snapshot, Mapping) else None
 
 
 def _diagnostic_value(
@@ -135,12 +130,9 @@ async def _send_results_to(answer, user_id: int, settings, school, catalog) -> N
     lines = [f"<b>{html.escape(interface.results_heading, quote=True)}</b>", ""]
     for row in rows[:10]:
         subject = html.escape(_diagnostic_value(row, catalog, "subject", fallback), quote=True)
-        score = html.escape(str(_value(row, "score", 0)), quote=True)
-        score_suffix = "%" if _value(row, "score_unit") == "accuracy_percent" else ""
-        headline = estimate_headline(_estimate(row), _value(row, "exam", ""))
-        estimate_part = (
-            f" · {html.escape(headline, quote=True)}" if headline is not None else ""
-        )
+        correct = _value(row, "correct_count", 0)
+        count = _value(row, "question_count", 0)
+        accuracy = round_half_up(correct / count * 100) if count else 0
         mode = (
             interface.quick_result
             if _value(row, "mode", "quick") == "quick"
@@ -148,7 +140,7 @@ async def _send_results_to(answer, user_id: int, settings, school, catalog) -> N
         )
         mode = html.escape(mode, quote=True)
         lines.append(
-            f"• <b>{subject}</b> — {score}{score_suffix}{estimate_part} ({mode})"
+            f"• <b>{subject}</b> · верно {correct}/{count} ({accuracy}%) · {mode}"
         )
     await answer(
         "\n".join(lines),
@@ -255,24 +247,13 @@ async def show_result(
         ),
         quote=True,
     )
-    score = html.escape(str(_value(attempt, "score", 0)), quote=True)
     question_count = html.escape(str(_value(attempt, "question_count", 0)), quote=True)
     correct_count = html.escape(str(_value(attempt, "correct_count", 0)), quote=True)
-    estimate = _estimate(attempt)
-    headline = estimate_headline(estimate, _value(attempt, "exam", ""))
-    caption = estimate_caption(estimate)
-    estimate_lines = (
-        f"<b>{html.escape(headline, quote=True)}</b>\n"
-        f"{html.escape(caption, quote=True)}\n"
-        if headline is not None and caption is not None else ""
-    )
     if callback.message:
         await callback.message.answer(
             f"<b>{subject}</b>\n"
-            f"{estimate_lines}"
-            f"{html.escape(school.brand.pdf.score_label, quote=True)}: {score}\n"
             f"{html.escape(school.brand.pdf.correct_label, quote=True)}: "
-            f"{correct_count}/{question_count}",
+            f"{correct_count}/{question_count}\n{COVERAGE_LIMITATION}",
             parse_mode="HTML",
             reply_markup=result_keyboard(
                 school,
@@ -292,6 +273,18 @@ def build_router(
     catalog: DiagnosticCatalog,
 ) -> Router:
     router = Router(name="diagnostic")
+
+    @router.message(Command("stop"))
+    async def stop_notifications(message: Message) -> None:
+        if message.from_user:
+            await attempts.set_notification_preference(message.from_user.id, False)
+            await message.answer("Напоминания отключены. Результаты диагностики останутся доступны. Включить напоминания снова — /notifications.")
+
+    @router.message(Command("notifications"))
+    async def enable_notifications(message: Message) -> None:
+        if message.from_user:
+            await attempts.set_notification_preference(message.from_user.id, True)
+            await message.answer("Напоминания включены. Отключить их можно командой /stop.")
 
     @router.message(CommandStart())
     @router.message(Command("diagnostics"))

@@ -34,6 +34,8 @@ def build_bot_commands(school: SchoolConfig) -> list[BotCommand]:
         BotCommand(command="diagnostics", description=labels.command_diagnostics),
         BotCommand(command="results", description=labels.command_results),
         BotCommand(command="plan", description=labels.command_plan),
+        BotCommand(command="stop", description="Отключить напоминания"),
+        BotCommand(command="notifications", description="Включить напоминания"),
     ]
 
 

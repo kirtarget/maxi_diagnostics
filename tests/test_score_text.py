@@ -96,17 +96,17 @@ def premium_attempt(result_snapshot: dict) -> dict:
     )
 
 
-def test_premium_report_shows_the_estimate_and_its_caption():
+def test_premium_report_labels_old_estimate_as_unvalidated():
     text = pdf_text(
         premium_attempt({"score": 100, "estimate": estimate(kind="grade", value=4)})
     )
 
-    assert "отметка 4" in text
-    assert "ориентировочно, по 12 заданиям" in text
+    assert "отметка 4" not in text
+    assert "не подтверждён методикой" in text
 
 
 def test_premium_report_omits_the_estimate_block_for_an_older_attempt():
     text = pdf_text(premium_attempt({"score": 100}))
 
     assert "ориентировочно" not in text
-    assert "Текущий результат" in text
+    assert "Правильных ответов" in text
