@@ -106,6 +106,7 @@ OPEN_ANSWER = re.compile(r"максимальный балл", re.IGNORECASE)
 MATCHING_ITEM = re.compile(r"^([А-ЯЁ])\)\s*(.*)$", re.DOTALL)
 MATCHING_OPTION = re.compile(r"^(\d)\)\s*(.*)$", re.DOTALL)
 INLINE_OPTION = re.compile(r"^(\d+)\)\s*\S")
+INLINE_OPTION_NUMBER = re.compile(r"^\d+\)\s*")
 MIN_INLINE_OPTIONS = 3
 DIGITS = re.compile(r"\d+\Z")
 NUMERIC_SHAPED = re.compile(r"[0-9,.+-]+\Z")
@@ -383,7 +384,8 @@ def _adopt_inline_options(task: SourceTask) -> None:
             continue
         if any(not 1 <= int(part) <= len(run) for part in parts):
             continue
-        task.options.extend(run)
+        # `Варианты:` blocks carry no numbering, so neither do these.
+        task.options.extend(INLINE_OPTION_NUMBER.sub("", line) for line in run)
         del blocks[start:stop]
         return
 

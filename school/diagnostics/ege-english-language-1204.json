@@ -62,19 +62,19 @@
       "options": [
         {
           "id": "a",
-          "label": "1) English has difficult features, but can still be an effective global language."
+          "label": "English has difficult features, but can still be an effective global language."
         },
         {
           "id": "b",
-          "label": "2) Schools tend to exaggerate the extent of globalisation in the world today."
+          "label": "Schools tend to exaggerate the extent of globalisation in the world today."
         },
         {
           "id": "c",
-          "label": "3) Global communication is less straightforward than it should be."
+          "label": "Global communication is less straightforward than it should be."
         },
         {
           "id": "d",
-          "label": "4) World culture continues to become increasingly globalised."
+          "label": "World culture continues to become increasingly globalised."
         }
       ],
       "correct": "c",
@@ -99,19 +99,19 @@
       "options": [
         {
           "id": "a",
-          "label": "1) Its spelling accurately reflects its pronunciation."
+          "label": "Its spelling accurately reflects its pronunciation."
         },
         {
           "id": "b",
-          "label": "2) Its grammar and vocabulary are relatively simple."
+          "label": "Its grammar and vocabulary are relatively simple."
         },
         {
           "id": "c",
-          "label": "3) It is becoming increasingly widely spoken."
+          "label": "It is becoming increasingly widely spoken."
         },
         {
           "id": "d",
-          "label": "4) It lacks associations with a specific culture."
+          "label": "It lacks associations with a specific culture."
         }
       ],
       "correct": "d",
@@ -136,19 +136,19 @@
       "options": [
         {
           "id": "a",
-          "label": "1) High in standard."
+          "label": "High in standard."
         },
         {
           "id": "b",
-          "label": "2) Pretentious."
+          "label": "Pretentious."
         },
         {
           "id": "c",
-          "label": "3) Unclear."
+          "label": "Unclear."
         },
         {
           "id": "d",
-          "label": "4) Extravagant."
+          "label": "Extravagant."
         }
       ],
       "correct": "a",
@@ -173,19 +173,19 @@
       "options": [
         {
           "id": "a",
-          "label": "1) Esperanto is too closely associated with European languages."
+          "label": "Esperanto is too closely associated with European languages."
         },
         {
           "id": "b",
-          "label": "2) Many learners find English more interesting than Esperanto."
+          "label": "Many learners find English more interesting than Esperanto."
         },
         {
           "id": "c",
-          "label": "3) Speakers of Arabic and Chinese find Esperanto difficult."
+          "label": "Speakers of Arabic and Chinese find Esperanto difficult."
         },
         {
           "id": "d",
-          "label": "4) Esperanto has not been promoted widely enough."
+          "label": "Esperanto has not been promoted widely enough."
         }
       ],
       "correct": "a",
@@ -210,19 +210,19 @@
       "options": [
         {
           "id": "a",
-          "label": "1) lt can no longer be considered artificial."
+          "label": "lt can no longer be considered artificial."
         },
         {
           "id": "b",
-          "label": "2) It is developing its own culture."
+          "label": "It is developing its own culture."
         },
         {
           "id": "c",
-          "label": "3) Its vocabulary is rapidly expanding."
+          "label": "Its vocabulary is rapidly expanding."
         },
         {
           "id": "d",
-          "label": "4) Its prestige is beginning to increase."
+          "label": "Its prestige is beginning to increase."
         }
       ],
       "correct": "b",
@@ -247,19 +247,19 @@
       "options": [
         {
           "id": "a",
-          "label": "1) Esperanto is in some ways superior to English."
+          "label": "Esperanto is in some ways superior to English."
         },
         {
           "id": "b",
-          "label": "2) Esperanto meets all the criteria for an international language."
+          "label": "Esperanto meets all the criteria for an international language."
         },
         {
           "id": "c",
-          "label": "3) it is hard to predict what the future fate of Esperanto will be."
+          "label": "it is hard to predict what the future fate of Esperanto will be."
         },
         {
           "id": "d",
-          "label": "4) Esperanto has prompted useful discussions about language."
+          "label": "Esperanto has prompted useful discussions about language."
         }
       ],
       "correct": "d",
@@ -284,19 +284,19 @@
       "options": [
         {
           "id": "a",
-          "label": "1) Esperanto."
+          "label": "Esperanto."
         },
         {
           "id": "b",
-          "label": "2) Uptake."
+          "label": "Uptake."
         },
         {
           "id": "c",
-          "label": "3) Perch."
+          "label": "Perch."
         },
         {
           "id": "d",
-          "label": "4) English."
+          "label": "English."
         }
       ],
       "correct": "a",

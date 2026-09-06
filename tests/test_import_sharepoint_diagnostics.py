@@ -556,7 +556,7 @@ def test_a_trailing_numbered_block_becomes_the_option_list(tmp_path):
 
     task = importer.parse_document(source)[0]
 
-    assert task.options == OPTION_LINES
+    assert task.options == ["Первое;", "Второе;", "Третье;", "Четвёртое."]
     assert task.prompt_blocks == ["Укажите порядковый номер верного утверждения."]
     assert importer.classify(task) == ("single", {"indices": [3]})
 
@@ -571,7 +571,7 @@ def test_a_leading_numbered_block_becomes_the_option_list(tmp_path):
 
     task = importer.parse_document(source)[0]
 
-    assert task.options == OPTION_LINES
+    assert task.options == ["Первое;", "Второе;", "Третье;", "Четвёртое."]
     assert task.prompt_blocks == ["Укажите порядковый номер верного утверждения."]
     assert importer.classify(task) == ("single", {"indices": [2]})
 
