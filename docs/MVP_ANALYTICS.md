@@ -21,7 +21,7 @@ Existing `opened`, `started`, `completed`, `result_viewed`, `trainer_answered` a
 | daily_started / daily_completed | Starting a plan and finishing its trainer session. |
 | life_lost | Accepted trainer answer with a negative life delta. |
 | streak_updated | Qualifying gameplay activity, once per school-local day. |
-| notification_sent | Confirmed reminder delivery. PDF delivery remains in the existing delivery analytics. |
+| notification_sent | Confirmed reminder delivery. Result delivery remains in the existing delivery analytics. |
 | notification_opened | Authenticated bootstrap with a signed link token for the user's delivered reminder, once per reminder cycle. |
 | user_returned | Subsequent authenticated bootstrap, at most once per UTC day. Includes same-day returns. |
 

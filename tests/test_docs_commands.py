@@ -95,7 +95,7 @@ def test_content_format_documents_the_post_completion_review_boundary():
     assert "after an authenticated completed attempt" in content.casefold()
     assert "display-only `expected_answer` and resolved guidance" in content
     assert "does not fabricate a general algorithm" in content
-    assert "without `review_snapshot` remain legacy reports" in content
+    assert "without `review_snapshot` have no answer review" in content
 
 
 def test_nginx_example_is_fixed_host_same_origin_and_has_no_open_proxy():
