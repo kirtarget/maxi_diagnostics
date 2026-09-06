@@ -13,20 +13,28 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from diagnostic.school import SchoolConfig
 
 
+def _with_query(url: object, **params: str) -> str:
+    parts = urlsplit(str(url))
+    query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    query.update(params)
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+
+
 def tracked_url(url: object, user_id: int, content: str) -> str:
     """Add generic diagnostic attribution without changing school ownership."""
     del user_id
-    parts = urlsplit(str(url))
-    query = dict(parse_qsl(parts.query, keep_blank_values=True))
-    query.update(
-        {
-            "utm_source": "telegram",
-            "utm_medium": "bot",
-            "utm_campaign": "diagnostic",
-            "utm_content": content,
-        }
+    return _with_query(
+        url,
+        utm_source="telegram",
+        utm_medium="bot",
+        utm_campaign="diagnostic",
+        utm_content=content,
     )
-    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+
+
+def attempt_result_url(miniapp_url: str, attempt_id: str) -> str:
+    """Open the Mini App straight on the result screen of one attempt."""
+    return _with_query(miniapp_url, attempt=attempt_id)
 
 
 def webapp_keyboard(

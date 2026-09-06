@@ -147,7 +147,6 @@ describe("result flow screens", () => {
     const html = renderToStaticMarkup(
       <ResultScreen
         diagnostic={{ exam: "ОГЭ", subject: "Математика" } as never}
-        pdfStatus="pending"
         result={{
           score: 0,
           max_score: 100,
@@ -174,7 +173,6 @@ describe("result flow screens", () => {
     const html = renderToStaticMarkup(
       <ResultScreen
         diagnostic={{ exam: "ЕГЭ", subject: "Физика" } as never}
-        pdfStatus="pending"
         result={{
           score: 50,
           max_score: 100,

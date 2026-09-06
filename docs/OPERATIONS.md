@@ -8,7 +8,7 @@ status. Schema startup adds onboarding and notification-preference columns
 idempotently. Keep the installation secret unchanged during this release.
 
 Users disable reminders with `/stop` and enable them with `/notifications`.
-Disabling reminders does not cancel requested PDF delivery. Engagement reminders
+Disabling reminders does not cancel result delivery. Engagement reminders
 share a 24-hour limit; unviewed-result reminders are separate. Only one bot worker
 may run for the installation. Reminder links include signed attribution tokens;
 do not copy complete link query strings into logs or analytics exports.
@@ -42,7 +42,7 @@ Run exactly **one polling** bot copy for the `maxi.kirtarget.ru` token. Its prod
 `.env` sets `BOT_POLLING_ENABLED=true`. Before starting or moving the bot, stop the
 old polling service and verify it has exited.
 If another controlled deployment must remain the single polling owner while this
-installation processes its own PDF queue, set `BOT_POLLING_ENABLED=false`. The bot
+installation processes its own delivery queue, set `BOT_POLLING_ENABLED=false`. The bot
 service then runs only the bounded delivery scheduler and does not call
 `getUpdates`. Do not use this mode unless the polling owner points users to this
 installation's Mini App.
@@ -60,10 +60,10 @@ anyone in that chat sees the alerts.
 
 Alerts are sent for four conditions.
 
-- `pdf_abandoned` - a report was abandoned after eight delivery attempts.
+- `delivery_abandoned` - a result was abandoned after eight delivery attempts.
 - `followup_abandoned` - a follow-up was abandoned after eight attempts.
 - `worker_tick_failed` - the one-minute worker tick raised an unhandled exception.
-- `pdf_queue_backlog` - more than 50 reports were waiting at the start of a tick.
+- `delivery_queue_backlog` - more than 50 results were waiting at the start of a tick.
 
 A message carries the kind, counts, and the attempt or notification id already visible
 in the protected admin lists. It never carries `initData`, Telegram profile data,
@@ -175,24 +175,24 @@ For an application rollback, keep the database volume, check out the last review
 revision, rebuild, and re-run health checks. Restore a database backup only when a
 schema/data rollback is explicitly required and approved.
 
-The worker retries failed PDF and notification deliveries with persisted leases.
+The worker retries failed result and notification deliveries with persisted leases.
 Inspect the protected admin issue lists for `abandoned` work. Correct the underlying
 configuration or Telegram problem and keep error details out of user messages.
-After eight failures the PDF's delivery-only answers/snapshot are erased; abandonment
-is therefore terminal and the learner must retake the diagnostic. Do not reset such a
-row to pending or fall back to current catalog content.
+After eight failures the delivery-only answers are erased and the snapshot is reduced
+to the public review items. Abandonment is therefore terminal for the chat message.
+The learner still opens the result in the Mini App. Do not reset such a row to pending
+or fall back to current catalog content.
 
 Telegram has no idempotency key. Returned message IDs are reconciled and cleaned up
 when a database lease is lost, but a timeout after Telegram accepted a send and before
 it returned an ID remains an unavoidable bounded at-least-once case. Monitor abandoned
-rows and investigate duplicate reports/reminders; automatic retries stop after eight
+rows and investigate duplicate results/reminders; automatic retries stop after eight
 attempts.
 
 ## Retention and backup lifecycle
 
 By default, drafts untouched for 30 days are superseded and their answers erased.
-Completed and superseded attempts, unused engagements, and unreferenced report-asset
-bundles expire after 365 days. Configure `IN_PROGRESS_RETENTION_DAYS` from 1 to 365
+Completed and superseded attempts and unused engagements expire after 365 days. Configure `IN_PROGRESS_RETENTION_DAYS` from 1 to 365
 and `DIAGNOSTIC_RETENTION_DAYS` from 31 to 3,650; the latter must remain longer than
 the 30-day follow-up window. The worker applies this policy in bounded user batches.
 
@@ -206,7 +206,7 @@ Offer telemetry is a bounded, best-effort internal signal. The Mini App sends on
 client event identifier, a configured placement, an offer identifier, and one of
 `impression`, `click`, or `dismiss`. The API validates the offer against the current
 `school/links.json`, timestamps the event on the server, and never stores `initData`,
-Telegram profile data, URLs, answers, correct answers, reports, or arbitrary metadata.
+Telegram profile data, URLs, answers, correct answers, or arbitrary metadata.
 Event identifiers are idempotent. Reusing one with different content is rejected.
 Events are rate-limited per installation-local pseudonymous subject and purged after
 90 days. User erasure removes events for that subject hash in the same transaction.

@@ -5,13 +5,12 @@ import { normalizeOffer, OfferSurface, type OfferTelemetryEvent } from "./offer-
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import { safeAssetPath } from "./question-assets";
 import { forecastUnitLabel } from "./score-estimate";
-import { pdfStatusCopy, topicRecommendation, type PdfStatusCopy, type PersonalRouteAction } from "./result-flow-model";
+import { topicRecommendation, type PersonalRouteAction } from "./result-flow-model";
 import type {
   ForecastKind,
   ForecastPoint,
   PublicDiagnostic,
   ReviewItem,
-  ReviewResponse,
   SchoolLinks,
   ServerResult,
   ServerTopic,
@@ -26,19 +25,16 @@ function topicName(topic: ServerTopic | string): string {
 export function ResultScreen({
   result,
   diagnostic,
-  pdfStatus,
   onReview,
   onForecast,
   onReplayMistakes,
 }: {
   result: ServerResult;
   diagnostic: Pick<PublicDiagnostic, "exam" | "subject">;
-  pdfStatus: ReviewResponse["pdf_status"];
   onReview: () => void;
   onForecast: () => void;
   onReplayMistakes?: () => void;
 }): ReactNode {
-  const pdf = pdfStatusCopy(pdfStatus);
   const recommendation = topicRecommendation(result.growth_topics);
   const accuracy = result.question_count > 0 ? Math.round(result.correct_count / result.question_count * 100) : 0;
   return (
@@ -83,13 +79,13 @@ export function ResultScreen({
           <span>{result.unassessed_part}</span>
         </div>
       )}
-      <div className={`delivery-note delivery-${pdfStatus}`} role="status" aria-live="polite">
-        <strong>{pdf.title}</strong>
-        <span>{pdf.description}</span>
+      <div className="scope-note">
+        <strong>Результат сохранён здесь</strong>
+        <span>Он останется в разделе «Мои результаты». Telegram присылает только короткое уведомление со ссылкой на этот экран.</span>
       </div>
       <div className="result-actions">
-        <button className="primary-button" onClick={onReview} type="button">Разобрать ошибки <span aria-hidden="true">→</span></button>
-        {onReplayMistakes && <button className="secondary-button" onClick={onReplayMistakes} type="button">Повторить ошибки</button>}
+        <button className="primary-button" onClick={onReview} type="button">Посмотреть разбор <span aria-hidden="true">→</span></button>
+        {onReplayMistakes && <button className="secondary-button" onClick={onReplayMistakes} type="button">Отработать ошибки</button>}
         <button className="secondary-button" onClick={onForecast} type="button">Мой план подготовки</button>
       </div>
       </div>
@@ -305,15 +301,11 @@ export function ForecastScreen({
 
 export function RouteScreen({
   items,
-  pdf,
   offers,
-  onRefreshPdf,
   onSubjects,
 }: {
   items: RouteItem[];
-  pdf: PdfStatusCopy;
   offers: SchoolLinks["offers"];
-  onRefreshPdf: () => void;
   onSubjects: () => void;
 }): ReactNode {
   return (
@@ -329,10 +321,9 @@ export function RouteScreen({
           </li>
         ))}
       </ol>
-      <div className="delivery-note" role="status" aria-live="polite">
-        <strong>{pdf.title}</strong>
-        <span>{pdf.description}</span>
-        {pdf.action && <button className="inline-action" onClick={onRefreshPdf} type="button">{pdf.action}</button>}
+      <div className="scope-note">
+        <strong>Где найти этот план</strong>
+        <span>План и разбор ошибок открываются здесь в любой момент. Все пройденные диагностики лежат в разделе «Мои результаты».</span>
       </div>
       {offers.length > 0 && (
         <section className="school-actions" aria-labelledby="school-actions-title">

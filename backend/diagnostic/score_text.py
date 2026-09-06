@@ -1,6 +1,6 @@
 """Shared Russian wording for the exam-score estimate.
 
-The PDF, the bot and the Mini App all say the same thing about an estimate, so the
+The bot and the Mini App both say the same thing about an estimate, so the
 phrasing lives in one place. Reads persisted snapshots, so every input is a plain
 mapping that may be missing or malformed.
 """

@@ -1,4 +1,4 @@
-"""Validation for text rendered with the bundled PDF fonts."""
+"""Glyph-coverage validation against the bundled Liberation Sans fonts."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ def _supported_codepoints() -> frozenset[int]:
 
 
 def validate_report_text(value: str) -> str:
-    """Reject text the bundled regular and bold PDF fonts cannot render."""
+    """Reject text the bundled regular and bold fonts cannot render."""
     supported = _supported_codepoints()
     if any(ord(character) not in supported for character in value):
         raise ValueError("unsupported_report_character")

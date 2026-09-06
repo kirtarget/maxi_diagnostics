@@ -147,7 +147,7 @@ export type Brand = {
     choose_option: string;
     next_question: string;
     get_result: string;
-    result_in_telegram: string;
+    result_in_app: string;
     privacy_label: string;
     support_label: string;
     choose_label: string;
@@ -218,7 +218,6 @@ export type ServerAttempt = {
   exam?: string;
   subject?: string;
   completed_at?: string;
-  pdf_status?: ReviewResponse["pdf_status"];
   attempt_id: string;
   diagnostic_id: string;
   content_version: string;
@@ -324,7 +323,6 @@ export type ReviewResponse = {
   ok: true;
   available: boolean;
   items: ReviewItem[];
-  pdf_status: "pending" | "sending" | "sent" | "failed" | "abandoned";
 };
 
 export type SavedSession = {

@@ -182,61 +182,6 @@ def test_catalog_detail_hides_unknown_diagnostic(monkeypatch):
     assert response.json() == {"detail": "diagnostic_not_found"}
 
 
-def test_report_asset_bundles_are_deterministic_across_restarts():
-    from diagnostic.api.sessions import prepare_report_asset_bundles
-
-    school = load_school(SAMPLE_SCHOOL)
-    catalog = load_catalog(school)
-
-    first = prepare_report_asset_bundles(school, catalog)
-    assert first == prepare_report_asset_bundles(school, catalog)
-    _, payload = first["demo-math"]
-    from io import BytesIO
-    from zipfile import ZipFile
-
-    with ZipFile(BytesIO(payload)) as archive:
-        assert {item.date_time for item in archive.infolist()} == {(1980, 1, 1, 0, 0, 0)}
-
-
-def test_report_asset_bundle_includes_only_its_diagnostic_images(tmp_path: Path):
-    school_root = tmp_path / "school"
-    shutil.copytree(SAMPLE_SCHOOL, school_root)
-    for name, color in (("question-1.svg", "#111111"), ("question-2.svg", "#222222")):
-        (school_root / "assets" / name).write_text(
-            '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="10">'
-            f'<rect width="20" height="10" fill="{color}"/></svg>',
-            encoding="utf-8",
-        )
-    diagnostic_path = school_root / "diagnostics/demo-math.json"
-    data = json.loads(diagnostic_path.read_text(encoding="utf-8"))
-    data["questions"][0]["assets"] = ["assets/question-1.svg"]
-    diagnostic_path.write_text(json.dumps(data), encoding="utf-8")
-    second = dict(data)
-    second["id"] = "second-math"
-    second["questions"] = [dict(question) for question in data["questions"]]
-    second["questions"][0]["assets"] = ["assets/question-2.svg"]
-    (school_root / "diagnostics/second-math.json").write_text(
-        json.dumps(second), encoding="utf-8"
-    )
-    school = load_school(school_root)
-    catalog = load_catalog(school)
-
-    from diagnostic.api.sessions import prepare_report_asset_bundles
-    from io import BytesIO
-    from zipfile import ZipFile
-
-    bundles = prepare_report_asset_bundles(school, catalog)
-    _, first_payload = bundles["demo-math"]
-    _, second_payload = bundles["second-math"]
-
-    with ZipFile(BytesIO(first_payload)) as archive:
-        assert "assets/question-1.svg" in archive.namelist()
-        assert "assets/question-2.svg" not in archive.namelist()
-    with ZipFile(BytesIO(second_payload)) as archive:
-        assert "assets/question-2.svg" in archive.namelist()
-        assert "assets/question-1.svg" not in archive.namelist()
-
-
 def test_progress_rejects_unknown_question_id(monkeypatch):
     client = make_client(monkeypatch)
     body = base_completion() | {
@@ -428,7 +373,7 @@ def test_erased_user_receives_stable_gone_response(monkeypatch):
     assert bootstrap.json() == {"detail": "diagnostic_user_erased"}
 
 
-def test_completion_returns_server_scored_result_and_pending_pdf(monkeypatch):
+def test_completion_returns_server_scored_result(monkeypatch):
     stored = {}
 
     async def complete_attempt(completion):
@@ -451,7 +396,6 @@ def test_completion_returns_server_scored_result_and_pending_pdf(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["result"]["score"] == 100
-    assert response.json()["attempt"]["pdf_status"] == "pending"
     assert stored["completion"].score == 100
     assert all(
         "correct" not in question
@@ -548,7 +492,6 @@ def test_review_endpoint_requires_owner_and_completion(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["available"] is True
-    assert response.json()["pdf_status"] == "sent"
     assert "expected_value" not in response.text
 
 
@@ -594,38 +537,10 @@ def test_review_endpoint_marks_legacy_snapshot_unavailable(monkeypatch):
     })
 
     assert response.status_code == 200
-    assert response.json() == {"ok": True, "available": False, "items": [], "pdf_status": "sent"}
+    assert response.json() == {"ok": True, "available": False, "items": []}
 
 
-def test_completion_reuses_assets_prepared_once_at_app_startup(monkeypatch):
-    from diagnostic.api import sessions
-
-    builds = []
-
-    def build_assets(_school, questions):
-        builds.append(tuple(question.id for question in questions))
-        return b"frozen-assets"
-
-    async def complete_attempt(completion):
-        return {
-            "attempt_id": completion.attempt_id,
-            "status": "completed",
-            "pdf_status": "pending",
-            "result_snapshot": completion.result_snapshot,
-        }
-
-    monkeypatch.setattr(sessions, "_build_report_assets", build_assets)
-    client = make_client(monkeypatch, complete_attempt=complete_attempt)
-    startup_build_count = len(builds)
-
-    response = client.post("/api/diagnostics/session/complete", json=base_completion())
-
-    assert response.status_code == 200
-    assert startup_build_count == 1
-    assert len(builds) == startup_build_count
-
-
-def test_completion_only_enqueues_pdf_for_the_single_worker(monkeypatch):
+def test_completion_only_enqueues_delivery_for_the_single_worker(monkeypatch):
     from unittest.mock import AsyncMock
     from diagnostic.api import sessions
 

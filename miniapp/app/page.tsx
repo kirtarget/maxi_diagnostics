@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { GameplayHomeScreen, GameplayProfileScreen, ModeScreen, NotTelegramScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
 import { safeAssetPath } from "./question-assets";
@@ -10,7 +10,8 @@ import {
   ReviewScreen,
   RouteScreen,
 } from "./result-flow";
-import { pdfStatusCopy, personalRoute } from "./result-flow-model";
+import { personalRoute } from "./result-flow-model";
+import { requestedAttemptId } from "./api";
 import { gameplayProfileView } from "./gameplay-profile-model";
 import { TrainerScreen } from "./trainer-screen";
 import { LeagueScreen } from "./league-screen";
@@ -32,7 +33,7 @@ const BUILD_BRAND: DisplayBrand = {
   name: process.env.NEXT_PUBLIC_BUILD_SCHOOL_NAME ?? "School",
   short_name: process.env.NEXT_PUBLIC_BUILD_SCHOOL_SHORT_NAME ?? "School",
   logo: process.env.NEXT_PUBLIC_BUILD_SCHOOL_LOGO ?? "",
-  resultStatus: process.env.NEXT_PUBLIC_BUILD_RESULT_STATUS ?? "Result in Telegram",
+  resultStatus: process.env.NEXT_PUBLIC_BUILD_RESULT_STATUS ?? "Result in the app",
 };
 
 function BrandHeader({
@@ -84,12 +85,24 @@ export default function Home() {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [screen, questionIndex]);
 
+  const openedRequestedResult = useRef(false);
+  useEffect(() => {
+    if (openedRequestedResult.current) return;
+    const requested = requestedAttemptId();
+    if (!requested || !bootstrapSession.state.bootstrap) return;
+    openedRequestedResult.current = true;
+    const attempt = bootstrapSession.state.bootstrap.results.find(
+      (item) => item.attempt_id === requested && item.result,
+    );
+    if (attempt) session.actions.openSavedResult(attempt);
+  }, [bootstrapSession.state.bootstrap, session.actions]);
+
   const brand = bootstrap?.school.brand;
   const displayBrand: DisplayBrand = brand ? {
     name: brand.name,
     short_name: brand.short_name,
     logo: brand.logo,
-    resultStatus: brand.interface.result_in_telegram,
+    resultStatus: brand.interface.result_in_app,
   } : BUILD_BRAND;
   const gameplayProfile = gameplayProfileView({ ...bootstrap?.progress_profile, ...bootstrap?.gameplay_profile });
   const dailyPlan = bootstrap?.daily_plan ?? null;
@@ -102,7 +115,6 @@ export default function Home() {
     else setScreen("welcome");
   };
   const routeItems = result ? personalRoute(result.growth_topics) : [];
-  const currentPdfStatus = review?.pdf_status ?? "pending";
   const replayAttemptId = session.actions.persistedAttemptId();
 
   const style = brand ? {
@@ -225,6 +237,7 @@ export default function Home() {
         {bootstrap.results.some((attempt) => attempt.result) && (
           <section className="screen" aria-label="Предыдущие результаты">
             <h2>Мои результаты</h2>
+            <p className="lead">Каждый результат и разбор ошибок хранятся здесь. Открой любую пройденную диагностику.</p>
             {bootstrap.results.filter((attempt) => attempt.result).map((attempt) => (
               <button key={attempt.attempt_id} type="button" className="secondary-button" onClick={() => session.actions.openSavedResult(attempt)}>
                 {attempt.exam} · {attempt.subject ?? "Диагностика"} · {attempt.result!.correct_count} из {attempt.result!.question_count}
@@ -307,7 +320,6 @@ export default function Home() {
         resultDiagnostic && (
           <ResultScreen
             diagnostic={resultDiagnostic}
-            pdfStatus={currentPdfStatus}
             result={result}
             onReview={session.actions.openReview}
             onForecast={() => setScreen("route")}
@@ -356,8 +368,6 @@ export default function Home() {
         <RouteScreen
           items={routeItems}
           offers={bootstrap.school.links.offers}
-          pdf={pdfStatusCopy(currentPdfStatus)}
-          onRefreshPdf={() => void session.actions.refreshReview()}
           onSubjects={() => setScreen("subjects")}
         />
       )}

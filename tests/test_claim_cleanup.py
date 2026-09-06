@@ -52,7 +52,7 @@ class _Pool:
 @pytest.mark.parametrize(
     ("claim_name", "attempts_column", "status_column", "lock_column", "select_operation"),
     [
-        ("claim_pending_pdf", "pdf_attempts", "pdf_status", "pdf_locked_at", "fetchrow"),
+        ("claim_pending_delivery", "pdf_attempts", "pdf_status", "pdf_locked_at", "fetchrow"),
         ("claim_due_notifications", "attempts", "status", "locked_at", "fetch"),
     ],
 )

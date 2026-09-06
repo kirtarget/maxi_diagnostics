@@ -431,11 +431,11 @@ async def test_claims_transition_pending_work_to_sending_once():
     attempt_id = f"attempt-{uuid4()}"
     await attempts.complete_attempt(completion(attempt_id, answers={"q1": "A"}))
 
-    claimed_pdf = await attempts.claim_pending_pdf(attempt_id)
+    claimed_pdf = await attempts.claim_pending_delivery(attempt_id)
     assert claimed_pdf is not None
     assert claimed_pdf["pdf_status"] == "sending"
     assert claimed_pdf["pdf_attempts"] == 1
-    assert await attempts.claim_pending_pdf(attempt_id) is None
+    assert await attempts.claim_pending_delivery(attempt_id) is None
 
     pool = await get_pool()
     async with pool.acquire() as connection:
@@ -454,7 +454,7 @@ async def test_claims_transition_pending_work_to_sending_once():
 async def test_first_pdf_claim_can_store_document_without_waiting_for_stale_reclaim():
     attempt_id = f"attempt-{uuid4()}"
     await attempts.complete_attempt(completion(attempt_id, answers={"q1": "A"}))
-    claimed = await attempts.claim_pending_pdf(attempt_id)
+    claimed = await attempts.claim_pending_delivery(attempt_id)
 
     assert claimed is not None
     assert await attempts.store_pdf_document(
@@ -493,13 +493,13 @@ async def test_pdf_cleanup_keeps_only_display_review_for_the_owner():
     await attempts.complete_attempt(completion(
         attempt_id, answers={"q1": "2"}, report_snapshot=report_snapshot,
     ))
-    claim = await attempts.claim_pending_pdf(attempt_id)
+    claim = await attempts.claim_pending_delivery(attempt_id)
 
     assert await attempts.store_pdf_document(attempt_id, claim["pdf_locked_at"], b"%PDF-document") is True
     after_materialization = await attempts.get_review_attempt(attempt_id, 101)
     assert after_materialization["report_snapshot"] == {"review_snapshot": display_review}
     assert await attempts.get_review_attempt(attempt_id, 202) is None
-    assert await attempts.mark_pdf_delivered(attempt_id, claim["pdf_locked_at"], 77) is True
+    assert await attempts.mark_delivery_sent(attempt_id, claim["pdf_locked_at"], 77) is True
 
     after_delivery = await attempts.get_review_attempt(attempt_id, 101)
     assert after_delivery["report_snapshot"] == {"review_snapshot": display_review}
@@ -519,14 +519,14 @@ async def test_final_pdf_abandonment_keeps_only_display_review():
             "public_review_snapshot": display_review,
         },
     ))
-    claim = await attempts.claim_pending_pdf(attempt_id)
+    claim = await attempts.claim_pending_delivery(attempt_id)
     pool = await get_pool()
     async with pool.acquire() as connection:
         await connection.execute(
             "UPDATE diagnostic_attempts SET pdf_attempts=8 WHERE attempt_id=$1", attempt_id
         )
 
-    assert await attempts.mark_pdf_failed(attempt_id, claim["pdf_locked_at"], "delivery failed") is True
+    assert await attempts.mark_delivery_failed(attempt_id, claim["pdf_locked_at"], "delivery failed") is True
     row = await attempts.get_review_attempt(attempt_id, 101)
     assert row["status"] == "completed"
     assert row["pdf_status"] == "abandoned"
@@ -612,20 +612,20 @@ async def test_attempt_cannot_be_mutated_by_a_different_owner():
 async def test_old_pdf_lease_cannot_finalize_a_reclaimed_delivery():
     attempt_id = f"attempt-{uuid4()}"
     await attempts.complete_attempt(completion(attempt_id, answers={"q1": "A"}))
-    first_claim = await attempts.claim_pending_pdf(attempt_id)
+    first_claim = await attempts.claim_pending_delivery(attempt_id)
     pool = await get_pool()
     async with pool.acquire() as connection:
         await connection.execute(
             "UPDATE diagnostic_attempts SET pdf_locked_at=now() - interval '11 minutes' WHERE attempt_id=$1",
             attempt_id,
         )
-    second_claim = await attempts.claim_pending_pdf(attempt_id)
+    second_claim = await attempts.claim_pending_delivery(attempt_id)
 
     assert second_claim is not None
     assert second_claim["pdf_locked_at"] != first_claim["pdf_locked_at"]
-    assert await attempts.mark_pdf_delivered(attempt_id, first_claim["pdf_locked_at"], 11) is False
+    assert await attempts.mark_delivery_sent(attempt_id, first_claim["pdf_locked_at"], 11) is False
     assert (await attempts.get_attempt(attempt_id))["pdf_status"] == "sending"
-    assert await attempts.mark_pdf_delivered(attempt_id, second_claim["pdf_locked_at"], 22) is True
+    assert await attempts.mark_delivery_sent(attempt_id, second_claim["pdf_locked_at"], 22) is True
     assert (await attempts.get_attempt(attempt_id))["pdf_message_id"] == 22
 
 
@@ -685,7 +685,7 @@ async def test_old_pdf_failure_cannot_overwrite_terminal_states():
     for status in ("sent", "cancelled", "abandoned"):
         attempt_id = f"attempt-{uuid4()}"
         await attempts.complete_attempt(completion(attempt_id, answers={"q1": "A"}))
-        claim = await attempts.claim_pending_pdf(attempt_id)
+        claim = await attempts.claim_pending_delivery(attempt_id)
         async with pool.acquire() as connection:
             await connection.execute(
                 "UPDATE diagnostic_attempts SET pdf_status=$2, pdf_locked_at=NULL WHERE attempt_id=$1",
@@ -695,7 +695,7 @@ async def test_old_pdf_failure_cannot_overwrite_terminal_states():
         cases.append((attempt_id, claim["pdf_locked_at"], status))
 
     for attempt_id, lease, expected_status in cases:
-        assert await attempts.mark_pdf_failed(attempt_id, lease, "late") is False
+        assert await attempts.mark_delivery_failed(attempt_id, lease, "late") is False
         assert (await attempts.get_attempt(attempt_id))["pdf_status"] == expected_status
 
 
@@ -703,9 +703,9 @@ async def test_old_pdf_failure_cannot_overwrite_terminal_states():
 async def test_pdf_retry_windows_and_eighth_failure_abandons_with_bounded_error():
     attempt_id = f"attempt-{uuid4()}"
     await attempts.complete_attempt(completion(attempt_id, answers={"q1": "A"}))
-    first_claim = await attempts.claim_pending_pdf(attempt_id)
-    assert await attempts.mark_pdf_failed(attempt_id, first_claim["pdf_locked_at"], "x" * 2000) is True
-    assert await attempts.claim_pending_pdf(attempt_id) is None
+    first_claim = await attempts.claim_pending_delivery(attempt_id)
+    assert await attempts.mark_delivery_failed(attempt_id, first_claim["pdf_locked_at"], "x" * 2000) is True
+    assert await attempts.claim_pending_delivery(attempt_id) is None
 
     pool = await get_pool()
     async with pool.acquire() as connection:
@@ -713,7 +713,7 @@ async def test_pdf_retry_windows_and_eighth_failure_abandons_with_bounded_error(
             "UPDATE diagnostic_attempts SET updated_at=now() - interval '6 minutes' WHERE attempt_id=$1",
             attempt_id,
         )
-    retried = await attempts.claim_pending_pdf(attempt_id)
+    retried = await attempts.claim_pending_delivery(attempt_id)
     assert retried is not None
 
     async with pool.acquire() as connection:
@@ -722,13 +722,13 @@ async def test_pdf_retry_windows_and_eighth_failure_abandons_with_bounded_error(
             attempt_id,
             b"%PDF-retained-until-terminal",
         )
-    eighth_claim = await attempts.claim_pending_pdf(attempt_id)
+    eighth_claim = await attempts.claim_pending_delivery(attempt_id)
     assert eighth_claim["pdf_attempts"] == 8
-    assert await attempts.mark_pdf_failed(attempt_id, eighth_claim["pdf_locked_at"], "x" * 2000) is True
+    assert await attempts.mark_delivery_failed(attempt_id, eighth_claim["pdf_locked_at"], "x" * 2000) is True
     final = await attempts.get_attempt(attempt_id)
     assert final["pdf_status"] == "abandoned"
     assert len(final["pdf_last_error"]) == 1000
-    assert await attempts.claim_pending_pdf(attempt_id) is None
+    assert await attempts.claim_pending_delivery(attempt_id) is None
     async with pool.acquire() as connection:
         assert await connection.fetchval(
             "SELECT pdf_document IS NULL FROM diagnostic_attempts WHERE attempt_id=$1",
@@ -741,8 +741,8 @@ async def test_viewing_result_does_not_postpone_a_due_pdf_retry():
     attempt_id = f"attempt-{uuid4()}"
     user_id = 8_100_000_000 + uuid4().int % 100_000_000
     await attempts.complete_attempt(completion(attempt_id, answers={"q1": "A"}, user_id=user_id))
-    claim = await attempts.claim_pending_pdf(attempt_id)
-    await attempts.mark_pdf_failed(attempt_id, claim["pdf_locked_at"], "temporary")
+    claim = await attempts.claim_pending_delivery(attempt_id)
+    await attempts.mark_delivery_failed(attempt_id, claim["pdf_locked_at"], "temporary")
     pool = await get_pool()
     async with pool.acquire() as connection:
         await connection.execute(
@@ -752,16 +752,16 @@ async def test_viewing_result_does_not_postpone_a_due_pdf_retry():
 
     await attempts.mark_result_viewed(attempt_id, user_id)
 
-    assert await attempts.claim_pending_pdf(attempt_id) is not None
+    assert await attempts.claim_pending_delivery(attempt_id) is not None
 
 
 @pytest.mark.asyncio
 async def test_successful_pdf_delivery_clears_retained_document_bytes():
     attempt_id = f"attempt-{uuid4()}"
     await attempts.complete_attempt(completion(attempt_id, answers={"q1": "A"}))
-    claim = await attempts.claim_pending_pdf(attempt_id)
+    claim = await attempts.claim_pending_delivery(attempt_id)
     await attempts.store_pdf_document(attempt_id, claim["pdf_locked_at"], b"%PDF-document")
-    assert await attempts.mark_pdf_delivered(attempt_id, claim["pdf_locked_at"], 77) is True
+    assert await attempts.mark_delivery_sent(attempt_id, claim["pdf_locked_at"], 77) is True
 
     pool = await get_pool()
     async with pool.acquire() as connection:
@@ -865,10 +865,10 @@ async def test_pdf_claim_tick_abandons_only_stale_exhausted_sending_lease():
         )
 
     assert await asyncio.gather(
-        attempts.claim_pending_pdf(ids["stale8"]),
-        attempts.claim_pending_pdf(ids["stale8"]),
+        attempts.claim_pending_delivery(ids["stale8"]),
+        attempts.claim_pending_delivery(ids["stale8"]),
     ) == [None, None]
-    reclaimed = await attempts.claim_pending_pdf(ids["stale7"])
+    reclaimed = await attempts.claim_pending_delivery(ids["stale7"])
     rows = {name: await attempts.get_attempt(attempt_id) for name, attempt_id in ids.items()}
 
     assert rows["stale8"]["pdf_status"] == "abandoned"

@@ -10,7 +10,7 @@ const buildBrand = JSON.parse(
   short_name: string;
   logo: string;
   bot_username?: string;
-  interface: { result_in_telegram: string };
+  interface: { result_in_app: string };
 };
 
 const nextConfig: NextConfig = {
@@ -21,7 +21,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BUILD_SCHOOL_NAME: buildBrand.name,
     NEXT_PUBLIC_BUILD_SCHOOL_SHORT_NAME: buildBrand.short_name,
     NEXT_PUBLIC_BUILD_SCHOOL_LOGO: buildBrand.logo,
-    NEXT_PUBLIC_BUILD_RESULT_STATUS: buildBrand.interface.result_in_telegram,
+    NEXT_PUBLIC_BUILD_RESULT_STATUS: buildBrand.interface.result_in_app,
     NEXT_PUBLIC_BUILD_BOT_USERNAME: buildBrand.bot_username ?? "",
   },
   turbopack: {

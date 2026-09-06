@@ -32,7 +32,7 @@ async def test_alerting_is_disabled_without_a_configured_chat():
     bot = FakeBot()
     alerts.configure(bot, None)
 
-    await alerts.notify("pdf_abandoned", "attempt=attempt_123 attempts=8")
+    await alerts.notify("delivery_abandoned", "attempt=attempt_123 attempts=8")
 
     assert bot.sent == []
 
@@ -44,18 +44,18 @@ async def test_one_message_per_kind_per_hour_and_other_kinds_still_pass(monkeypa
     clock = [1_000.0]
     monkeypatch.setattr(alerts.time, "monotonic", lambda: clock[0])
 
-    await alerts.notify("pdf_abandoned", "attempt=a1 attempts=8")
-    await alerts.notify("pdf_abandoned", "attempt=a2 attempts=8")
+    await alerts.notify("delivery_abandoned", "attempt=a1 attempts=8")
+    await alerts.notify("delivery_abandoned", "attempt=a2 attempts=8")
     await alerts.notify("followup_abandoned", "notification=7 attempts=8")
     clock[0] += alerts.DEDUPE_WINDOW_SECONDS - 1
-    await alerts.notify("pdf_abandoned", "attempt=a3 attempts=8")
+    await alerts.notify("delivery_abandoned", "attempt=a3 attempts=8")
     clock[0] += 2
-    await alerts.notify("pdf_abandoned", "attempt=a4 attempts=8")
+    await alerts.notify("delivery_abandoned", "attempt=a4 attempts=8")
 
     assert [message["text"] for message in bot.sent] == [
-        "pdf_abandoned: attempt=a1 attempts=8",
+        "delivery_abandoned: attempt=a1 attempts=8",
         "followup_abandoned: notification=7 attempts=8",
-        "pdf_abandoned: attempt=a4 attempts=8",
+        "delivery_abandoned: attempt=a4 attempts=8",
     ]
     assert all(message["chat_id"] == -100200300 for message in bot.sent)
 

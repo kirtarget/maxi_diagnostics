@@ -229,13 +229,12 @@ async def test_polling_failure_closes_bot_session_and_database(monkeypatch):
         AsyncMock(side_effect=lambda: events.append("database_closed")),
     )
     monkeypatch.setattr(bot_main, "configure_bot_safely", AsyncMock())
-    monkeypatch.setattr(bot_main, "store_report_asset_bundle", AsyncMock())
     monkeypatch.setattr(bot_main, "Bot", FakeBot)
     monkeypatch.setattr(bot_main, "Dispatcher", FakeDispatcher)
     monkeypatch.setattr(
         bot_main,
         "build_worker_scheduler",
-        lambda actual_bot, actual_settings, actual_school, actual_catalog: FakeScheduler(),
+        lambda actual_bot, actual_settings, actual_school: FakeScheduler(),
     )
 
     with pytest.raises(RuntimeError, match="polling failed"):
@@ -285,7 +284,6 @@ async def test_delivery_only_mode_runs_scheduler_without_starting_polling(monkey
     monkeypatch.setattr(bot_main, "load_catalog", lambda actual: catalog)
     monkeypatch.setattr(bot_main, "init_db", AsyncMock())
     monkeypatch.setattr(bot_main, "close_db", AsyncMock())
-    monkeypatch.setattr(bot_main, "store_report_asset_bundle", AsyncMock())
     monkeypatch.setattr(bot_main, "Bot", FakeBot)
     monkeypatch.setattr(
         bot_main,
@@ -295,7 +293,7 @@ async def test_delivery_only_mode_runs_scheduler_without_starting_polling(monkey
     monkeypatch.setattr(
         bot_main,
         "build_worker_scheduler",
-        lambda actual_bot, actual_settings, actual_school, actual_catalog: FakeScheduler(),
+        lambda actual_bot, actual_settings, actual_school: FakeScheduler(),
     )
     monkeypatch.setattr(
         bot_main,

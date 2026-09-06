@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS diagnostic_session_generations (
     CHECK (generation ~ '^[0-9a-f]{32}$')
 );
 
+-- Dead since the PDF report was dropped: diagnostic_report_asset_bundles and the
+-- diagnostic_attempts columns report_asset_bundle_id, report_assets and
+-- pdf_document are never written any more. They stay so an older image can roll
+-- back safely. A separate task drops them.
 CREATE TABLE IF NOT EXISTS diagnostic_report_asset_bundles (
     bundle_id TEXT PRIMARY KEY,
     payload BYTEA NOT NULL,

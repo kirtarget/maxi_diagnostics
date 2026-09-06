@@ -259,7 +259,7 @@ describe("Home screen transitions", () => {
     expect(screenClasses()).toContain("result-screen");
     expect(container.textContent).toContain("Архивный предмет");
     expect(requestedPaths).not.toContain("/api/diagnostics/catalog");
-    expect(container.textContent).not.toContain("Повторить ошибки");
+    expect(container.textContent).not.toContain("Отработать ошибки");
   });
 
   it("moves from loading to welcome on a first visit", async () => {
@@ -321,7 +321,6 @@ describe("Home screen transitions", () => {
     route("/api/diagnostics/session/review", {
       ok: true,
       available: true,
-      pdf_status: "sent",
       items: [{
         question_id: "q1",
         number: 1,
