@@ -682,3 +682,24 @@ def test_a_regular_word_formation_key_still_ships(tmp_path):
         assert question["correct"] == [key]
 
 
+def test_verified_at_can_be_pinned_to_a_given_day(tmp_path):
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    build_source_document(source_directory / SOURCE_NAME)
+    catalog_path = build_repository(tmp_path)
+
+    importer.main(
+        [str(source_directory), "--root", str(tmp_path), "--verified-at", "2026-09-04"]
+    )
+
+    questions = _questions(catalog_path)
+    imported_questions = [
+        question
+        for identifier, question in questions.items()
+        if identifier.startswith(importer.ID_PREFIX)
+    ]
+    assert imported_questions
+    assert all(
+        question["source"]["verified_at"] == "2026-09-04"
+        for question in imported_questions
+    )

@@ -1066,6 +1066,11 @@ def main(argv: list[str] | None = None) -> int:
         help="JSON plan naming subject, exam, season and topic per source file",
     )
     parser.add_argument("--root", type=Path, default=REPOSITORY_ROOT)
+    parser.add_argument(
+        "--verified-at",
+        default=date.today().isoformat(),
+        help="Editorial verification date stamped on every imported question",
+    )
     parser.add_argument("--dry-run", action="store_true")
     arguments = parser.parse_args(argv)
 
@@ -1073,7 +1078,7 @@ def main(argv: list[str] | None = None) -> int:
     diagnostics_root = root / "school" / "diagnostics"
     assets_root = root / "school" / "assets" / "questions"
     report_path = root / "authoring" / "sharepoint-import" / "report.md"
-    verified_at = date.today().isoformat()
+    verified_at = str(arguments.verified_at)
 
     targets = load_targets(diagnostics_root)
     kept_assets = {
