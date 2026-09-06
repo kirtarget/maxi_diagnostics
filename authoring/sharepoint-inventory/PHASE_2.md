@@ -481,10 +481,146 @@ Dry-run импортёра не проверяет уникальность ид
 Итого 25 файлов и 256 конвертируемых заданий по текущим правилам ключей.
 Поддержка форматов ключа из решения 2 добавит ещё несколько заданий.
 
+## Dry-run по плану после KIR-209
+
+Импортёр доработан по решениям 1 и 2. Прогон собран во временной папке из 20
+базовых DOCX и 25 файлов плана, каталог не менялся.
+
+```text
+python scripts/import_sharepoint_diagnostics.py <папка>
+  --plan authoring/sharepoint-inventory/phase-2-import-plan.json --dry-run
+```
+
+```json
+{
+  "sources": 45,
+  "imported": 607,
+  "text_questions": 75,
+  "assets": 97,
+  "skipped_by_reason": {
+    "external_resource": 3,
+    "irregular_key": 3,
+    "missing_figure": 3,
+    "open_answer": 14
+  },
+  "diagnostics": [
+    {
+      "file": "ege-biology-1207.json",
+      "existing": 0,
+      "appended": 81
+    },
+    {
+      "file": "ege-chemistry-1208.json",
+      "existing": 0,
+      "appended": 26
+    },
+    {
+      "file": "ege-english-language-1204.json",
+      "existing": 0,
+      "appended": 23
+    },
+    {
+      "file": "ege-history-1211.json",
+      "existing": 0,
+      "appended": 11
+    },
+    {
+      "file": "ege-informatics-1205.json",
+      "existing": 0,
+      "appended": 15
+    },
+    {
+      "file": "ege-literature-1209.json",
+      "existing": 0,
+      "appended": 7
+    },
+    {
+      "file": "ege-mathematics-1212.json",
+      "existing": 0,
+      "appended": 56
+    },
+    {
+      "file": "ege-physics-1206.json",
+      "existing": 0,
+      "appended": 79
+    },
+    {
+      "file": "ege-russian-language-1213.json",
+      "existing": 0,
+      "appended": 98
+    },
+    {
+      "file": "ege-social-studies-1210.json",
+      "existing": 0,
+      "appended": 67
+    },
+    {
+      "file": "oge-biology-699.json",
+      "existing": 0,
+      "appended": 21
+    },
+    {
+      "file": "oge-chemistry-192.json",
+      "existing": 0,
+      "appended": 19
+    },
+    {
+      "file": "oge-english-language-202.json",
+      "existing": 0,
+      "appended": 17
+    },
+    {
+      "file": "oge-history-196.json",
+      "existing": 0,
+      "appended": 16
+    },
+    {
+      "file": "oge-mathematics-198.json",
+      "existing": 0,
+      "appended": 19
+    },
+    {
+      "file": "oge-physics-197.json",
+      "existing": 0,
+      "appended": 18
+    },
+    {
+      "file": "oge-russian-language-379.json",
+      "existing": 0,
+      "appended": 18
+    },
+    {
+      "file": "oge-social-studies-195.json",
+      "existing": 0,
+      "appended": 16
+    }
+  ],
+  "dry_run": true
+}
+```
+
+Коллизий идентификаторов нет. Импортировано 607 заданий: 348 базовых и 259
+тематических. Плановые 256 выросли на 3 за счёт новых правил ключа. Ни один
+каталог не подошёл к лимиту 200, максимум у `ege-russian-language` — 98.
+Появилась причина пропуска `open_answer`, по ней отсеяно 14 заданий второй
+части.
+
+### Правка плана: `topic_slug` стал уникальным на файл
+
+Проверка уникальности идентификаторов сразу нашла дефект плана. Значение
+`topic_slug` описывало папку темы, а не файл. Три файла цитологии биологии
+одного сезона давали один и тот же идентификатор `sp-biology-ege-2025-citologia-q1`
+и так далее, всего 12 групп из 25 файлов. Формат идентификатора из решения 1 в
+таком виде не работает.
+
+В `phase-2-import-plan.json` у всех 25 записей `topic_slug` заменён на
+уникальный на файл, вида `citologia-biosintez` и `citologia-mejoz`. Поле `topic`
+не менялось, методист по-прежнему видит тему папки. Русский язык тоже переведён
+на уникальные слаги, хотя там сезоны и так различались, чтобы правка сезона в
+плане не возвращала коллизию.
+
 ### Следующий шаг
 
-Доработка импортёра по решениям 1 и 2 с тестами, затем dry-run по плану с
-проверкой уникальности идентификаторов, затем отдельное решение владельца об
-импорте в `school/`. Файл `scripts/import_sharepoint_diagnostics.py` сейчас
-содержит незакоммиченные правки задачи KIR-202, поэтому доработка ждёт их
-слияния.
+Отдельное решение владельца об импорте в `school/`. Импорт увеличит банк с 348
+до 607 вопросов, поэтому его стоит проводить одним прогоном с последующими
+`validate_school.py` и `check_brand_isolation.py`.
