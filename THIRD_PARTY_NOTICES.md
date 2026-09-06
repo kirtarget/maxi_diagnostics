@@ -16,10 +16,9 @@ standalone runtime image.
 
 The backend build likewise generates a fail-closed license bundle from every
 installed Python distribution. Exact-version audited fallbacks for packages
-that omit a license file are retained under `third_party_licenses/python/`;
-pycairo's selected LGPL 2.1 text comes from the pinned Debian build image. The
+that omit a license file are retained under `third_party_licenses/python/`. The
 runtime image also contains the Debian copyright/source notices for its
-installed system packages, including Cairo and its font/image dependencies.
+installed system packages.
 
 The bundled Liberation Sans font files under
 `backend/diagnostic/assets/fonts/` are distributed under the SIL Open Font
