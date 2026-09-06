@@ -107,6 +107,14 @@ python scripts/import_sharepoint_diagnostics.py <каталог-с-docx>
 поддержан в `catalog.py`, поэтому каталог проверяется обычной командой
 `python scripts/validate_school.py`.
 
+### Карта источников SharePoint
+
+Перед поиском или импортом учебных материалов прочитайте
+`authoring/sharepoint-inventory/README.md`. Там указаны точка входа, коды
+предметов, рабочие ветки ЕГЭ и правила выборочной загрузки. Количественный
+срез архива ведётся в `authoring/sharepoint-inventory/PHASE_1.md`, итоги выборочной
+загрузки, дубли и решения по импорту в `PHASE_2.md`.
+
 Прежний каталог (178 вопросов из выгрузки Edcheck и 123 вопроса нашей кампании
 `fipi-2026-min15`), конвертер Edcheck и методология авторской кампании лежат в
 `authoring/archive/2026-09-pre-sharepoint/`. Этот каталог — справочный: его не
