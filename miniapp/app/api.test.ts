@@ -344,7 +344,7 @@ describe("diagnostic API payloads", () => {
 
   it("posts only review authentication and session identifiers", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      ok: true, available: true, items: [], pdf_status: "pending",
+      ok: true, available: true, items: [],
     }), {
       status: 200,
       headers: { "Content-Type": "application/json" },

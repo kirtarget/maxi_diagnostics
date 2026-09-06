@@ -218,7 +218,6 @@ export type ServerAttempt = {
   exam?: string;
   subject?: string;
   completed_at?: string;
-  pdf_status?: ReviewResponse["pdf_status"];
   attempt_id: string;
   diagnostic_id: string;
   content_version: string;
@@ -324,7 +323,6 @@ export type ReviewResponse = {
   ok: true;
   available: boolean;
   items: ReviewItem[];
-  pdf_status: "pending" | "sending" | "sent" | "failed" | "abandoned";
 };
 
 export type SavedSession = {

@@ -1,6 +1,6 @@
 import { normalizedEstimate } from "./score-estimate";
 import type {
-  ForecastKind, ForecastPoint, ReviewResponse, ServerResult, ServerTopic,
+  ForecastKind, ForecastPoint, ServerResult, ServerTopic,
 } from "./types";
 
 type ResultWithForecast = Pick<ServerResult, "score" | "forecast" | "estimate">;
@@ -15,12 +15,6 @@ export type PersonalRouteAction = {
   id: "close-topic" | "strengthen-topic" | "recheck";
   title: string;
   description: string;
-};
-
-export type PdfStatusCopy = {
-  title: string;
-  description: string;
-  action?: string;
 };
 
 export type ResultGameAchievement = {
@@ -194,34 +188,3 @@ export function personalRoute(growthTopics: GrowthTopic[]): PersonalRouteAction[
   ].slice(0, 3);
 }
 
-export function pdfStatusCopy(status: ReviewResponse["pdf_status"]): PdfStatusCopy {
-  switch (status) {
-    case "pending":
-      return {
-        title: "Готовим PDF для Telegram",
-        description: "Результат и разбор уже сохранены.",
-      };
-    case "sending":
-      return {
-        title: "Отправляем PDF в Telegram",
-        description: "Проверяем доставку документа.",
-      };
-    case "sent":
-      return {
-        title: "PDF отправлен в Telegram",
-        description: "Результат, ответы и разбор сохранены в чате.",
-      };
-    case "failed":
-      return {
-        title: "PDF пока не отправлен",
-        description: "Документ сохранён; попробуйте проверить статус позже.",
-        action: "Проверить статус",
-      };
-    case "abandoned":
-      return {
-        title: "PDF не удалось отправить",
-        description: "Результат и разбор остаются доступны в приложении.",
-        action: "Проверить статус",
-      };
-  }
-}

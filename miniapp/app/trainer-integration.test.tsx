@@ -124,7 +124,6 @@ describe("trainer integration contracts", () => {
   it("shows replay errors only when a completed attempt is available", () => {
     const html = renderToStaticMarkup(<ResultScreen
       diagnostic={{ exam: "ОГЭ", subject: "Математика" } as never}
-      pdfStatus="sent"
       result={{ score: 4, max_score: 10, score_unit: "баллов", correct_count: 2, question_count: 4, strong_topics: [], growth_topics: [], unassessed_part: null } as never}
       onReview={() => undefined}
       onForecast={() => undefined}

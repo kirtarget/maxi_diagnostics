@@ -602,6 +602,13 @@ export const loadBootstrap = (initData: string) => {
     token && token.length <= 160 ? { notification_token: token } : undefined);
 };
 
+/** Attempt the delivery message asked us to open, if the link carries one. */
+export const requestedAttemptId = (): string | null => {
+  if (typeof window === "undefined") return null;
+  const attempt = new URLSearchParams(window.location.search).get("attempt");
+  return attempt && /^[A-Za-z0-9_-]{1,64}$/.test(attempt) ? attempt : null;
+};
+
 export const startOnboarding = (initData: string, sessionScope: string) =>
   postDiagnostic<{ status: "selection" | "completed" }>("/api/diagnostics/onboarding", initData, {
     session_scope: sessionScope, status: "selection",

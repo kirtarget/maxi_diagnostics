@@ -112,7 +112,7 @@ const screens: Array<[string, string]> = [
   ["question-input", renderToStaticMarkup(<QuestionView question={q("5", { type: "input", options: undefined, prompt: "Найди значение выражения 2,4 · 5 − 3,6. Запиши ответ числом." } as never)} index={4} total={10} answer="8,4" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
   ["question-tablegap", renderToStaticMarkup(<QuestionView question={q("9", { type: "input", options: undefined, prompt: tableGapPrompt, topic: "Химия" } as never)} index={8} total={10} answer="1" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
   ["question-text", renderToStaticMarkup(<QuestionView question={q("7", { type: "text", options: undefined, max_length: 40, topic: "Союзы", prompt: "Выпишите подчинительный союз из предложения." } as never)} index={6} total={10} answer="однако" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
-  ["result", renderToStaticMarkup(<ResultScreen diagnostic={diagnostics[0]} pdfStatus="pending" result={result} onReview={noop} onForecast={noop} onReplayMistakes={noop} />)],
+  ["result", renderToStaticMarkup(<ResultScreen diagnostic={diagnostics[0]} result={result} onReview={noop} onForecast={noop} onReplayMistakes={noop} />)],
   ["review", renderToStaticMarkup(<ReviewScreen items={[{ question_id: "q8", number: 8, type: "single", topic: "Квадратные уравнения", title: "Задание 8", prompt: "Решите уравнение x² + 4x − 5 = 0. Укажите больший корень.", is_correct: false, user_answer: "−5", expected_answer: "1", guidance: "По теореме Виета: x₁ · x₂ = −5, x₁ + x₂ = −4. Корни: 1 и −5. Больший из них — 1.", guidance_kind: "fallback", max_primary_score: 2, earned_primary_score: 0, source: approvedSource }]} index={0} onBack={noop} onNext={noop} onForecast={noop} />)],
   ["review-clean", renderToStaticMarkup(<ReviewScreen items={[]} index={0} onBack={noop} onNext={noop} onForecast={noop} />)],
   ["forecast", renderToStaticMarkup(<ForecastScreen points={[{ id: "current", label: "Сейчас", value: 74 }, { id: "goal", label: "Цель", value: 85 }]} offers={links.offers} onBack={noop} onRoute={noop} />)],
@@ -130,7 +130,7 @@ const screens: Array<[string, string]> = [
     error: null,
     retryPhase: null,
   } as never} dispatch={noop} livesReminder={{ status: "idle" }} onRemindLives={noop} offers={links.offers} />)],
-  ["route", renderToStaticMarkup(<RouteScreen items={[{ id: "close-topic", title: "Квадратные уравнения", description: "Зона роста: начни с тренажёра по этой теме." }, { id: "strengthen-topic", title: "Геометрия · площади", description: "Повтори формулы площадей и реши подборку." }]} pdf={{ title: "PDF-отчёт готовится", description: "Пришлём в Telegram, когда будет готов." }} offers={links.offers} onRefreshPdf={noop} onSubjects={noop} />)],
+  ["route", renderToStaticMarkup(<RouteScreen items={[{ id: "close-topic", title: "Квадратные уравнения", description: "Зона роста: начни с тренажёра по этой теме." }, { id: "strengthen-topic", title: "Геометрия · площади", description: "Повтори формулы площадей и реши подборку." }]} offers={links.offers} onSubjects={noop} />)],
   ["trainer-feedback", renderToStaticMarkup(<TrainerScreen state={{
     phase: "feedback",
     session: { trainer_session_id: "t", revision: 2, mode: "normal", lives_remaining: 4, question_ids: ["a", "b", "c", "d", "e"], questions: [q("a", { prompt: "Чему равно значение выражения 3 · (4 + 2)?", options: [{ id: "a", label: "14" }, { id: "b", label: "18" }, { id: "c", label: "20" }] } as never), q("b"), q("c"), q("d"), q("e")] },

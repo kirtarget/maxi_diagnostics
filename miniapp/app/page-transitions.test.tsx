@@ -321,7 +321,6 @@ describe("Home screen transitions", () => {
     route("/api/diagnostics/session/review", {
       ok: true,
       available: true,
-      pdf_status: "sent",
       items: [{
         question_id: "q1",
         number: 1,

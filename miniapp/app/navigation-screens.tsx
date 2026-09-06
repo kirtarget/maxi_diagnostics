@@ -212,7 +212,7 @@ export function WelcomeScreen({
       <div className="welcome-facts" aria-label="Параметры диагностики">
         <div><strong>{questionRange}</strong><span>{questionWord(maximumQuestions)}</span></div>
         <div><strong>Без таймера</strong><span>свой темп</span></div>
-        <div><strong>PDF</strong><span>в Telegram</span></div>
+        <div><strong>Разбор</strong><span>в приложении</span></div>
       </div>
       <button className="primary-button" onClick={onStart} type="button">
         {labels.start_diagnostic} <span aria-hidden="true">→</span>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { forecastKind, forecastTrajectory, personalRoute, pdfStatusCopy, resultGameSummary, topicRecommendation } from "./result-flow-model";
+import { forecastKind, forecastTrajectory, personalRoute, resultGameSummary, topicRecommendation } from "./result-flow-model";
 
 describe("result flow model", () => {
   it("uses the current score plus at most two persisted forecast points", () => {
@@ -77,13 +77,6 @@ describe("result flow model", () => {
     });
   });
 
-  it("distinguishes every PDF delivery state without claiming unsent delivery", () => {
-    expect(pdfStatusCopy("pending").title).toBe("Готовим PDF для Telegram");
-    expect(pdfStatusCopy("sending").title).toBe("Отправляем PDF в Telegram");
-    expect(pdfStatusCopy("sent").title).toBe("PDF отправлен в Telegram");
-    expect(pdfStatusCopy("failed").action).toBe("Проверить статус");
-    expect(pdfStatusCopy("abandoned").title).toBe("PDF не удалось отправить");
-  });
 
   it("builds bounded local game progress from a single result", () => {
     expect(resultGameSummary({
