@@ -377,3 +377,138 @@ def test_unsupported_pdf_glyphs_are_normalized_instead_of_dropping_the_task():
     assert importer.clean_line("𝑚 · 𝑔") == "m · g"
     assert importer.clean_line("∠ABC") == "угол ABC"
     assert importer.renders(importer.clean_line("∠ABC = 30°"))
+
+
+PLAN_SOURCE_NAME = "ХИМ_Кислоты_Заданий 8.docx"
+
+
+def write_plan(path: Path, entries: list[dict]) -> Path:
+    path.write_text(
+        json.dumps({"sources": entries}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    return path
+
+
+def plan_entry(source: Path, **overrides) -> dict:
+    entry = {
+        "path": f"/sites/x/{source.name}",
+        "file_name": source.name,
+        "content_hash": importer.file_digest(source),
+        "subject": "chemistry",
+        "exam": "oge",
+        "season": "21-22",
+        "topic": "Кислоты и основания",
+        "topic_slug": "kisloty",
+        "declared_question_count": 8,
+    }
+    entry.update(overrides)
+    return entry
+
+
+@pytest.fixture()
+def planned(tmp_path):
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    source = source_directory / PLAN_SOURCE_NAME
+    build_source_document(source)
+    catalog_path = build_repository(tmp_path)
+    plan = write_plan(tmp_path / "plan.json", [plan_entry(source)])
+    return tmp_path, catalog_path, source_directory, plan
+
+
+def test_plan_supplies_subject_exam_year_and_topic(planned):
+    root, catalog_path, source_directory, plan = planned
+
+    importer.main([str(source_directory), "--plan", str(plan), "--root", str(root)])
+
+    questions = _questions(catalog_path)
+    single = questions["sp-chemistry-oge-2022-kisloty-q1"]
+    assert single["type"] == "single"
+    assert single["topic"] == "Кислоты и основания"
+    assert single["title"] == "Задание 1"
+    assert single["source"]["official_year"] == 2022
+
+
+def test_plan_hash_mismatch_stops_the_import(planned):
+    root, _, source_directory, _ = planned
+    source = source_directory / PLAN_SOURCE_NAME
+    plan = write_plan(
+        root / "bad-plan.json", [plan_entry(source, content_hash="0" * 64)]
+    )
+
+    with pytest.raises(importer.ImportError, match="does not match the plan"):
+        importer.main([str(source_directory), "--plan", str(plan), "--root", str(root)])
+
+
+def test_a_file_outside_the_plan_keeps_its_filename_derived_id(tmp_path):
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    build_source_document(source_directory / SOURCE_NAME)
+    catalog_path = build_repository(tmp_path)
+    plan = write_plan(
+        tmp_path / "plan.json",
+        [plan_entry(source_directory / SOURCE_NAME, file_name="другой.docx")],
+    )
+
+    importer.main([str(source_directory), "--plan", str(plan), "--root", str(tmp_path)])
+    with_plan = catalog_path.read_bytes()
+    importer.main([str(source_directory), "--root", str(tmp_path)])
+
+    assert catalog_path.read_bytes() == with_plan
+    assert "sp-chemistry-oge-2022-q1" in _questions(catalog_path)
+
+
+def test_colliding_ids_stop_the_import(tmp_path):
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    build_source_document(source_directory / SOURCE_NAME)
+    build_source_document(source_directory / "ХИМ_ОГЭ_МРКТ_21-22_Заданий 8.docx")
+    build_repository(tmp_path)
+
+    with pytest.raises(importer.ImportError, match="Duplicate question ids"):
+        importer.main([str(source_directory), "--root", str(tmp_path), "--dry-run"])
+
+
+def test_a_numeric_key_may_end_with_a_full_stop():
+    task = importer.SourceTask(number=1, answer=["1,84."])
+    task.prompt_blocks.append("Вычислите плотность.")
+
+    kind, payload = importer.classify(task)
+
+    assert kind == "input"
+    assert payload["correct"] == ["1,84", "1.84"]
+
+
+def test_an_explanation_paragraph_after_the_key_moves_to_the_solution(tmp_path):
+    document = Document()
+    _task(document, 1)
+    document.add_paragraph("Вычислите массовую долю.")
+    document.add_paragraph("Ответ:")
+    document.add_paragraph("0,25")
+    document.add_paragraph("Пояснение: делим массу вещества на массу раствора.")
+    source = tmp_path / "explanation.docx"
+    document.save(str(source))
+
+    task = importer.parse_document(source)[0]
+
+    assert task.answer == ["0,25"]
+    assert task.solution == ["Пояснение: делим массу вещества на массу раствора."]
+
+
+def test_open_answer_tasks_are_skipped_with_their_own_reason():
+    task = importer.SourceTask(
+        number=1,
+        answer=["Развёрнутый ответ"],
+        solution=["Критерии оценивания. Максимальный балл — 3."],
+    )
+    task.prompt_blocks.append("Обоснуйте ответ.")
+
+    assert importer.classify(task) == ("skip", "open_answer")
+
+
+def test_pdf_unsafe_degree_and_figure_dash_are_replaced():
+    assert importer.clean_line("t = 30ᵒC") == "t = 30°C"
+    assert importer.clean_line("5 ‒ 3") == "5 - 3"
+    assert importer.renders(importer.clean_line("t = 30ᵒC"))
