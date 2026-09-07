@@ -1,5 +1,6 @@
 import { parseSequenceMatchingPrompt } from "./sequence-matching";
 import { parseTableGapPrompt } from "./table-gap-matching";
+import { splitPromptSentences } from "./math-text";
 import type { Question } from "./types";
 
 export type PromptBlock =
@@ -8,11 +9,47 @@ export type PromptBlock =
   | { kind: "table"; rows: string[][] };
 
 const ITEM_PATTERN = /^([А-ЯЁA-Z]|\d{1,2})\)\s*(.+)$/u;
-const INSTRUCTION_PATTERN = /^(?:ответ|в ответе|запишите|введите|укажите ответ)(?:\s|$)/iu;
-const LETTER_PATTERN = /[A-ZА-ЯЁ]/gu;
+const INSTRUCTION_PATTERN = /^(?:ответ(?:ы|ом)?(?:\s+(?:запишите|запиши|укажите|дайте))?|в\s+ответ(?:е|ом)?(?:\s+(?:запишите|запиши|укажите|дайте))?|запишите(?:\s+(?:ответ|последовательность|число|слово|цифры))?|запиши(?:\s+(?:ответ|последовательность|число|слово|цифры))?|введите(?:\s+(?:ответ|последовательность|число|слово|цифры))?|введи(?:\s+(?:ответ|последовательность|число|слово|цифры))?|в\s+таблиц(?:у|е)|укажите\s+ответ)(?:\s|$)/iu;
+const LETTER_PATTERN = /\p{Lu}/gu;
+const HEADING_OPERATOR_PATTERN = /[\p{Ll}\p{Nd}+\-−×÷*/=≤≥<>⇄→√^·∙:≠_]/u;
+const STEM_PATTERN = /^(?:какой|какая|какие|каково|каким|какую|сколько|чему|что|почему|зачем|где|когда|как|установите|определите|выберите|найдите|решите|сопоставьте|назовите|укажите|расставьте|отредактируйте|выпишите|запишите|среди|в\s+тексте|из\s+предложенного)(?:\s|$)/iu;
+
+type StemMatch = { lineIndex: number; start: number; text: string };
+
+function splitTrailingInstruction(line: string): string[] {
+  const sentences = splitPromptSentences(line);
+  const instruction = sentences.at(-1);
+  if (!instruction || !INSTRUCTION_PATTERN.test(instruction)) return [line];
+  const instructionStart = line.lastIndexOf(instruction);
+  if (instructionStart <= 0) return [line];
+  return [line.slice(0, instructionStart).trim(), instruction].filter(Boolean);
+}
+
+function findStem(lines: string[]): StemMatch | null {
+  const questions: StemMatch[] = [];
+  const actions: StemMatch[] = [];
+  lines.forEach((line, lineIndex) => {
+    for (const sentence of splitPromptSentences(line)) {
+      const start = line.indexOf(sentence);
+      if (start < 0 || INSTRUCTION_PATTERN.test(sentence)) continue;
+      const citation = /^\([^)]{1,200}\)\s*/u.exec(sentence)?.[0] ?? "";
+      const candidateStart = start + citation.length;
+      const candidateText = sentence.slice(citation.length);
+      const match = { lineIndex, start: candidateStart, text: candidateText };
+      if (/[?]\s*$/u.test(candidateText)) questions.push(match);
+      if (STEM_PATTERN.test(candidateText)) actions.push(match);
+    }
+  });
+  const lastQuestion = questions.at(-1);
+  const actionAfterQuestion = lastQuestion
+    ? actions.filter((match) => match.lineIndex > lastQuestion.lineIndex
+      || (match.lineIndex === lastQuestion.lineIndex && match.start > lastQuestion.start))
+    : [];
+  return actionAfterQuestion.at(-1) ?? lastQuestion ?? actions[0] ?? null;
+}
 
 function isHeading(value: string): boolean {
-  if (value.length > 96) return false;
+  if (value.length >= 60 || HEADING_OPERATOR_PATTERN.test(value)) return false;
   const letters = value.match(LETTER_PATTERN)?.join("") ?? "";
   return letters.length >= 3 && letters === letters.toLocaleUpperCase("ru-RU");
 }
@@ -28,10 +65,23 @@ export function parseQuestionPrompt(prompt: string): PromptBlock[] {
     .split(/\n+/u)
     .map((line) => line.trim())
     .filter(Boolean);
+  const promptLines = lines.flatMap(splitTrailingInstruction);
+
+  const stem = findStem(promptLines);
+  const orderedLines = stem
+    ? [
+      stem.text,
+      ...promptLines.flatMap((line, lineIndex) => {
+        if (lineIndex !== stem.lineIndex) return [line];
+        return [line.slice(0, stem.start).trim(), line.slice(stem.start + stem.text.length).trim()]
+          .filter(Boolean);
+      }),
+    ]
+    : promptLines;
 
   const blocks: PromptBlock[] = [];
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
+  for (let index = 0; index < orderedLines.length; index += 1) {
+    const line = orderedLines[index];
     if (index === 0) {
       blocks.push({ kind: "stem", text: line });
       continue;
@@ -41,8 +91,8 @@ export function parseQuestionPrompt(prompt: string): PromptBlock[] {
     // Two such lines in a row are a table, and reading one as prose is the
     // difference between a grid and a wall of vertical bars.
     const rows: string[][] = [];
-    while (index < lines.length) {
-      const row = tableRow(lines[index]);
+    while (index < orderedLines.length) {
+      const row = tableRow(orderedLines[index]);
       if (!row) break;
       rows.push(row);
       index += 1;
@@ -89,7 +139,7 @@ export function answerTypeLabel(question: Question): string {
 }
 
 export function questionTitleClassName(text: string): string {
-  if (text.length > 360) return "question-title question-title-long";
-  if (text.length > 180) return "question-title question-title-medium";
+  if (text.length >= 360) return "question-title question-title-long";
+  if (text.length >= 180) return "question-title question-title-medium";
   return "question-title";
 }

@@ -308,6 +308,69 @@ describe("QuestionView", () => {
     expect(html).not.toContain("Получившийся ответ");
   });
 
+  it("renders the real OGE chemistry q04 formula in a matching answer", () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        question={{
+          id: "sp-chemistry-oge-2022-q4",
+          type: "matching",
+          topic: "Задание 4",
+          title: "Задание 4",
+          prompt: "Установите соответствие между формулой соединения и степенью окисления йода в этом соединении.",
+          items: [{ id: "i1", label: "А) H_(5)IO_(6)" }],
+          options: [{ id: "o1", label: "1) +7" }],
+        }}
+        subject="Химия"
+        index={0}
+        total={1}
+        answer={{}}
+        labels={{ answer_label: "Ваш ответ", choose_option: "Выберите вариант" } as unknown as Brand["interface"]}
+        onAnswer={() => undefined}
+        onBack={() => undefined}
+        onNext={() => undefined}
+      />,
+    );
+    expect(html).toContain("<sub>5</sub>");
+    expect(html).toContain("<sub>6</sub>");
+  });
+
+  it("keeps Russian q22 text free of math badges", () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        question={{ ...question, type: "multiple", prompt: "(1) Текст с числами. Какие высказывания верны?", options: [{ id: "a", label: "1) Ответ" }], selection_limit: 1 }}
+        subject="Русский язык"
+        index={0}
+        total={1}
+        answer={[]}
+        labels={{ answer_label: "Ваш ответ" } as unknown as Brand["interface"]}
+        onAnswer={() => undefined}
+        onBack={() => undefined}
+        onNext={() => undefined}
+      />,
+    );
+    expect(html).not.toContain("math-expression");
+  });
+
+  it("places the real physics q11 instruction directly above the answer field", () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        question={{ ...question, type: "input", prompt: "Как изменится величина?\nВ ответ запишите последовательность цифр, соответствующую графам таблицы.\nВведите последовательность цифр без пробелов." }}
+        subject="Физика"
+        index={0}
+        total={1}
+        answer=""
+        labels={{ answer_label: "Ваш ответ", enter_answer: "Введите ответ" } as unknown as Brand["interface"]}
+        onAnswer={() => undefined}
+        onBack={() => undefined}
+        onNext={() => undefined}
+      />,
+    );
+    const instructionIndex = html.indexOf("question-instruction");
+    const answerIndex = html.indexOf('class="short-answer"');
+    expect(instructionIndex).toBeGreaterThan(-1);
+    expect(instructionIndex).toBeLessThan(answerIndex);
+  });
+
   it("places an illustration directly after the task stem", () => {
     const html = renderToStaticMarkup(
       <QuestionView

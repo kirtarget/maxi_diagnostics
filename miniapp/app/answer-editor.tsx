@@ -1,5 +1,5 @@
-import { answerInputConfig } from "./math-text";
 import { FormattedMathText } from "./math-display";
+import { answerInputConfig, plainMathText } from "./math-text";
 import { updateMatchingAnswer } from "./answer-values";
 import { cleanAnswerLabel } from "./question-prompt";
 import { DEFAULT_TEXT_ANSWER_LENGTH } from "./answer-values";
@@ -21,9 +21,11 @@ export type AnswerEditorLabels = {
 
 export type AnswerEditorProps = {
   question: Question;
+  subject?: string;
   value: AnswerValue | undefined;
   onChange: (value: AnswerValue) => void;
   disabled?: boolean;
+  suppressAutoHint?: boolean;
   labels?: Partial<AnswerEditorLabels>;
 };
 
@@ -33,31 +35,32 @@ const DEFAULT_LABELS: AnswerEditorLabels = {
   choose: "Выберите",
 };
 
-export function AnswerEditor({ question, value, onChange, disabled = false, labels }: AnswerEditorProps) {
+export function AnswerEditor({ question, subject, value, onChange, disabled = false, suppressAutoHint = false, labels }: AnswerEditorProps) {
   const text = { ...DEFAULT_LABELS, ...labels };
   const asText = typeof value === "string" ? value : "";
   if (question.type === "single") {
-    return <SingleEditor question={question} value={asText} disabled={disabled} onChange={onChange} />;
+    return <SingleEditor question={question} subject={subject} value={asText} disabled={disabled} onChange={onChange} />;
   }
   if (question.type === "multiple") {
-    return <MultipleEditor question={question} value={Array.isArray(value) ? value : []} disabled={disabled} onChange={onChange} />;
+    return <MultipleEditor question={question} subject={subject} value={Array.isArray(value) ? value : []} disabled={disabled} onChange={onChange} />;
   }
   if (question.type === "matching") {
     const pairs = value && typeof value === "object" && !Array.isArray(value) ? value : {};
-    return <MatchingEditor question={question} value={pairs} disabled={disabled} chooseLabel={text.choose} onChange={onChange} />;
+    return <MatchingEditor question={question} subject={subject} value={pairs} disabled={disabled} chooseLabel={text.choose} onChange={onChange} />;
   }
   if (question.type === "text") {
-    return <ShortTextEditor question={question} value={asText} disabled={disabled} label={text.answer} placeholder={text.placeholder} onChange={onChange} />;
+    return <ShortTextEditor question={question} value={asText} disabled={disabled} suppressAutoHint={suppressAutoHint} label={text.answer} placeholder={text.placeholder} onChange={onChange} />;
   }
-  return <InputEditor question={question} value={asText} disabled={disabled} label={text.answer} placeholder={text.placeholder} onChange={onChange} />;
+  return <InputEditor question={question} value={asText} disabled={disabled} suppressAutoHint={suppressAutoHint} label={text.answer} placeholder={text.placeholder} onChange={onChange} />;
 }
 
-function OptionButton({ label, marker, selected, disabled, square, onClick }: {
+function OptionButton({ label, marker, selected, disabled, square, subject, onClick }: {
   label: string;
   marker: string;
   selected: boolean;
   disabled: boolean;
   square?: boolean;
+  subject?: string;
   onClick: () => void;
 }) {
   return (
@@ -69,14 +72,15 @@ function OptionButton({ label, marker, selected, disabled, square, onClick }: {
       onClick={onClick}
     >
       <span className="option-letter">{marker}</span>
-      <span><FormattedMathText text={cleanAnswerLabel(label)} /></span>
+      <span><FormattedMathText text={cleanAnswerLabel(label)} subject={subject} /></span>
       <span className={square ? "selection-mark square" : "selection-mark"} aria-hidden="true" />
     </button>
   );
 }
 
-function SingleEditor({ question, value, disabled, onChange }: {
+function SingleEditor({ question, subject, value, disabled, onChange }: {
   question: SingleQuestion;
+  subject?: string;
   value: string;
   disabled: boolean;
   onChange: (value: AnswerValue) => void;
@@ -90,6 +94,7 @@ function SingleEditor({ question, value, disabled, onChange }: {
           marker={String.fromCharCode(65 + index)}
           selected={value === option.id}
           disabled={disabled}
+          subject={subject}
           onClick={() => onChange(option.id)}
         />
       ))}
@@ -97,8 +102,9 @@ function SingleEditor({ question, value, disabled, onChange }: {
   );
 }
 
-function MultipleEditor({ question, value, disabled, onChange }: {
+function MultipleEditor({ question, subject, value, disabled, onChange }: {
   question: MultipleQuestion;
+  subject?: string;
   value: string[];
   disabled: boolean;
   onChange: (value: AnswerValue) => void;
@@ -117,6 +123,7 @@ function MultipleEditor({ question, value, disabled, onChange }: {
           marker={String.fromCharCode(65 + index)}
           selected={value.includes(option.id)}
           disabled={disabled}
+          subject={subject}
           square
           onClick={() => toggle(option.id)}
         />
@@ -125,8 +132,9 @@ function MultipleEditor({ question, value, disabled, onChange }: {
   );
 }
 
-function MatchingEditor({ question, value, disabled, chooseLabel, onChange }: {
+function MatchingEditor({ question, subject, value, disabled, chooseLabel, onChange }: {
   question: MatchingQuestion;
+  subject?: string;
   value: Record<string, string>;
   disabled: boolean;
   chooseLabel: string;
@@ -137,7 +145,7 @@ function MatchingEditor({ question, value, disabled, chooseLabel, onChange }: {
       {question.items.map((item, index) => (
         <label className="matching-row" key={item.id}>
           <span className="matching-index">{index + 1}</span>
-          <span><FormattedMathText text={cleanAnswerLabel(item.label)} /></span>
+          <span><FormattedMathText text={cleanAnswerLabel(item.label)} subject={subject} /></span>
           <select
             aria-label={`Соответствие для ${item.label}`}
             disabled={disabled}
@@ -146,7 +154,7 @@ function MatchingEditor({ question, value, disabled, chooseLabel, onChange }: {
           >
             <option value="">{chooseLabel}</option>
             {question.options.map((option) => (
-              <option value={option.id} key={option.id}>{cleanAnswerLabel(option.label)}</option>
+              <option value={option.id} key={option.id}>{plainMathText(cleanAnswerLabel(option.label), subject)}</option>
             ))}
           </select>
         </label>
@@ -155,10 +163,11 @@ function MatchingEditor({ question, value, disabled, chooseLabel, onChange }: {
   );
 }
 
-function InputEditor({ question, value, disabled, label, placeholder, onChange }: {
+function InputEditor({ question, value, disabled, suppressAutoHint, label, placeholder, onChange }: {
   question: InputQuestion;
   value: string;
   disabled: boolean;
+  suppressAutoHint: boolean;
   label: string;
   placeholder: string;
   onChange: (value: AnswerValue) => void;
@@ -189,16 +198,17 @@ function InputEditor({ question, value, disabled, label, placeholder, onChange }
         />
         {value && <button type="button" disabled={disabled} onClick={() => onChange("")}>Очистить</button>}
       </span>
-      <small>{config.hint}</small>
+      {!suppressAutoHint && <small>{config.hint}</small>}
     </label>
   );
 }
 
 /** Free text: the same field as InputEditor, without the numeric mode or its digit hint. */
-function ShortTextEditor({ question, value, disabled, label, placeholder, onChange }: {
+function ShortTextEditor({ question, value, disabled, suppressAutoHint, label, placeholder, onChange }: {
   question: TextQuestion;
   value: string;
   disabled: boolean;
+  suppressAutoHint: boolean;
   label: string;
   placeholder: string;
   onChange: (value: AnswerValue) => void;
@@ -221,7 +231,7 @@ function ShortTextEditor({ question, value, disabled, label, placeholder, onChan
         />
         {value && <button type="button" disabled={disabled} onClick={() => onChange("")}>Очистить</button>}
       </span>
-      <small>Введите только ответ — без пояснений и лишних слов.</small>
+      {!suppressAutoHint && <small>Введите только ответ — без пояснений и лишних слов.</small>}
     </label>
   );
 }

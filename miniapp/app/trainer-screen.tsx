@@ -6,6 +6,7 @@ import { ConfirmSheet } from "./confirm-sheet";
 import { FormattedMathText, FormattedStem } from "./math-display";
 import { normalizeOffer, OfferSurface, type OfferPlacement, type OfferTelemetryEvent } from "./offer-ux";
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
+import { parseQuestionPrompt } from "./question-prompt";
 import type { AnswerValue, Question, SchoolLinks } from "./types";
 import {
   isTrainerAnswerComplete,
@@ -38,8 +39,12 @@ export type TrainerScreenProps = {
   onOfferEvent?: (event: OfferTelemetryEvent) => void;
 };
 
-function QuestionPrompt({ question, reason }: { question: Question; reason?: string | null }) {
-  return <div className="trainer-prompt"><div className="trainer-prompt-meta">{reason && <span className="trainer-plan-reason">{reason}</span>}{hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}</div><h1><FormattedStem text={question.prompt} /></h1><small>{question.topic}</small></div>;
+function QuestionPrompt({ question, subject, reason }: { question: Question; subject?: string; reason?: string | null }) {
+  const prompt = parseQuestionPrompt(question.prompt)
+    .filter((block) => block.kind !== "instruction")
+    .map((block) => block.kind === "item" ? `${block.marker}) ${block.text}` : block.kind === "table" ? block.rows.map((row) => row.join(" | ")).join("\n") : block.text)
+    .join("\n");
+  return <div className="trainer-prompt"><div className="trainer-prompt-meta">{reason && <span className="trainer-plan-reason">{reason}</span>}{hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}</div><h1><FormattedStem text={prompt} subject={subject} /></h1><small>{question.topic}</small></div>;
 }
 
 const LIFE_REFILL_INTERVAL_MS = 4 * 60 * 60 * 1000;
@@ -102,7 +107,7 @@ function TrainerNoLivesScreen({ nextLifeAt, livesReminder, onRemindLives, onHome
   </section>;
 }
 
-function Feedback({ state, showPrimaryScore }: { state: TrainerState; showPrimaryScore: boolean }) {
+function Feedback({ state, subject, showPrimaryScore }: { state: TrainerState; subject?: string; showPrimaryScore: boolean }) {
   const result = state.answerResult;
   if (!result) return null;
   const kind = trainerFeedbackKind(result);
@@ -110,8 +115,8 @@ function Feedback({ state, showPrimaryScore }: { state: TrainerState; showPrimar
   return <aside className={`trainer-feedback ${kind === "correct" ? "is-correct" : "is-wrong"}`} aria-live="polite">
     <strong>{label}</strong>
     {showPrimaryScore && <PrimaryScoreBadge maxPrimaryScore={result.max_primary_score} earnedPrimaryScore={result.earned_primary_score} />}
-    {result.correct_answer && <p>Ответ: <FormattedMathText text={result.correct_answer} /></p>}
-    {result.explanation && <p><FormattedMathText text={result.explanation} /></p>}
+    {result.correct_answer && <p>Ответ: <FormattedMathText text={result.correct_answer} subject={subject} /></p>}
+    {result.explanation && <p><FormattedMathText text={result.explanation} subject={subject} /></p>}
     {result.xp_delta > 0 && <small>+{result.xp_delta} XP</small>}
   </aside>;
 }
@@ -156,6 +161,7 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
     if (state.draftAnswer) onAnswer?.(question.id, state.draftAnswer);
   };
   const subject = header?.subject ?? state.session.diagnostic_id;
+  const trainerInstructions = parseQuestionPrompt(question.prompt).flatMap((block) => block.kind === "instruction" ? [block.text] : []);
   const modeLabel = header?.modeLabel ?? trainerModeLabel(state.session.mode);
   return <section className="screen trainer-screen" aria-labelledby="trainer-title">
     <div className="trainer-header">
@@ -170,9 +176,10 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
       </div>
     </div>
     <div className="question-progress-rail" role="progressbar" aria-valuemin={0} aria-valuemax={state.session.questions.length} aria-valuenow={Math.min(questionIndex + 1, state.session.questions.length)}><span className="question-progress-fill" style={{ width: `${(Math.min(questionIndex + 1, state.session.questions.length) / state.session.questions.length) * 100}%` }} /></div>
-    <QuestionPrompt question={question} reason={planReasonLabel(state, question.id)} />
-    <AnswerEditor question={question} value={state.draftAnswer} disabled={locked} onChange={(answer) => dispatch({ type: "set_answer", answer })} />
-    {state.phase === "feedback" ? <><Feedback state={state} showPrimaryScore={hasApprovedPrimaryScore(question.source)} />{isLast ? <button className="primary-button question-next" type="button" onClick={() => { dispatch({ type: "finish_requested" }); onFinish?.(); }}>Завершить тренировку <span aria-hidden="true">→</span></button> : <button className="primary-button question-next" type="button" onClick={() => dispatch({ type: "next_question" })}>Следующий вопрос <span aria-hidden="true">→</span></button>}</> : <button className="primary-button question-next" type="button" disabled={!canSubmit || state.phase === "awaiting_result"} onClick={submit}>{state.phase === "awaiting_result" ? "Проверяем…" : "Проверить ответ"}<span aria-hidden="true">→</span></button>}
+    <QuestionPrompt question={question} subject={subject} reason={planReasonLabel(state, question.id)} />
+    {trainerInstructions.map((instruction, instructionIndex) => <p className="question-instruction" key={`trainer-instruction-${instructionIndex}`}><FormattedMathText text={instruction} subject={subject} /></p>)}
+    <AnswerEditor question={question} subject={subject} value={state.draftAnswer} disabled={locked} suppressAutoHint={trainerInstructions.length > 0} onChange={(answer) => dispatch({ type: "set_answer", answer })} />
+    {state.phase === "feedback" ? <><Feedback state={state} subject={subject} showPrimaryScore={hasApprovedPrimaryScore(question.source)} />{isLast ? <button className="primary-button question-next" type="button" onClick={() => { dispatch({ type: "finish_requested" }); onFinish?.(); }}>Завершить тренировку <span aria-hidden="true">→</span></button> : <button className="primary-button question-next" type="button" onClick={() => dispatch({ type: "next_question" })}>Следующий вопрос <span aria-hidden="true">→</span></button>}</> : <button className="primary-button question-next" type="button" disabled={!canSubmit || state.phase === "awaiting_result"} onClick={submit}>{state.phase === "awaiting_result" ? "Проверяем…" : "Проверить ответ"}<span aria-hidden="true">→</span></button>}
     <ConfirmSheet open={confirmOpen} onCancel={() => setConfirmOpen(false)} onConfirm={() => { setConfirmOpen(false); onHome?.(); }} />
   </section>;
 }

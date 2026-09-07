@@ -370,6 +370,7 @@ export default function Home() {
           error={reviewError}
           index={reviewIndex}
           items={review?.items ?? []}
+          subject={resultDiagnostic?.subject}
           legacy={review?.available === false}
           loading={!review && !reviewError}
           onBack={session.actions.reviewBack}

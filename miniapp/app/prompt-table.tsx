@@ -3,7 +3,7 @@ import { FormattedMathText } from "./math-display";
 // The converter flattens a source table to one `cell | cell` line per row. Read
 // as prose that is a wall of vertical bars, so both the question and its review
 // draw the grid the author wrote.
-export function PromptTable({ rows }: { rows: string[][] }) {
+export function PromptTable({ rows, subject }: { rows: string[][]; subject?: string }) {
   const [header, ...body] = rows;
   return (
     <div className="question-table-scroll">
@@ -11,7 +11,7 @@ export function PromptTable({ rows }: { rows: string[][] }) {
         <thead>
           <tr>
             {header.map((cell, cellIndex) => (
-              <th key={cellIndex} scope="col"><FormattedMathText text={cell} /></th>
+              <th key={cellIndex} scope="col"><FormattedMathText text={cell} subject={subject} /></th>
             ))}
           </tr>
         </thead>
@@ -19,7 +19,7 @@ export function PromptTable({ rows }: { rows: string[][] }) {
           {body.map((row, rowIndex) => (
             <tr key={rowIndex}>
               {row.map((cell, cellIndex) => (
-                <td key={cellIndex}><FormattedMathText text={cell} /></td>
+                <td key={cellIndex}><FormattedMathText text={cell} subject={subject} /></td>
               ))}
             </tr>
           ))}
