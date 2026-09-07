@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { questionProgress, QuestionView } from "./question-screen";
-import type { Brand, Question } from "./types";
+import type { AnswerValue, Brand, Question } from "./types";
 
 
 const question: Question = {
@@ -14,8 +14,117 @@ const question: Question = {
   asset: "assets/questions/q9861.png",
 };
 
+const sequenceQuestion: Question = {
+  ...question,
+  id: "q-sequence",
+  prompt: [
+    "Установите соответствие.",
+    "А) Первый пункт",
+    "Б) Второй пункт",
+    "1) Первый вариант",
+    "2) Второй вариант",
+  ].join("\n"),
+};
+
+const tableGapQuestion: Question = {
+  ...question,
+  id: "q-table-gap",
+  prompt: [
+    "Заполните пустые ячейки таблицы.",
+    "Колонка 1",
+    "Колонка 2",
+    "Колонка 3",
+    "(А)",
+    "Значение",
+    "Значение",
+    "Значение",
+    "(Б)",
+    "Значение",
+    "Пропущенные элементы:",
+    "1) Первый вариант;",
+    "2) Второй вариант.",
+  ].join("\n"),
+};
+
 
 describe("QuestionView", () => {
+  it.each([
+    ["single", { ...question, type: "single", options: [{ id: "a", label: "А" }] } as Question, undefined, "a"],
+    ["multiple", {
+      ...question,
+      type: "multiple",
+      options: [{ id: "a", label: "А" }, { id: "b", label: "Б" }],
+      selection_limit: 2,
+    } as Question, ["a"], ["a", "b"]],
+    ["matching", {
+      ...question,
+      type: "matching",
+      items: [{ id: "a", label: "А" }, { id: "b", label: "Б" }],
+      options: [{ id: "1", label: "Один" }, { id: "2", label: "Два" }],
+    } as Question, { a: "1" }, { a: "1", b: "2" }],
+    ["input", question, "не число", "12"],
+    ["input sequence", sequenceQuestion, "1", "12"],
+    ["input table gap", tableGapQuestion, "1", "12"],
+    ["text", { ...question, type: "text", max_length: 40 } as Question, "   ", "но"],
+  ])("enables the next action only for a complete %s answer", (_type, currentQuestion, incomplete, complete) => {
+    const renderQuestion = (answer: AnswerValue | undefined) => renderToStaticMarkup(
+      <QuestionView
+        question={currentQuestion}
+        index={0}
+        total={3}
+        answer={answer}
+        labels={{
+          back: "Назад",
+          task_label: "Задание",
+          of_label: "из",
+          illustration_alt: "Иллюстрация к заданию",
+          next_question: "Следующее задание",
+          get_result: "Получить результат",
+          answer_label: "Ваш ответ",
+          enter_answer: "Введите ответ",
+          choose_option: "Выберите вариант",
+        } as unknown as Brand["interface"]}
+        onAnswer={() => undefined}
+        onBack={() => undefined}
+        onNext={() => undefined}
+      />,
+    );
+
+    expect(renderQuestion(incomplete)).toMatch(/class="primary-button question-next" disabled=""/);
+    expect(renderQuestion(complete)).not.toMatch(/class="primary-button question-next" disabled=""/);
+  });
+
+  it("accepts either a word or digits as a valid text answer", () => {
+    const textQuestion = { ...question, type: "text", max_length: 40 } as Question;
+    const renderAnswer = (answer: string) => renderToStaticMarkup(
+      <QuestionView
+        question={textQuestion}
+        index={0}
+        total={3}
+        answer={answer}
+        labels={{
+          back: "Назад",
+          task_label: "Задание",
+          of_label: "из",
+          illustration_alt: "Иллюстрация к заданию",
+          next_question: "Следующее задание",
+          get_result: "Получить результат",
+          answer_label: "Ваш ответ",
+          enter_answer: "Введите ответ",
+          choose_option: "Выберите вариант",
+        } as unknown as Brand["interface"]}
+        onAnswer={() => undefined}
+        onBack={() => undefined}
+        onNext={() => undefined}
+      />,
+    );
+
+    expect(renderAnswer("но")).not.toContain('disabled=""');
+    expect(renderAnswer("12")).not.toContain('disabled=""');
+    expect(renderAnswer("")).toContain('disabled=""');
+    expect(renderAnswer("   ")).toContain('disabled=""');
+  });
+
   it("builds game-like progress from the server-owned question position", () => {
     expect(questionProgress(1, 4)).toEqual({
       current: 2,
