@@ -137,3 +137,29 @@ def test_max_length_defaults_to_eighty_and_variants_must_fit_it():
 def test_distinct_variants_that_differ_only_in_dash_style_collide():
     with pytest.raises(ValidationError):
         text_question(correct=["что-то", "что—то"])
+
+
+@pytest.mark.parametrize(
+    ("typed", "expected"),
+    [
+        ("«реализм»", "реализм"),
+        ('"реализм"', "реализм"),
+        ("„реализм“", "реализм"),
+        (":реализм", "реализм"),
+        ("don’t", "don't"),
+        ("don`t", "don't"),
+    ],
+)
+def test_quotation_marks_and_apostrophes_do_not_decide_the_answer(typed, expected):
+    assert normalize_text_answer(typed) == normalize_text_answer(expected)
+
+
+def test_a_hyphen_still_decides_the_answer():
+    """In an orthography task the hyphen is the whole question."""
+    assert normalize_text_answer("по-моему") != normalize_text_answer("по моему")
+    assert not is_answer_correct(text_question(correct=["по-моему"]), "по моему")
+
+
+def test_quotation_marks_alone_are_not_an_answer():
+    assert not is_valid_text_answer("«»")
+    assert not is_valid_text_answer("...")

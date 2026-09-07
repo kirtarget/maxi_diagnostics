@@ -833,11 +833,62 @@ class Candidate:
     outcome: Outcome
 
 
+def load_answer_variants(path: Path) -> dict[str, list[str]]:
+    """Read the editor's extra accepted wordings, keyed by question id.
+
+    The converter rewrites every `sp-` question on each run, so a wording added
+    by hand to the catalog would not survive. This file does.
+    """
+    if not path.is_file():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    variants = payload.get("variants", {})
+    if not isinstance(variants, dict):
+        raise ImportError(f"`variants` must be an object in {path.name}")
+    result: dict[str, list[str]] = {}
+    for question_id, wordings in variants.items():
+        if not isinstance(wordings, list) or not wordings:
+            raise ImportError(f"Answer variants for {question_id} must be a non-empty list")
+        cleaned = []
+        for wording in wordings:
+            if not isinstance(wording, str):
+                raise ImportError(f"Answer variant for {question_id} is not a string")
+            text = clean_line(wording)
+            if not 1 <= len(text) <= MAX_TEXT_ANSWER_CHARS:
+                raise ImportError(f"Answer variant for {question_id} is out of length range")
+            cleaned.append(text)
+        result[question_id] = cleaned
+    return result
+
+
+def apply_answer_variants(question: dict[str, Any], extra: list[str]) -> str | None:
+    """Add the editor's wordings to a free-text key, or say why they cannot go in."""
+    from diagnostic.text_answers import normalize_text_answer
+
+    if question["type"] != "text":
+        return "answer_variants_need_a_text_question"
+    accepted = list(question["correct"])
+    seen = {normalize_text_answer(value) for value in accepted}
+    for wording in extra:
+        normalized = normalize_text_answer(wording)
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        accepted.append(wording)
+    if len(accepted) > MAX_TEXT_VARIANTS:
+        return "too_many_answer_variants"
+    question["correct"] = accepted
+    return None
+
+
 def convert_file(
-    source: SourceFile, verified_at: str
+    source: SourceFile,
+    verified_at: str,
+    answer_variants: dict[str, list[str]] | None = None,
 ) -> tuple[list[Candidate], list[Outcome]]:
     candidates: list[Candidate] = []
     outcomes: list[Outcome] = []
+    variants = answer_variants or {}
     for task in source.tasks:
         kind, payload = classify(task)
         if kind == "skip":
@@ -847,6 +898,11 @@ def convert_file(
         if isinstance(question, str):
             outcomes.append(Outcome(task.number, "skipped", kind, question))
             continue
+        extra = variants.get(question["id"])
+        if extra:
+            problem = apply_answer_variants(question, extra)
+            if problem is not None:
+                raise ImportError(f"{problem}: {question['id']}")
 
         prepared = [prepare_image(payload_bytes) for payload_bytes in task.images]
         reason = _rejection(question, prepared)
@@ -1112,6 +1168,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--root", type=Path, default=REPOSITORY_ROOT)
     parser.add_argument(
+        "--answer-variants",
+        type=Path,
+        help="JSON file of extra accepted wordings, keyed by question id",
+    )
+    parser.add_argument(
         "--verified-at",
         default=date.today().isoformat(),
         help="Editorial verification date stamped on every imported question",
@@ -1133,6 +1194,9 @@ def main(argv: list[str] | None = None) -> int:
     }
 
     plan = load_plan(arguments.plan) if arguments.plan else {}
+    answer_variants = load_answer_variants(
+        arguments.answer_variants or root / "authoring" / "answer-variants.json"
+    )
     sources = [
         read_source_file(path, plan.get(path.name))
         for path in sorted(arguments.source.resolve().glob("*.docx"))
@@ -1149,7 +1213,7 @@ def main(argv: list[str] | None = None) -> int:
             raise ImportError(f"No catalog diagnostic for {key}")
         target = targets[key]
         target_by_source[source.path] = target.path
-        file_candidates, file_outcomes = convert_file(source, verified_at)
+        file_candidates, file_outcomes = convert_file(source, verified_at, answer_variants)
         candidates.extend(file_candidates)
         outcomes_by_source[source.path] = file_outcomes
 
