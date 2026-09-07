@@ -99,6 +99,60 @@ describe("result flow screens", () => {
     expect(html).not.toContain(">Неверно<");
   });
 
+  it("uses the review subject for chemistry and language math rendering", () => {
+    const chemistryHtml = renderToStaticMarkup(
+      <ReviewScreen
+        subject="Химия"
+        items={[{
+          question_id: "chemistry-q1",
+          number: 1,
+          type: "single",
+          topic: "Вещества",
+          title: "Задание 1",
+          prompt: "Определите формулу Fe_(2)(SO_(4))_(3).",
+          is_correct: false,
+          status: "incorrect",
+          user_answer: "Fe_(2)(SO_(4))_(3)",
+          expected_answer: "Fe_(2)(SO_(4))_(3)",
+          guidance: "Проверьте индексы.",
+          guidance_kind: "fallback",
+        }]}
+        index={0}
+        onBack={() => undefined}
+        onNext={() => undefined}
+        onForecast={() => undefined}
+      />,
+    );
+    expect(chemistryHtml).toContain("<sub>2</sub>");
+    expect(chemistryHtml).toContain("<sub>4</sub>");
+
+    const languageHtml = renderToStaticMarkup(
+      <ReviewScreen
+        subject="Русский язык"
+        items={[{
+          question_id: "russian-q1",
+          number: 1,
+          type: "single",
+          topic: "Язык",
+          title: "Задание 1",
+          prompt: "В 2022 году К и M: 3A₁₆.",
+          is_correct: false,
+          status: "incorrect",
+          user_answer: "3A₁₆",
+          expected_answer: "К",
+          guidance: "Прочитайте условие.",
+          guidance_kind: "fallback",
+        }]}
+        index={0}
+        onBack={() => undefined}
+        onNext={() => undefined}
+        onForecast={() => undefined}
+      />,
+    );
+    expect(languageHtml).not.toContain("math-expression");
+    expect(languageHtml).toContain("3A₁₆");
+  });
+
   it("renders only the provided forecast points", () => {
     const html = renderToStaticMarkup(
       <ForecastScreen

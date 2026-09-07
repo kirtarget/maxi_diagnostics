@@ -52,4 +52,10 @@ describe("Training Radar UI contracts", () => {
     const css = readFileSync(new URL("./globals.css", import.meta.url), "utf8");
     expect(css).toMatch(/\.table-gap-select select\s*\{[^}]*min-height:\s*44px/u);
   });
+
+  it("keeps formula spans in inline flow so native subscript alignment applies", () => {
+    const css = readFileSync(new URL("./globals.css", import.meta.url), "utf8");
+    expect(css).toMatch(/\.math-expression\s*\{[^}]*display:\s*inline;/u);
+    expect(css).not.toMatch(/\.math-expression\s*\{[^}]*display:\s*inline-flex;/u);
+  });
 });

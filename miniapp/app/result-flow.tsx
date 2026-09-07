@@ -20,7 +20,7 @@ import type {
 
 export type RouteItem = PersonalRouteAction;
 
-function ReviewPrompt({ prompt }: { prompt: string }) {
+function ReviewPrompt({ prompt, subject }: { prompt: string; subject?: string }) {
   // The review shows the task again, so a table has to stay a table here too.
   const blocks = parseQuestionPrompt(prompt);
   const parts: ReactNode[] = [];
@@ -29,7 +29,7 @@ function ReviewPrompt({ prompt }: { prompt: string }) {
     if (!text.length) return;
     parts.push(
       <p className="review-prompt" key={`text-${parts.length}`}>
-        <FormattedStem text={text.join("\n")} />
+        <FormattedStem text={text.join("\n")} subject={subject} />
       </p>,
     );
     text = [];
@@ -37,7 +37,7 @@ function ReviewPrompt({ prompt }: { prompt: string }) {
   for (const block of blocks) {
     if (block.kind === "table") {
       flush();
-      parts.push(<PromptTable key={`table-${parts.length}`} rows={block.rows} />);
+      parts.push(<PromptTable key={`table-${parts.length}`} rows={block.rows} subject={subject} />);
       continue;
     }
     text.push(block.kind === "item" ? `${block.marker}) ${block.text}` : block.text);
@@ -132,6 +132,7 @@ export function ResultScreen({
 
 export function ReviewScreen({
   items,
+  subject,
   index,
   loading = false,
   error = null,
@@ -142,6 +143,7 @@ export function ReviewScreen({
   onForecast,
 }: {
   items: ReviewItem[];
+  subject?: string;
   index: number;
   loading?: boolean;
   error?: string | null;
@@ -223,7 +225,7 @@ export function ReviewScreen({
         {hasApprovedPrimaryScore(item.source) && <PrimaryScoreBadge maxPrimaryScore={item.max_primary_score} earnedPrimaryScore={item.earned_primary_score} />}
       </div>
       <h1 id="review-title">{item.title}</h1>
-      <ReviewPrompt prompt={item.prompt} />
+      <ReviewPrompt prompt={item.prompt} subject={subject} />
       {imagePaths.length > 0 && (
         <div className="review-media">
           {imagePaths.map((path, imageIndex) => (
@@ -236,17 +238,17 @@ export function ReviewScreen({
       <dl className="answer-review">
         <div className="answer-review-user">
           <dt>Ваш ответ</dt>
-          <dd><FormattedMathText text={item.user_answer} /></dd>
+          <dd><FormattedMathText text={item.user_answer} subject={subject} /></dd>
         </div>
         <div className="answer-review-expected">
           <dt>Правильный ответ</dt>
-          <dd><FormattedMathText text={item.expected_answer} /></dd>
+          <dd><FormattedMathText text={item.expected_answer} subject={subject} /></dd>
         </div>
       </dl>
       <section className="guidance" aria-labelledby="guidance-title">
         <span>Как решать</span>
         <h2 id="guidance-title">Разберите ход решения</h2>
-        <p>{item.learning_material_text || item.guidance}</p>
+        <p><FormattedMathText text={item.learning_material_text || item.guidance} subject={subject} /></p>
       </section>
       <button className="primary-button" onClick={isLast ? onForecast : onNext} type="button">
           {isLast ? "Мой план подготовки" : "Следующая ошибка"} <span aria-hidden="true">→</span>

@@ -291,6 +291,44 @@ describe("trainer integration contracts", () => {
     expect(html).not.toContain("А) 2");
   });
 
+  it("uses the trainer subject for chemistry and language math rendering", () => {
+    const chemistryQuestion = {
+      ...question,
+      prompt: "Определите формулу Fe_(2)(SO_(4))_(3).",
+    };
+    const chemistryState = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "chemistry", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [chemistryQuestion], lives_remaining: 5,
+      },
+    });
+    const chemistryHtml = renderToStaticMarkup(<TrainerScreen
+      state={chemistryState}
+      dispatch={() => undefined}
+      header={{ diagnosticId: "chemistry", exam: "ЕГЭ", subject: "Химия", mode: "normal", modeLabel: "Тренировка" }}
+    />);
+    expect(chemistryHtml).toContain("<sub>2</sub>");
+    expect(chemistryHtml).toContain("<sub>4</sub>");
+
+    const languageState = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "russian-language", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [{ ...question, prompt: "В 2022 году К и M: 3A₁₆." }], lives_remaining: 5,
+      },
+    });
+    const languageHtml = renderToStaticMarkup(<TrainerScreen
+      state={languageState}
+      dispatch={() => undefined}
+      header={{ diagnosticId: "russian-language", exam: "ЕГЭ", subject: "Русский язык", mode: "normal", modeLabel: "Тренировка" }}
+    />);
+    expect(languageHtml).not.toContain("math-expression");
+    expect(languageHtml).toContain("3A₁₆");
+  });
+
   it("shows the dedicated no-lives screen with a countdown and a Telegram reminder", () => {
     const state = trainerReducer(trainerInitialState, {
       type: "start",

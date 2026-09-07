@@ -1221,7 +1221,7 @@ select:focus-visible,
 
 .question-title-medium { font-size: 17px; }
 
-.question-title-long { font-size: 15px; font-weight: 650; }
+.question-title-long { font-size: 16px; font-weight: 650; }
 
 .prompt-sentence { display: inline; }
 
@@ -1230,18 +1230,13 @@ select:focus-visible,
 .prompt-sentence-important { color: var(--ink); font-weight: 750; }
 
 .math-expression {
-  display: inline-flex;
-  align-items: baseline;
-  padding: 1px 7px;
-  border-radius: 7px;
-  background: var(--primary-tint);
+  display: inline;
   font-weight: 800;
 }
 
 .math-expression sup { font-size: 0.68em; }
 
 .math-variable {
-  background: color-mix(in srgb, var(--brand-ink) 6%, transparent);
   font-style: italic;
   font-weight: 700;
 }
@@ -1259,7 +1254,6 @@ select:focus-visible,
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.6px;
-  text-transform: uppercase;
 }
 
 .question-instruction {
@@ -1268,7 +1262,7 @@ select:focus-visible,
   border-radius: 12px;
   color: color-mix(in srgb, var(--ink) 84%, var(--brand-primary));
   background: var(--primary-tint);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.45;
 }

@@ -5,10 +5,10 @@ import {
   tokenizeMathText,
 } from "./math-text";
 
-export function FormattedMathText({ text }: { text: string }) {
+export function FormattedMathText({ text, subject }: { text: string; subject?: string }) {
   return (
     <>
-      {tokenizeMathText(text).map((part, partIndex) => (
+      {tokenizeMathText(text, subject).map((part, partIndex) => (
         part.isMath
           ? (
             <span
@@ -18,7 +18,9 @@ export function FormattedMathText({ text }: { text: string }) {
               {mathDisplayParts(part.text).map((displayPart, displayIndex) => (
                 displayPart.isSuperscript
                   ? <sup key={displayIndex}>{displayPart.text}</sup>
-                  : displayPart.text
+                  : displayPart.isSubscript
+                    ? <sub key={displayIndex}>{displayPart.text}</sub>
+                    : displayPart.text
               ))}
             </span>
           )
@@ -28,7 +30,7 @@ export function FormattedMathText({ text }: { text: string }) {
   );
 }
 
-export function FormattedStem({ text }: { text: string }) {
+export function FormattedStem({ text, subject }: { text: string; subject?: string }) {
   return (
     <>
       {splitPromptSentences(text).map((sentence, sentenceIndex) => (
@@ -38,7 +40,7 @@ export function FormattedStem({ text }: { text: string }) {
             : "prompt-sentence"}
           key={`${sentenceIndex}-${sentence}`}
         >
-          <FormattedMathText text={sentence} />
+          <FormattedMathText text={sentence} subject={subject} />
         </span>
       ))}
     </>

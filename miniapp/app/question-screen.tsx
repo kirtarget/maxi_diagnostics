@@ -150,6 +150,7 @@ export function QuestionView({
   const readiness = answerReadiness(question, answer);
   const imagePaths = questionAssetPaths(question);
   const promptBlocks = parseQuestionPrompt(question.prompt);
+  const instructions = promptBlocks.flatMap((block) => block.kind === "instruction" ? [block.text] : []);
   const sequenceMatching = question.type === "input"
     ? parseSequenceMatchingPrompt(question.prompt, question)
     : null;
@@ -226,32 +227,36 @@ export function QuestionView({
             return (
               <Fragment key={blockIndex}>
                 <h1 id="question-title" className={questionTitleClassName(block.text)}>
-                  <FormattedStem text={block.text} />
+                  <FormattedStem text={block.text} subject={subject} />
                 </h1>
                 {questionMedia}
               </Fragment>
             );
           }
           if (block.kind === "heading") {
-            return <h2 className="question-section-title" key={blockIndex}><FormattedMathText text={block.text} /></h2>;
+            return <h2 className="question-section-title" key={blockIndex}><FormattedMathText text={block.text} subject={subject} /></h2>;
           }
           if (block.kind === "item") {
             return (
               <div className="question-list-item" key={blockIndex}>
                 <span>{block.marker}</span>
-                <p><FormattedMathText text={block.text} /></p>
+                <p><FormattedMathText text={block.text} subject={subject} /></p>
               </div>
             );
           }
           if (block.kind === "table") {
-            return <PromptTable key={blockIndex} rows={block.rows} />;
+            return <PromptTable key={blockIndex} rows={block.rows} subject={subject} />;
           }
-          if (block.kind === "instruction") {
-            return <p className="question-instruction" key={blockIndex}><FormattedMathText text={block.text} /></p>;
-          }
-          return <p className="question-paragraph" key={blockIndex}><FormattedMathText text={block.text} /></p>;
+          if (block.kind === "instruction") return null;
+          return <p className="question-paragraph" key={blockIndex}><FormattedMathText text={block.text} subject={subject} /></p>;
         })}
       </div>
+
+      {instructions.length > 0 && instructions.map((instruction, instructionIndex) => (
+        <p className="question-instruction" key={`instruction-${instructionIndex}`}>
+          <FormattedMathText text={instruction} subject={subject} />
+        </p>
+      ))}
 
       {tableGap ? (
         <TableGapAnswer matching={tableGap} onChange={onAnswer} value={typeof answer === "string" ? answer : ""} />
@@ -260,8 +265,10 @@ export function QuestionView({
       ) : (
         <AnswerEditor
           question={question}
+          subject={subject}
           value={answer}
           onChange={onAnswer}
+          suppressAutoHint={instructions.length > 0}
           labels={{
             answer: labels.answer_label,
             placeholder: labels.enter_answer,
