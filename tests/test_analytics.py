@@ -21,6 +21,47 @@ async def test_emit_event_filters_action_and_data_to_strict_allowlists(monkeypat
 
 
 @pytest.mark.asyncio
+async def test_question_skipped_event_never_includes_the_answer(monkeypatch):
+    from diagnostic import analytics
+
+    post = AsyncMock()
+    monkeypatch.setattr(
+        analytics.Settings,
+        "from_env",
+        lambda **_: SimpleNamespace(
+            analytics_webhook_url="https://analytics.example/events"
+        ),
+    )
+    monkeypatch.setattr(analytics, "_post_json", post)
+
+    await analytics.emit_event(
+        "question_skipped",
+        42,
+        {
+            "attempt_id": "attempt_123",
+            "diagnostic_id": "demo-math",
+            "mode": "full",
+            "question_index": 3,
+            "answers": {"q4": "secret"},
+        },
+    )
+
+    post.assert_awaited_once_with(
+        "https://analytics.example/events",
+        {
+            "action": "question_skipped",
+            "data": {
+                "attempt_id": "attempt_123",
+                "diagnostic_id": "demo-math",
+                "mode": "full",
+                "question_index": 3,
+            },
+        },
+        timeout=5,
+    )
+
+
+@pytest.mark.asyncio
 async def test_emit_event_is_noop_without_url_and_swallows_transport_failure(monkeypatch):
     from diagnostic import analytics
 

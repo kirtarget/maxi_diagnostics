@@ -4,6 +4,31 @@ import { describe, expect, it } from "vitest";
 import { ForecastEmptyScreen, ForecastScreen, ResultScreen, ReviewScreen } from "./result-flow";
 
 describe("result flow screens", () => {
+  it("separates skipped answers from incorrect answers", () => {
+    const html = renderToStaticMarkup(
+      <ResultScreen
+        diagnostic={{ exam: "ЕГЭ", subject: "Математика" } as never}
+        pdfStatus="pending"
+        result={{
+          diagnostic_id: "demo-math",
+          mode: "full",
+          score: 1,
+          max_score: 18,
+          score_unit: "балл",
+          correct_count: 1,
+          skipped_count: 3,
+          question_count: 18,
+          strong_topics: [],
+          growth_topics: [],
+        }}
+        onReview={() => undefined}
+        onForecast={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("1 верно · 14 неверно · 3 пропущено");
+  });
+
   it("renders the persisted answers and honest fallback label", () => {
     const html = renderToStaticMarkup(
       <ReviewScreen
@@ -15,6 +40,7 @@ describe("result flow screens", () => {
           title: "Задание 1",
           prompt: "Условие",
           is_correct: false,
+          status: "incorrect",
           user_answer: "12",
           expected_answer: "16",
           guidance: "Решайте по шагам.",
@@ -54,7 +80,8 @@ describe("result flow screens", () => {
           title: "Задание 8",
           prompt: "Решите уравнение x^(2) + 4x − 5 = 0. Укажите больший корень.",
           is_correct: false,
-          user_answer: "−5",
+          status: "skipped",
+          user_answer: "Ты пропустил задание",
           expected_answer: "1",
           guidance: "По теореме Виета корни: 1 и −5.",
           guidance_kind: "fallback",
@@ -68,6 +95,8 @@ describe("result flow screens", () => {
     expect(html).toContain("math-expression");
     expect(html).toContain("<sup>2</sup>");
     expect(html).not.toContain("x^(2)");
+    expect(html).toContain("Пропущено");
+    expect(html).not.toContain(">Неверно<");
   });
 
   it("renders only the provided forecast points", () => {

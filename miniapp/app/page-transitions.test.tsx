@@ -50,6 +50,7 @@ const serverResult: ServerResult = {
   mode: "full",
   question_count: 1,
   correct_count: 0,
+  skipped_count: 0,
   score: 0,
   max_score: 1,
   score_unit: "балл",
@@ -110,6 +111,7 @@ type Routes = Record<string, () => Promise<unknown>>;
 
 let routes: Routes;
 let requestedPaths: string[];
+let requestedBodies: Array<{ path: string; body: unknown }>;
 let root: Root | null = null;
 let container: HTMLElement;
 
@@ -159,9 +161,13 @@ beforeEach(() => {
   };
   routes = {};
   requestedPaths = [];
-  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+  requestedBodies = [];
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = String(input);
     requestedPaths.push(path);
+    if (typeof init?.body === "string") {
+      requestedBodies.push({ path, body: JSON.parse(init.body) });
+    }
     const handler = routes[path];
     return jsonResponse(handler ? await handler() : { ok: true });
   }));
@@ -329,6 +335,7 @@ describe("Home screen transitions", () => {
         title: "Задание 1",
         prompt: "Выберите ответ",
         is_correct: false,
+        status: "incorrect",
         user_answer: "A",
         expected_answer: "B",
         guidance: "Повтори тему.",
@@ -362,6 +369,67 @@ describe("Home screen transitions", () => {
     await settle();
     expect(screenClasses()).toContain("review-screen");
     expect(container.textContent).toContain("Повтори тему.");
+  });
+
+  it("submits the canonical empty marker when the last question is skipped", async () => {
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      progress_profile: { completion_count: 1, achievement_keys: [] },
+    }));
+    route("/api/diagnostics/catalog", { diagnostic });
+    const completion = deferred<unknown>();
+    routes["/api/diagnostics/session/complete"] = () => completion.promise;
+
+    await mountHome();
+    await clickAndSettle(".gameplay-home-cta");
+    await clickAndSettle(".mode-card.featured");
+    await clickAndSettle(".subject-card");
+    await settle();
+
+    expect(container.textContent).toContain("Не знаю, получить результат");
+    await clickAndSettle(".question-skip");
+    expect(screenClasses()).toContain("submit-screen");
+    expect(requestedBodies.find(({ path }) => path === "/api/diagnostics/session/complete")?.body).toMatchObject({
+      question_count: 1,
+      answers: { q1: "" },
+    });
+  });
+
+  it("lets the user replace a skipped answer after going back", async () => {
+    const secondQuestion = { ...diagnostic.questions[0], id: "q2", title: "Задание 2" };
+    const twoQuestionDiagnostic: PublicDiagnostic = {
+      ...diagnostic,
+      quick_count: 2,
+      full_count: 2,
+      question_count: 2,
+      questions: [diagnostic.questions[0], secondQuestion],
+    };
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      diagnostics: [twoQuestionDiagnostic],
+      progress_profile: { completion_count: 1, achievement_keys: [] },
+    }));
+    route("/api/diagnostics/catalog", { diagnostic: twoQuestionDiagnostic });
+    const completion = deferred<unknown>();
+    routes["/api/diagnostics/session/complete"] = () => completion.promise;
+
+    await mountHome();
+    await clickAndSettle(".gameplay-home-cta");
+    await clickAndSettle(".mode-card.featured");
+    await clickAndSettle(".subject-card");
+    await settle();
+
+    await clickAndSettle(".question-skip");
+    await clickAndSettle(".back-button");
+    expect(container.textContent).toContain("Задание пропущено");
+
+    await clickAndSettle(".answer-option");
+    expect(container.textContent).not.toContain("Задание пропущено");
+    await clickAndSettle(".question-next");
+    await clickAndSettle(".question-skip");
+
+    expect(requestedBodies.find(({ path }) => path === "/api/diagnostics/session/complete")?.body).toMatchObject({
+      question_count: 2,
+      answers: { q1: "a", q2: "" },
+    });
   });
 
   it("moves from home into the trainer", async () => {

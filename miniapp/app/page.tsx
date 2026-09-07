@@ -18,6 +18,7 @@ import { LeagueScreen } from "./league-screen";
 import { useBootstrap } from "./use-bootstrap";
 import { useDiagnosticSession } from "./use-diagnostic-session";
 import { useTrainer } from "./use-trainer";
+import { isEmptyAnswer } from "./answer-values";
 import type { Brand, Screen } from "./types";
 
 type DisplayBrand = Pick<Brand, "name" | "short_name" | "logo"> & {
@@ -299,9 +300,17 @@ export default function Home() {
             answer={questions[questionIndex].type === "input" || questions[questionIndex].type === "text"
               ? inputDrafts[questions[questionIndex].id] ?? answers[questions[questionIndex].id]
               : answers[questions[questionIndex].id]}
+            skipped={Object.hasOwn(answers, questions[questionIndex].id)
+              && isEmptyAnswer(questions[questionIndex], answers[questions[questionIndex].id])}
+            skippedIndexes={questions.flatMap((question, questionIndex) => (
+              Object.hasOwn(answers, question.id) && isEmptyAnswer(question, answers[question.id])
+                ? [questionIndex]
+                : []
+            ))}
             onAnswer={session.actions.answerQuestion}
             onBack={session.actions.previousQuestion}
             onNext={session.actions.nextQuestion}
+            onSkip={session.actions.skipQuestion}
             labels={brand!.interface}
           />
         </>

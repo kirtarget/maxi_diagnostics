@@ -4,7 +4,7 @@ import pytest
 
 from diagnostic.catalog import load_catalog
 from diagnostic.school import SCORE_SCALES_ADAPTER, load_school
-from diagnostic.scoring import score_answers
+from diagnostic.scoring import is_answer_correct, score_answers
 
 SAMPLE_SCHOOL = Path(__file__).resolve().parents[1] / "tests/fixtures/sample-school"
 
@@ -31,6 +31,28 @@ def test_server_scores_all_question_types():
     assert result.score == 100
     assert result.primary_score == 5
     assert result.max_primary_score == 5
+
+
+def test_server_counts_canonical_skips_as_incorrect():
+    result = score_answers(
+        sample_catalog(),
+        "demo-math",
+        "full",
+        {"q1": "", "q2": [], "q3": {}, "q4": "", "q5": ""},
+    )
+
+    assert result.correct_count == 0
+    assert result.skipped_count == 5
+    assert result.question_count == 5
+    assert result.score == 0
+
+
+def test_every_canonical_skip_is_an_incorrect_answer():
+    questions = sample_catalog().get("demo-math").questions
+    skipped_answers = ("", [], {}, "", "")
+
+    for question, answer in zip(questions, skipped_answers, strict=True):
+        assert not is_answer_correct(question, answer)
 
 
 def test_server_weights_accuracy_by_primary_score():

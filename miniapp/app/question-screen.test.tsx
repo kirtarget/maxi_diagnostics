@@ -49,24 +49,24 @@ const tableGapQuestion: Question = {
 
 describe("QuestionView", () => {
   it.each([
-    ["single", { ...question, type: "single", options: [{ id: "a", label: "А" }] } as Question, undefined, "a"],
+    ["single", { ...question, type: "single", options: [{ id: "a", label: "А" }] } as Question, undefined, "a", "Выбери вариант"],
     ["multiple", {
       ...question,
       type: "multiple",
       options: [{ id: "a", label: "А" }, { id: "b", label: "Б" }],
       selection_limit: 2,
-    } as Question, ["a"], ["a", "b"]],
+    } as Question, ["a"], ["a", "b"], "Выбрано 1 из 2"],
     ["matching", {
       ...question,
       type: "matching",
       items: [{ id: "a", label: "А" }, { id: "b", label: "Б" }],
       options: [{ id: "1", label: "Один" }, { id: "2", label: "Два" }],
-    } as Question, { a: "1" }, { a: "1", b: "2" }],
-    ["input", question, "не число", "12"],
-    ["input sequence", sequenceQuestion, "1", "12"],
-    ["input table gap", tableGapQuestion, "1", "12"],
-    ["text", { ...question, type: "text", max_length: 40 } as Question, "   ", "но"],
-  ])("enables the next action only for a complete %s answer", (_type, currentQuestion, incomplete, complete) => {
+    } as Question, { a: "1" }, { a: "1", b: "2" }, "Осталось заполнить: Б"],
+    ["input", question, "не число", "12", "Введи число"],
+    ["input sequence", sequenceQuestion, "1", "12", "Заполнено 1 из 2"],
+    ["input table gap", tableGapQuestion, "1", "12", "Осталось заполнить: Б"],
+    ["text", { ...question, type: "text", max_length: 40 } as Question, "   ", "но", "Введи ответ"],
+  ])("enables the next action only for a complete %s answer", (_type, currentQuestion, incomplete, complete, reason) => {
     const renderQuestion = (answer: AnswerValue | undefined) => renderToStaticMarkup(
       <QuestionView
         question={currentQuestion}
@@ -90,8 +90,42 @@ describe("QuestionView", () => {
       />,
     );
 
-    expect(renderQuestion(incomplete)).toMatch(/class="primary-button question-next" disabled=""/);
-    expect(renderQuestion(complete)).not.toMatch(/class="primary-button question-next" disabled=""/);
+    const incompleteHtml = renderQuestion(incomplete);
+    const completeHtml = renderQuestion(complete);
+
+    expect(incompleteHtml).toMatch(/class="primary-button question-next" disabled=""/);
+    expect(incompleteHtml).toContain('role="status"');
+    expect(incompleteHtml).toContain(reason);
+    expect(completeHtml).not.toMatch(/class="primary-button question-next" disabled=""/);
+    expect(completeHtml).not.toContain('class="question-next-status"');
+  });
+
+  it("keeps the next action in a dedicated sticky bar", () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        question={question}
+        index={0}
+        total={3}
+        answer={undefined}
+        labels={{
+          back: "Назад",
+          task_label: "Задание",
+          of_label: "из",
+          illustration_alt: "Иллюстрация к заданию",
+          next_question: "Следующее задание",
+          get_result: "Получить результат",
+          answer_label: "Ваш ответ",
+          enter_answer: "Введите ответ",
+          choose_option: "Выберите вариант",
+        } as unknown as Brand["interface"]}
+        onAnswer={() => undefined}
+        onBack={() => undefined}
+        onNext={() => undefined}
+      />,
+    );
+
+    expect(html).toContain('class="question-action-bar"');
+    expect(html).toContain('class="question-save-state"');
   });
 
   it("accepts either a word or digits as a valid text answer", () => {
@@ -125,6 +159,53 @@ describe("QuestionView", () => {
     expect(renderAnswer("   ")).toContain('disabled=""');
   });
 
+  it("offers an explicit skip action and explains a restored skip marker", () => {
+    const available = renderToStaticMarkup(
+      <QuestionView
+        question={question}
+        index={0}
+        total={3}
+        answer={undefined}
+        skipped={false}
+        labels={{
+          back: "Назад", task_label: "Задание", of_label: "из",
+          illustration_alt: "Иллюстрация", next_question: "Следующее задание",
+          get_result: "Получить результат", answer_label: "Ваш ответ",
+          enter_answer: "Введите ответ", choose_option: "Выберите вариант",
+        } as unknown as Brand["interface"]}
+        onAnswer={() => undefined}
+        onBack={() => undefined}
+        onNext={() => undefined}
+        onSkip={() => undefined}
+      />,
+    );
+    const skipped = renderToStaticMarkup(
+      <QuestionView
+        question={question}
+        index={0}
+        total={3}
+        answer="черновик"
+        skipped
+        labels={{
+          back: "Назад", task_label: "Задание", of_label: "из",
+          illustration_alt: "Иллюстрация", next_question: "Следующее задание",
+          get_result: "Получить результат", answer_label: "Ваш ответ",
+          enter_answer: "Введите ответ", choose_option: "Выберите вариант",
+        } as unknown as Brand["interface"]}
+        onAnswer={() => undefined}
+        onBack={() => undefined}
+        onNext={() => undefined}
+        onSkip={() => undefined}
+      />,
+    );
+
+    expect(available).toContain('class="question-skip"');
+    expect(available).toContain("Не знаю, дальше");
+    expect(skipped).not.toContain('class="question-skip"');
+    expect(skipped).toContain("Задание пропущено. Можно вернуться и ответить позже.");
+    expect(skipped).not.toMatch(/class="primary-button question-next" disabled=""/);
+  });
+
   it("builds game-like progress from the server-owned question position", () => {
     expect(questionProgress(1, 4)).toEqual({
       current: 2,
@@ -139,6 +220,7 @@ describe("QuestionView", () => {
         index={1}
         total={4}
         answer={undefined}
+        skippedIndexes={[0]}
         labels={{
           back: "Назад",
           task_label: "Задание",
@@ -158,6 +240,7 @@ describe("QuestionView", () => {
     expect(html).toContain('aria-valuetext="Задание 2 из 4. Набираем темп"');
     expect(html.match(/class="question-progress-node(?: |\")/g)).toHaveLength(4);
     expect(html).toContain("question-progress-node is-current");
+    expect(html).toContain("question-progress-node is-complete is-skipped");
     expect(html).toContain("Набираем темп");
   });
 

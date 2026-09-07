@@ -302,6 +302,107 @@ def test_completion_requires_complete_answer_shapes(monkeypatch, question_id, an
     assert response.json()["detail"] == "invalid_answer_value"
 
 
+def test_progress_accepts_canonical_skips_without_emitting_completion_events(monkeypatch):
+    from diagnostic.api import sessions
+
+    async def upsert_progress(progress):
+        return {
+            "attempt_id": progress.attempt_id,
+            "diagnostic_id": progress.diagnostic_id,
+            "content_version": progress.content_version,
+            "exam": progress.exam,
+            "subject": progress.subject,
+            "mode": progress.mode,
+            "status": "in_progress",
+            "question_index": progress.question_index,
+            "question_count": progress.question_count,
+            "progress_revision": progress.progress_revision,
+            "answers": progress.answers,
+            "started_transition": False,
+        }
+
+    emitted = AsyncMock()
+    monkeypatch.setattr(sessions, "emit_event", emitted)
+    client = make_client(monkeypatch, upsert_progress=upsert_progress)
+    body = full_completion() | {
+        "question_index": 0,
+        "answers": {"q1": "", "q2": [], "q3": {}, "q4": "", "q5": ""},
+    }
+
+    response = client.post("/api/diagnostics/session/progress", json=body)
+
+    assert response.status_code == 200
+    emitted.assert_not_awaited()
+
+
+def test_completion_counts_skips_and_separates_funnel_events(monkeypatch):
+    from diagnostic.api import sessions
+
+    stored = {}
+
+    async def complete_attempt(completion):
+        stored["completion"] = completion
+        return {
+            "attempt_id": completion.attempt_id,
+            "diagnostic_id": completion.diagnostic_id,
+            "content_version": completion.content_version,
+            "mode": completion.mode,
+            "status": "completed",
+            "question_count": completion.question_count,
+            "correct_count": completion.correct_count,
+            "result_snapshot": completion.result_snapshot,
+            "pdf_status": "pending",
+            "completed_transition": True,
+            "started_transition": False,
+        }
+
+    emitted = AsyncMock()
+    recorded = AsyncMock()
+    monkeypatch.setattr(sessions, "emit_event", emitted)
+    monkeypatch.setattr(sessions.funnel, "record_event", recorded)
+    client = make_client(monkeypatch, complete_attempt=complete_attempt)
+    body = full_completion()
+    body["answers"] = {"q1": "", "q2": [], "q3": {}, "q4": "", "q5": ""}
+
+    response = client.post("/api/diagnostics/session/complete", json=body)
+
+    assert response.status_code == 200
+    assert response.json()["result"]["skipped_count"] == 5
+    assert stored["completion"].result_snapshot["skipped_count"] == 5
+    actions = [call.args[0] for call in emitted.await_args_list]
+    assert actions.count("question_skipped") == 5
+    assert actions.count("diagnostic_completed") == 1
+    for call in emitted.await_args_list:
+        if call.args[0] == "question_skipped":
+            assert "answers" not in call.args[2]
+    skip_calls = [
+        call for call in recorded.await_args_list
+        if call.kwargs["action"] == "question_skipped"
+    ]
+    assert len(skip_calls) == 5
+    skip_keys = [call.kwargs["dedupe_key"] for call in skip_calls]
+    assert len(set(skip_keys)) == 5
+    assert set(skip_keys) == {
+        f"diagnostic/{body['attempt_id']}/question_skipped/{question_id}"
+        for question_id in body["answers"]
+    }
+    assert all("answers" not in call.kwargs for call in skip_calls)
+    assert sum(
+        call.kwargs["action"] == "completed"
+        for call in recorded.await_args_list
+    ) == 1
+
+
+def test_legacy_result_defaults_skipped_count_to_zero():
+    from diagnostic.api.sessions import serialize_result
+
+    result = serialize_result(
+        {"result_snapshot": {"score": 50, "correct_count": 1}}, None
+    )
+
+    assert result["skipped_count"] == 0
+
+
 def test_progress_maps_per_user_limit_to_429(monkeypatch):
     async def upsert_progress(_):
         raise ValueError("diagnostic_rate_limited")

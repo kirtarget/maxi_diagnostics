@@ -35,6 +35,23 @@ def test_review_snapshot_formats_every_question_type():
     assert all(item["is_correct"] is False for item in snapshot)
 
 
+def test_review_snapshot_labels_every_canonical_skip():
+    questions = load_catalog(load_school(SAMPLE_SCHOOL)).get("demo-math").questions
+    snapshot = build_review_snapshot(
+        questions,
+        {"q1": "", "q2": [], "q3": {}, "q4": "", "q5": ""},
+    )
+
+    assert all(item["user_answer"] == "Ты пропустил задание" for item in snapshot)
+    assert all(item["is_correct"] is False for item in snapshot)
+    assert all(item["status"] == "skipped" for item in snapshot)
+    assert all(item["expected_answer"] != "Ты пропустил задание" for item in snapshot)
+    assert all(
+        item["user_answer"] == "Ты пропустил задание"
+        for item in public_review_items({"review_snapshot": snapshot}) or []
+    )
+
+
 def test_individual_explanation_wins_and_public_review_drops_raw_values():
     catalog = load_catalog(load_school(SAMPLE_SCHOOL))
     questions = catalog.get("demo-math").questions
@@ -157,6 +174,8 @@ def test_public_review_never_exposes_unanswered_as_the_expected_answer():
         }
     )
 
-    assert public == [
-        {"question_id": "q1", "expected_answer": "Эталонный ответ не сохранён"}
-    ]
+    assert public == [{
+        "question_id": "q1",
+        "expected_answer": "Эталонный ответ не сохранён",
+        "status": "incorrect",
+    }]

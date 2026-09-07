@@ -39,6 +39,28 @@ def test_funnel_event_schema_stores_no_identifier_or_payload():
     assert "idx_diagnostic_funnel_events_day_action" in funnel_ddl
 
 
+def test_funnel_action_constraints_cover_fresh_and_kir_221_schemas():
+    from diagnostic.db.funnel import FUNNEL_ACTIONS
+
+    initial_start = DDL.index("CONSTRAINT diagnostic_funnel_events_action_check")
+    initial_end = DDL.index(
+        "CONSTRAINT diagnostic_funnel_events_exam_length", initial_start
+    )
+    initial_constraint = DDL[initial_start:initial_end]
+
+    migration_start = DDL.index(
+        "version='2026-09-07-kir-221-question-skipped'"
+    )
+    migration_end = DDL.index(
+        "INSERT INTO diagnostic_schema_migrations", migration_start
+    )
+    migration_constraint = DDL[migration_start:migration_end]
+
+    for action in FUNNEL_ACTIONS:
+        assert f"'{action}'" in initial_constraint
+        assert f"'{action}'" in migration_constraint
+
+
 def test_daily_plan_schema_is_idempotent_and_bounded():
     start = DDL.index("CREATE TABLE IF NOT EXISTS diagnostic_daily_plans")
     end = DDL.index("idx_diagnostic_daily_plans_date")

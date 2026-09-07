@@ -100,6 +100,8 @@ async def test_funnel_counts_unique_subjects_per_step_and_return_windows():
             (subject(1), "opened", None, None, days_ago(3)),
             (subject(1), "started", "oge", "Математика", days_ago(3)),
             (subject(1), "completed", "oge", "Математика", days_ago(3)),
+            (subject(1), "question_skipped", "oge", "Математика", days_ago(3)),
+            (subject(1), "question_skipped", "oge", "Математика", days_ago(3)),
             (subject(1), "result_viewed", "oge", "Математика", days_ago(2)),
             (subject(1), "trainer_answered", "oge", "Математика", days_ago(2)),
             (subject(2), "opened", None, None, days_ago(6)),
@@ -118,6 +120,7 @@ async def test_funnel_counts_unique_subjects_per_step_and_return_windows():
         "started": 2,
         "completed": 1,
         "result_viewed": 1,
+        "question_skipped": 2,
         "trainer_answered": 1,
         "offer_clicked": 1,
         "returned_d1": 1,
@@ -169,10 +172,12 @@ async def test_funnel_breakdown_and_filters_stay_inside_the_window():
         {
             "exam": "ege", "subject": "Физика", "started": 1, "completed": 0,
             "result_viewed": 0, "trainer_answered": 0,
+            "question_skipped": 0,
         },
         {
             "exam": "oge", "subject": "Математика", "started": 2, "completed": 1,
             "result_viewed": 0, "trainer_answered": 0,
+            "question_skipped": 0,
         },
     ]
     assert filtered["exam"] == "ege"

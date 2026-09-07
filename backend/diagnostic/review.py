@@ -8,6 +8,7 @@ from typing import Any
 
 from diagnostic.catalog import (
     InputQuestion,
+    is_skipped_answer,
     MatchingQuestion,
     MultipleQuestion,
     Question,
@@ -28,6 +29,7 @@ _PUBLIC_REVIEW_FIELDS = frozenset(
         "asset",
         "assets",
         "is_correct",
+        "status",
         "max_primary_score",
         "earned_primary_score",
         "source",
@@ -84,6 +86,7 @@ def build_review_snapshot(
         expected_answer = format_answer(question, answer_value)
         individual_guidance = question.explanation
         is_correct = is_answer_correct(question, user_value)
+        skipped = is_skipped_answer(question, user_value)
         assets = getattr(question, "assets", None)
         snapshot.append(
             {
@@ -104,6 +107,7 @@ def build_review_snapshot(
                     for item in getattr(question, "items", ())
                 ],
                 "is_correct": is_correct,
+                "status": "skipped" if skipped else "correct" if is_correct else "incorrect",
                 "max_primary_score": question.max_primary_score,
                 "earned_primary_score": question.max_primary_score if is_correct else 0,
                 "source": (
@@ -113,7 +117,11 @@ def build_review_snapshot(
                 ),
                 "user_value": user_value,
                 "expected_value": answer_value,
-                "user_answer": format_answer(question, user_value),
+                "user_answer": (
+                    "Ты пропустил задание"
+                    if skipped
+                    else format_answer(question, user_value)
+                ),
                 "expected_answer": expected_answer,
                 "guidance": individual_guidance
                 or fallback_guidance(question, expected_answer),
@@ -136,6 +144,9 @@ def public_review_items(report_snapshot: Mapping[str, Any]) -> list[dict[str, An
         public_item = {
             key: value for key, value in item.items() if key in _PUBLIC_REVIEW_FIELDS
         }
+        public_item.setdefault(
+            "status", "correct" if public_item.get("is_correct") else "incorrect"
+        )
         if (
             public_item.get("expected_answer") == "Не отвечено"
             and not item.get("expected_value")

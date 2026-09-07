@@ -18,6 +18,7 @@ import type {
 import type { OfferPlacement } from "./offer-ux";
 import { parseLeagueResponse, type LeagueResponse } from "./league-model";
 import {
+  isEmptyAnswer,
   isValidNumericInput,
   isValidTextInput,
   updateMatchingAnswer,
@@ -509,6 +510,7 @@ function isValidAnswer(
   question: PublicDiagnostic["questions"][number],
   answer: unknown,
 ): boolean {
+  if (isEmptyAnswer(question, answer)) return true;
   if (question.type === "single") {
     return typeof answer === "string" && question.options.some((option) => option.id === answer);
   }

@@ -1,4 +1,53 @@
-import type { AnswerMap } from "./types";
+import type { AnswerMap, AnswerValue, Question } from "./types";
+
+export function emptyAnswerFor(question: Question): AnswerValue {
+  switch (question.type) {
+    case "single":
+    case "input":
+    case "text":
+      return "";
+    case "multiple":
+      return [];
+    case "matching":
+      return {};
+    default: {
+      const exhaustiveQuestion: never = question;
+      return exhaustiveQuestion;
+    }
+  }
+}
+
+export function isEmptyAnswer(question: Question, answer: unknown): boolean {
+  switch (question.type) {
+    case "single":
+    case "input":
+    case "text":
+      return answer === "";
+    case "multiple":
+      return Array.isArray(answer) && answer.length === 0;
+    case "matching":
+      return typeof answer === "object"
+        && answer !== null
+        && !Array.isArray(answer)
+        && Object.keys(answer).length === 0;
+    default: {
+      const exhaustiveQuestion: never = question;
+      return exhaustiveQuestion;
+    }
+  }
+}
+
+export function updateAnswerFromEditor(
+  current: AnswerMap, question: Question, value: AnswerValue,
+): AnswerMap {
+  const next = { ...current };
+  if (isEmptyAnswer(question, value)) {
+    delete next[question.id];
+  } else {
+    next[question.id] = value;
+  }
+  return next;
+}
 
 export function isValidNumericInput(value: unknown): value is string {
   if (typeof value !== "string" || value.length < 1 || value.length > 64 || value !== value.trim()) {
@@ -50,6 +99,7 @@ export function updateNumericInputAnswer(
   current: AnswerMap, questionId: string, draft: string,
 ): AnswerMap {
   if (isValidNumericInput(draft)) return { ...current, [questionId]: draft };
+  if (Object.hasOwn(current, questionId) && current[questionId] === "") return current;
   const next = { ...current };
   delete next[questionId];
   return next;
@@ -59,6 +109,7 @@ export function updateTextInputAnswer(
   current: AnswerMap, questionId: string, draft: string, maxLength?: number,
 ): AnswerMap {
   if (isValidTextInput(draft, maxLength)) return { ...current, [questionId]: draft };
+  if (Object.hasOwn(current, questionId) && current[questionId] === "") return current;
   const next = { ...current };
   delete next[questionId];
   return next;

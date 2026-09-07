@@ -545,7 +545,12 @@ CREATE TABLE IF NOT EXISTS diagnostic_funnel_events (
     CONSTRAINT diagnostic_funnel_events_action_check
         CHECK (action IN (
             'opened', 'started', 'completed', 'result_viewed',
-            'trainer_answered', 'offer_clicked'
+            'question_skipped', 'trainer_answered', 'offer_clicked',
+            'registration_started', 'registration_completed', 'onboarding_started',
+            'onboarding_completed', 'diagnostic_started', 'question_answered',
+            'diagnostic_abandoned', 'diagnostic_completed', 'daily_started',
+            'daily_completed', 'life_lost', 'streak_updated', 'notification_sent',
+            'notification_opened', 'user_returned'
         )),
     CONSTRAINT diagnostic_funnel_events_exam_length
         CHECK (exam IS NULL OR length(exam) BETWEEN 1 AND 32),
@@ -576,6 +581,30 @@ ALTER TABLE diagnostic_funnel_events ADD CONSTRAINT diagnostic_funnel_events_act
     ));
 INSERT INTO diagnostic_schema_migrations(version) VALUES ('2026-09-06-mvp-product-events');
 END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM diagnostic_schema_migrations
+         WHERE version='2026-09-07-kir-221-question-skipped'
+    ) THEN
+        ALTER TABLE diagnostic_funnel_events
+            DROP CONSTRAINT IF EXISTS diagnostic_funnel_events_action_check;
+        ALTER TABLE diagnostic_funnel_events
+            ADD CONSTRAINT diagnostic_funnel_events_action_check
+            CHECK (action IN (
+                'opened', 'started', 'completed', 'result_viewed',
+                'question_skipped', 'trainer_answered', 'offer_clicked',
+                'registration_started', 'registration_completed', 'onboarding_started',
+                'onboarding_completed', 'diagnostic_started', 'question_answered',
+                'diagnostic_abandoned', 'diagnostic_completed', 'daily_started',
+                'daily_completed', 'life_lost', 'streak_updated', 'notification_sent',
+                'notification_opened', 'user_returned'
+            ));
+        INSERT INTO diagnostic_schema_migrations(version)
+        VALUES ('2026-09-07-kir-221-question-skipped');
+    END IF;
 END $$;
 
 DO $$
