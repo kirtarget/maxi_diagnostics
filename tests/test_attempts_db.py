@@ -451,15 +451,12 @@ async def test_claims_transition_pending_work_to_sending_once():
 
 
 @pytest.mark.asyncio
-async def test_first_pdf_claim_can_store_document_without_waiting_for_stale_reclaim():
+async def test_the_first_delivery_claim_strips_the_answers_it_no_longer_needs():
     attempt_id = f"attempt-{uuid4()}"
     await attempts.complete_attempt(completion(attempt_id, answers={"q1": "A"}))
     claimed = await attempts.claim_pending_delivery(attempt_id)
 
     assert claimed is not None
-    assert await attempts.store_pdf_document(
-        attempt_id, claimed["pdf_locked_at"], b"%PDF-first-claim"
-    ) is True
 
     pool = await get_pool()
     async with pool.acquire() as connection:
@@ -467,7 +464,8 @@ async def test_first_pdf_claim_can_store_document_without_waiting_for_stale_recl
             "SELECT pdf_document, answers, report_snapshot FROM diagnostic_attempts WHERE attempt_id=$1",
             attempt_id,
         )
-    assert stored["pdf_document"] == b"%PDF-first-claim"
+    # The column outlives the report it used to hold; nothing writes it now.
+    assert stored["pdf_document"] is None
     assert stored["answers"] == {}
     assert stored["report_snapshot"] == {}
 
@@ -495,7 +493,6 @@ async def test_pdf_cleanup_keeps_only_display_review_for_the_owner():
     ))
     claim = await attempts.claim_pending_delivery(attempt_id)
 
-    assert await attempts.store_pdf_document(attempt_id, claim["pdf_locked_at"], b"%PDF-document") is True
     after_materialization = await attempts.get_review_attempt(attempt_id, 101)
     assert after_materialization["report_snapshot"] == {"review_snapshot": display_review}
     assert await attempts.get_review_attempt(attempt_id, 202) is None
@@ -529,7 +526,7 @@ async def test_final_pdf_abandonment_keeps_only_display_review():
     assert await attempts.mark_delivery_failed(attempt_id, claim["pdf_locked_at"], "delivery failed") is True
     row = await attempts.get_review_attempt(attempt_id, 101)
     assert row["status"] == "completed"
-    assert row["pdf_status"] == "abandoned"
+    assert (await attempts.get_attempt(attempt_id))["pdf_status"] == "abandoned"
     assert row["report_snapshot"] == {"review_snapshot": display_review}
 
 
@@ -756,11 +753,10 @@ async def test_viewing_result_does_not_postpone_a_due_pdf_retry():
 
 
 @pytest.mark.asyncio
-async def test_successful_pdf_delivery_clears_retained_document_bytes():
+async def test_successful_delivery_clears_the_retained_attempt_data():
     attempt_id = f"attempt-{uuid4()}"
     await attempts.complete_attempt(completion(attempt_id, answers={"q1": "A"}))
     claim = await attempts.claim_pending_delivery(attempt_id)
-    await attempts.store_pdf_document(attempt_id, claim["pdf_locked_at"], b"%PDF-document")
     assert await attempts.mark_delivery_sent(attempt_id, claim["pdf_locked_at"], 77) is True
 
     pool = await get_pool()

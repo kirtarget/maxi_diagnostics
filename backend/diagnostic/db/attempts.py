@@ -823,10 +823,15 @@ async def claim_pending_delivery(attempt_id: str | None = None):
             )
             if row is None:
                 return None
+            # The message carries the score line only, so a claimed attempt has no
+            # further use for the submitted answers or the private review. Clearing
+            # them here keeps a failing delivery from holding them for eight tries.
             return await connection.fetchrow(
                 f"""
                 UPDATE diagnostic_attempts
                    SET pdf_status='sending', pdf_locked_at=now(), pdf_attempts=pdf_attempts+1,
+                       answers='{{}}'::jsonb, report_snapshot={_SANITIZED_REVIEW_SNAPSHOT},
+                       pdf_document=NULL, report_assets=NULL, report_asset_bundle_id=NULL,
                        updated_at=now()
                  WHERE attempt_id=$1 RETURNING {_ATTEMPT_PUBLIC_COLUMNS}
                 """,

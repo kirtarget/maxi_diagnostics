@@ -24,7 +24,6 @@ from fastapi.responses import Response
 
 from diagnostic.api.main import create_app
 from diagnostic.catalog import load_catalog
-from diagnostic.db.attempts import store_report_asset_bundle
 from diagnostic.db.core import close_db, init_db
 from diagnostic.school import load_school
 from diagnostic.settings import Settings
@@ -98,9 +97,6 @@ def create_harness() -> FastAPI:
     async def lifespan(app: FastAPI):
         try:
             await init_db(database_url, school)
-            bundles = dict(backend.state.report_asset_bundles.values())
-            for bundle_id, payload in bundles.items():
-                await store_report_asset_bundle(bundle_id, payload)
             async with (
                 httpx.AsyncClient(base_url=FRONTEND, trust_env=False, timeout=30) as frontend,
                 httpx.AsyncClient(
