@@ -345,8 +345,9 @@ def test_the_repository_catalog_holds_only_sharepoint_questions():
             question["id"].startswith(importer.ID_PREFIX)
             for question in document["questions"]
         ), path.name
-        assert 1 <= document["quick_count"] <= 5, path.name
-        assert document["quick_count"] <= len(document["questions"]), path.name
+        # The quick diagnostic asks eight questions, or the whole file when it
+        # holds fewer than eight.
+        assert document["quick_count"] == min(8, len(document["questions"])), path.name
 
 
 def test_reordered_numeric_keys_become_accepted_input_variants():

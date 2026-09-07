@@ -167,7 +167,7 @@ def test_result_carries_no_estimate_without_a_scale():
     assert result.estimate is None
 
 
-def test_three_correct_answers_do_not_imply_a_perfect_exam():
+def test_a_perfect_quick_result_does_not_imply_a_perfect_exam():
     catalog = load_catalog(load_school())
     diagnostic = catalog.get("ege-mathematics-1212")
     questions = diagnostic.questions_for_mode("quick")
@@ -180,7 +180,7 @@ def test_three_correct_answers_do_not_imply_a_perfect_exam():
         },
         load_school().scale_for(diagnostic.exam, diagnostic.subject),
     )
-    assert result.correct_count == result.question_count == 3
+    assert result.correct_count == result.question_count == diagnostic.quick_count
     assert result.accuracy_percent == 100
     assert result.estimate is None
 
