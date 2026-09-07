@@ -125,6 +125,15 @@ SEQUENCE_HINT = "Введите последовательность цифр б
 # A two-column matching table the converter could not read stays in the prompt as
 # `left | right` lines. That is unreadable, so the task is dropped instead.
 FLATTENED_MATCHING = re.compile(r"^\s*(?:[А-ЯЁA-Z][.)]|_{3,})\s.*\|\s*\d[.)]\s", re.MULTILINE)
+# The printed exam tells the student where to write the answer. The Mini App
+# collects it, so those sentences only contradict what is on screen.
+ANSWER_SHEET_SENTENCES = (
+    re.compile(r"(?:\s*и)?\s*запиш\w+\s+в\s+таблиц\w+[^.]*(?:\.|$)", re.IGNORECASE),
+    re.compile(r"\s*в\s+ответе?\s+запиш\w+[^.]*(?:\.|$)", re.IGNORECASE),
+    re.compile(r"\s*запиш\w+\s+в\s+ответе\s+цифры[^.]*(?:\.|$)", re.IGNORECASE),
+    re.compile(r"\s*запиш\w+\s+цифры,\s+под\s+которыми[^.]*(?:\.|$)", re.IGNORECASE),
+)
+UI_COLLECTS_THE_ANSWER = {"single", "multiple", "matching"}
 WORD_FORMATION_HINT = re.compile(r"\|\s*(?P<hint>[A-Z]+(?:\s+[A-Z]+)*)\s*\Z")
 AUXILIARY_WORDS = frozenset(
     {
@@ -635,8 +644,21 @@ def _glued_answer(prompt: str, variants: list[str]) -> bool:
     return False
 
 
+def strip_answer_sheet_instructions(prompt: str) -> str:
+    """Drop the sentences that tell the student where to write the answer."""
+    lines = []
+    for line in prompt.split("\n"):
+        for pattern in ANSWER_SHEET_SENTENCES:
+            line = pattern.sub("", line)
+        line = re.sub(r"\s+", " ", line).strip()
+        if line:
+            lines.append(line)
+    return "\n".join(lines)
+
+
 def _option_label(value: str) -> str | None:
-    cleaned = clean_line(value)
+    # List punctuation reads as a typo once every option is its own control.
+    cleaned = clean_line(value).rstrip(";,").rstrip()
     return cleaned if 1 <= len(cleaned) <= MAX_OPTION_LABEL_CHARS else None
 
 
@@ -649,6 +671,8 @@ def build_question(
     verified_at: str,
 ) -> dict[str, Any] | str:
     prompt = build_prompt(task, skip_tables=kind == "matching")
+    if kind in UI_COLLECTS_THE_ANSWER:
+        prompt = strip_answer_sheet_instructions(prompt)
     if not prompt:
         return "empty_prompt"
     if kind == "input" and payload.get("sequence") and not SEQUENCE_MARKERS.search(prompt):

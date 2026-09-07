@@ -752,3 +752,27 @@ def test_an_unreadable_matching_table_is_skipped_instead_of_flattened():
     )
 
     assert importer._rejection(question, []) == "unreadable_matching"
+
+
+def test_answer_sheet_instructions_leave_the_prompt_the_app_collects():
+    """The Mini App collects the answer, so telling the student where to write it lies."""
+    stripped = importer.strip_answer_sheet_instructions(
+        "Установите соответствие между событиями и годами.\n"
+        "В ответ запишите последовательность цифр, соответствующую буквам АБВ."
+    )
+    assert stripped == "Установите соответствие между событиями и годами."
+
+    # The sentence survives without its full stop in some documents.
+    assert importer.strip_answer_sheet_instructions(
+        "Подберите позицию второго столбца.\nВ ответ запишите последовательность цифр"
+    ) == "Подберите позицию второго столбца."
+
+    # A task that is genuinely about writing a measurement keeps its wording.
+    kept = "Запишите результат измерения напряжения с учётом погрешности."
+    assert importer.strip_answer_sheet_instructions(kept) == kept
+
+
+def test_option_labels_drop_the_list_punctuation_of_their_source():
+    assert importer._option_label("Реформация в Германии;") == "Реформация в Германии"
+    assert importer._option_label("вторая позиция,") == "вторая позиция"
+    assert importer._option_label("обычный вариант") == "обычный вариант"
