@@ -12,6 +12,15 @@ authoring package and must not be presented as approved content. The pre-import
 catalog and the retired authoring workflow are kept for reference in
 `authoring/archive/2026-09-pre-sharepoint/`.
 
+New and reworked tasks are written in the authoring document format described in
+`docs/AUTHORING_TEMPLATE.md`: the task type is named in words and items, options
+and the key sit in their own fields, so nothing has to be inferred from the key
+shape. `scripts/convert_to_authoring_template.py` turns an editorial SharePoint
+document into that format and `scripts/check_authoring_document.py` names every
+task and field that is still wrong. The converted copies of the SharePoint sample
+live in `authoring/sharepoint-authoring/` with a report of what the editor has
+to fill in.
+
 ## Diagnostic file envelope
 
 `school/diagnostics/` contains only regular top-level `.json` files. Filenames use
