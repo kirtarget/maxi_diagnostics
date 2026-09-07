@@ -1,4 +1,5 @@
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -235,9 +236,34 @@ def test_catalog_rejects_multiple_choice_that_cannot_be_answered_correctly():
         Diagnostic.model_validate(data)
 
 
+def test_sequence_hint_alone_keeps_a_numeric_task_numeric():
+    """KIR-239: the editorial footer "Введите последовательность цифр" sits under
+    ordinary numeric tasks too, so it must not turn "200" into a 3-cell sequence."""
+    data = sample_diagnostic_data()["questions"][3] | {
+        "prompt": (
+            "Чему равна удельная теплоёмкость вещества этого тела?\n"
+            "Ответ дайте в Дж/(кг·°С).\n"
+            "Введите последовательность цифр без пробелов."
+        ),
+        "correct": ["200"],
+    }
+
+    question = InputQuestion.model_validate(data)
+
+    assert question.answer_format == "number"
+    assert question.answer_length is None
+    assert is_valid_answer_shape(question, "12", complete=True)
+    assert is_valid_answer_shape(question, "200,0", complete=True)
+
+
 def test_legacy_sequence_input_infers_contract_four_metadata():
     data = sample_diagnostic_data()["questions"][3] | {
-        "prompt": "Введите последовательность цифр без пробелов.",
+        "prompt": (
+            "Установите соответствие между понятиями и определениями.\n"
+            "А) Теплопроводность\nБ) Изохорический процесс\nВ) Адиабатический процесс\n"
+            "1) Явление передачи тепла\n2) Процесс при постоянном объёме\n"
+            "В ответ запишите последовательность цифр, соответствующую буквам АБВ."
+        ),
         "correct": ["211"],
     }
 
@@ -246,7 +272,51 @@ def test_legacy_sequence_input_infers_contract_four_metadata():
     assert question.answer_format == "sequence"
     assert question.answer_length == 3
     assert question.allow_reuse is True
+    assert question.markers == ("А", "Б", "В")
+
+
+def test_ordering_task_infers_a_sequence_from_its_numbered_items():
+    data = sample_diagnostic_data()["questions"][3] | {
+        "prompt": (
+            "Расположите химические элементы\n1) Калий\n2) Алюминий\n3) Литий\n"
+            "в порядке ослабления металлических свойств.\n"
+            "Запишите номера выбранных элементов в соответствующем порядке."
+        ),
+        "correct": ["132"],
+    }
+
+    question = InputQuestion.model_validate(data)
+
+    assert question.answer_format == "sequence"
+    assert question.answer_length == 3
+    assert question.allow_reuse is False
     assert question.markers == ("1", "2", "3")
+
+
+_POSITIONAL_OR_ORDERING = re.compile(
+    r"(?m)^\s*[А-ЯЁA-Z]\s*[).|]|соответству\w+\s+буквам|расположите|установите\s+последовательность"
+    r"|в\s+порядке|укажите\s+(?:все\s+)?цифр|последовательность\s+цифр,\s+соответству"
+    r"|последовательность\s+(?:этап|событ|действ|процесс|реакц|предлож)",
+    re.IGNORECASE,
+)
+
+
+def test_school_catalog_only_marks_sequences_that_read_as_sequences():
+    """Every sequence question in the shipped catalog must name positions or an order,
+    and every correct key must pass the server-side shape check it will be scored with."""
+    catalog = load_catalog(load_school())
+    offenders = []
+    for diagnostic in catalog.diagnostics:
+        for question in diagnostic.questions:
+            if not isinstance(question, InputQuestion):
+                continue
+            for variant in question.correct:
+                assert is_valid_answer_shape(question, variant, complete=True), (
+                    diagnostic.id, question.id, variant
+                )
+            if question.answer_format == "sequence" and not _POSITIONAL_OR_ORDERING.search(question.prompt):
+                offenders.append((diagnostic.id, question.id))
+    assert offenders == []
 
 
 def test_number_input_rejects_sequence_metadata():

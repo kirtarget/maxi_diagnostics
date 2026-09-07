@@ -638,6 +638,14 @@ def _expected_questions(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+class InvalidAnswerValue(HTTPException):
+    """A 422 that names the question so the Mini App can return the student to it."""
+
+    def __init__(self, question_id: str) -> None:
+        super().__init__(status_code=422, detail="invalid_answer_value")
+        self.question_id = question_id
+
+
 def _validate_answer_values(
     catalog: DiagnosticCatalog,
     diagnostic_id: str,
@@ -654,4 +662,4 @@ def _validate_answer_values(
                 question, answers[question.id], complete=complete
             )
         ):
-            raise HTTPException(status_code=422, detail="invalid_answer_value")
+            raise InvalidAnswerValue(question.id)

@@ -17,7 +17,7 @@ from diagnostic.logging_config import configure_logging
 from diagnostic.school import SchoolConfig, load_school
 from diagnostic.settings import Settings
 
-from .sessions import create_router
+from .sessions import InvalidAnswerValue, create_router
 from .league import create_league_router
 from .offer_events import create_offer_events_router
 from .trainer import create_trainer_router
@@ -66,6 +66,13 @@ def create_app(
         return JSONResponse(
             status_code=422,
             content={"detail": "request_invalid", "errors": safe_errors},
+        )
+
+    @app.exception_handler(InvalidAnswerValue)
+    async def invalid_answer_value(_: Request, exc: InvalidAnswerValue) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail, "question_id": exc.question_id},
         )
 
     @app.get("/healthz")

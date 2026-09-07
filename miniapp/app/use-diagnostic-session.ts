@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import {
+  apiErrorDetail,
+  apiErrorQuestionId,
+  bootstrapResumeSummary,
   buildCompletionPayload,
   clearLocalSession,
   completeDiagnostic,
   createAttemptId,
   createProgressSaveQueue,
-  bootstrapResumeSummary,
   isConflictError,
   loadDiagnostic,
   loadReview,
@@ -518,7 +520,19 @@ export function useDiagnosticSession({
         await recoverConflict.current();
         return;
       }
-      setError("Не удалось получить результат. Ответы сохранены — повторите отправку.");
+      const refusedQuestionId = apiErrorDetail(submitError) === "invalid_answer_value"
+        ? apiErrorQuestionId(submitError)
+        : null;
+      const refusedIndex = refusedQuestionId
+        ? questions.findIndex((question) => question.id === refusedQuestionId)
+        : -1;
+      if (refusedIndex >= 0) {
+        setQuestionIndex(refusedIndex);
+        latestQuestionIndex.current = refusedIndex;
+        setError(`Ответ на задание ${refusedIndex + 1} не принят. Проверь его и отправь результат снова.`);
+      } else {
+        setError("Не удалось получить результат. Ответы сохранены — повторите отправку.");
+      }
       setScreen("question");
     }
   };

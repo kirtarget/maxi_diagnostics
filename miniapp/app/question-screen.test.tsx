@@ -64,6 +64,14 @@ describe("QuestionView", () => {
     } as Question, { a: "1" }, { a: "1", b: "2" }, "Осталось заполнить: Б"],
     ["input", question, "не число", "12", "Введи число"],
     ["input sequence", sequenceQuestion, "1", "12", "Заполнено 1 из 2"],
+    ["input sequence by metadata", {
+      ...question,
+      prompt: "Расставьте знаки препинания: укажите цифры, на месте которых должны стоять запятые.",
+      answer_format: "sequence",
+      answer_length: 3,
+      allow_reuse: false,
+      markers: ["1", "2", "3"],
+    } as Question, "12", "134", "Заполнено 2 из 3"],
     ["input table gap", tableGapQuestion, "1", "12", "Осталось заполнить: Б"],
     ["text", { ...question, type: "text", max_length: 40 } as Question, "   ", "но", "Введи ответ"],
   ])("enables the next action only for a complete %s answer", (_type, currentQuestion, incomplete, complete, reason) => {
