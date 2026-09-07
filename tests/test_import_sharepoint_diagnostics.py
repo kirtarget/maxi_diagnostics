@@ -246,6 +246,9 @@ def test_irregular_key_is_skipped_and_explained_in_the_report(imported):
         encoding="utf-8"
     )
     assert SOURCE_NAME in report
+    assert "Импортёр применяет только узкие" in report
+    assert "источника с совпавшим SHA-256" in report
+    assert "без правок" not in report
     assert "| 7 | skipped | - | irregular_key | 0 |" in report
     assert "| 1 | imported | single | - | 0 |" in report
     assert f"| {SOURCE_NAME} | 7 | - | irregular_key |" in report

@@ -20,6 +20,7 @@
       "correct": [
         "2673"
       ],
+      "answer_format": "number",
       "explanation": "Справа от входа расположен спортивный комплекс, ему соответствует цифра 3.\nВ правой части парка, позади университета находится общежитие, ему соответствует цифра 7.\nНапротив спортивного комплекса расположен комбинат питания, ему соответствует цифра 6.\nВ центре территории расположен объект под номером 2, условное обозначение которого соответствует цветнику.",
       "source": {
         "provider": "maximum_editorial",
@@ -42,6 +43,7 @@
       "correct": [
         "27"
       ],
+      "answer_format": "number",
       "explanation": "Количество клеток плана, выложенных плиткой, равно 6 + 6 + 6 + 4 + 2 + 2 + 2 + 2 = 30.\nТак как сторона одной клетки равна 2 м, то площадь одной клетки равна 4 м^(2).\nТогда площадь всех дорожек и площадки равна 30 · 4 = 120 м^(2).\nТротуарная плитка продаётся в упаковках, рассчитанных на 4,5 м^(2), значит для укладки всех дорожек и обеих площадок понадобилось упаковок плитки.",
       "source": {
         "provider": "maximum_editorial",
@@ -64,6 +66,7 @@
       "correct": [
         "11"
       ],
+      "answer_format": "number",
       "explanation": "Площадь территории студенческого городка составляет 13 · 18 = 234 клетки.\nЗдание университета занимает площадь 3 · 8 + 2 = 26 клеток.\nСоставим пропорцию:\nОтвет нужно округлить до целого, поэтому получаем 11%.",
       "source": {
         "provider": "maximum_editorial",
@@ -86,6 +89,7 @@
       "correct": [
         "10"
       ],
+      "answer_format": "number",
       "explanation": "Расстояние от цветника до комбината можно найти как длину гипотенузы прямоугольного треугольника со сторонами 3 клетки и 4 клетки.\nЭто пифагорова тройка 3:4:5, значит гипотенуза составляет 5 клеток.\nТак как сторона клетки равна 2 м, то расстояние между цветником и комбинатом питания равно 10 м.",
       "source": {
         "provider": "maximum_editorial",
@@ -108,6 +112,7 @@
       "correct": [
         "77273"
       ],
+      "answer_format": "number",
       "explanation": "1. Садовый центр «Дарвин»:\nСтоимость 16 кустарников = 16 · 1135 = 18160 рублей.\nСтоимость 23 деревьев = 23 · 2371 = 54533 рубля.\nКоличество упаковок минерального удобрения = (156 · 180) : 4000 = 7,02 ≈ 8.\nСтоимость минерального удобрения = 8 · 485 = 3880 рублей.\nОбщая стоимость: 18160 + 54533 + 3880 + 700 = 77273 рубля.\n2. Садовый центр «Садко»:\nСтоимость 16 кустарников = 16 · 903 = 14 448 рублей.\nСтоимость 23 деревьев = 23 · 2978 = 68494 рубля.\nКоличество упаковок минерального удобрения = (156 · 140) : 4000 = 5,46 ≈ 6.\nСтоимость минерального удобрения = 6 · 544 = 3264 рубля.\nОбщая стоимость: 14448 + 68494 + 3264 = 86206 рублей.\nНаиболее дешёвый вариант — первый, стоимостью 77273 рубля.",
       "source": {
         "provider": "maximum_editorial",
@@ -125,20 +130,22 @@
       "type": "input",
       "topic": "Задание 6",
       "title": "Задание 6",
-      "prompt": "Найдите значение выражения .",
+      "prompt": "Найдите значение выражения.",
       "max_primary_score": 1,
       "correct": [
         "0,25",
         "0.25"
       ],
+      "answer_format": "number",
       "source": {
         "provider": "maximum_editorial",
         "official_year": 2022,
-        "approval_status": "draft",
+        "approval_status": "approved",
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-04"
+        "verified_at": "2026-09-04",
+        "exam_position": "6"
       },
       "asset": "assets/questions/sp-mathematics-oge-2022-q6-1.png"
     },
@@ -190,14 +197,16 @@
       "correct": [
         "13"
       ],
+      "answer_format": "number",
       "source": {
         "provider": "maximum_editorial",
         "official_year": 2022,
-        "approval_status": "draft",
+        "approval_status": "approved",
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-04"
+        "verified_at": "2026-09-04",
+        "exam_position": "8"
       },
       "asset": "assets/questions/sp-mathematics-oge-2022-q8-1.png"
     },
@@ -211,15 +220,17 @@
       "correct": [
         "8"
       ],
+      "answer_format": "number",
       "explanation": "28x – 4 + 5x = 260\n33x = 264\nx = 264 : 33 = 24 : 3 = 8",
       "source": {
         "provider": "maximum_editorial",
         "official_year": 2022,
-        "approval_status": "draft",
+        "approval_status": "approved",
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-04"
+        "verified_at": "2026-09-04",
+        "exam_position": "9"
       },
       "asset": "assets/questions/sp-mathematics-oge-2022-q9-1.png"
     },
@@ -234,6 +245,7 @@
         "0,25",
         "0.25"
       ],
+      "answer_format": "number",
       "explanation": "Всего спортсменов 8 + 1 + 3 = 12, спортсменов из Германии — 3.\nВероятность спортсмена из Германии выступать первым равна 3 : 12 = 1 : 4 = 0,25.",
       "source": {
         "provider": "maximum_editorial",
@@ -255,6 +267,7 @@
       "correct": [
         "312"
       ],
+      "answer_format": "number",
       "explanation": "График под буквой Б убывает, значит перед x стоит отрицательный коэффициент — вариант 1.\nГрафик под буквой А сдвинут вверх, значит свободный коэффициент положителен — вариант 3.\nГрафик под буквой В сдвинут вниз, значит свободный коэффициент отрицателен — вариант 2.",
       "source": {
         "provider": "maximum_editorial",
@@ -277,6 +290,7 @@
       "correct": [
         "540"
       ],
+      "answer_format": "number",
       "explanation": "Подставим заданное значение переменной N в формулу:\nC = 300 + (3,6 – 3) · 400 = 300 + 0,6 · 400 = 300 + 240 = 540 рублей.",
       "source": {
         "provider": "maximum_editorial",
@@ -293,20 +307,22 @@
       "type": "input",
       "topic": "Задание 13",
       "title": "Задание 13",
-      "prompt": "Решите систему неравенств . На каком из рисунков изображено множество её решений?",
+      "prompt": "Решите систему неравенств. На каком из рисунков изображено множество её решений?",
       "max_primary_score": 1,
       "correct": [
         "1"
       ],
-      "explanation": "Решим систему неравенств:",
+      "answer_format": "number",
+      "explanation": "Решим систему неравенств",
       "source": {
         "provider": "maximum_editorial",
         "official_year": 2022,
-        "approval_status": "draft",
+        "approval_status": "approved",
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
         "rights_status": "original",
-        "verified_at": "2026-09-04"
+        "verified_at": "2026-09-04",
+        "exam_position": "13"
       },
       "assets": [
         "assets/questions/sp-mathematics-oge-2022-q13-1.png",
@@ -323,6 +339,7 @@
       "correct": [
         "14"
       ],
+      "answer_format": "number",
       "explanation": "Так как время каждую неделю уменьшалось НА 5 секунд, значит это арифметическая прогрессия.\nПереведем начальное время в секунды: 1,5 минуты равны 90 секундам.\n25 = 90 – 5(n – 1)\n25 = 90 – 5n + 5\n5n = 95 – 25\nn = 70/5 = 14\nТаким образом, через 14 недель Маша сможет получить звание Мастера спорта по плаванию.",
       "source": {
         "provider": "maximum_editorial",
@@ -344,6 +361,7 @@
       "correct": [
         "76"
       ],
+      "answer_format": "number",
       "explanation": "Так как BE и AD — высоты, то углы FEC и FDC равны 90 градусов.\nВ четырехугольнике FECD:\nугол C = 360° – угол FDC – угол FEC – угол EFD = 360° – 90° – 90° – 104° = 76°",
       "source": {
         "provider": "maximum_editorial",
@@ -365,6 +383,7 @@
       "correct": [
         "6"
       ],
+      "answer_format": "number",
       "explanation": "Пусть OM = ON = x.\nПо свойству касательной и секущей, проведенным из одной точки:\n4^(2) = (5 – x)(5 + x)\n16 = 25 – x^(2)\nx^(2) = 9\nx = 3\nMN = 2x = 6.",
       "source": {
         "provider": "maximum_editorial",
@@ -387,6 +406,7 @@
       "correct": [
         "21"
       ],
+      "answer_format": "number",
       "explanation": "Высота CH делит большее основание на два отрезка: AH = BC = 6 и DH.\nВ прямоугольном треугольнике CDH CH : CD = 8 : 17 — это пифагорова тройка 8:15:17, значит DH = 15.\nТогда нижнее основание равно AH + DH = 6 + 15 = 21.",
       "source": {
         "provider": "maximum_editorial",
@@ -408,6 +428,7 @@
       "correct": [
         "5"
       ],
+      "answer_format": "number",
       "explanation": "Расстояние от точки С до середины отрезка АВ можно найти как гипотенузу прямоугольного треугольника с катетами 3 и 4. Это пифагорова тройка 3:4:5, значит расстояние равно 5.",
       "source": {
         "provider": "maximum_editorial",
