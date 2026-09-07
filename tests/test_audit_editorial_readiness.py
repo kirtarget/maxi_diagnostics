@@ -63,6 +63,8 @@ def test_complete_runtime_metadata_becomes_reviewed_but_never_approved(tmp_path:
     for index, question in enumerate(data["questions"], start=1):
         question["max_primary_score"] = 1
         question["explanation"] = "Проверяем каждый шаг решения и получаем указанный ответ."
+        if question["type"] == "input":
+            question["answer_format"] = "number"
         question["source"] = {
             "provider": "maximum",
             "official_year": 2026,

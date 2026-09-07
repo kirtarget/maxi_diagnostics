@@ -101,6 +101,25 @@ def _numbered_run(blocks: list[str]) -> tuple[list[str], list[str]]:
 
 def _write_prompt(document: DocxDocument, blocks: list[str], task: legacy.SourceTask) -> None:
     document.add_paragraph("Условие:")
+    if task.prompt_nodes:
+        for node in task.prompt_nodes:
+            if isinstance(node, legacy.PromptParagraph):
+                text = legacy.strip_answer_sheet_instructions(node.text)
+                if text:
+                    document.add_paragraph(text)
+                for payload in node.images:
+                    try:
+                        document.add_picture(io.BytesIO(payload), width=Cm(12))
+                    except Exception:  # noqa: BLE001 - the editor can replace a figure
+                        document.add_paragraph(_mark("рисунок не удалось перенести"))
+            else:
+                table = node.table
+                columns = max(table.columns, 1)
+                written = document.add_table(rows=len(table.rows), cols=columns)
+                for row, source_row in zip(written.rows, table.rows):
+                    for cell, lines in zip(row.cells, source_row):
+                        cell.text = "\n".join(lines)
+        return
     for block in blocks:
         document.add_paragraph(block)
     for table in task.prompt_tables:
@@ -147,35 +166,51 @@ def convert(source: Path, target: Path) -> dict[str, object]:
             document.add_paragraph(f"Ответ: {_mark(reason)}")
             note(reason)
         elif kind in {"single", "multiple"}:
+            if kind == "single":
+                if not isinstance(payload, legacy.SingleAnswerSpec):
+                    raise TypeError(
+                        f"Unexpected answer spec for single: {type(payload).__name__}"
+                    )
+                indices = payload.indices
+            elif isinstance(payload, legacy.MultipleAnswerSpec):
+                indices = payload.indices
+            else:
+                raise TypeError(f"Unexpected answer spec for {kind}: {type(payload).__name__}")
             document.add_paragraph(f"Тип: {KIND_NAMES[kind]}")
             _write_prompt(document, blocks, task)
             document.add_paragraph("Варианты:")
             for index, label in enumerate(task.options, start=1):
                 document.add_paragraph(f"{index}) {label}")
             document.add_paragraph(
-                "Ответ: " + ", ".join(str(index) for index in payload["indices"])
+                "Ответ: " + ", ".join(str(index) for index in indices)
             )
             counts[KIND_NAMES[kind]] += 1
         elif kind == "matching":
+            if not isinstance(payload, legacy.MatchingAnswerSpec):
+                raise TypeError(f"Unexpected answer spec for matching: {type(payload).__name__}")
             document.add_paragraph(f"Тип: {authoring.MATCHING}")
             _write_prompt(document, blocks, task)
             document.add_paragraph("Пункты:")
-            for index, item in enumerate(payload["items"]):
+            for index, item in enumerate(payload.items):
                 document.add_paragraph(f"{chr(ord('А') + index)}) {legacy.clean_line(item)}")
             document.add_paragraph("Варианты:")
-            for digit, label in payload["options"]:
+            for digit, label in payload.options:
                 document.add_paragraph(f"{digit}) {legacy.clean_line(label)}")
-            document.add_paragraph(f"Ответ: {payload['key']}")
+            document.add_paragraph(f"Ответ: {payload.key}")
             counts[authoring.MATCHING] += 1
         elif kind == "text":
+            if not isinstance(payload, legacy.TextAnswerSpec):
+                raise TypeError(f"Unexpected answer spec for text: {type(payload).__name__}")
             document.add_paragraph(f"Тип: {authoring.SHORT}")
             _write_prompt(document, blocks, task)
             document.add_paragraph("Ответ:")
-            for wording in payload["correct"]:
+            for wording in payload.correct:
                 document.add_paragraph(wording)
             counts[authoring.SHORT] += 1
         else:  # input
-            values = payload["correct"]
+            if not isinstance(payload, legacy.InputAnswerSpec):
+                raise TypeError(f"Unexpected answer spec for input: {type(payload).__name__}")
+            values = payload.correct
             key = values[0]
             if key.isdigit() and len(key) > 1:
                 rest, options = _numbered_run(blocks)

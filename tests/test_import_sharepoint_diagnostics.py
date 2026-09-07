@@ -262,6 +262,29 @@ def test_inline_figure_becomes_a_deduplicated_question_asset(imported):
         assert image.size == (40, 30)
 
 
+def test_table_cell_figure_is_rejected_deterministically(tmp_path):
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    document = Document()
+    _task(document, 14)
+    document.add_paragraph("Определите значение по рисунку.")
+    table = document.add_table(rows=1, cols=1)
+    table.cell(0, 0).paragraphs[0].add_run().add_picture(_png(), width=Inches(1))
+    _answer(document, None, "42")
+    source = source_directory / SOURCE_NAME
+    document.save(source)
+
+    root = tmp_path
+    catalog_path = build_repository(root)
+    importer.main([str(source_directory), "--root", str(root)])
+
+    assert "sp-chemistry-oge-2022-q14" not in _questions(catalog_path)
+    report = (root / "authoring" / "sharepoint-import" / "report.md").read_text(
+        encoding="utf-8"
+    )
+    assert "| 14 | skipped | - | unsupported_table_cell_figure | 0 |" in report
+
+
 def test_existing_questions_keep_their_exact_bytes(imported):
     _, catalog_path, _ = imported
     text = catalog_path.read_text(encoding="utf-8")
@@ -357,8 +380,163 @@ def test_reordered_numeric_keys_become_accepted_input_variants():
     kind, payload = importer.classify(task)
 
     assert kind == "input"
-    assert payload["correct"] == ["1234", "2134", "1243", "2143"]
-    assert payload["sequence"] is True
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.correct == ("1234", "2134", "1243", "2143")
+    assert payload.sequence is True
+
+
+def test_guarded_q05_repair_removes_only_duplicate_marker_from_flattened_prompt():
+    prompt = (
+        "Установите соответствие. 1) Один 2) Два 3) Три 4) Гидроксид "
+        "5) Пять 6) Гидроксид 7) Кислота 8) Восемь 9) Девять"
+    )
+    task = importer.SourceTask(number=5, prompt_blocks=[prompt], answer=["277"])
+    source = importer.SourceFile(
+        Path("chemistry.docx"), "ЕГЭ", "chemistry", 2022, 1, (task,),
+        content_hash=importer.TRUSTED_SOURCE_HASHES["chemistry-ege-2022"],
+    )
+
+    assert importer._drop_guarded_q05_duplicate(task, source)
+    assert "6)" not in task.prompt_blocks[0]
+    assert "7) Кислота" in task.prompt_blocks[0]
+
+    kind, payload = importer.classify(task)
+    question = importer.build_question(source, task, kind, payload, verified_at="2026-09-01")
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.correct == ("277",)
+    assert payload.answer_format == "sequence"
+    assert payload.answer_length == 3
+    assert payload.allow_reuse is True
+    assert payload.markers == ("А", "Б", "В")
+    assert "6)" not in question["prompt"]
+    assert "7) Кислота" in question["prompt"]
+
+
+@pytest.mark.parametrize("content_hash", ["", "changed"])
+def test_q05_repair_does_not_change_untrusted_source(content_hash):
+    prompt = "1) Один 2) Два 3) Три 4) Гидроксид 5) Пять 6) Гидроксид 7) Кислота"
+    task = importer.SourceTask(number=5, prompt_blocks=[prompt], answer=["277"])
+    source = importer.SourceFile(
+        Path("chemistry.docx"), "ЕГЭ", "chemistry", 2022, 1, (task,), content_hash=content_hash
+    )
+
+    assert not importer._drop_guarded_q05_duplicate(task, source)
+    assert task.prompt_blocks == [prompt]
+
+
+def test_q05_table_grid_repair_survives_real_docx_parse(tmp_path):
+    document = Document()
+    _task(document, 5)
+    document.add_paragraph("Установите соответствие между веществами и реагентами.")
+    table = document.add_table(rows=3, cols=3)
+    labels = [
+        "1) Один", "2) Два", "3) Три",
+        "4) Гидроксид", "5) Пять", "6) Гидроксид",
+        "7) Кислота", "8) Восемь", "9) Девять",
+    ]
+    for cell, label in zip((cell for row in table.rows for cell in row.cells), labels):
+        cell.text = label
+    _answer(document, None, "277")
+    source_path = tmp_path / "chemistry-grid.docx"
+    document.save(source_path)
+
+    task = importer.parse_document(source_path)[0]
+    source = importer.SourceFile(
+        source_path, "ЕГЭ", "chemistry", 2022, 28, (task,),
+        content_hash=importer.TRUSTED_SOURCE_HASHES["chemistry-ege-2022"],
+    )
+
+    assert importer._drop_guarded_q05_duplicate(task, source)
+    assert task.prompt_tables[0].rows[1][2] == ()
+    assert task.prompt_tables[0].rows[2][0] == ("7) Кислота",)
+    kind, payload = importer.classify(task)
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "sequence"
+    assert payload.options[5][0] == "7"
+    assert payload.correct == ("277",)
+
+
+def test_score_policy_approves_only_pinned_q05_and_biology_q18():
+    q05_task = importer.SourceTask(number=5, prompt_blocks=["Назовите вещество."], answer=["7"])
+    q05_source = importer.SourceFile(
+        Path("chemistry.docx"), "ЕГЭ", "chemistry", 2022, 1, (q05_task,),
+        content_hash=importer.TRUSTED_SOURCE_HASHES["chemistry-ege-2022"],
+    )
+    _, q05_payload = importer.classify(q05_task)
+    q05 = importer.build_question(q05_source, q05_task, "input", q05_payload, verified_at="2026-09-01")
+    importer._repair_source_question(q05_source, q05_task, q05)
+    assert q05["max_primary_score"] == 1
+    assert q05["source"]["approval_status"] == "approved"
+    assert q05["source"]["exam_position"] == "5"
+
+    biology_source = importer.SourceFile(
+        Path("biology.docx"), "ЕГЭ", "biology", 2022, 1, (),
+        content_hash=importer.TRUSTED_SOURCE_HASHES["biology-ege-2022"],
+    )
+    biology_task = importer.SourceTask(number=18)
+    biology = {
+        "max_primary_score": 1,
+        "source": {
+            "approval_status": "draft",
+        },
+    }
+    importer._repair_source_question(biology_source, biology_task, biology)
+    assert biology["max_primary_score"] == 2
+    assert biology["source"] == {"approval_status": "approved", "exam_position": "18"}
+
+
+def test_oge_math_target_repairs_punctuation_spacing_and_score():
+    source = importer.SourceFile(
+        Path("math.docx"), "ОГЭ", "mathematics", 2022, 19, (),
+        content_hash=importer.TRUSTED_SOURCE_HASHES["mathematics-oge-2022"],
+    )
+    task = importer.SourceTask(number=6)
+    question = {
+        "prompt": "Вычислите значение .",
+        "source": {"approval_status": "draft"},
+    }
+
+    importer._repair_source_question(source, task, question)
+
+    assert question["prompt"] == "Вычислите значение."
+    assert question["max_primary_score"] == 1
+    assert question["source"]["approval_status"] == "approved"
+
+
+@pytest.mark.parametrize("number, answer", [(6, "0,25"), (8, "13"), (9, "8"), (13, "1")])
+def test_approved_oge_math_numeric_targets_have_explicit_number_format(number, answer):
+    task = importer.SourceTask(number=number, prompt_blocks=["Вычислите значение."], answer=[answer])
+    source = importer.SourceFile(
+        Path("math.docx"), "ОГЭ", "mathematics", 2022, 19, (task,),
+        content_hash=importer.TRUSTED_SOURCE_HASHES["mathematics-oge-2022"],
+    )
+    kind, payload = importer.classify(task)
+    question = importer.build_question(source, task, kind, payload, verified_at="2026-09-01")
+    importer._repair_source_question(source, task, question)
+
+    assert question["answer_format"] == "number"
+    assert question["max_primary_score"] == 1
+    assert question["source"]["approval_status"] == "approved"
+
+
+def test_changed_target_hash_gets_no_repair_or_approval():
+    source = importer.SourceFile(
+        Path("math.docx"), "ОГЭ", "mathematics", 2022, 19, (), content_hash="changed"
+    )
+    task = importer.SourceTask(number=6)
+    question = {
+        "prompt": "Вычислите значение .",
+        "max_primary_score": 1,
+        "source": {"approval_status": "draft"},
+    }
+
+    importer._repair_source_question(source, task, question)
+
+    assert question["prompt"] == "Вычислите значение ."
+    assert question["max_primary_score"] == 1
+    assert question["source"] == {"approval_status": "draft"}
 
 
 def test_packed_multi_digit_keys_are_still_skipped():
@@ -474,7 +652,8 @@ def test_a_numeric_key_may_end_with_a_full_stop():
     kind, payload = importer.classify(task)
 
     assert kind == "input"
-    assert payload["correct"] == ["1,84", "1.84"]
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.correct == ("1,84", "1.84")
 
 
 def test_an_explanation_paragraph_after_the_key_moves_to_the_solution(tmp_path):
@@ -559,7 +738,7 @@ def test_a_trailing_numbered_block_becomes_the_option_list(tmp_path):
 
     assert task.options == ["Первое;", "Второе;", "Третье;", "Четвёртое."]
     assert task.prompt_blocks == ["Укажите порядковый номер верного утверждения."]
-    assert importer.classify(task) == ("single", {"indices": [3]})
+    assert importer.classify(task) == ("single", importer.SingleAnswerSpec((3,)))
 
 
 def test_a_leading_numbered_block_becomes_the_option_list(tmp_path):
@@ -574,7 +753,7 @@ def test_a_leading_numbered_block_becomes_the_option_list(tmp_path):
 
     assert task.options == ["Первое;", "Второе;", "Третье;", "Четвёртое."]
     assert task.prompt_blocks == ["Укажите порядковый номер верного утверждения."]
-    assert importer.classify(task) == ("single", {"indices": [2]})
+    assert importer.classify(task) == ("single", importer.SingleAnswerSpec((2,)))
 
 
 def test_a_numbered_block_stays_in_the_prompt_when_the_key_orders_it(tmp_path):
@@ -635,14 +814,17 @@ def test_a_single_digit_key_carries_no_sequence_hint():
     kind, payload = importer.classify(task)
 
     assert kind == "input"
-    assert payload["sequence"] is False
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.sequence is False
 
 
 def test_a_multi_digit_key_still_carries_the_sequence_hint():
     task = importer.SourceTask(number=1, answer=["134"])
     task.prompt_blocks.append("Выпишите номера верных утверждений.")
 
-    assert importer.classify(task)[1]["sequence"] is True
+    payload = importer.classify(task)[1]
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.sequence is True
 
 
 def _english_source() -> importer.SourceFile:
@@ -726,8 +908,9 @@ def test_a_matching_table_labelled_with_dots_becomes_a_matching_question():
 
     assert kind == "matching"
     # The third row is labelled with a Latin B that looks like the Cyrillic one.
-    assert len(payload["items"]) == 3
-    assert [digit for digit, _ in payload["options"]] == ["1", "2", "3", "4"]
+    assert isinstance(payload, importer.MatchingAnswerSpec)
+    assert len(payload.items) == 3
+    assert [digit for digit, _ in payload.options] == ["1", "2", "3", "4"]
 
 
 def test_an_unreadable_matching_table_is_skipped_instead_of_flattened():

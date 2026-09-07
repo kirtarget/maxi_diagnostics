@@ -353,7 +353,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
         onboarding_status = await onboarding.get_status(user["id"])
         return {
             "onboarding": {"status": onboarding_status},
-            "catalog_contract": 3,
+            "catalog_contract": 4,
             "session_scope": _session_scope(
                 secret, user["id"], generation
             ),

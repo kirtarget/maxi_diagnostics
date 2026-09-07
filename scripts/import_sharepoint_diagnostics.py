@@ -25,7 +25,6 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import date
 import hashlib
 import io
 import json
@@ -33,7 +32,7 @@ from pathlib import Path
 import re
 import sys
 import unicodedata
-from typing import Any, Literal
+from typing import Any, Literal, TypeAlias
 
 from docx import Document
 from docx.oxml.ns import qn
@@ -64,6 +63,7 @@ MAX_ANSWER_VARIANTS = 20
 MAX_TEXT_ANSWER_CHARS = 80
 MAX_REFERENCED_ASSETS = 201
 MAX_ASSET_SIDE = 900
+DEFAULT_VERIFIED_AT = "1970-01-01"
 SOURCE_URL = "https://maximumtest.ru/"
 SOURCE_PROVIDER = "maximum_editorial"
 
@@ -92,6 +92,19 @@ SUBJECT_NAMES = {
     "physics": "Физика",
     "chemistry": "Химия",
 }
+TRUSTED_SOURCE_HASHES = {
+    "chemistry-ege-2022": "af5c2a79a8d46c265f8a072c6abfd24be153cef7c20852aff1316821ba0a462a",
+    "biology-ege-2022": "6f35b4d13e9896e62b3071a998e06881e3876a785c7f4b29da7d22c6c7f0fd4b",
+    "mathematics-oge-2022": "105fef81980a74e066adc5ab430f7ae9cad4c7a6e7c1e343a313e2cc781b9c45",
+    "russian-language-ege-2022": "d1b27c66126732e2c53e3bde730ecc955f359f825b8c34faafea87a8cabbad1f",
+}
+GUARDED_Q05_DUPLICATE_SOURCES = frozenset({"chemistry-ege-2022"})
+CHECKED_IN_SCORE_POLICY: dict[tuple[str, str, frozenset[int]], int] = {
+    ("ЕГЭ", "chemistry", frozenset({1, 2, 3, 4, 5, 17})): 1,
+    ("ЕГЭ", "biology", frozenset({18})): 2,
+    ("ОГЭ", "mathematics", frozenset({6, 8, 9, 13})): 1,
+    ("ЕГЭ", "russian-language", frozenset({4})): 1,
+}
 EXAM_CODES = {"ЕГЭ": "ege", "ОГЭ": "oge"}
 EXAM_NAMES = {code: name for name, code in EXAM_CODES.items()}
 
@@ -111,6 +124,8 @@ MATCHING_ITEM = re.compile(r"^([А-ЯЁA-Z])[.)]\s*(.*)$", re.DOTALL)
 MATCHING_OPTION = re.compile(r"^(\d)[.)]\s*(.*)$", re.DOTALL)
 INLINE_OPTION = re.compile(r"^(\d+)\)\s*\S")
 INLINE_OPTION_NUMBER = re.compile(r"^\d+\)\s*")
+FLATTENED_NUMBERED_CHOICE = re.compile(r"(?:^|\s)(?P<number>\d+)[.)]\s*(?P<label>.*?)(?=\s+\d+[.)]\s+|\Z)", re.DOTALL)
+TABLE_NUMBERED_CHOICE = re.compile(r"^(?P<number>\d+)[.)]\s*(?P<label>.+)$", re.DOTALL)
 MIN_INLINE_OPTIONS = 3
 DIGITS = re.compile(r"\d+\Z")
 NUMERIC_SHAPED = re.compile(r"[0-9,.+-]+\Z")
@@ -176,10 +191,19 @@ class ImportError(RuntimeError):  # noqa: A001 - a controlled failure, not the b
 
 
 @dataclass(frozen=True)
+class SourceCell:
+    """A table cell with ordered paragraph text and embedded figures."""
+
+    paragraphs: tuple[str, ...]
+    images: tuple[bytes, ...] = ()
+
+
+@dataclass(frozen=True)
 class SourceTable:
     """One docx table as a grid of per-cell paragraph lists."""
 
     rows: tuple[tuple[tuple[str, ...], ...], ...]
+    cells: tuple[tuple[SourceCell, ...], ...] = ()
 
     @property
     def columns(self) -> int:
@@ -195,6 +219,65 @@ class SourceTask:
     solution: list[str] = field(default_factory=list)
     answer: list[str] = field(default_factory=list)
     images: list[bytes] = field(default_factory=list)
+    # The nodes retain the body order that the legacy split lists cannot carry.
+    # `prompt_blocks` and `prompt_tables` remain populated for existing callers.
+    prompt_nodes: list["PromptNode"] = field(default_factory=list)
+    sequence_choices: list[tuple[str, str]] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class PromptParagraph:
+    text: str
+    images: tuple[bytes, ...] = ()
+
+
+@dataclass(frozen=True)
+class PromptTable:
+    table: SourceTable
+
+
+PromptNode: TypeAlias = PromptParagraph | PromptTable
+ParagraphNode = PromptParagraph
+TableNode = PromptTable
+
+
+@dataclass(frozen=True)
+class SingleAnswerSpec:
+    indices: tuple[int, ...]
+
+@dataclass(frozen=True)
+class MultipleAnswerSpec:
+    indices: tuple[int, ...]
+
+@dataclass(frozen=True)
+class MatchingAnswerSpec:
+    items: tuple[str, ...]
+    options: tuple[tuple[str, str], ...]
+    key: str
+    table: SourceTable | None = None
+
+@dataclass(frozen=True)
+class InputAnswerSpec:
+    correct: tuple[str, ...]
+    sequence: bool = False
+    answer_format: str = "number"
+    answer_length: int | None = None
+    allow_reuse: bool | None = None
+    markers: tuple[str, ...] = ()
+    options: tuple[tuple[str, str], ...] = ()
+
+@dataclass(frozen=True)
+class TextAnswerSpec:
+    correct: tuple[str, ...]
+
+
+AnswerSpec: TypeAlias = (
+    SingleAnswerSpec
+    | MultipleAnswerSpec
+    | MatchingAnswerSpec
+    | InputAnswerSpec
+    | TextAnswerSpec
+)
 
 
 @dataclass(frozen=True)
@@ -221,6 +304,7 @@ class SourceFile:
     tasks: tuple[SourceTask, ...]
     topic: str = ""
     topic_slug: str = ""
+    content_hash: str = ""
 
     @property
     def slug(self) -> str:
@@ -312,19 +396,33 @@ def _paragraph_text(paragraph: Paragraph) -> str:
     return "".join(parts)
 
 
-def _read_table(table: Table) -> SourceTable:
+def _read_table(table: Table, relationships=None) -> SourceTable:
     rows = []
+    cell_rows = []
     for row in table.rows:
         cells = []
+        source_cells = []
         for cell in row.cells:
-            lines = tuple(
+            paragraphs = tuple(
                 clean_line(_paragraph_text(paragraph))
                 for paragraph in cell.paragraphs
                 if clean_line(_paragraph_text(paragraph))
             )
+            images = tuple(
+                image
+                for paragraph in cell.paragraphs
+                for image in (
+                    _paragraph_images(paragraph, relationships)
+                    if relationships is not None
+                    else []
+                )
+            )
+            lines = paragraphs
             cells.append(lines)
+            source_cells.append(SourceCell(paragraphs=paragraphs, images=images))
         rows.append(tuple(cells))
-    return SourceTable(rows=tuple(rows))
+        cell_rows.append(tuple(source_cells))
+    return SourceTable(rows=tuple(rows), cells=tuple(cell_rows))
 
 
 def parse_document(path: Path) -> tuple[SourceTask, ...]:
@@ -336,7 +434,9 @@ def parse_document(path: Path) -> tuple[SourceTask, ...]:
     for block in _iter_blocks(document):
         if isinstance(block, Table):
             if current is not None and section == "prompt":
-                current.prompt_tables.append(_read_table(block))
+                table = _read_table(block, relationships)
+                current.prompt_tables.append(table)
+                current.prompt_nodes.append(PromptTable(table))
             continue
         text = clean_line(_paragraph_text(block))
         heading = TASK_HEADING.match(text)
@@ -360,6 +460,8 @@ def parse_document(path: Path) -> tuple[SourceTask, ...]:
         images = _paragraph_images(block, relationships)
         if section == "prompt":
             current.images.extend(images)
+            if text or images:
+                current.prompt_nodes.append(PromptParagraph(text, tuple(images)))
         if not text:
             continue
         getattr(current, {"prompt": "prompt_blocks", "options": "options",
@@ -403,7 +505,191 @@ def _adopt_inline_options(task: SourceTask) -> None:
         # `Варианты:` blocks carry no numbering, so neither do these.
         task.options.extend(INLINE_OPTION_NUMBER.sub("", line) for line in run)
         del blocks[start:stop]
+        removed = set(run)
+        task.prompt_nodes[:] = [
+            node
+            for node in task.prompt_nodes
+            if not isinstance(node, PromptParagraph) or node.text not in removed
+        ]
         return
+
+
+def _flattened_numbered_choices(task: SourceTask) -> list[tuple[str, str]]:
+    """Read a numbered choice grid from one block without rewriting that block."""
+    if task.sequence_choices:
+        return list(task.sequence_choices)
+    if task.number == 5:
+        for table in task.prompt_tables:
+            choices = _numbered_choice_table(table)
+            if choices:
+                return choices
+    if task.options or len(task.prompt_blocks) != 1:
+        return []
+    text = task.prompt_blocks[0]
+    found = list(FLATTENED_NUMBERED_CHOICE.finditer(text))
+    if len(found) < 3 or found[0].group("number") != "1":
+        return []
+    numbers = [int(match.group("number")) for match in found]
+    if numbers != list(range(1, len(numbers) + 1)):
+        return []
+    labels = [clean_line(match.group("label")) for match in found]
+    if any(not label for label in labels):
+        return []
+    return list(zip((str(number) for number in numbers), labels))
+
+
+def _numbered_choice_table(table: SourceTable) -> list[tuple[str, str]]:
+    """Read the nine numbered cells of the known q05 three-by-three grid."""
+    if len(table.rows) != 3 or table.columns != 3:
+        return []
+    choices: list[tuple[str, str]] = []
+    for row in table.rows:
+        for cell in row:
+            if len(cell) != 1:
+                return []
+            found = TABLE_NUMBERED_CHOICE.fullmatch(cell[0])
+            if found is None:
+                return []
+            choices.append((found.group("number"), clean_line(found.group("label"))))
+    numbers = [int(number) for number, _ in choices]
+    if numbers != list(range(1, 10)) or any(not label for _, label in choices):
+        return []
+    return choices
+
+
+def _remove_table_choice(table: SourceTable, marker: str) -> SourceTable:
+    rows: list[tuple[tuple[str, ...], ...]] = []
+    cells: list[tuple[SourceCell, ...]] = []
+    for row_index, row in enumerate(table.rows):
+        new_row: list[tuple[str, ...]] = []
+        new_cells: list[SourceCell] = []
+        for column_index, lines in enumerate(row):
+            source_cell = (
+                table.cells[row_index][column_index]
+                if table.cells
+                else SourceCell(paragraphs=lines)
+            )
+            updated_lines = tuple(
+                line
+                for line in lines
+                if (
+                    (found := TABLE_NUMBERED_CHOICE.fullmatch(line or "")) is None
+                    or found.group("number") != marker
+                )
+            )
+            new_row.append(updated_lines)
+            new_cells.append(
+                SourceCell(
+                    paragraphs=updated_lines,
+                    images=source_cell.images,
+                )
+            )
+        rows.append(tuple(new_row))
+        cells.append(tuple(new_cells))
+    return SourceTable(rows=tuple(rows), cells=tuple(cells))
+
+
+def _normalized_choice_label(value: str) -> str:
+    return re.sub(r"\W+", "", clean_line(value).casefold())
+
+
+def _drop_guarded_q05_duplicate(task: SourceTask, source: SourceFile) -> bool:
+    """Drop only the known duplicate choice marker in the verified source shape."""
+    if (
+        task.number != 5
+        or source.slug not in GUARDED_Q05_DUPLICATE_SOURCES
+        or TRUSTED_SOURCE_HASHES.get(source.slug) != source.content_hash
+        or any("6" in part for part in task.answer)
+    ):
+        return False
+    table = next(
+        (candidate for candidate in task.prompt_tables if _numbered_choice_table(candidate)),
+        None,
+    )
+    choices = _flattened_numbered_choices(task) or [
+        (str(index), label) for index, label in enumerate(task.options, start=1)
+    ]
+    if len(choices) < 6:
+        return False
+    if _normalized_choice_label(choices[3][1]) != _normalized_choice_label(choices[5][1]):
+        return False
+    if task.options or (table is None and len(task.prompt_blocks) != 1):
+        return False
+    if table is not None:
+        updated_table = _remove_table_choice(table, "6")
+        task.prompt_tables[:] = [
+            updated_table if candidate is table else candidate
+            for candidate in task.prompt_tables
+        ]
+        task.prompt_nodes[:] = [
+            PromptTable(updated_table) if isinstance(node, PromptTable) and node.table is table else node
+            for node in task.prompt_nodes
+        ]
+        task.sequence_choices = [choice for choice in choices if choice[0] != "6"]
+        return True
+    prompt = task.prompt_blocks[0]
+    marker = re.compile(r"(?P<prefix>^|\s)6[.)]\s*.*?(?=\s+7[.)]\s+|\Z)", re.DOTALL)
+    updated, count = marker.subn(lambda match: match.group("prefix"), prompt, count=1)
+    if count != 1:
+        return False
+    task.prompt_blocks[0] = updated
+    task.sequence_choices = [choice for choice in choices if choice[0] != "6"]
+    task.prompt_nodes[:] = [
+        PromptParagraph(updated, node.images)
+        if isinstance(node, PromptParagraph) and node.text == prompt
+        else node
+        for node in task.prompt_nodes
+    ]
+    return True
+
+
+def _score_policy(exam: str, subject: str, position: int) -> int | None:
+    """Return a primary score only for the checked-in evidence positions."""
+    for (policy_exam, policy_subject, positions), score in CHECKED_IN_SCORE_POLICY.items():
+        if exam == policy_exam and subject == policy_subject and position in positions:
+            return score
+    return None
+
+
+def _repair_source_question(
+    source: SourceFile, task: SourceTask, question: dict[str, Any]
+) -> None:
+    """Apply narrow, source-keyed repairs to known editorial transcription errors."""
+    if TRUSTED_SOURCE_HASHES.get(source.slug) != source.content_hash:
+        return
+    slug = source.slug
+    if slug == "chemistry-ege-2022" and task.number in {1, 2, 3}:
+        for option in question.get("options", []):
+            if option["label"] == "Со":
+                option["label"] = "Co"
+            elif option["label"] == "Не":
+                option["label"] = "He"
+        question["prompt"] = re.sub(r"(\d[.)]\s*)Со\b", r"\1Co", question["prompt"])
+        question["prompt"] = re.sub(r"(\d[.)]\s*)Не\b", r"\1He", question["prompt"])
+    elif slug == "chemistry-ege-2022" and task.number == 5:
+        if question.get("explanation"):
+            question["explanation"] = question["explanation"].replace("КОН", "KOH")
+    elif slug == "chemistry-ege-2022" and task.number == 17:
+        if question.get("explanation"):
+            question["explanation"] = question["explanation"].replace("Сl", "Cl")
+    elif slug == "biology-ege-2022" and task.number == 18:
+        for key in ("items", "options"):
+            for option in question.get(key, []):
+                option["label"] = re.sub(
+                    r"^A\)", "А)", option["label"]
+                )
+                option["label"] = re.sub(r"^B\)", "В)", option["label"])
+                option["label"] = re.sub(r"^E\)", "Е)", option["label"])
+    elif slug == "mathematics-oge-2022" and task.number in {6, 13}:
+        question["prompt"] = re.sub(r"\s+([.,:;])", r"\1", question["prompt"])
+        if question.get("explanation"):
+            question["explanation"] = question["explanation"].rstrip()
+            question["explanation"] = question["explanation"].rstrip(":")
+    score = _score_policy(source.exam, source.subject_code, task.number)
+    if score is not None:
+        question["max_primary_score"] = score
+        question["source"]["approval_status"] = "approved"
+        question["source"]["exam_position"] = str(task.number)
 
 
 def _fold_answer_explanation(task: SourceTask) -> None:
@@ -471,6 +757,7 @@ def read_source_file(path: Path, entry: PlanEntry | None = None) -> SourceFile:
             tasks=parse_document(path),
             topic=entry.topic,
             topic_slug=entry.topic_slug,
+            content_hash=file_digest(path),
         )
     match = FILENAME.match(path.stem)
     if match is None:
@@ -485,6 +772,7 @@ def read_source_file(path: Path, entry: PlanEntry | None = None) -> SourceFile:
         year=2000 + int(match.group("end")),
         declared_tasks=int(match.group("tasks")),
         tasks=parse_document(path),
+        content_hash=file_digest(path),
     )
 
 
@@ -538,6 +826,17 @@ def _render_table(table: SourceTable) -> str:
 def build_prompt(task: SourceTask, *, skip_table: SourceTable | None = None) -> str:
     # A matching task shows its pairs as controls, so only that one table is
     # dropped. A data table the question reasons about has to stay.
+    if task.prompt_nodes:
+        parts: list[str] = []
+        for node in task.prompt_nodes:
+            if isinstance(node, PromptParagraph):
+                if node.text:
+                    parts.append(node.text)
+            elif node.table is not skip_table:
+                rendered = _render_table(node.table)
+                if rendered:
+                    parts.append(rendered)
+        return clean_block(parts)
     parts = list(task.prompt_blocks)
     parts.extend(
         rendered
@@ -551,7 +850,7 @@ def build_prompt(task: SourceTask, *, skip_table: SourceTable | None = None) -> 
     return clean_block(parts)
 
 
-def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
+def classify(task: SourceTask) -> tuple[str, AnswerSpec | str]:
     """Return (question_type, payload) or ("skip", reason)."""
     if any(OPEN_ANSWER.search(line) for line in (*task.answer, *task.solution)):
         return "skip", "open_answer"
@@ -579,7 +878,7 @@ def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
         )
         if not reorderings:
             return "skip", "irregular_key"
-        return "input", {"correct": list(parts), "sequence": True}
+        return "input", InputAnswerSpec(tuple(parts), sequence=True)
 
     if task.options:
         if len(digit_parts) != len(parts) or any(len(part) != 1 for part in parts):
@@ -589,16 +888,17 @@ def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
             return "skip", "irregular_key"
         if any(not 1 <= index <= len(task.options) for index in indices):
             return "skip", "irregular_key"
-        return ("single" if len(indices) == 1 else "multiple"), {"indices": indices}
+        spec = SingleAnswerSpec if len(indices) == 1 else MultipleAnswerSpec
+        return ("single" if len(indices) == 1 else "multiple"), spec(tuple(indices))
 
     matching = _matching_table(task.prompt_tables)
     if matching is not None and len(parts) == 1 and DIGITS.fullmatch(key):
         table, items, options = matching
         option_digits = {digit for digit, _ in options}
         if len(key) == len(items) and set(key) <= option_digits:
-            return "matching", {
-                "items": items, "options": options, "key": key, "table": table,
-            }
+            return "matching", MatchingAnswerSpec(
+                tuple(items), tuple(options), key, table
+            )
 
     if len(parts) == 1 and is_valid_numeric_answer(key):
         variants = [key]
@@ -606,7 +906,24 @@ def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
             variants.append(key.replace(",", "."))
         # A one-digit key is a single number, not a sequence to type unspaced.
         sequence = len(key) > 1 and bool(DIGITS.fullmatch(key))
-        return "input", {"correct": variants, "sequence": sequence}
+        numbered = _flattened_numbered_choices(task)
+        if (
+            sequence
+            and len(numbered) in {8, 9}
+            and (len(numbered) == 9 or bool(task.sequence_choices))
+            and len(key) == 3
+            and set(key) <= {marker for marker, _ in numbered}
+        ):
+            return "input", InputAnswerSpec(
+                tuple(variants),
+                sequence=True,
+                answer_format="sequence",
+                answer_length=3,
+                allow_reuse=True,
+                markers=("А", "Б", "В"),
+                options=tuple(numbered),
+            )
+        return "input", InputAnswerSpec(tuple(variants), sequence=sequence)
 
     # Numeric-looking but ungrammatical, e.g. a value with its error margin
     # concatenated (`0,100,01`).
@@ -622,7 +939,7 @@ def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
             variants.append(cleaned)
     if not 1 <= len(variants) <= MAX_TEXT_VARIANTS:
         return "skip", "irregular_key"
-    return "text", {"correct": variants}
+    return "text", TextAnswerSpec(tuple(variants))
 
 
 # --------------------------------------------------------------------------
@@ -676,16 +993,22 @@ def build_question(
     source: SourceFile,
     task: SourceTask,
     kind: str,
-    payload: dict[str, Any],
+    payload: AnswerSpec,
     *,
     verified_at: str,
 ) -> dict[str, Any] | str:
-    prompt = build_prompt(task, skip_table=payload.get("table") if kind == "matching" else None)
+    table = payload.table if isinstance(payload, MatchingAnswerSpec) else None
+    prompt = build_prompt(task, skip_table=table if kind == "matching" else None)
     if kind in UI_COLLECTS_THE_ANSWER:
         prompt = strip_answer_sheet_instructions(prompt)
     if not prompt:
         return "empty_prompt"
-    if kind == "input" and payload.get("sequence") and not SEQUENCE_MARKERS.search(prompt):
+    if (
+        kind == "input"
+        and isinstance(payload, InputAnswerSpec)
+        and payload.sequence
+        and not SEQUENCE_MARKERS.search(prompt)
+    ):
         prompt = f"{prompt}\n{SEQUENCE_HINT}"
     if len(prompt) > MAX_PROMPT_CHARS:
         return "prompt_too_long"
@@ -699,7 +1022,9 @@ def build_question(
         "max_primary_score": 1,
     }
 
-    if kind in {"single", "multiple"}:
+    if kind == "single":
+        if not isinstance(payload, SingleAnswerSpec):
+            return "invalid_answer_spec"
         labels = [_option_label(option) for option in task.options]
         if any(label is None for label in labels) or not 1 <= len(labels) <= MAX_OPTIONS:
             return "invalid_options"
@@ -707,15 +1032,26 @@ def build_question(
             {"id": chr(ord("a") + index), "label": label}
             for index, label in enumerate(labels)
         ]
-        correct = [chr(ord("a") + index - 1) for index in payload["indices"]]
-        if kind == "single":
-            question["correct"] = correct[0]
-        else:
-            question["selection_limit"] = len(correct)
-            question["correct"] = correct
+        correct = [chr(ord("a") + index - 1) for index in payload.indices]
+        question["correct"] = correct[0]
+    elif kind == "multiple":
+        if not isinstance(payload, MultipleAnswerSpec):
+            return "invalid_answer_spec"
+        labels = [_option_label(option) for option in task.options]
+        if any(label is None for label in labels) or not 1 <= len(labels) <= MAX_OPTIONS:
+            return "invalid_options"
+        question["options"] = [
+            {"id": chr(ord("a") + index), "label": label}
+            for index, label in enumerate(labels)
+        ]
+        correct = [chr(ord("a") + index - 1) for index in payload.indices]
+        question["selection_limit"] = len(correct)
+        question["correct"] = correct
     elif kind == "matching":
-        items = [_option_label(item) for item in payload["items"]]
-        options = [(digit, _option_label(label)) for digit, label in payload["options"]]
+        if not isinstance(payload, MatchingAnswerSpec):
+            return "invalid_answer_spec"
+        items = [_option_label(item) for item in payload.items]
+        options = [(digit, _option_label(label)) for digit, label in payload.options]
         if any(item is None for item in items) or any(label is None for _, label in options):
             return "invalid_options"
         if len(items) > MAX_OPTIONS or len(options) > MAX_OPTIONS:
@@ -732,15 +1068,25 @@ def build_question(
             option_entries.append({"id": f"o{digit}", "label": label})
         question["options"] = option_entries
         question["correct"] = {
-            f"i{index + 1}": f"o{digit}" for index, digit in enumerate(payload["key"])
+            f"i{index + 1}": f"o{digit}" for index, digit in enumerate(payload.key)
         }
     elif kind == "text":
-        if _glued_answer(prompt, payload["correct"]):
+        if not isinstance(payload, TextAnswerSpec):
+            return "invalid_answer_spec"
+        if _glued_answer(prompt, payload.correct):
             return "glued_answer"
-        question["correct"] = payload["correct"]
+        question["correct"] = list(payload.correct)
         question["max_length"] = MAX_TEXT_ANSWER_CHARS
     else:
-        question["correct"] = payload["correct"]
+        if not isinstance(payload, InputAnswerSpec):
+            return "invalid_answer_spec"
+        question["correct"] = list(payload.correct)
+        question["answer_format"] = payload.answer_format
+        if payload.answer_format == "sequence":
+            question["answer_format"] = "sequence"
+            question["answer_length"] = payload.answer_length
+            question["allow_reuse"] = payload.allow_reuse
+            question["markers"] = list(payload.markers)
 
     explanation = clean_block(task.solution)
     if explanation and len(explanation) <= MAX_EXPLANATION_CHARS and renders(explanation):
@@ -890,6 +1236,12 @@ def convert_file(
     outcomes: list[Outcome] = []
     variants = answer_variants or {}
     for task in source.tasks:
+        if _has_table_cell_figure(task):
+            outcomes.append(
+                Outcome(task.number, "skipped", reason="unsupported_table_cell_figure")
+            )
+            continue
+        _drop_guarded_q05_duplicate(task, source)
         kind, payload = classify(task)
         if kind == "skip":
             outcomes.append(Outcome(task.number, "skipped", reason=str(payload)))
@@ -898,6 +1250,7 @@ def convert_file(
         if isinstance(question, str):
             outcomes.append(Outcome(task.number, "skipped", kind, question))
             continue
+        _repair_source_question(source, task, question)
         extra = variants.get(question["id"])
         if extra:
             problem = apply_answer_variants(question, extra)
@@ -934,6 +1287,16 @@ def _rejection(
     if EXTERNAL_RESOURCE.search(question["prompt"]):
         return "external_resource"
     return validate_question(question)
+
+
+def _has_table_cell_figure(task: SourceTask) -> bool:
+    """Table-cell figures cannot retain their relative layout in the catalog."""
+    return any(
+        cell.images
+        for table in task.prompt_tables
+        for row in table.cells
+        for cell in row
+    )
 
 
 def allocate_assets(
@@ -1056,11 +1419,13 @@ def write_report(
         "Каталог школы состоит только из этих заданий. Текст задания, вариантов и "
         "ключ взяты из редакционно утверждённых документов MAXIMUM без правок. Тема "
         "берётся из плана источников, а без плана каждому вопросу проставлена "
-        "тема «Задание N». Первичный балл всегда 1. Раздел «Темы, требующие "
+        "тема «Задание N». Первичный балл берётся из закреплённой score policy "
+        "только для проверенных позиций, остальные остаются со статусом draft. "
+        "Раздел «Темы, требующие "
         "сопоставления» "
         "перечисляет их по предметам, чтобы методист заполнил таблицу «позиция КИМ → "
-        "тема». Все импортированные вопросы имеют `approval_status = draft` и требуют "
-        "предметной редактуры.",
+        "тема». Только позиции из score policy получают `approval_status = approved`; "
+        "остальные требуют предметной редактуры.",
         "",
         "## Итоги",
         "",
@@ -1174,8 +1539,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--verified-at",
-        default=date.today().isoformat(),
-        help="Editorial verification date stamped on every imported question",
+        default=None,
+        help=(
+            "Explicit editorial verification date stamped on every imported question "
+            f"(defaults to the non-editorial sentinel {DEFAULT_VERIFIED_AT})"
+        ),
     )
     parser.add_argument("--dry-run", action="store_true")
     arguments = parser.parse_args(argv)
@@ -1184,7 +1552,7 @@ def main(argv: list[str] | None = None) -> int:
     diagnostics_root = root / "school" / "diagnostics"
     assets_root = root / "school" / "assets" / "questions"
     report_path = root / "authoring" / "sharepoint-import" / "report.md"
-    verified_at = str(arguments.verified_at)
+    verified_at = str(arguments.verified_at or DEFAULT_VERIFIED_AT)
 
     targets = load_targets(diagnostics_root)
     kept_assets = {

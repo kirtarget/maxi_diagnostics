@@ -58,6 +58,26 @@ _WINDOWS_RESERVED_BASENAMES = frozenset(
     | {f"com{index}" for index in range(1, 10)}
     | {f"lpt{index}" for index in range(1, 10)}
 )
+_INPUT_METADATA_FIELDS = frozenset(
+    {"answer_format", "answer_length", "allow_reuse", "markers"}
+)
+_SEQUENCE_PROMPT = re.compile(r"(?:последовательност\w*|sequence)", re.IGNORECASE)
+_SEQUENCE_MARKER = re.compile(r"(?m)^\s*([А-ЯЁA-Z])\s*[).|]")
+_LATIN_MARKER = re.compile(r"^[A-Za-z]$")
+_CYRILLIC_MARKER = re.compile(r"^[А-ЯЁа-яё]$")
+_VISIBLE_MARKER = re.compile(r"^\s*([А-ЯЁA-Z]|\d+)[.)]\s*")
+
+
+def _has_mixed_marker_scripts(markers: Any) -> bool:
+    if not isinstance(markers, (list, tuple)):
+        return False
+    scripts = {
+        "latin" if _LATIN_MARKER.fullmatch(marker) else "cyrillic"
+        for marker in markers
+        if isinstance(marker, str)
+        and (_LATIN_MARKER.fullmatch(marker) or _CYRILLIC_MARKER.fullmatch(marker))
+    }
+    return len(scripts) > 1
 
 
 def _validate_display_text(value: str) -> str:
@@ -317,6 +337,7 @@ class SingleQuestion(QuestionBase):
     @model_validator(mode="after")
     def validate_correct_option(self) -> "SingleQuestion":
         _validate_unique_option_ids(self.options)
+        _validate_unique_option_labels(self.options)
         if self.correct not in {option.id for option in self.options}:
             raise ValueError("invalid_option_reference")
         return self
@@ -333,6 +354,7 @@ class MultipleQuestion(QuestionBase):
     @model_validator(mode="after")
     def validate_multiple_options(self) -> "MultipleQuestion":
         _validate_unique_option_ids(self.options)
+        _validate_unique_option_labels(self.options)
         option_ids = {option.id for option in self.options}
         if self.selection_limit > len(self.options) or len(self.correct) != self.selection_limit:
             raise ValueError("invalid_selection_limit")
@@ -355,6 +377,9 @@ class MatchingQuestion(QuestionBase):
     def validate_matching_options(self) -> "MatchingQuestion":
         _validate_unique_option_ids(self.items)
         _validate_unique_option_ids(self.options)
+        _validate_unique_option_labels(self.items)
+        _validate_unique_option_labels(self.options)
+        _validate_matching_marker_layout(self.items, self.options, self.source)
         if set(self.correct) != {item.id for item in self.items}:
             raise ValueError("incomplete_matching_keys")
         if not set(self.correct.values()).issubset({option.id for option in self.options}):
@@ -365,12 +390,85 @@ class MatchingQuestion(QuestionBase):
 class InputQuestion(QuestionBase):
     type: Literal["input"]
     correct: tuple[str, ...] = Field(min_length=1, max_length=20, json_schema_extra=SERVER_ONLY)
+    answer_format: Literal["number", "sequence"] = "number"
+    answer_length: int | None = Field(default=None, ge=1, le=20, strict=True)
+    allow_reuse: bool | None = Field(default=None, strict=True)
+    markers: tuple[str, ...] | None = Field(default=None, min_length=1, max_length=20)
+
+    @field_validator("markers")
+    @classmethod
+    def validate_markers(cls, value: tuple[str, ...] | None) -> tuple[str, ...] | None:
+        if value is None:
+            return None
+        if any(not marker.strip() for marker in value):
+            raise ValueError("blank_sequence_marker")
+        return tuple(_validate_display_text(marker) for marker in value)
+
+    @model_validator(mode="before")
+    @classmethod
+    def infer_legacy_metadata(cls, value: Any) -> Any:
+        if not isinstance(value, dict):
+            return value
+        supplied = {
+            key for key in _INPUT_METADATA_FIELDS
+            if key in value and value[key] is not None
+        }
+        source = value.get("source")
+        approved = (
+            source.get("approval_status") == "approved"
+            if isinstance(source, dict)
+            else getattr(source, "approval_status", None) == "approved"
+        )
+        if approved and "answer_format" not in supplied:
+            raise ValueError("input_metadata_required")
+        if value.get("answer_format") == "number" and supplied - {"answer_format"}:
+            raise ValueError("number_sequence_metadata")
+        if (
+            value.get("answer_format") == "sequence"
+            and "markers" in supplied
+            and _has_mixed_marker_scripts(value.get("markers"))
+        ):
+            raise ValueError("mixed_sequence_marker_scripts")
+        if not supplied:
+            return {**value, **_infer_input_metadata(value)}
+        if approved:
+            answer_format = value.get("answer_format")
+            required = {"answer_format"}
+            if answer_format == "sequence":
+                required |= {"answer_length", "allow_reuse", "markers"}
+            if not required <= supplied:
+                raise ValueError("input_metadata_required")
+        return value
 
     @model_validator(mode="after")
     def validate_input_variants(self) -> "InputQuestion":
+        sequence_fields = (
+            self.answer_length, self.allow_reuse, self.markers
+        )
+        if self.answer_format == "number":
+            if any(field is not None for field in sequence_fields):
+                raise ValueError("number_sequence_metadata")
+            for variant in self.correct:
+                if not is_valid_numeric_answer(variant):
+                    raise ValueError("invalid_input_variant")
+            return self
+
+        if any(field is None for field in sequence_fields):
+            raise ValueError("sequence_metadata_required")
+        assert self.answer_length is not None
+        assert self.allow_reuse is not None
+        assert self.markers is not None
+        if any(not marker.strip() for marker in self.markers):
+            raise ValueError("blank_sequence_marker")
+        if len(set(self.markers)) != len(self.markers):
+            raise ValueError("duplicate_sequence_marker")
+        if self.answer_length != len(self.markers):
+            raise ValueError("sequence_length_mismatch")
         for variant in self.correct:
-            if not is_valid_numeric_answer(variant):
-                raise ValueError("invalid_input_variant")
+            if len(variant) != self.answer_length:
+                raise ValueError("invalid_sequence_variant")
+            if not self.allow_reuse and len(set(variant)) != len(variant):
+                raise ValueError("sequence_reuse_not_allowed")
         return self
 
 
@@ -402,6 +500,35 @@ Question = Annotated[
     SingleQuestion | MultipleQuestion | MatchingQuestion | InputQuestion | TextQuestion,
     Field(discriminator="type"),
 ]
+
+
+def _infer_input_metadata(value: dict[str, Any]) -> dict[str, Any]:
+    correct = value.get("correct")
+    prompt = value.get("prompt")
+    variants = tuple(correct) if isinstance(correct, (list, tuple)) else ()
+    sequence = (
+        isinstance(prompt, str)
+        and bool(_SEQUENCE_PROMPT.search(prompt))
+        and bool(variants)
+        and all(isinstance(variant, str) and variant for variant in variants)
+        and len({len(variant) for variant in variants}) == 1
+        and len(variants[0]) > 1
+    )
+    if not sequence:
+        return {"answer_format": "number"}
+    answer_length = len(variants[0])
+    prompt_markers = tuple(dict.fromkeys(_SEQUENCE_MARKER.findall(prompt or "")))
+    markers = (
+        prompt_markers[:answer_length]
+        if len(prompt_markers) >= answer_length
+        else tuple(str(index) for index in range(1, answer_length + 1))
+    )
+    return {
+        "answer_format": "sequence",
+        "answer_length": answer_length,
+        "allow_reuse": any(len(set(variant)) != len(variant) for variant in variants),
+        "markers": markers,
+    }
 
 
 class ScoringConfig(BaseModel):
@@ -538,6 +665,62 @@ def _validate_unique_option_ids(options: tuple[QuestionOption, ...]) -> None:
         raise ValueError("duplicate_option_id")
 
 
+def _validate_unique_option_labels(
+    options: tuple[QuestionOption, ...],
+) -> None:
+    labels = [
+        re.sub(r"\s+", " ", unicodedata.normalize("NFC", option.label))
+        .strip()
+        .casefold()
+        for option in options
+    ]
+    if len(set(labels)) != len(labels):
+        raise ValueError("duplicate_option_label")
+
+
+def _validate_matching_marker_layout(
+    items: tuple[QuestionOption, ...],
+    options: tuple[QuestionOption, ...],
+    source: QuestionSource | None,
+) -> None:
+    """Reject source markers that collapse the two matching columns."""
+    if source is None or source.approval_status != "approved":
+        return
+
+    groups = (items, options)
+    styles: list[set[str]] = []
+    for group in groups:
+        group_styles: set[str] = set()
+        for option in group:
+            visible_label = option.label.strip()
+            marker_match = _VISIBLE_MARKER.match(visible_label)
+            if marker_match is not None:
+                visible_label = visible_label[marker_match.end():].strip()
+            if visible_label == "___":
+                raise ValueError("placeholder_matching_marker")
+            match = _VISIBLE_MARKER.match(option.label)
+            if match is None:
+                continue
+            marker = match.group(1)
+            group_styles.add("alpha" if not marker.isdigit() else "numeric")
+            if marker.isalpha():
+                if _LATIN_MARKER.fullmatch(marker):
+                    group_styles.add("latin")
+                elif _CYRILLIC_MARKER.fullmatch(marker):
+                    group_styles.add("cyrillic")
+        styles.append(group_styles)
+
+    for group_styles in styles:
+        if "latin" in group_styles and "cyrillic" in group_styles:
+            raise ValueError("mixed_matching_marker_scripts")
+        if "alpha" in group_styles and "numeric" in group_styles:
+            raise ValueError("mixed_matching_marker_columns")
+    if {"alpha"} <= styles[0] and {"numeric"} <= styles[1]:
+        return
+    if {"numeric"} <= styles[0] and {"alpha"} <= styles[1]:
+        raise ValueError("matching_positions_options_mixed")
+
+
 def public_question(question: Question) -> dict[str, Any]:
     """Serialize a question for the Mini App, dropping every SERVER_ONLY field."""
     return question.model_dump(
@@ -566,6 +749,17 @@ def is_valid_answer_shape(question: Question, answer: Any, *, complete: bool) ->
     if isinstance(question, SingleQuestion):
         return isinstance(answer, str) and answer in {option.id for option in question.options}
     if isinstance(question, InputQuestion):
+        if question.answer_format == "sequence":
+            assert question.answer_length is not None
+            if (
+                not isinstance(answer, str)
+                or not answer
+                or len(answer) > question.answer_length
+                or (complete and len(answer) != question.answer_length)
+            ):
+                return False
+            assert question.markers is not None
+            return question.allow_reuse or len(set(answer)) == len(answer)
         return is_valid_numeric_answer(answer)
     if isinstance(question, TextQuestion):
         return is_valid_text_answer(answer, question.max_length)

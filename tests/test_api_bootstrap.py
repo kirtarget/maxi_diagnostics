@@ -117,7 +117,7 @@ def test_bootstrap_returns_brand_and_sanitized_catalog(monkeypatch):
         "lives_remaining", "next_life_at", "daily_goal", "quest",
     }
     assert body["school"]["brand"]["name"] == configured_school.brand.name
-    assert body["catalog_contract"] == 3
+    assert body["catalog_contract"] == 4
     assert set(body["diagnostics"][0]) == {
         "id", "content_version", "exam", "subject", "mark", "quick_count",
         "full_count", "question_count",

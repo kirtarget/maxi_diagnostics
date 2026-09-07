@@ -163,7 +163,13 @@ function InputEditor({ question, value, disabled, label, placeholder, onChange }
   placeholder: string;
   onChange: (value: AnswerValue) => void;
 }) {
-  const config = answerInputConfig(question.prompt);
+  const config = question.answer_format === "number"
+    ? {
+      ...answerInputConfig(question.prompt),
+      inputMode: "decimal" as const,
+      hint: "Используйте цифры и знак минус, если он нужен.",
+    }
+    : answerInputConfig(question.prompt);
   return (
     <label className="short-answer">
       <span>{label}</span>

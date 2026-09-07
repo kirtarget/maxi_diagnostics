@@ -7,6 +7,8 @@ import pytest
 from diagnostic.catalog import (
     Diagnostic,
     DiagnosticCatalog,
+    InputQuestion,
+    MatchingQuestion,
     is_skipped_answer,
     is_valid_answer_shape,
     load_catalog,
@@ -233,6 +235,168 @@ def test_catalog_rejects_multiple_choice_that_cannot_be_answered_correctly():
         Diagnostic.model_validate(data)
 
 
+def test_legacy_sequence_input_infers_contract_four_metadata():
+    data = sample_diagnostic_data()["questions"][3] | {
+        "prompt": "Введите последовательность цифр без пробелов.",
+        "correct": ["211"],
+    }
+
+    question = InputQuestion.model_validate(data)
+
+    assert question.answer_format == "sequence"
+    assert question.answer_length == 3
+    assert question.allow_reuse is True
+    assert question.markers == ("1", "2", "3")
+
+
+def test_number_input_rejects_sequence_metadata():
+    data = sample_diagnostic_data()["questions"][3] | {
+        "answer_format": "number",
+        "markers": ["1"],
+    }
+
+    with pytest.raises(ValueError, match="number_sequence_metadata"):
+        InputQuestion.model_validate(data)
+
+
+def test_sequence_input_requires_consistent_metadata():
+    data = sample_diagnostic_data()["questions"][3] | {
+        "answer_format": "sequence",
+        "answer_length": 3,
+        "allow_reuse": False,
+        "markers": ["A", "B", "C"],
+        "correct": ["211"],
+    }
+
+    with pytest.raises(ValueError, match="sequence_reuse_not_allowed"):
+        InputQuestion.model_validate(data)
+
+
+def test_sequence_input_rejects_blank_marker():
+    data = sample_diagnostic_data()["questions"][3] | {
+        "answer_format": "sequence",
+        "answer_length": 2,
+        "allow_reuse": False,
+        "markers": ["A", " "],
+        "correct": ["12"],
+    }
+
+    with pytest.raises(ValueError, match="blank_sequence_marker"):
+        InputQuestion.model_validate(data)
+
+
+def test_approved_input_requires_explicit_metadata():
+    data = sample_diagnostic_data()["questions"][3] | {
+        "source": {
+            "provider": "maximum_editorial",
+            "official_year": 2026,
+            "approval_status": "approved",
+            "source_kind": "original",
+            "source_url": "https://maximumtest.ru/",
+            "rights_status": "original",
+            "verified_at": "2026-09-01",
+        },
+    }
+
+    with pytest.raises(ValueError, match="input_metadata_required"):
+        InputQuestion.model_validate(data)
+
+
+def test_approved_choice_rejects_duplicate_visible_labels():
+    data = sample_diagnostic_data()
+    data["questions"][0]["source"] = {
+        "provider": "maximum_editorial",
+        "official_year": 2026,
+        "approval_status": "approved",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-01",
+    }
+    data["questions"][0]["options"][1]["label"] = "3"
+
+    with pytest.raises(ValueError, match="duplicate_option_label"):
+        Diagnostic.model_validate(data)
+
+
+def test_draft_choice_rejects_duplicate_visible_labels():
+    data = sample_diagnostic_data()
+    data["questions"][0]["options"][1]["label"] = "  3  "
+
+    with pytest.raises(ValueError, match="duplicate_option_label"):
+        Diagnostic.model_validate(data)
+
+
+def _approved_source() -> dict[str, object]:
+    return {
+        "provider": "maximum_editorial",
+        "official_year": 2026,
+        "approval_status": "approved",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-01",
+    }
+
+
+def test_approved_sequence_rejects_mixed_marker_scripts():
+    data = sample_diagnostic_data()["questions"][3] | {
+        "source": _approved_source(),
+        "answer_format": "sequence",
+        "answer_length": 3,
+        "allow_reuse": False,
+        "markers": ["A", "Б", "C"],
+        "correct": ["123"],
+    }
+
+    with pytest.raises(ValueError, match="mixed_sequence_marker_scripts"):
+        InputQuestion.model_validate(data)
+
+
+def test_approved_matching_rejects_placeholder_marker():
+    data = sample_diagnostic_data()["questions"][2] | {
+        "source": _approved_source(),
+        "items": [
+            {"id": "a", "label": "___"},
+            {"id": "b", "label": "Second"},
+        ],
+    }
+
+    with pytest.raises(ValueError, match="placeholder_matching_marker"):
+        MatchingQuestion.model_validate(data)
+
+
+def test_approved_matching_rejects_prefixed_placeholder_marker():
+    data = sample_diagnostic_data()["questions"][2] | {
+        "source": _approved_source(),
+        "items": [
+            {"id": "a", "label": "А) ___"},
+            {"id": "b", "label": "Б) Second"},
+        ],
+    }
+
+    with pytest.raises(ValueError, match="placeholder_matching_marker"):
+        MatchingQuestion.model_validate(data)
+
+
+def test_approved_matching_rejects_reversed_position_and_option_markers():
+    data = sample_diagnostic_data()["questions"][2] | {
+        "source": _approved_source(),
+        "items": [
+            {"id": "a", "label": "1) First"},
+            {"id": "b", "label": "2) Second"},
+        ],
+        "options": [
+            {"id": "1", "label": "А) One"},
+            {"id": "2", "label": "Б) Two"},
+        ],
+        "correct": {"a": "1", "b": "2"},
+    }
+
+    with pytest.raises(ValueError, match="matching_positions_options_mixed"):
+        MatchingQuestion.model_validate(data)
+
+
 @pytest.mark.parametrize("variant", ["not-a-number", "NaN", "Infinity", "sNaN"])
 def test_catalog_rejects_unscoreable_input_correct_variants(variant: str):
     data = sample_diagnostic_data()
@@ -403,7 +567,8 @@ def test_catalog_rejects_one_diagnostic_public_payload_over_two_megabytes():
     data = sample_diagnostic_data()
     question = data["questions"][0]
     question["options"] = [
-        {"id": f"o{index}", "label": "x" * 250} for index in range(50)
+        {"id": f"o{index}", "label": "x" * 249 + str(index)}
+        for index in range(50)
     ]
     question["correct"] = "o0"
     data["questions"] = [
