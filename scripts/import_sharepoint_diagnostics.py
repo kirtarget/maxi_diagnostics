@@ -493,8 +493,10 @@ def read_source_file(path: Path, entry: PlanEntry | None = None) -> SourceFile:
 # --------------------------------------------------------------------------
 
 
-def _matching_table(tables: list[SourceTable]) -> tuple[list[str], list[tuple[str, str]]] | None:
-    """Return (item labels, [(option digit, label)]) for a two-column matching table."""
+def _matching_table(
+    tables: list[SourceTable],
+) -> tuple[SourceTable, list[str], list[tuple[str, str]]] | None:
+    """Return (source table, item labels, [(option digit, label)]) for a matching table."""
     for table in tables:
         if table.columns != 2 or len(table.rows) < 3:
             continue
@@ -512,7 +514,7 @@ def _matching_table(tables: list[SourceTable]) -> tuple[list[str], list[tuple[st
                 if found:
                     options.append((found.group(1), line))
         if len(items) >= 2 and len(options) >= 2:
-            return items, options
+            return table, items, options
     return None
 
 
@@ -533,13 +535,19 @@ def _render_table(table: SourceTable) -> str:
     return "\n".join(lines)
 
 
-def build_prompt(task: SourceTask, *, skip_tables: bool) -> str:
+def build_prompt(task: SourceTask, *, skip_table: SourceTable | None = None) -> str:
+    # A matching task shows its pairs as controls, so only that one table is
+    # dropped. A data table the question reasons about has to stay.
     parts = list(task.prompt_blocks)
-    if not skip_tables:
-        parts.extend(
-            rendered for rendered in (_render_table(table) for table in task.prompt_tables)
-            if rendered
+    parts.extend(
+        rendered
+        for rendered in (
+            _render_table(table)
+            for table in task.prompt_tables
+            if table is not skip_table
         )
+        if rendered
+    )
     return clean_block(parts)
 
 
@@ -585,10 +593,12 @@ def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
 
     matching = _matching_table(task.prompt_tables)
     if matching is not None and len(parts) == 1 and DIGITS.fullmatch(key):
-        items, options = matching
+        table, items, options = matching
         option_digits = {digit for digit, _ in options}
         if len(key) == len(items) and set(key) <= option_digits:
-            return "matching", {"items": items, "options": options, "key": key}
+            return "matching", {
+                "items": items, "options": options, "key": key, "table": table,
+            }
 
     if len(parts) == 1 and is_valid_numeric_answer(key):
         variants = [key]
@@ -670,7 +680,7 @@ def build_question(
     *,
     verified_at: str,
 ) -> dict[str, Any] | str:
-    prompt = build_prompt(task, skip_tables=kind == "matching")
+    prompt = build_prompt(task, skip_table=payload.get("table") if kind == "matching" else None)
     if kind in UI_COLLECTS_THE_ANSWER:
         prompt = strip_answer_sheet_instructions(prompt)
     if not prompt:

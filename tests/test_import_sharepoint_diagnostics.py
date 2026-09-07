@@ -776,3 +776,34 @@ def test_option_labels_drop_the_list_punctuation_of_their_source():
     assert importer._option_label("Реформация в Германии;") == "Реформация в Германии"
     assert importer._option_label("вторая позиция,") == "вторая позиция"
     assert importer._option_label("обычный вариант") == "обычный вариант"
+
+
+def test_a_matching_task_keeps_the_data_table_it_reasons_about():
+    """Only the table that became the pairs is dropped from the prompt."""
+    data = importer.SourceTable(rows=(
+        (("Статья",), ("Доля",)),
+        (("На армию",), ("40 %",)),
+        (("На флот",), ("10 %",)),
+    ))
+    pairs = importer.SourceTable(rows=(
+        (("Начала",), ("Завершения",)),
+        (("А) Расходы на армию",), ("1) Составляли более половины.",)),
+        (("Б) Расходы на флот",), ("2) Были меньше десятой части.",)),
+    ))
+    task = importer.SourceTask(
+        number=7,
+        prompt_blocks=["Используя данные таблицы, завершите суждения."],
+        prompt_tables=[data, pairs],
+        answer=["12"],
+    )
+
+    kind, payload = importer.classify(task)
+    assert kind == "matching"
+
+    question = importer.build_question(
+        importer.SourceFile(Path("f.docx"), "ОГЭ", "history", 2022, 1, ()),
+        task, kind, payload, verified_at="2026-09-04",
+    )
+
+    assert "На армию | 40 %" in question["prompt"]
+    assert "Составляли более половины" not in question["prompt"]
