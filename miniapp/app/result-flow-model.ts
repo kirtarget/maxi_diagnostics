@@ -1,6 +1,6 @@
 import { normalizedEstimate } from "./score-estimate";
 import type {
-  ForecastKind, ForecastPoint, ReviewResponse, ServerResult, ServerTopic,
+  ForecastKind, ForecastPoint, ServerResult, ServerTopic,
 } from "./types";
 
 type ResultWithForecast = Pick<ServerResult, "score" | "forecast" | "estimate">;
@@ -15,12 +15,6 @@ export type PersonalRouteAction = {
   id: "close-topic" | "strengthen-topic" | "recheck";
   title: string;
   description: string;
-};
-
-export type PdfStatusCopy = {
-  title: string;
-  description: string;
-  action?: string;
 };
 
 export type ResultGameAchievement = {
@@ -173,13 +167,13 @@ export function personalRoute(growthTopics: GrowthTopic[]): PersonalRouteAction[
     .map((topic, index) => index === 0
       ? {
         id: "close-topic" as const,
-        title: `Закрыть тему «${topic}»`,
-        description: "Повтори базовые конструкции и реши короткий набор заданий.",
+        title: `Разобрать «${topic}»`,
+        description: "Посмотри разбор ответа и повтори это задание.",
       }
       : {
         id: "strengthen-topic" as const,
-        title: `Укрепить тему «${topic}»`,
-        description: "Собери ключевые правила и закрепи их практикой.",
+        title: `Повторить «${topic}»`,
+        description: "Проверь решение и попробуй ответить самостоятельно.",
       });
 
   const recheck: PersonalRouteAction = {
@@ -194,34 +188,3 @@ export function personalRoute(growthTopics: GrowthTopic[]): PersonalRouteAction[
   ].slice(0, 3);
 }
 
-export function pdfStatusCopy(status: ReviewResponse["pdf_status"]): PdfStatusCopy {
-  switch (status) {
-    case "pending":
-      return {
-        title: "Готовим PDF для Telegram",
-        description: "Результат и разбор уже сохранены.",
-      };
-    case "sending":
-      return {
-        title: "Отправляем PDF в Telegram",
-        description: "Проверяем доставку документа.",
-      };
-    case "sent":
-      return {
-        title: "PDF отправлен в Telegram",
-        description: "Результат, ответы и разбор сохранены в чате.",
-      };
-    case "failed":
-      return {
-        title: "PDF пока не отправлен",
-        description: "Документ сохранён; попробуйте проверить статус позже.",
-        action: "Проверить статус",
-      };
-    case "abandoned":
-      return {
-        title: "PDF не удалось отправить",
-        description: "Результат и разбор остаются доступны в приложении.",
-        action: "Проверить статус",
-      };
-  }
-}

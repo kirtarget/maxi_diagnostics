@@ -3,6 +3,15 @@
 This repository is configured for MAXIMUM Education. It contains the school catalog,
 brand, domain, and public links for `maxi.kirtarget.ru`.
 
+The MVP distinguishes first-session onboarding from returning users. Results show
+accuracy within the checked sample, not an exam-score prediction. The whole result
+lives in the Mini App. Telegram delivers a short summary with a button that opens
+that attempt's result screen. The protected
+`/admin/users` page lists activity and outcomes. Bot commands `/stop` and
+`/notifications` disable and enable reminders. See
+[`docs/MVP_ANALYTICS.md`](docs/MVP_ANALYTICS.md) for event definitions and
+[`docs/MVP_AUDIT_2026-09-06.md`](docs/MVP_AUDIT_2026-09-06.md) for launch checks.
+
 ## Deployment setup
 
 1. Clone a clean reviewed revision of this repository.

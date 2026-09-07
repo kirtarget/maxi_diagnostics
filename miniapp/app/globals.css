@@ -282,18 +282,6 @@ select:focus-visible,
 }
 
 .text-action,
-.inline-action {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  border: 0;
-  padding: 0;
-  color: var(--brand-primary);
-  background: transparent;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
 
 /* ============ Centered service states ============ */
 
@@ -1308,6 +1296,40 @@ select:focus-visible,
   line-height: 1.45;
 }
 
+.question-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--brand-ink) 10%, transparent);
+}
+
+.question-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.question-table th,
+.question-table td {
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid color-mix(in srgb, var(--brand-ink) 8%, transparent);
+}
+
+.question-table thead th {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  background: color-mix(in srgb, var(--brand-ink) 5%, transparent);
+}
+
+.question-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 .question-media {
   display: flex;
   flex-direction: column;
@@ -2077,31 +2099,6 @@ select:focus-visible,
 .scope-note strong { font-size: 13px; font-weight: 700; }
 
 .scope-note span { color: var(--muted); font-size: 13px; line-height: 1.4; }
-
-.delivery-note {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 13px 15px;
-  border: 1px solid color-mix(in srgb, var(--brand-primary) 20%, transparent);
-  border-radius: 14px;
-  background: var(--primary-tint);
-}
-
-.delivery-note strong { font-size: 13px; font-weight: 700; }
-
-.delivery-note span { color: var(--muted); font-size: 13px; line-height: 1.4; }
-
-.delivery-failed,
-.delivery-abandoned {
-  border-color: var(--signal-line);
-  background: var(--signal-tint);
-}
-
-.delivery-sent {
-  border-color: var(--success-line);
-  background: var(--success-tint);
-}
 
 .result-actions {
   display: flex;

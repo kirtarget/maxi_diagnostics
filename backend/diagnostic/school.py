@@ -338,7 +338,7 @@ class InterfaceLabels(BaseModel):
     choose_option: str
     next_question: str
     get_result: str
-    result_in_telegram: str
+    result_in_app: str
     privacy_label: str
     support_label: str
     choose_label: str

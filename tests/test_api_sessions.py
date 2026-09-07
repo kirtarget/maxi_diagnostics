@@ -182,61 +182,6 @@ def test_catalog_detail_hides_unknown_diagnostic(monkeypatch):
     assert response.json() == {"detail": "diagnostic_not_found"}
 
 
-def test_report_asset_bundles_are_deterministic_across_restarts():
-    from diagnostic.api.sessions import prepare_report_asset_bundles
-
-    school = load_school(SAMPLE_SCHOOL)
-    catalog = load_catalog(school)
-
-    first = prepare_report_asset_bundles(school, catalog)
-    assert first == prepare_report_asset_bundles(school, catalog)
-    _, payload = first["demo-math"]
-    from io import BytesIO
-    from zipfile import ZipFile
-
-    with ZipFile(BytesIO(payload)) as archive:
-        assert {item.date_time for item in archive.infolist()} == {(1980, 1, 1, 0, 0, 0)}
-
-
-def test_report_asset_bundle_includes_only_its_diagnostic_images(tmp_path: Path):
-    school_root = tmp_path / "school"
-    shutil.copytree(SAMPLE_SCHOOL, school_root)
-    for name, color in (("question-1.svg", "#111111"), ("question-2.svg", "#222222")):
-        (school_root / "assets" / name).write_text(
-            '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="10">'
-            f'<rect width="20" height="10" fill="{color}"/></svg>',
-            encoding="utf-8",
-        )
-    diagnostic_path = school_root / "diagnostics/demo-math.json"
-    data = json.loads(diagnostic_path.read_text(encoding="utf-8"))
-    data["questions"][0]["assets"] = ["assets/question-1.svg"]
-    diagnostic_path.write_text(json.dumps(data), encoding="utf-8")
-    second = dict(data)
-    second["id"] = "second-math"
-    second["questions"] = [dict(question) for question in data["questions"]]
-    second["questions"][0]["assets"] = ["assets/question-2.svg"]
-    (school_root / "diagnostics/second-math.json").write_text(
-        json.dumps(second), encoding="utf-8"
-    )
-    school = load_school(school_root)
-    catalog = load_catalog(school)
-
-    from diagnostic.api.sessions import prepare_report_asset_bundles
-    from io import BytesIO
-    from zipfile import ZipFile
-
-    bundles = prepare_report_asset_bundles(school, catalog)
-    _, first_payload = bundles["demo-math"]
-    _, second_payload = bundles["second-math"]
-
-    with ZipFile(BytesIO(first_payload)) as archive:
-        assert "assets/question-1.svg" in archive.namelist()
-        assert "assets/question-2.svg" not in archive.namelist()
-    with ZipFile(BytesIO(second_payload)) as archive:
-        assert "assets/question-2.svg" in archive.namelist()
-        assert "assets/question-1.svg" not in archive.namelist()
-
-
 def test_progress_rejects_unknown_question_id(monkeypatch):
     client = make_client(monkeypatch)
     body = base_completion() | {
@@ -430,14 +375,22 @@ def test_completion_counts_skips_and_separates_funnel_events(monkeypatch):
     for call in emitted.await_args_list:
         if call.args[0] == "question_skipped":
             assert "answers" not in call.args[2]
-    assert [call.kwargs["action"] for call in recorded.await_args_list] == [
-        "question_skipped",
-        "question_skipped",
-        "question_skipped",
-        "question_skipped",
-        "question_skipped",
-        "completed",
+    skip_calls = [
+        call for call in recorded.await_args_list
+        if call.kwargs["action"] == "question_skipped"
     ]
+    assert len(skip_calls) == 5
+    skip_keys = [call.kwargs["dedupe_key"] for call in skip_calls]
+    assert len(set(skip_keys)) == 5
+    assert set(skip_keys) == {
+        f"diagnostic/{body['attempt_id']}/question_skipped/{question_id}"
+        for question_id in body["answers"]
+    }
+    assert all("answers" not in call.kwargs for call in skip_calls)
+    assert sum(
+        call.kwargs["action"] == "completed"
+        for call in recorded.await_args_list
+    ) == 1
 
 
 def test_legacy_result_defaults_skipped_count_to_zero():
@@ -521,7 +474,7 @@ def test_erased_user_receives_stable_gone_response(monkeypatch):
     assert bootstrap.json() == {"detail": "diagnostic_user_erased"}
 
 
-def test_completion_returns_server_scored_result_and_pending_pdf(monkeypatch):
+def test_completion_returns_server_scored_result(monkeypatch):
     stored = {}
 
     async def complete_attempt(completion):
@@ -544,7 +497,6 @@ def test_completion_returns_server_scored_result_and_pending_pdf(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["result"]["score"] == 100
-    assert response.json()["attempt"]["pdf_status"] == "pending"
     assert stored["completion"].score == 100
     assert all(
         "correct" not in question
@@ -552,12 +504,12 @@ def test_completion_returns_server_scored_result_and_pending_pdf(monkeypatch):
     )
     assert stored["completion"].forecast == {
         "kind": "accuracy_percent",
-        "points": [{"id": "intensive", "label": "Интенсив", "value": 100}],
+        "points": [],
     }
     assert not hasattr(stored["completion"], "telegram_username")
     assert not hasattr(stored["completion"], "first_name")
     assert response.json()["result"]["forecast"] == stored["completion"].forecast
-    assert response.json()["result"]["unassessed_part"] == "оставшаяся часть полной диагностики"
+    assert "Это не прогноз" in response.json()["result"]["unassessed_part"]
 
 
 def test_completion_freezes_review_snapshot(monkeypatch):
@@ -641,7 +593,6 @@ def test_review_endpoint_requires_owner_and_completion(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["available"] is True
-    assert response.json()["pdf_status"] == "sent"
     assert "expected_value" not in response.text
 
 
@@ -687,38 +638,10 @@ def test_review_endpoint_marks_legacy_snapshot_unavailable(monkeypatch):
     })
 
     assert response.status_code == 200
-    assert response.json() == {"ok": True, "available": False, "items": [], "pdf_status": "sent"}
+    assert response.json() == {"ok": True, "available": False, "items": []}
 
 
-def test_completion_reuses_assets_prepared_once_at_app_startup(monkeypatch):
-    from diagnostic.api import sessions
-
-    builds = []
-
-    def build_assets(_school, questions):
-        builds.append(tuple(question.id for question in questions))
-        return b"frozen-assets"
-
-    async def complete_attempt(completion):
-        return {
-            "attempt_id": completion.attempt_id,
-            "status": "completed",
-            "pdf_status": "pending",
-            "result_snapshot": completion.result_snapshot,
-        }
-
-    monkeypatch.setattr(sessions, "_build_report_assets", build_assets)
-    client = make_client(monkeypatch, complete_attempt=complete_attempt)
-    startup_build_count = len(builds)
-
-    response = client.post("/api/diagnostics/session/complete", json=base_completion())
-
-    assert response.status_code == 200
-    assert startup_build_count == 1
-    assert len(builds) == startup_build_count
-
-
-def test_completion_only_enqueues_pdf_for_the_single_worker(monkeypatch):
+def test_completion_only_enqueues_delivery_for_the_single_worker(monkeypatch):
     from unittest.mock import AsyncMock
     from diagnostic.api import sessions
 
@@ -769,11 +692,13 @@ def test_completion_records_funnel_steps_without_a_telegram_identifier(monkeypat
     secret = client.app.state.settings.application_secret
 
     assert response.status_code == 200
-    assert [call.kwargs["action"] for call in recorded.await_args_list] == [
-        "started", "completed"
-    ]
+    actions = [call.kwargs["action"] for call in recorded.await_args_list]
+    assert {"started", "completed", "diagnostic_started", "diagnostic_completed",
+            "onboarding_completed", "streak_updated", "question_answered"} <= set(actions)
+    assert actions.count("question_answered") == len(base_completion()["answers"])
     for call in recorded.await_args_list:
-        assert call.kwargs["exam"] and call.kwargs["subject"]
+        if call.kwargs["action"] in {"started", "completed", "question_answered"}:
+            assert call.kwargs["exam"] and call.kwargs["subject"]
         assert session_subject_key(secret, call.kwargs["user_id"]) is not None
         assert "init_data" not in call.kwargs
 
@@ -1027,14 +952,14 @@ def capture_completion(monkeypatch, school):
     return stored["completion"], response.json()
 
 
-def test_forecast_recovers_a_share_of_the_missed_growth_points(monkeypatch):
+def test_forecast_does_not_invent_recovery_of_missed_points(monkeypatch):
     completion, payload = capture_completion(monkeypatch, school_with())
 
     assert payload["result"]["score"] == 50
     assert payload["result"]["recoverable_primary_score"] == 1
     assert completion.forecast == {
         "kind": "accuracy_percent",
-        "points": [{"id": "intensive", "label": "Интенсив", "value": 100}],
+        "points": [],
     }
 
 
@@ -1043,27 +968,20 @@ def test_forecast_keeps_the_current_value_when_nothing_is_recovered(monkeypatch)
         monkeypatch, school_with(recovery_share=0)
     )
 
-    assert completion.forecast["points"][0]["value"] == 50
+    assert completion.forecast["points"] == []
 
 
-def test_completion_estimates_the_exam_score_from_the_matching_scale(monkeypatch):
+def test_completion_does_not_estimate_exam_score_even_with_a_scale(monkeypatch):
     completion, payload = capture_completion(
         monkeypatch, school_with(scales=[DEMO_SCALE])
     )
 
-    assert payload["result"]["estimate"] == {
-        "kind": "test_score",
-        "value": 50,
-        "scaled_primary": 4,
-        "exam_max_primary": 8,
-        "sample_max_primary": 2,
-        "sample_size": 2,
-        "min_pass": 27,
-    }
+    assert payload["result"]["estimate"] is None
+    assert payload["result"]["accuracy_percent"] == 50
     assert completion.result_snapshot["estimate"] == payload["result"]["estimate"]
     assert completion.forecast == {
-        "kind": "test_score",
-        "points": [{"id": "intensive", "label": "Интенсив", "value": 100}],
+        "kind": "accuracy_percent",
+        "points": [],
     }
 
 

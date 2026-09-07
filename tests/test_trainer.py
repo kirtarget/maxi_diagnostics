@@ -172,6 +172,35 @@ async def test_lives_reminder_schedules_notification_at_next_refill(database):
 
     assert await trainer.schedule_lives_refill_reminder(user_id) == due_at
 
+    async with pool.acquire() as connection:
+        await connection.execute(
+            "UPDATE diagnostic_notifications SET status='sending', locked_at=now(), attempts=8 WHERE user_id=$1",
+            user_id,
+        )
+        claimed = await connection.fetchrow(
+            "SELECT * FROM diagnostic_notifications WHERE user_id=$1", user_id,
+        )
+    await trainer.schedule_lives_refill_reminder(user_id)
+    async with pool.acquire() as connection:
+        same_cycle = await connection.fetchrow(
+            "SELECT * FROM diagnostic_notifications WHERE user_id=$1", user_id,
+        )
+        assert same_cycle["locked_at"] == claimed["locked_at"]
+        assert same_cycle["status"] == "sending"
+        await connection.execute(
+            "UPDATE diagnostic_notifications SET status='sent', locked_at=NULL, sent_at=now() WHERE user_id=$1",
+            user_id,
+        )
+    later = anchor + timedelta(hours=4, minutes=1)
+    await trainer.schedule_lives_refill_reminder(user_id, now=later)
+    async with pool.acquire() as connection:
+        new_cycle = await connection.fetchrow(
+            "SELECT * FROM diagnostic_notifications WHERE user_id=$1", user_id,
+        )
+    assert new_cycle["status"] == "pending"
+    assert new_cycle["attempts"] == 0
+    assert new_cycle["due_at"] == anchor + timedelta(hours=8)
+
 
 @pytest.mark.asyncio
 async def test_lives_reminder_is_noop_when_lives_are_full(database):

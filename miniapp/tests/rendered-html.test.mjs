@@ -40,7 +40,8 @@ test("renders the configured school identity", async () => {
   assert.ok(output.includes(`--brand-background:${brand.colors.background}`));
   assert.match(output, /Загружаем диагностику/);
   assert.match(output, /Подготовка/);
-  assert.match(output, /Прогноз баллов/);
+  assert.match(output, /Мой план подготовки/);
+  assert.doesNotMatch(output, /Ожидаемый результат|Прогноз баллов/);
   assert.match(output, /Персональный маршрут/);
 });
 

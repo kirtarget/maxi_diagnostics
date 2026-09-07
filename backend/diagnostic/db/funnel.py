@@ -9,6 +9,7 @@ so that the return-rate arithmetic stays inside one calendar system.
 from __future__ import annotations
 
 import logging
+import hashlib
 from typing import Any, Final
 
 from diagnostic.db.core import get_pool
@@ -24,7 +25,12 @@ FUNNEL_STEPS: Final[tuple[str, ...]] = (
     "result_viewed",
 )
 FUNNEL_ACTIONS: Final[frozenset[str]] = frozenset(
-    (*FUNNEL_STEPS, "question_skipped", "trainer_answered", "offer_clicked")
+    (*FUNNEL_STEPS, "question_skipped", "trainer_answered", "offer_clicked",
+     "registration_started", "registration_completed", "onboarding_started",
+     "onboarding_completed", "diagnostic_started", "question_answered",
+     "diagnostic_abandoned", "diagnostic_completed", "daily_started",
+     "daily_completed", "life_lost", "streak_updated", "notification_sent",
+     "notification_opened", "user_returned")
 )
 FUNNEL_RETENTION_DAYS: Final[int] = 90
 _COUNTED_ACTIONS: Final[tuple[str, ...]] = (
@@ -46,13 +52,19 @@ _WINDOW = """
     ),
     subject_days AS (
         SELECT DISTINCT subject_hash, occurred_on FROM window_events
+         WHERE action IN (
+             'opened', 'started', 'completed', 'result_viewed', 'trainer_answered',
+             'offer_clicked', 'onboarding_started', 'onboarding_completed',
+             'diagnostic_started', 'question_answered', 'diagnostic_completed',
+             'daily_started', 'daily_completed', 'notification_opened', 'user_returned'
+         )
     )
 """
 _SUMMARY_SQL = (
     _WINDOW
     + """
     SELECT
-        (SELECT count(DISTINCT subject_hash) FROM window_events) AS subjects,
+        (SELECT count(DISTINCT subject_hash) FROM subject_days) AS subjects,
         (SELECT count(DISTINCT subject_hash) FROM window_events
           WHERE action='opened') AS opened,
         (SELECT count(DISTINCT subject_hash) FROM window_events
@@ -119,6 +131,7 @@ async def record_event(
     action: str,
     exam: Any = None,
     subject: Any = None,
+    dedupe_key: str | None = None,
 ) -> bool:
     """Append one funnel event. Never raises into the request or bot path."""
     try:
@@ -128,13 +141,15 @@ async def record_event(
         async with pool.acquire() as connection:
             await connection.execute(
                 """
-                INSERT INTO diagnostic_funnel_events (subject_hash, action, exam, subject)
-                VALUES ($1, $2, $3, $4)
+                INSERT INTO diagnostic_funnel_events (subject_hash, action, exam, subject, dedupe_hash)
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (subject_hash, action, dedupe_hash) DO NOTHING
                 """,
                 session_subject_key(application_secret, user_id),
                 action,
                 _bounded(exam, _MAX_EXAM_LENGTH),
                 _bounded(subject, _MAX_SUBJECT_LENGTH),
+                hashlib.sha256(dedupe_key.encode()).hexdigest() if dedupe_key else None,
             )
         return True
     except Exception as exc:
@@ -144,6 +159,37 @@ async def record_event(
             type(exc).__name__,
         )
         return False
+
+
+async def record_abandoned_attempts(application_secret: str, *, limit: int = 500) -> int:
+    """Infer abandonment once after 24 hours without saved diagnostic progress."""
+    try:
+        pool = await get_pool()
+        async with pool.acquire() as connection:
+            rows = await connection.fetch(
+                """
+                SELECT a.attempt_id, a.user_id, a.exam, a.subject
+                  FROM diagnostic_attempts a
+                 WHERE a.status='in_progress' AND a.updated_at <= now() - interval '24 hours'
+                   AND NOT EXISTS (
+                       SELECT 1 FROM diagnostic_funnel_events event
+                        WHERE event.action='diagnostic_abandoned'
+                          AND event.dedupe_hash=encode(sha256(convert_to('abandoned/' || a.attempt_id, 'UTF8')), 'hex')
+                   )
+                 ORDER BY a.updated_at, a.attempt_id LIMIT $1
+                """, max(1, min(limit, 500)),
+            )
+        recorded = 0
+        for row in rows:
+            recorded += await record_event(
+                application_secret=application_secret, user_id=row["user_id"],
+                action="diagnostic_abandoned", exam=row["exam"], subject=row["subject"],
+                dedupe_key=f"abandoned/{row['attempt_id']}",
+            )
+        return recorded
+    except Exception as exc:
+        logger.warning("diagnostic_abandonment_scan_failed error=%s", type(exc).__name__)
+        return 0
 
 
 async def purge_funnel_events(
@@ -184,6 +230,15 @@ async def funnel_report(
         breakdown = await connection.fetch(
             _BREAKDOWN_SQL, window, exam_filter, subject_filter
         )
+        event_counts = await connection.fetch(
+            """
+            SELECT action, count(*) AS events, count(DISTINCT subject_hash) AS users
+              FROM diagnostic_funnel_events
+             WHERE occurred_on > (now() AT TIME ZONE 'UTC')::date - $1::int
+               AND ($2::text IS NULL OR exam=$2) AND ($3::text IS NULL OR subject=$3)
+             GROUP BY action ORDER BY action
+            """, window, exam_filter, subject_filter,
+        )
     counts = {key: int(summary[key]) for key in ("subjects", *_COUNTED_ACTIONS)}
     counts["returned_d1"] = int(summary["returned_d1"])
     counts["returned_d7"] = int(summary["returned_d7"])
@@ -192,6 +247,8 @@ async def funnel_report(
         "exam": exam_filter,
         "subject": subject_filter,
         "summary": counts,
+        "events": [{"action": row["action"], "events": int(row["events"]),
+                    "users": int(row["users"])} for row in event_counts],
         "breakdown": [
             {
                 "exam": str(row["exam"]),

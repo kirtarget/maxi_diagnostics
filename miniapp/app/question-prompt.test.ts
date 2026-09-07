@@ -82,6 +82,8 @@ describe("parseQuestionPrompt", () => {
 describe("cleanAnswerLabel", () => {
   it("removes duplicated source numbering from answer buttons", () => {
     expect(cleanAnswerLabel("3) расщепление углеводов")).toBe("расщепление углеводов");
+    expect(cleanAnswerLabel("А. Восстание декабристов")).toBe("Восстание декабристов");
+    expect(cleanAnswerLabel("1. 1185 г.")).toBe("1185 г.");
   });
 
   it("keeps ordinary answer text unchanged", () => {
@@ -97,5 +99,32 @@ describe("questionTitleClassName", () => {
 
   it("keeps concise prompts prominent", () => {
     expect(questionTitleClassName("Краткое условие")).toBe("question-title");
+  });
+});
+
+describe("table blocks", () => {
+  it("groups the converter's `cell | cell` lines into one table", () => {
+    const blocks = parseQuestionPrompt([
+      "Рассмотрите таблицу и заполните пустую ячейку.",
+      "Метод | Применение метода",
+      "___ | Изучение кариотипа под микроскопом.",
+      "Популяционно-статистический | Изучение гена в популяции.",
+      "Ответ запишите словом.",
+    ].join("\n"));
+
+    const table = blocks.find((block) => block.kind === "table");
+    expect(table).toBeDefined();
+    expect(table && table.kind === "table" && table.rows).toEqual([
+      ["Метод", "Применение метода"],
+      ["___", "Изучение кариотипа под микроскопом."],
+      ["Популяционно-статистический", "Изучение гена в популяции."],
+    ]);
+    expect(blocks.filter((block) => block.kind === "table")).toHaveLength(1);
+    expect(blocks[blocks.length - 1]).toEqual({ kind: "instruction", text: "Ответ запишите словом." });
+  });
+
+  it("leaves a lone line with a bar as prose", () => {
+    const blocks = parseQuestionPrompt("Задание.\nВыберите a | b как обозначение.");
+    expect(blocks.some((block) => block.kind === "table")).toBe(false);
   });
 });

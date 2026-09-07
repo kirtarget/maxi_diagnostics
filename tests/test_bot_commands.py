@@ -31,6 +31,8 @@ def test_bot_command_menu_is_diagnostic_only():
         "diagnostics",
         "results",
         "plan",
+        "stop",
+        "notifications",
     ]
 
 
@@ -227,13 +229,12 @@ async def test_polling_failure_closes_bot_session_and_database(monkeypatch):
         AsyncMock(side_effect=lambda: events.append("database_closed")),
     )
     monkeypatch.setattr(bot_main, "configure_bot_safely", AsyncMock())
-    monkeypatch.setattr(bot_main, "store_report_asset_bundle", AsyncMock())
     monkeypatch.setattr(bot_main, "Bot", FakeBot)
     monkeypatch.setattr(bot_main, "Dispatcher", FakeDispatcher)
     monkeypatch.setattr(
         bot_main,
         "build_worker_scheduler",
-        lambda actual_bot, actual_settings, actual_school, actual_catalog: FakeScheduler(),
+        lambda actual_bot, actual_settings, actual_school: FakeScheduler(),
     )
 
     with pytest.raises(RuntimeError, match="polling failed"):
@@ -283,7 +284,6 @@ async def test_delivery_only_mode_runs_scheduler_without_starting_polling(monkey
     monkeypatch.setattr(bot_main, "load_catalog", lambda actual: catalog)
     monkeypatch.setattr(bot_main, "init_db", AsyncMock())
     monkeypatch.setattr(bot_main, "close_db", AsyncMock())
-    monkeypatch.setattr(bot_main, "store_report_asset_bundle", AsyncMock())
     monkeypatch.setattr(bot_main, "Bot", FakeBot)
     monkeypatch.setattr(
         bot_main,
@@ -293,7 +293,7 @@ async def test_delivery_only_mode_runs_scheduler_without_starting_polling(monkey
     monkeypatch.setattr(
         bot_main,
         "build_worker_scheduler",
-        lambda actual_bot, actual_settings, actual_school, actual_catalog: FakeScheduler(),
+        lambda actual_bot, actual_settings, actual_school: FakeScheduler(),
     )
     monkeypatch.setattr(
         bot_main,
@@ -343,7 +343,7 @@ def _completed_row(**overrides) -> dict:
 
 
 @pytest.mark.asyncio
-async def test_results_listing_shows_the_estimate_next_to_the_percent(monkeypatch):
+async def test_results_listing_omits_unvalidated_exam_estimate(monkeypatch):
     from diagnostic.bot import handlers
 
     monkeypatch.setattr(
@@ -360,7 +360,7 @@ async def test_results_listing_shows_the_estimate_next_to_the_percent(monkeypatc
 
     text = message.answer.await_args.args[0]
     assert "50%" in text
-    assert "≈ 53 балла ЕГЭ" in text
+    assert "≈ 53 балла ЕГЭ" not in text
 
 
 @pytest.mark.asyncio
@@ -385,7 +385,7 @@ async def test_results_listing_keeps_the_percent_only_for_older_attempts(monkeyp
 
 
 @pytest.mark.asyncio
-async def test_result_message_repeats_the_estimate_and_its_caption(monkeypatch):
+async def test_result_message_omits_estimate_and_explains_coverage(monkeypatch):
     from diagnostic.bot import handlers
 
     monkeypatch.setattr(
@@ -404,8 +404,5 @@ async def test_result_message_repeats_the_estimate_and_its_caption(monkeypatch):
     )
 
     text = callback.message.answer.await_args.args[0]
-    assert "≈ 53 балла ЕГЭ" in text
-    assert (
-        "ориентировочно, "
-        "по 10 заданиям" in text
-    )
+    assert "≈ 53 балла ЕГЭ" not in text
+    assert "Это не прогноз балла ЕГЭ или ОГЭ" in text

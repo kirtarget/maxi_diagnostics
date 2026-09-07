@@ -30,6 +30,50 @@ def subject(user_id: int) -> str:
     return session_subject_key(SECRET, user_id)
 
 
+@pytest.mark.asyncio
+async def test_product_event_retries_are_deduplicated_per_subject_and_action():
+    for user_id in (41, 41, 42):
+        assert await funnel.record_event(
+            application_secret=SECRET, user_id=user_id, action="question_answered",
+            dedupe_key="attempt/question",
+        )
+    assert await funnel.record_event(
+        application_secret=SECRET, user_id=41, action="life_lost",
+        dedupe_key="attempt/question",
+    )
+    report = await funnel.funnel_report(days=7)
+    assert report["events"] == [
+        {"action": "life_lost", "events": 1, "users": 1},
+        {"action": "question_answered", "events": 2, "users": 2},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_abandonment_scan_records_stale_attempts_only_once():
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute("TRUNCATE diagnostic_attempts CASCADE")
+        await connection.execute(
+            """
+            INSERT INTO diagnostic_attempts
+                (attempt_id, user_id, diagnostic_id, exam, subject, mode,
+                 question_count, updated_at)
+            VALUES ('stale', 41, 'demo', 'oge', 'Math', 'quick', 3,
+                    now() - interval '25 hours'),
+                   ('recent', 42, 'demo', 'oge', 'Math', 'quick', 3, now())
+            """
+        )
+    assert await funnel.record_abandoned_attempts(SECRET) == 1
+    assert await funnel.record_abandoned_attempts(SECRET) == 0
+    async with pool.acquire() as connection:
+        rows = await connection.fetch(
+            "SELECT subject_hash, action FROM diagnostic_funnel_events"
+        )
+    assert [dict(row) for row in rows] == [
+        {"subject_hash": subject(41), "action": "diagnostic_abandoned"},
+    ]
+
+
 async def seed(rows) -> None:
     pool = await get_pool()
     async with pool.acquire() as connection:
@@ -84,6 +128,30 @@ async def test_funnel_counts_unique_subjects_per_step_and_return_windows():
     }
     assert month["summary"]["opened"] == 3
     assert month["summary"]["subjects"] == 3
+
+
+@pytest.mark.asyncio
+async def test_background_events_do_not_count_as_users_or_returns():
+    await seed([
+        (subject(1), "opened", None, None, days_ago(3)),
+        (subject(1), "notification_sent", None, None, days_ago(2)),
+        (subject(1), "diagnostic_abandoned", None, None, days_ago(1)),
+        (subject(2), "notification_sent", None, None, days_ago(2)),
+        (subject(2), "notification_sent", None, None, days_ago(1)),
+        (subject(3), "registration_started", None, None, days_ago(2)),
+        (subject(3), "registration_completed", None, None, days_ago(1)),
+    ])
+    report = await funnel.funnel_report(days=7)
+    assert report["summary"]["subjects"] == 1
+    assert report["summary"]["returned_d1"] == 0
+    assert report["summary"]["returned_d7"] == 0
+    assert any(row["action"] == "notification_sent" for row in report["events"])
+
+    await seed([(subject(1), "user_returned", None, None, days_ago(2))])
+    report = await funnel.funnel_report(days=7)
+    assert report["summary"]["subjects"] == 1
+    assert report["summary"]["returned_d1"] == 1
+    assert report["summary"]["returned_d7"] == 0
 
 
 @pytest.mark.asyncio

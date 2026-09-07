@@ -84,21 +84,11 @@ def test_backend_and_miniapp_images_are_reproducible_minimal_and_non_root():
         line.strip() for line in read("requirements-dev-lock.txt").splitlines()
         if line.strip() and not line.startswith("#")
     }
-    build_lock = {
-        line.strip() for line in read("requirements-build-lock.txt").splitlines()
-        if line.strip() and not line.startswith("#")
-    }
 
     assert backend.startswith("FROM python:3.11-slim@sha256:")
     assert "COPY requirements-lock.txt" in backend
-    assert "COPY requirements-build-lock.txt" in backend
-    assert "--no-deps -r /app/requirements-build-lock.txt" in backend
-    assert "--no-build-isolation" in backend
-    assert "pip wheel" in backend and "/app/wheelhouse" in backend
-    assert "--no-index --find-links=/app/wheelhouse --no-deps" in backend
+    assert "--only-binary=:all: --no-deps -r /app/requirements-lock.txt" in backend
     assert "AS python-dependencies" in backend
-    assert "libcairo2-dev" in backend and "pkg-config" in backend and "build-essential" in backend
-    assert "libcairo2" in backend
     assert "COPY --from=python-dependencies /opt/venv /opt/venv" in backend
     assert "collect_python_licenses.py" in backend
     assert "COPY --from=python-dependencies /app/licenses/python-runtime" in backend
@@ -111,14 +101,6 @@ def test_backend_and_miniapp_images_are_reproducible_minimal_and_non_root():
     assert "urllib.request" in backend and "127.0.0.1:8080/healthz" in backend
     assert requirements and all("==" in line for line in requirements)
     assert requirements <= runtime_lock <= dev_lock
-    assert build_lock == {
-        "meson-python==0.20.0",
-        "meson==1.11.2",
-        "ninja==1.13.0",
-        "packaging==26.3",
-        "pyproject-metadata==0.12.1",
-        "wheel==0.45.1",
-    }
 
     assert "FROM node:22-alpine@sha256:" in miniapp
     assert "npm ci" in miniapp and "npm run build" in miniapp
@@ -165,7 +147,6 @@ def test_ci_supplies_stable_test_application_secret_without_printing_compose_sec
     assert "IMAGE_NAMESPACE:" in workflow
     assert "INSTALLATION_ID:" in workflow
     assert "python -m pip install --no-deps -r requirements-dev-lock.txt" in workflow
-    assert workflow.index("libcairo2-dev") < workflow.index("pip install --no-deps")
     assert "python -m pip install -r requirements-dev.txt" not in workflow
     assert "docker compose config --quiet" in workflow
     assert "run: docker compose config\n" not in workflow
@@ -228,13 +209,10 @@ def test_backend_runtime_license_inventory_is_fail_closed_with_audited_fallbacks
     collector = read("scripts/collect_python_licenses.py")
     dockerfile = read("backend/Dockerfile")
     expected = {
-        "third_party_licenses/python/rlpycairo-0.4.0-BSD.txt": "Copyright (c) 2000-2022, ReportLab Inc.",
         "third_party_licenses/python/webencodings-0.5.1-BSD.txt": "Copyright (c) 2012 by Simon Sapin.",
-        "third_party_licenses/python/pycairo-1.29.1-provenance.txt": "LGPL-2.1-only OR MPL-1.1",
     }
 
     assert "python_license_file_missing" in collector
-    assert 'Path("/usr/share/common-licenses/LGPL-2.1")' in collector
     assert "No license text was packaged" not in collector
     assert "dpkg-query" in dockerfile and "/usr/share/doc/${base}/copyright" in dockerfile
     for relative, marker in expected.items():

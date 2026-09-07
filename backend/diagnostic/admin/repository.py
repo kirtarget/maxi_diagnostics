@@ -10,6 +10,39 @@ def _bounded(limit: int, offset: int) -> tuple[int, int]:
     return max(1, min(int(limit), 100)), max(0, int(offset))
 
 
+async def list_users(*, offset: int = 0, user_id: int | None = None) -> list:
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        return await connection.fetch(
+            """
+            SELECT e.user_id, e.opened_at, e.last_opened_at,
+                   e.notifications_enabled, e.onboarding_started_at,
+                   COALESCE(p.completion_count, 0) AS completed,
+                   COALESCE(p.streak_days, 0) AS streak_days,
+                   p.streak_last_date, COALESCE(p.lives_remaining, 5) AS lives_remaining,
+                   p.lives_refill_at, COALESCE(p.xp_total, 0) AS xp_total,
+                   a.started, a.subject, a.result_subject, a.correct_count, a.question_count, a.errors
+              FROM diagnostic_engagements e
+              LEFT JOIN diagnostic_progress_profiles p USING (user_id)
+              LEFT JOIN LATERAL (
+                  SELECT count(*) AS started,
+                         (array_agg(subject ORDER BY updated_at DESC))[1] AS subject,
+                         (array_agg(subject ORDER BY completed_at DESC NULLS LAST)
+                             FILTER (WHERE status='completed'))[1] AS result_subject,
+                         (array_agg(correct_count ORDER BY completed_at DESC NULLS LAST)
+                             FILTER (WHERE status='completed'))[1] AS correct_count,
+                         (array_agg(question_count ORDER BY completed_at DESC NULLS LAST)
+                             FILTER (WHERE status='completed'))[1] AS question_count,
+                         count(*) FILTER (WHERE pdf_status='abandoned') AS errors
+                    FROM diagnostic_attempts WHERE user_id=e.user_id
+              ) a ON true
+             WHERE ($1::bigint IS NULL OR e.user_id=$1)
+             ORDER BY e.last_opened_at DESC, e.user_id
+             LIMIT 50 OFFSET $2
+            """, user_id, max(0, offset),
+        )
+
+
 def _delete_count(status: str) -> int:
     try:
         return int(status.rsplit(" ", 1)[1])

@@ -19,10 +19,6 @@ strong_topics, growth_topics, forecast, result_snapshot, started_at, updated_at,
 completed_at, result_viewed_at, pdf_status, pdf_attempts, pdf_last_error,
 pdf_locked_at, pdf_delivered_at, pdf_message_id
 """.strip()
-_ATTEMPT_DELIVERY_COLUMNS = (
-    f"{_ATTEMPT_PUBLIC_COLUMNS}, report_snapshot, report_asset_bundle_id, "
-    "report_assets, pdf_document"
-)
 _SANITIZED_REVIEW_SNAPSHOT = """
 CASE
     WHEN jsonb_typeof(report_snapshot->'public_review_snapshot') = 'array'
@@ -86,9 +82,6 @@ class AttemptCompletion:
     forecast: dict[str, Any] = field(default_factory=dict)
     result_snapshot: dict[str, Any] = field(default_factory=dict)
     report_snapshot: dict[str, Any] = field(default_factory=dict)
-    report_asset_bundle_id: str | None = None
-    report_assets: bytes | None = None
-    pdf_document: bytes | None = None
     supersedes_attempt_id: str | None = None
     activity_timezone: str = "Europe/Moscow"
 
@@ -272,29 +265,30 @@ async def mark_opened(user_id: int) -> bool:
             return created is not None
 
 
-async def store_report_asset_bundle(bundle_id: str, payload: bytes) -> None:
-    if len(bundle_id) != 64 or not payload or len(payload) > 25 * 1024 * 1024:
-        raise ValueError("report_assets_invalid")
+async def set_notification_preference(user_id: int, enabled: bool) -> None:
     pool = await get_pool()
     async with pool.acquire() as connection:
-        await connection.execute(
-            """
-            INSERT INTO diagnostic_report_asset_bundles (bundle_id, payload)
-            VALUES ($1, $2)
-            ON CONFLICT (bundle_id) DO NOTHING
-            """,
-            bundle_id,
-            payload,
-        )
-
-
-async def get_report_asset_bundle(bundle_id: str) -> bytes | None:
-    pool = await get_pool()
-    async with pool.acquire() as connection:
-        return await connection.fetchval(
-            "SELECT payload FROM diagnostic_report_asset_bundles WHERE bundle_id=$1",
-            bundle_id,
-        )
+        async with connection.transaction():
+            await connection.execute("SELECT pg_advisory_xact_lock($1)", user_id)
+            await _raise_if_erased(connection, user_id)
+            await connection.execute(
+                """
+                INSERT INTO diagnostic_engagements
+                    (user_id, opened_at, last_opened_at, notifications_enabled)
+                VALUES ($1, now(), now(), $2)
+                ON CONFLICT (user_id) DO UPDATE SET notifications_enabled=$2
+                """,
+                user_id, enabled,
+            )
+            if not enabled:
+                await connection.execute(
+                    """
+                    UPDATE diagnostic_notifications
+                       SET status='cancelled', locked_at=NULL, updated_at=now()
+                     WHERE user_id=$1 AND status IN ('pending','failed','sending')
+                    """,
+                    user_id,
+                )
 
 
 async def upsert_progress(progress: AttemptProgress):
@@ -557,10 +551,9 @@ async def complete_attempt(completion: AttemptCompletion):
                     subject, mode, status, question_index, question_count, answers,
                     progress_revision, correct_count, score, max_score, score_unit,
                     unassessed_part, strong_topics, growth_topics,
-                    forecast, result_snapshot, report_snapshot, report_asset_bundle_id,
-                    report_assets, pdf_document,
+                    forecast, result_snapshot, report_snapshot,
                     completed_at, updated_at, pdf_status
-                ) VALUES ($1,$2,$3,$4,$5,$6,$7,'completed',$8,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,now(),now(),'pending')
+                ) VALUES ($1,$2,$3,$4,$5,$6,$7,'completed',$8,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,now(),now(),'pending')
                 ON CONFLICT (attempt_id) DO UPDATE SET
                     diagnostic_id=EXCLUDED.diagnostic_id,
                     content_version=EXCLUDED.content_version,
@@ -582,15 +575,12 @@ async def complete_attempt(completion: AttemptCompletion):
                     forecast=EXCLUDED.forecast,
                     result_snapshot=EXCLUDED.result_snapshot,
                     report_snapshot=EXCLUDED.report_snapshot,
-                    report_asset_bundle_id=EXCLUDED.report_asset_bundle_id,
-                    report_assets=EXCLUDED.report_assets,
-                    pdf_document=EXCLUDED.pdf_document,
                     completed_at=now(), updated_at=now()
                 WHERE diagnostic_attempts.user_id=EXCLUDED.user_id
                   AND diagnostic_attempts.status = 'in_progress'
                   AND EXCLUDED.progress_revision = diagnostic_attempts.progress_revision + 1
-                RETURNING {_ATTEMPT_PUBLIC_COLUMNS}, $24::boolean AS completed_transition,
-                              $25::boolean AS started_transition
+                RETURNING {_ATTEMPT_PUBLIC_COLUMNS}, $21::boolean AS completed_transition,
+                              $22::boolean AS started_transition
                 """,
                 completion.attempt_id, completion.user_id, completion.diagnostic_id,
                 completion.content_version, completion.exam, completion.subject,
@@ -599,9 +589,6 @@ async def complete_attempt(completion: AttemptCompletion):
                 completion.score, completion.max_score, completion.score_unit,
                 completion.unassessed_part, completion.strong_topics, completion.growth_topics,
                 completion.forecast, completion.result_snapshot, completion.report_snapshot,
-                completion.report_asset_bundle_id,
-                completion.report_assets,
-                completion.pdf_document,
                 True,
                 existing is None,
             )
@@ -683,7 +670,7 @@ async def get_review_attempt(attempt_id: str, user_id: int):
     async with pool.acquire() as connection:
         return await connection.fetchrow(
             """
-            SELECT attempt_id, status, pdf_status, report_snapshot
+            SELECT attempt_id, status, report_snapshot
               FROM diagnostic_attempts
              WHERE attempt_id=$1 AND user_id=$2
             """,
@@ -800,7 +787,7 @@ async def list_notifications(attempt_id: str) -> list:
         )
 
 
-async def claim_pending_pdf(attempt_id: str | None = None):
+async def claim_pending_delivery(attempt_id: str | None = None):
     pool = await get_pool()
     async with pool.acquire() as connection:
         async with connection.transaction():
@@ -836,18 +823,23 @@ async def claim_pending_pdf(attempt_id: str | None = None):
             )
             if row is None:
                 return None
+            # The message carries the score line only, so a claimed attempt has no
+            # further use for the submitted answers or the private review. Clearing
+            # them here keeps a failing delivery from holding them for eight tries.
             return await connection.fetchrow(
                 f"""
                 UPDATE diagnostic_attempts
                    SET pdf_status='sending', pdf_locked_at=now(), pdf_attempts=pdf_attempts+1,
+                       answers='{{}}'::jsonb, report_snapshot={_SANITIZED_REVIEW_SNAPSHOT},
+                       pdf_document=NULL, report_assets=NULL, report_asset_bundle_id=NULL,
                        updated_at=now()
-                 WHERE attempt_id=$1 RETURNING {_ATTEMPT_DELIVERY_COLUMNS}
+                 WHERE attempt_id=$1 RETURNING {_ATTEMPT_PUBLIC_COLUMNS}
                 """,
                 row["attempt_id"],
             )
 
 
-async def mark_pdf_delivered(
+async def mark_delivery_sent(
     attempt_id: str, lease: datetime, message_id: int | None
 ) -> bool:
     pool = await get_pool()
@@ -870,7 +862,7 @@ async def mark_pdf_delivered(
         return row is not None
 
 
-async def pdf_delivery_is_sent(attempt_id: str, message_id: int) -> bool:
+async def delivery_is_sent(attempt_id: str, message_id: int) -> bool:
     pool = await get_pool()
     async with pool.acquire() as connection:
         return bool(await connection.fetchval(
@@ -880,7 +872,7 @@ async def pdf_delivery_is_sent(attempt_id: str, message_id: int) -> bool:
         ))
 
 
-async def pdf_delivery_is_abandoned(attempt_id: str) -> bool:
+async def delivery_is_abandoned(attempt_id: str) -> bool:
     pool = await get_pool()
     async with pool.acquire() as connection:
         return bool(await connection.fetchval(
@@ -889,7 +881,7 @@ async def pdf_delivery_is_abandoned(attempt_id: str) -> bool:
         ))
 
 
-async def count_pending_pdfs() -> int:
+async def count_pending_deliveries() -> int:
     pool = await get_pool()
     async with pool.acquire() as connection:
         return int(await connection.fetchval(
@@ -1043,7 +1035,7 @@ async def purge_retained_diagnostic_data(
     return counts
 
 
-async def pdf_claim_is_active(attempt_id: str, lease: datetime) -> bool:
+async def delivery_claim_is_active(attempt_id: str, lease: datetime) -> bool:
     pool = await get_pool()
     async with pool.acquire() as connection:
         return bool(await connection.fetchval(
@@ -1062,30 +1054,6 @@ async def pdf_claim_is_active(attempt_id: str, lease: datetime) -> bool:
             attempt_id,
             lease,
         ))
-
-
-async def store_pdf_document(
-    attempt_id: str, lease: datetime, document: bytes
-) -> bool:
-    if not document or len(document) > 25 * 1024 * 1024:
-        raise ValueError("pdf_document_invalid")
-    pool = await get_pool()
-    async with pool.acquire() as connection:
-        row = await connection.fetchrow(
-            f"""
-            UPDATE diagnostic_attempts
-               SET pdf_document=COALESCE(pdf_document, $3),
-                   report_assets=NULL, answers='{{}}'::jsonb,
-                   report_snapshot={_SANITIZED_REVIEW_SNAPSHOT},
-                   report_asset_bundle_id=NULL, updated_at=now()
-             WHERE attempt_id=$1 AND pdf_status='sending' AND pdf_locked_at=$2
-            RETURNING attempt_id
-            """,
-            attempt_id,
-            lease,
-            document,
-        )
-        return row is not None
 
 
 async def supersede_stale_attempt(attempt_id: str, user_id: int) -> bool:
@@ -1118,7 +1086,7 @@ async def supersede_stale_attempt(attempt_id: str, user_id: int) -> bool:
         return row is not None
 
 
-async def mark_pdf_failed(attempt_id: str, lease: datetime, error_text: str) -> bool:
+async def mark_delivery_failed(attempt_id: str, lease: datetime, error_text: str) -> bool:
     pool = await get_pool()
     async with pool.acquire() as connection:
         row = await connection.fetchrow(
@@ -1167,8 +1135,12 @@ async def schedule_streak_save_notifications(
                   SELECT (now() AT TIME ZONE $1)::date AS today
               ) AS school
              WHERE profile.streak_days >= 2
-               AND (profile.streak_last_date IS NULL
-                    OR profile.streak_last_date < school.today)
+               AND profile.streak_last_date = school.today - 1
+               AND NOT EXISTS (
+                   SELECT 1 FROM diagnostic_notifications existing
+                    WHERE existing.dedupe_key = 'streak_save:' || profile.user_id::text
+                        || ':' || to_char(school.today, 'YYYYMMDD')
+               )
                AND NOT EXISTS (
                    SELECT 1 FROM diagnostic_erased_users erased
                     WHERE erased.user_id=profile.user_id
@@ -1202,6 +1174,19 @@ async def claim_due_notifications(limit: int = 1) -> list:
                 """
                 SELECT * FROM diagnostic_notifications
                  WHERE due_at <= now() AND attempts < 8
+                   AND NOT EXISTS (
+                       SELECT 1 FROM diagnostic_engagements engagement
+                        WHERE engagement.user_id=diagnostic_notifications.user_id
+                          AND NOT engagement.notifications_enabled
+                   )
+                   AND (kind='result_unviewed' OR NOT EXISTS (
+                       SELECT 1 FROM diagnostic_notifications recent
+                        WHERE recent.user_id=diagnostic_notifications.user_id
+                          AND recent.id <> diagnostic_notifications.id
+                          AND recent.kind <> 'result_unviewed'
+                          AND ((recent.status='sent' AND recent.sent_at > now() - interval '24 hours')
+                            OR (recent.status='sending' AND recent.locked_at > now() - interval '10 minutes'))
+                   ))
                    AND NOT EXISTS (
                        SELECT 1 FROM diagnostic_erased_users erased
                         WHERE erased.user_id=diagnostic_notifications.user_id
@@ -1294,6 +1279,8 @@ async def get_claimed_notification(
                    profile.streak_days,
                    profile.streak_last_date
                        = (now() AT TIME ZONE $3)::date AS streak_active_today,
+                   profile.streak_last_date
+                       = (now() AT TIME ZONE $3)::date - 1 AS streak_at_risk,
                    EXISTS (
                        SELECT 1 FROM diagnostic_attempts AS later
                         WHERE later.user_id=n.user_id
@@ -1307,6 +1294,11 @@ async def get_claimed_notification(
               LEFT JOIN diagnostic_progress_profiles AS profile
                      ON profile.user_id=n.user_id
              WHERE n.id=$1 AND n.status='sending' AND n.locked_at=$2
+               AND NOT EXISTS (
+                   SELECT 1 FROM diagnostic_engagements engagement
+                    WHERE engagement.user_id=n.user_id
+                      AND NOT engagement.notifications_enabled
+               )
                AND NOT EXISTS (
                    SELECT 1 FROM diagnostic_erased_users erased
                     WHERE erased.user_id=n.user_id

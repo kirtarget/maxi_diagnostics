@@ -1,0 +1,50 @@
+{
+  "captured_at": "2026-09-06",
+  "source": "SharePoint / Разработка 2024-2025 / КОНТЕНТ ЛК / Контент приложения",
+  "status": "phase_1_complete",
+  "scope": {
+    "ege_first_level_thematic_folders": true,
+    "ege_nested_source_folders": "counted_without_deduplication",
+    "ege_variant_roots": "mapped_without_question_count",
+    "oge_first_level_thematic_folders": true,
+    "oge_nested_source_folders": "partial_count_without_deduplication"
+  },
+  "ege": {
+    "thematic_docx": 539,
+    "declared_questions_minimum": 4485,
+    "subjects": {
+      "АЯ": { "docx": 10, "declared_questions_minimum": 67 },
+      "БИО": { "docx": 89, "declared_questions_minimum": 656 },
+      "ИНФ": { "docx": 17, "declared_questions_minimum": 304 },
+      "ИСТ": { "docx": 75, "declared_questions_minimum": 579 },
+      "ЛИТ": { "docx": 45, "declared_questions_minimum": 220 },
+      "МА": { "docx": 62, "declared_questions_minimum": 557 },
+      "ОБЩ": { "docx": 91, "declared_questions_minimum": 722 },
+      "РЯ": { "docx": 63, "declared_questions_minimum": 598 },
+      "ФИЗ": { "docx": 38, "declared_questions_minimum": 333 },
+      "ХИМ": { "docx": 49, "declared_questions_minimum": 449 }
+    },
+    "nested_source_files": 493,
+    "variant_root_folders": 63
+  },
+  "oge": {
+    "thematic_docx_minimum": 155,
+    "declared_questions_minimum": 1610,
+    "nested_source_files_partial": 56,
+    "limitations": [
+      "Раздел политики обществознания нестабильно отображается в SharePoint и не включён в минимум.",
+      "История, варианты, тренажёры, теория и вложенные исходники не включены в число заданий.",
+      "Файлы исходников могут дублировать тематические пакеты."
+    ]
+  },
+  "current_runtime_catalog": {
+    "diagnostic_source_docx": 20,
+    "imported_questions": 348,
+    "meaning": "минимальный runtime-каталог, а не размер банка заданий"
+  },
+  "next_phase": [
+    "Собрать размер, дату изменения и хэш кандидатов на импорт.",
+    "Дедуплицировать тематические пакеты и исходники по содержимому.",
+    "Выбрать тематические пакеты с ключами, объяснениями и ресурсами для dry-run импорта."
+  ]
+}

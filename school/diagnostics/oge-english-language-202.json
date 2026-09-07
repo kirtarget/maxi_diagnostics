@@ -3,7 +3,8 @@
   "exam": "ОГЭ",
   "subject": "Английский язык",
   "mark": "Вариант 1",
-  "quick_count": 2,
+  "quick_count": 8,
+  "full_count": 14,
   "scoring": {
     "max_score": 100,
     "score_unit": "accuracy_percent"
@@ -92,48 +93,6 @@
       }
     },
     {
-      "id": "sp-english-language-oge-2022-q5",
-      "type": "text",
-      "topic": "Задание 5",
-      "title": "Задание 5",
-      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы оно грамматически соответствовало содержанию текста.\n5 | Linda enjoyed it very much when they went somewhere all together as a family. They __________________ it very often since her parents were very busy people. | NOT DO",
-      "max_primary_score": 1,
-      "correct": [
-        "Didnotdo"
-      ],
-      "max_length": 80,
-      "source": {
-        "provider": "maximum_editorial",
-        "official_year": 2022,
-        "approval_status": "draft",
-        "source_kind": "original",
-        "source_url": "https://maximumtest.ru/",
-        "rights_status": "original",
-        "verified_at": "2026-09-04"
-      }
-    },
-    {
-      "id": "sp-english-language-oge-2022-q6",
-      "type": "text",
-      "topic": "Задание 6",
-      "title": "Задание 6",
-      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы оно грамматически соответствовало содержанию текста.\n6 | Linda __________________ ski but the prospect didn’t scare her. | NOT CAN",
-      "max_primary_score": 1,
-      "correct": [
-        "Couldnot"
-      ],
-      "max_length": 80,
-      "source": {
-        "provider": "maximum_editorial",
-        "official_year": 2022,
-        "approval_status": "draft",
-        "source_kind": "original",
-        "source_url": "https://maximumtest.ru/",
-        "rights_status": "original",
-        "verified_at": "2026-09-04"
-      }
-    },
-    {
       "id": "sp-english-language-oge-2022-q7",
       "type": "text",
       "topic": "Задание 7",
@@ -205,27 +164,6 @@
       "max_primary_score": 1,
       "correct": [
         "Waspreparing"
-      ],
-      "max_length": 80,
-      "source": {
-        "provider": "maximum_editorial",
-        "official_year": 2022,
-        "approval_status": "draft",
-        "source_kind": "original",
-        "source_url": "https://maximumtest.ru/",
-        "rights_status": "original",
-        "verified_at": "2026-09-04"
-      }
-    },
-    {
-      "id": "sp-english-language-oge-2022-q11",
-      "type": "text",
-      "topic": "Задание 11",
-      "title": "Задание 11",
-      "prompt": "Прочитайте приведённые ниже предложения. Преобразуйте слова, напечатанные заглавными буквами в конце строки, так, чтобы оно грамматически соответствовало содержанию текста.\n11 | Linda could see diagrams on the screen. They __________________ in different colours which made them look complicated. | DRAW",
-      "max_primary_score": 1,
-      "correct": [
-        "Weredrawn"
       ],
       "max_length": 80,
       "source": {

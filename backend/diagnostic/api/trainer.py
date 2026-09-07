@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import secrets
+from datetime import datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
@@ -68,7 +70,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
     router = APIRouter(prefix="/api/diagnostics")
 
     @router.post("/trainer/start")
-    async def start(body: TrainerStartRequest, request: Request) -> dict[str, Any]:
+    async def start(body: TrainerStartRequest, request: Request, background_tasks: BackgroundTasks) -> dict[str, Any]:
         user = telegram_user(request, body.init_data)
         await _require_current_session(request, user["id"], body.session_scope)
         try:
@@ -210,6 +212,9 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
             "next_life_at": profile_payload["next_life_at"],
         }
         if plan is not None:
+            _funnel(background_tasks, request, user["id"], "daily_started",
+                    diagnostic.exam, diagnostic.subject,
+                    dedupe_key=f"plan/{plan['plan_date']}")
             payload["plan"] = {
                 "plan_date": plan["plan_date"],
                 "total": plan["total"],
@@ -317,7 +322,16 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
             _funnel(
                 background_tasks, request, user["id"], "trainer_answered",
                 diagnostic.exam, diagnostic.subject,
+                dedupe_key=f"trainer/{body.trainer_session_id}/{body.question_id}",
             )
+            event_key = f"trainer/{body.trainer_session_id}/{body.question_id}"
+            _funnel(background_tasks, request, user["id"], "question_answered",
+                    diagnostic.exam, diagnostic.subject, dedupe_key=event_key)
+            if result.get("life_delta", 0) < 0:
+                _funnel(background_tasks, request, user["id"], "life_lost", dedupe_key=event_key)
+            if result.get("xp_delta", 0) > 0:
+                _funnel(background_tasks, request, user["id"], "streak_updated",
+                        dedupe_key=datetime.now(ZoneInfo(request.app.state.settings.timezone)).date().isoformat())
             return {
                 **result,
                 "max_primary_score": question.max_primary_score,
@@ -341,15 +355,20 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
         return {"ok": True, "due_at": due_at}
 
     @router.post("/trainer/finish")
-    async def finish(body: TrainerFinishRequest, request: Request) -> dict[str, Any]:
+    async def finish(body: TrainerFinishRequest, request: Request, background_tasks: BackgroundTasks) -> dict[str, Any]:
         user = telegram_user(request, body.init_data)
         await _require_current_session(request, user["id"], body.session_scope)
         try:
-            return await trainer.finish_session(
+            result = await trainer.finish_session(
                 session_id=body.trainer_session_id,
                 user_id=user["id"],
                 revision=body.revision,
             )
+            session = await trainer.get_session(body.trainer_session_id, user["id"])
+            if session is not None and session["mode"] == "plan":
+                _funnel(background_tasks, request, user["id"], "daily_completed",
+                        dedupe_key=f"trainer/{body.trainer_session_id}")
+            return result
         except ValueError as exc:
             raise _error(exc) from exc
 

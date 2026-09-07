@@ -38,6 +38,7 @@ import type {
   Question,
   ReviewResponse,
   ServerResult,
+  ServerAttempt,
   Screen,
 } from "./types";
 
@@ -53,6 +54,7 @@ export type DiagnosticSessionState = {
   answers: AnswerMap;
   inputDrafts: Record<string, string>;
   result: ServerResult | null;
+  resultDiagnostic: Pick<PublicDiagnostic, "exam" | "subject"> | null;
   review: ReviewResponse | null;
   reviewIndex: number;
   reviewError: string | null;
@@ -69,6 +71,7 @@ export type DiagnosticSessionActions = {
   previousQuestion(): void;
   nextQuestion(): void;
   openReview(): void;
+  openSavedResult(attempt: ServerAttempt): void;
   refreshReview(): Promise<ReviewResponse | null>;
   reviewBack(): void;
   reviewNext(): void;
@@ -99,7 +102,7 @@ export function useDiagnosticSession({
 }): DiagnosticSession {
   const { initData, schoolId: schoolIdRef, sessionScopeRef, sessionScope } = bootstrap;
   const bootstrapData = bootstrap.state.bootstrap;
-  const { load: loadBootstrapData, setError, countCompletion } = bootstrap.actions;
+  const { load: loadBootstrapData, setError, refreshProgress } = bootstrap.actions;
 
   const [loadedDiagnostic, setLoadedDiagnostic] = useState<PublicDiagnostic | null>(null);
   const [diagnosticLoad, dispatchDiagnosticLoad] = useReducer(
@@ -115,6 +118,7 @@ export function useDiagnosticSession({
   const [inputDrafts, setInputDrafts] = useState<Record<string, string>>({});
   const [attemptId, setAttemptId] = useState(createAttemptId);
   const [result, setResult] = useState<ServerResult | null>(null);
+  const [savedResultDiagnostic, setSavedResultDiagnostic] = useState<Pick<PublicDiagnostic, "exam" | "subject"> | null>(null);
   const [review, setReview] = useState<ReviewResponse | null>(null);
   const [reviewIndex, setReviewIndex] = useState(0);
   const [reviewError, setReviewError] = useState<string | null>(null);
@@ -333,7 +337,9 @@ export function useDiagnosticSession({
         setReview(null);
         setReviewIndex(0);
         setReviewError(null);
-        setScreen(data.progress_profile?.completion_count ? "home" : "welcome");
+        const onboarding = data.onboarding?.status ?? (data.progress_profile?.completion_count ? "completed" : "welcome");
+        if (onboarding === "selection") setMode("quick");
+        setScreen(onboarding === "completed" ? "home" : onboarding === "selection" ? "subjects" : "welcome");
       }
       return true;
     } catch {
@@ -498,12 +504,13 @@ export function useDiagnosticSession({
       progressRevision.current = response.attempt.progress_revision;
       supersedesAttemptId.current = undefined;
       setResult(response.result);
-      countCompletion();
+      setSavedResultDiagnostic(null);
       setReview(null);
       setReviewIndex(0);
       setReviewError(null);
       clearLocalSession(brand.school_id, sessionScope);
       setScreen("result");
+      void refreshProgress();
     } catch (submitError) {
       if (isConflictError(submitError)) {
         progressQueue.current?.cancel();
@@ -590,6 +597,7 @@ export function useDiagnosticSession({
       answers,
       inputDrafts,
       result,
+      resultDiagnostic: savedResultDiagnostic ?? diagnostic,
       review,
       reviewIndex,
       reviewError,
@@ -597,6 +605,21 @@ export function useDiagnosticSession({
     },
     actions: {
       hydrate,
+      openSavedResult: (attempt) => {
+        if (!attempt.result) return;
+        attemptGeneration.current += 1;
+        progressQueue.current?.cancel();
+        activeAttemptId.current = attempt.attempt_id;
+        persistedAttemptId.current = attempt.attempt_id;
+        reviewRequestGate.current!.activate({ attemptId: attempt.attempt_id, generation: attemptGeneration.current });
+        setAttemptId(attempt.attempt_id);
+        setResult(attempt.result);
+        setSavedResultDiagnostic({ exam: attempt.exam ?? "", subject: attempt.subject ?? "Диагностика" });
+        setReview(null);
+        setReviewError(null);
+        setReviewIndex(0);
+        setScreen("result");
+      },
       setExam,
       chooseMode: (selectedMode, nextExam) => {
         setMode(selectedMode);

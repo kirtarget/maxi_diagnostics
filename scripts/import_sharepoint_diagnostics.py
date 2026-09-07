@@ -8,14 +8,22 @@ figures, and records every skipped task with a reason in a Markdown report.
 
 Every catalog question comes from these documents. A re-run replaces exactly the
 questions whose id starts with `sp-`, leaves every other byte of the file alone,
-and must produce byte-identical output.
+and must produce byte-identical output. The source directory therefore has to
+hold the whole bank, the 20 base diagnostics included.
 
-    python scripts/import_sharepoint_diagnostics.py <docx-dir>
+Subject, exam, season and topic come from the source filename. Thematic packages
+are named too freely for that, so `--plan` supplies the same fields explicitly
+for the files it lists and checks each of them against a SHA-256 content hash.
+Their question ids carry the plan topic slug, which keeps two packages of one
+subject and season apart.
+
+    python scripts/import_sharepoint_diagnostics.py <docx-dir> [--plan plan.json]
 """
 
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date
 import hashlib
@@ -31,6 +39,7 @@ from docx import Document
 from docx.oxml.ns import qn
 from docx.table import Table
 from docx.text.paragraph import Paragraph
+from docx.text.run import Run
 from PIL import Image
 
 
@@ -84,14 +93,25 @@ SUBJECT_NAMES = {
     "chemistry": "Химия",
 }
 EXAM_CODES = {"ЕГЭ": "ege", "ОГЭ": "oge"}
+EXAM_NAMES = {code: name for name, code in EXAM_CODES.items()}
 
 FILENAME = re.compile(
     r"^(?P<subject>[А-ЯЁ]+)_(?P<exam>ЕГЭ|ОГЭ)_.*?_(?P<start>\d{2})-(?P<end>\d{2})"
     r"_.*Заданий\s*(?P<tasks>\d+)$"
 )
 TASK_HEADING = re.compile(r"^Задание\s*(\d+)\.?$")
-MATCHING_ITEM = re.compile(r"^([А-ЯЁ])\)\s*(.*)$", re.DOTALL)
-MATCHING_OPTION = re.compile(r"^(\d)\)\s*(.*)$", re.DOTALL)
+SEASON = re.compile(r"^(?P<start>\d{2})-(?P<end>\d{2})$")
+TOPIC_SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+OPEN_ANSWER = re.compile(r"максимальный балл", re.IGNORECASE)
+# Editors label the two columns with either a bracket or a dot, and a table
+# that uses dots is the same table.
+# Latin capitals sneak into these tables as look-alikes of the Cyrillic
+# enumeration letters, so a table can label its rows А, Б, B.
+MATCHING_ITEM = re.compile(r"^([А-ЯЁA-Z])[.)]\s*(.*)$", re.DOTALL)
+MATCHING_OPTION = re.compile(r"^(\d)[.)]\s*(.*)$", re.DOTALL)
+INLINE_OPTION = re.compile(r"^(\d+)\)\s*\S")
+INLINE_OPTION_NUMBER = re.compile(r"^\d+\)\s*")
+MIN_INLINE_OPTIONS = 3
 DIGITS = re.compile(r"\d+\Z")
 NUMERIC_SHAPED = re.compile(r"[0-9,.+-]+\Z")
 FIGURE_WORDS = re.compile(
@@ -102,6 +122,26 @@ FIGURE_WORDS = re.compile(
 EXTERNAL_RESOURCE = re.compile(r"https?://|воспользуйтесь файлом|аудиозапис|прослушайте", re.IGNORECASE)
 SEQUENCE_MARKERS = re.compile(r"^[А-ЯЁ]\)", re.MULTILINE)
 SEQUENCE_HINT = "Введите последовательность цифр без пробелов."
+# A two-column matching table the converter could not read stays in the prompt as
+# `left | right` lines. That is unreadable, so the task is dropped instead.
+FLATTENED_MATCHING = re.compile(r"^\s*(?:[А-ЯЁA-Z][.)]|_{3,})\s.*\|\s*\d[.)]\s", re.MULTILINE)
+# The printed exam tells the student where to write the answer. The Mini App
+# collects it, so those sentences only contradict what is on screen.
+ANSWER_SHEET_SENTENCES = (
+    re.compile(r"(?:\s*и)?\s*запиш\w+\s+в\s+таблиц\w+[^.]*(?:\.|$)", re.IGNORECASE),
+    re.compile(r"\s*в\s+ответе?\s+запиш\w+[^.]*(?:\.|$)", re.IGNORECASE),
+    re.compile(r"\s*запиш\w+\s+в\s+ответе\s+цифры[^.]*(?:\.|$)", re.IGNORECASE),
+    re.compile(r"\s*запиш\w+\s+цифры,\s+под\s+которыми[^.]*(?:\.|$)", re.IGNORECASE),
+)
+UI_COLLECTS_THE_ANSWER = {"single", "multiple", "matching"}
+WORD_FORMATION_HINT = re.compile(r"\|\s*(?P<hint>[A-Z]+(?:\s+[A-Z]+)*)\s*\Z")
+AUXILIARY_WORDS = frozenset(
+    {
+        "am", "are", "is", "was", "were", "be", "been", "being", "do", "does",
+        "did", "have", "has", "had", "can", "could", "will", "would", "shall",
+        "should", "may", "might", "must", "not",
+    }
+)
 PDF_SAFE_REPLACEMENTS = str.maketrans(
     {
         "⋅": "·",
@@ -116,6 +156,8 @@ PDF_SAFE_REPLACEMENTS = str.maketrans(
         "́": "",
         "̆": "",
         "∠": "угол ",
+        "ᵒ": "°",
+        "‒": "-",
     }
 )
 # Liberation Sans has no Mathematical Alphanumeric Symbols; the compatibility
@@ -156,6 +198,20 @@ class SourceTask:
 
 
 @dataclass(frozen=True)
+class PlanEntry:
+    """One `--plan` record: the metadata a free-form filename cannot carry."""
+
+    file_name: str
+    content_hash: str
+    subject_code: str
+    exam: str
+    year: int
+    topic: str
+    topic_slug: str
+    declared_tasks: int
+
+
+@dataclass(frozen=True)
 class SourceFile:
     path: Path
     exam: str
@@ -163,10 +219,13 @@ class SourceFile:
     year: int
     declared_tasks: int
     tasks: tuple[SourceTask, ...]
+    topic: str = ""
+    topic_slug: str = ""
 
     @property
     def slug(self) -> str:
-        return f"{self.subject_code}-{EXAM_CODES[self.exam]}-{self.year}"
+        base = f"{self.subject_code}-{EXAM_CODES[self.exam]}-{self.year}"
+        return f"{base}-{self.topic_slug}" if self.topic_slug else base
 
 
 @dataclass
@@ -235,15 +294,33 @@ def _paragraph_images(paragraph: Paragraph, relationships) -> list[bytes]:
     return payloads
 
 
+def _paragraph_text(paragraph: Paragraph) -> str:
+    parts: list[str] = []
+    segment = ""
+    alignment = None
+    for element in paragraph._p.iter(qn("w:r")):
+        run = Run(element, paragraph)
+        if not run.text:
+            continue
+        current = "super" if run.font.superscript else "sub" if run.font.subscript else None
+        if current != alignment:
+            parts.append(f"^({segment})" if alignment == "super" else f"_({segment})" if alignment == "sub" else segment)
+            segment = ""
+            alignment = current
+        segment += run.text
+    parts.append(f"^({segment})" if alignment == "super" else f"_({segment})" if alignment == "sub" else segment)
+    return "".join(parts)
+
+
 def _read_table(table: Table) -> SourceTable:
     rows = []
     for row in table.rows:
         cells = []
         for cell in row.cells:
             lines = tuple(
-                clean_line(paragraph.text)
+                clean_line(_paragraph_text(paragraph))
                 for paragraph in cell.paragraphs
-                if clean_line(paragraph.text)
+                if clean_line(_paragraph_text(paragraph))
             )
             cells.append(lines)
         rows.append(tuple(cells))
@@ -261,7 +338,7 @@ def parse_document(path: Path) -> tuple[SourceTask, ...]:
             if current is not None and section == "prompt":
                 current.prompt_tables.append(_read_table(block))
             continue
-        text = clean_line(block.text)
+        text = clean_line(_paragraph_text(block))
         heading = TASK_HEADING.match(text)
         if heading:
             current = SourceTask(number=int(heading.group(1)))
@@ -287,10 +364,114 @@ def parse_document(path: Path) -> tuple[SourceTask, ...]:
             continue
         getattr(current, {"prompt": "prompt_blocks", "options": "options",
                           "solution": "solution", "answer": "answer"}[section]).append(text)
+    for task in tasks:
+        _fold_answer_explanation(task)
+        _adopt_inline_options(task)
     return tuple(tasks)
 
 
-def read_source_file(path: Path) -> SourceFile:
+def _adopt_inline_options(task: SourceTask) -> None:
+    """Move an option list typed as plain `N)` prompt lines into `options`.
+
+    Some editors skip the `Варианты:` marker, which leaves the choices inside the
+    prompt and turns a pick-one task into an empty input box. Only a run anchored
+    at one end of the prompt, numbered `1..N` without a gap, and answered by a
+    single digit inside that range can be the option list: a numbered run the key
+    reorders, or one the question text refers to, keeps its place.
+    """
+    if task.options or len(task.answer) != 1:
+        return
+    parts = [part.strip() for part in task.answer[0].strip().split("#")]
+    if not all(len(part) == 1 and part.isdigit() for part in parts):
+        return
+    blocks = task.prompt_blocks
+    head = 0
+    while head < len(blocks) and INLINE_OPTION.match(blocks[head]):
+        head += 1
+    tail = len(blocks)
+    while tail > 0 and INLINE_OPTION.match(blocks[tail - 1]):
+        tail -= 1
+    for start, stop in ((0, head), (tail, len(blocks))):
+        run = blocks[start:stop]
+        if len(run) < MIN_INLINE_OPTIONS or len(run) == len(blocks):
+            continue
+        numbers = [int(INLINE_OPTION.match(line).group(1)) for line in run]
+        if numbers != list(range(1, len(run) + 1)):
+            continue
+        if any(not 1 <= int(part) <= len(run) for part in parts):
+            continue
+        # `Варианты:` blocks carry no numbering, so neither do these.
+        task.options.extend(INLINE_OPTION_NUMBER.sub("", line) for line in run)
+        del blocks[start:stop]
+        return
+
+
+def _fold_answer_explanation(task: SourceTask) -> None:
+    """Some documents put the explanation into the answer block, after the key."""
+    if len(task.answer) == 2 and task.answer[1].casefold().startswith("пояснени"):
+        task.solution.append(task.answer.pop())
+
+
+def file_digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def load_plan(path: Path) -> dict[str, PlanEntry]:
+    """Read the source plan, keyed by file name."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    entries: dict[str, PlanEntry] = {}
+    for record in payload.get("sources", []):
+        file_name = record["file_name"]
+        if file_name in entries:
+            raise ImportError(f"Duplicate plan entry: {file_name}")
+        subject_code = record["subject"]
+        if subject_code not in SUBJECT_NAMES:
+            raise ImportError(f"Unknown subject in plan entry {file_name}")
+        exam = EXAM_NAMES.get(record["exam"])
+        if exam is None:
+            raise ImportError(f"Unknown exam in plan entry {file_name}")
+        season = SEASON.match(record["season"])
+        if season is None:
+            raise ImportError(f"Unknown season in plan entry {file_name}")
+        topic_slug = record["topic_slug"]
+        if not TOPIC_SLUG.match(topic_slug):
+            raise ImportError(f"Unusable topic slug in plan entry {file_name}")
+        topic = clean_line(record["topic"])
+        if not topic:
+            raise ImportError(f"Empty topic in plan entry {file_name}")
+        entries[file_name] = PlanEntry(
+            file_name=file_name,
+            content_hash=record["content_hash"],
+            subject_code=subject_code,
+            exam=exam,
+            year=2000 + int(season.group("end")),
+            topic=topic,
+            topic_slug=topic_slug,
+            # The filename does not always name a count; the manifest block count
+            # is then the only declaration the report can compare against.
+            declared_tasks=int(
+                record.get("declared_question_count") or record["task_blocks"]
+            ),
+        )
+    if not entries:
+        raise ImportError(f"No sources in plan {path}")
+    return entries
+
+
+def read_source_file(path: Path, entry: PlanEntry | None = None) -> SourceFile:
+    if entry is not None:
+        if file_digest(path) != entry.content_hash:
+            raise ImportError(f"Source file does not match the plan hash: {path.name}")
+        return SourceFile(
+            path=path,
+            exam=entry.exam,
+            subject_code=entry.subject_code,
+            year=entry.year,
+            declared_tasks=entry.declared_tasks,
+            tasks=parse_document(path),
+            topic=entry.topic,
+            topic_slug=entry.topic_slug,
+        )
     match = FILENAME.match(path.stem)
     if match is None:
         raise ImportError(f"Unrecognized source filename: {path.name}")
@@ -312,8 +493,10 @@ def read_source_file(path: Path) -> SourceFile:
 # --------------------------------------------------------------------------
 
 
-def _matching_table(tables: list[SourceTable]) -> tuple[list[str], list[tuple[str, str]]] | None:
-    """Return (item labels, [(option digit, label)]) for a two-column matching table."""
+def _matching_table(
+    tables: list[SourceTable],
+) -> tuple[SourceTable, list[str], list[tuple[str, str]]] | None:
+    """Return (source table, item labels, [(option digit, label)]) for a matching table."""
     for table in tables:
         if table.columns != 2 or len(table.rows) < 3:
             continue
@@ -331,7 +514,7 @@ def _matching_table(tables: list[SourceTable]) -> tuple[list[str], list[tuple[st
                 if found:
                     options.append((found.group(1), line))
         if len(items) >= 2 and len(options) >= 2:
-            return items, options
+            return table, items, options
     return None
 
 
@@ -352,21 +535,31 @@ def _render_table(table: SourceTable) -> str:
     return "\n".join(lines)
 
 
-def build_prompt(task: SourceTask, *, skip_tables: bool) -> str:
+def build_prompt(task: SourceTask, *, skip_table: SourceTable | None = None) -> str:
+    # A matching task shows its pairs as controls, so only that one table is
+    # dropped. A data table the question reasons about has to stay.
     parts = list(task.prompt_blocks)
-    if not skip_tables:
-        parts.extend(
-            rendered for rendered in (_render_table(table) for table in task.prompt_tables)
-            if rendered
+    parts.extend(
+        rendered
+        for rendered in (
+            _render_table(table)
+            for table in task.prompt_tables
+            if table is not skip_table
         )
+        if rendered
+    )
     return clean_block(parts)
 
 
 def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
     """Return (question_type, payload) or ("skip", reason)."""
+    if any(OPEN_ANSWER.search(line) for line in (*task.answer, *task.solution)):
+        return "skip", "open_answer"
     if len(task.answer) != 1 or not task.answer[0].strip():
         return "skip", "irregular_key"
     key = task.answer[0].strip()
+    if key.endswith(".") and NUMERIC_SHAPED.fullmatch(key[:-1]):
+        key = key[:-1]
     parts = [part.strip() for part in key.split("#")]
     if any(not part for part in parts):
         return "skip", "irregular_key"
@@ -400,16 +593,20 @@ def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
 
     matching = _matching_table(task.prompt_tables)
     if matching is not None and len(parts) == 1 and DIGITS.fullmatch(key):
-        items, options = matching
+        table, items, options = matching
         option_digits = {digit for digit, _ in options}
         if len(key) == len(items) and set(key) <= option_digits:
-            return "matching", {"items": items, "options": options, "key": key}
+            return "matching", {
+                "items": items, "options": options, "key": key, "table": table,
+            }
 
     if len(parts) == 1 and is_valid_numeric_answer(key):
         variants = [key]
         if "," in key:
             variants.append(key.replace(",", "."))
-        return "input", {"correct": variants, "sequence": bool(DIGITS.fullmatch(key))}
+        # A one-digit key is a single number, not a sequence to type unspaced.
+        sequence = len(key) > 1 and bool(DIGITS.fullmatch(key))
+        return "input", {"correct": variants, "sequence": sequence}
 
     # Numeric-looking but ungrammatical, e.g. a value with its error margin
     # concatenated (`0,100,01`).
@@ -433,8 +630,45 @@ def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
 # --------------------------------------------------------------------------
 
 
+def _glued_answer(prompt: str, variants: list[str]) -> bool:
+    """Whether a word-formation key spells a phrase the student cannot type.
+
+    These tasks end with the source word after a `|`. A few editorial keys write
+    the expected phrase without its space (`wasimpressed`, `didnotbelieve`), so
+    the only accepted spelling is one no reader would produce. The key is the
+    editorial source and stays untouched; the task leaves the catalog instead.
+    """
+    last_line = prompt.rstrip().splitlines()[-1]
+    match = WORD_FORMATION_HINT.search(last_line)
+    if match is None or any(" " in variant for variant in variants):
+        return False
+    hint = match.group("hint").split()
+    if len(hint) > 1:
+        return True
+    stem = hint[0].lower()
+    for variant in variants:
+        lowered = variant.lower()
+        index = lowered.find(stem)
+        if index > 0 and lowered[:index] in AUXILIARY_WORDS:
+            return True
+    return False
+
+
+def strip_answer_sheet_instructions(prompt: str) -> str:
+    """Drop the sentences that tell the student where to write the answer."""
+    lines = []
+    for line in prompt.split("\n"):
+        for pattern in ANSWER_SHEET_SENTENCES:
+            line = pattern.sub("", line)
+        line = re.sub(r"\s+", " ", line).strip()
+        if line:
+            lines.append(line)
+    return "\n".join(lines)
+
+
 def _option_label(value: str) -> str | None:
-    cleaned = clean_line(value)
+    # List punctuation reads as a typo once every option is its own control.
+    cleaned = clean_line(value).rstrip(";,").rstrip()
     return cleaned if 1 <= len(cleaned) <= MAX_OPTION_LABEL_CHARS else None
 
 
@@ -446,7 +680,9 @@ def build_question(
     *,
     verified_at: str,
 ) -> dict[str, Any] | str:
-    prompt = build_prompt(task, skip_tables=kind == "matching")
+    prompt = build_prompt(task, skip_table=payload.get("table") if kind == "matching" else None)
+    if kind in UI_COLLECTS_THE_ANSWER:
+        prompt = strip_answer_sheet_instructions(prompt)
     if not prompt:
         return "empty_prompt"
     if kind == "input" and payload.get("sequence") and not SEQUENCE_MARKERS.search(prompt):
@@ -457,7 +693,7 @@ def build_question(
     question: dict[str, Any] = {
         "id": f"{ID_PREFIX}{source.slug}-q{task.number}",
         "type": kind,
-        "topic": f"Задание {task.number}",
+        "topic": source.topic or f"Задание {task.number}",
         "title": f"Задание {task.number}",
         "prompt": prompt,
         "max_primary_score": 1,
@@ -499,6 +735,8 @@ def build_question(
             f"i{index + 1}": f"o{digit}" for index, digit in enumerate(payload["key"])
         }
     elif kind == "text":
+        if _glued_answer(prompt, payload["correct"]):
+            return "glued_answer"
         question["correct"] = payload["correct"]
         question["max_length"] = MAX_TEXT_ANSWER_CHARS
     else:
@@ -595,11 +833,62 @@ class Candidate:
     outcome: Outcome
 
 
+def load_answer_variants(path: Path) -> dict[str, list[str]]:
+    """Read the editor's extra accepted wordings, keyed by question id.
+
+    The converter rewrites every `sp-` question on each run, so a wording added
+    by hand to the catalog would not survive. This file does.
+    """
+    if not path.is_file():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    variants = payload.get("variants", {})
+    if not isinstance(variants, dict):
+        raise ImportError(f"`variants` must be an object in {path.name}")
+    result: dict[str, list[str]] = {}
+    for question_id, wordings in variants.items():
+        if not isinstance(wordings, list) or not wordings:
+            raise ImportError(f"Answer variants for {question_id} must be a non-empty list")
+        cleaned = []
+        for wording in wordings:
+            if not isinstance(wording, str):
+                raise ImportError(f"Answer variant for {question_id} is not a string")
+            text = clean_line(wording)
+            if not 1 <= len(text) <= MAX_TEXT_ANSWER_CHARS:
+                raise ImportError(f"Answer variant for {question_id} is out of length range")
+            cleaned.append(text)
+        result[question_id] = cleaned
+    return result
+
+
+def apply_answer_variants(question: dict[str, Any], extra: list[str]) -> str | None:
+    """Add the editor's wordings to a free-text key, or say why they cannot go in."""
+    from diagnostic.text_answers import normalize_text_answer
+
+    if question["type"] != "text":
+        return "answer_variants_need_a_text_question"
+    accepted = list(question["correct"])
+    seen = {normalize_text_answer(value) for value in accepted}
+    for wording in extra:
+        normalized = normalize_text_answer(wording)
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        accepted.append(wording)
+    if len(accepted) > MAX_TEXT_VARIANTS:
+        return "too_many_answer_variants"
+    question["correct"] = accepted
+    return None
+
+
 def convert_file(
-    source: SourceFile, verified_at: str
+    source: SourceFile,
+    verified_at: str,
+    answer_variants: dict[str, list[str]] | None = None,
 ) -> tuple[list[Candidate], list[Outcome]]:
     candidates: list[Candidate] = []
     outcomes: list[Outcome] = []
+    variants = answer_variants or {}
     for task in source.tasks:
         kind, payload = classify(task)
         if kind == "skip":
@@ -609,6 +898,11 @@ def convert_file(
         if isinstance(question, str):
             outcomes.append(Outcome(task.number, "skipped", kind, question))
             continue
+        extra = variants.get(question["id"])
+        if extra:
+            problem = apply_answer_variants(question, extra)
+            if problem is not None:
+                raise ImportError(f"{problem}: {question['id']}")
 
         prepared = [prepare_image(payload_bytes) for payload_bytes in task.images]
         reason = _rejection(question, prepared)
@@ -635,6 +929,8 @@ def _rejection(
         return "too_many_figures"
     if not images and FIGURE_WORDS.search(question["prompt"]):
         return "missing_figure"
+    if len(FLATTENED_MATCHING.findall(question["prompt"])) >= 2:
+        return "unreadable_matching"
     if EXTERNAL_RESOURCE.search(question["prompt"]):
         return "external_resource"
     return validate_question(question)
@@ -719,7 +1015,7 @@ def read_target(path: Path) -> Target:
 def render_target(target: Target, chunks: list[tuple[str, str]]) -> str:
     """Rewrite the questions array, leaving every other byte of the file alone.
 
-    The full diagnostic is the whole file, so nothing here writes `full_count`.
+    `full_count` belongs to the editor, so nothing here writes or moves it.
     """
     body = ",".join(f"\n    {chunk}" for _, chunk in chunks)
     return f"{target.head}{body}\n  {target.tail}"
@@ -759,8 +1055,9 @@ def write_report(
         "",
         "Каталог школы состоит только из этих заданий. Текст задания, вариантов и "
         "ключ взяты из редакционно утверждённых документов MAXIMUM без правок. Тема "
-        "не выводится ни из какого источника: каждому вопросу проставлена тема "
-        "«Задание N» и первичный балл 1. Раздел «Темы, требующие сопоставления» "
+        "берётся из плана источников, а без плана каждому вопросу проставлена "
+        "тема «Задание N». Первичный балл всегда 1. Раздел «Темы, требующие "
+        "сопоставления» "
         "перечисляет их по предметам, чтобы методист заполнил таблицу «позиция КИМ → "
         "тема». Все импортированные вопросы имеют `approval_status = draft` и требуют "
         "предметной редактуры.",
@@ -808,8 +1105,8 @@ def write_report(
             "",
             "## Темы, требующие сопоставления",
             "",
-            "У всех импортированных заданий тема равна «Задание N». Заполните "
-            "позицию КИМ и тему для каждого номера в списке.",
+            "У импортированных заданий без записи в плане тема равна «Задание N». "
+            "Заполните позицию КИМ и тему для каждого номера в списке.",
             "",
             "| Каталог | Экзамен | Предмет | Документ | Задания |",
             "|---|---|---|---|---|",
@@ -864,7 +1161,22 @@ def write_report(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", type=Path, help="Directory holding the source .docx files")
+    parser.add_argument(
+        "--plan",
+        type=Path,
+        help="JSON plan naming subject, exam, season and topic per source file",
+    )
     parser.add_argument("--root", type=Path, default=REPOSITORY_ROOT)
+    parser.add_argument(
+        "--answer-variants",
+        type=Path,
+        help="JSON file of extra accepted wordings, keyed by question id",
+    )
+    parser.add_argument(
+        "--verified-at",
+        default=date.today().isoformat(),
+        help="Editorial verification date stamped on every imported question",
+    )
     parser.add_argument("--dry-run", action="store_true")
     arguments = parser.parse_args(argv)
 
@@ -872,7 +1184,7 @@ def main(argv: list[str] | None = None) -> int:
     diagnostics_root = root / "school" / "diagnostics"
     assets_root = root / "school" / "assets" / "questions"
     report_path = root / "authoring" / "sharepoint-import" / "report.md"
-    verified_at = date.today().isoformat()
+    verified_at = str(arguments.verified_at)
 
     targets = load_targets(diagnostics_root)
     kept_assets = {
@@ -881,8 +1193,12 @@ def main(argv: list[str] | None = None) -> int:
         if path.is_file() and not path.name.startswith(ID_PREFIX)
     }
 
+    plan = load_plan(arguments.plan) if arguments.plan else {}
+    answer_variants = load_answer_variants(
+        arguments.answer_variants or root / "authoring" / "answer-variants.json"
+    )
     sources = [
-        read_source_file(path)
+        read_source_file(path, plan.get(path.name))
         for path in sorted(arguments.source.resolve().glob("*.docx"))
     ]
     if not sources:
@@ -897,7 +1213,7 @@ def main(argv: list[str] | None = None) -> int:
             raise ImportError(f"No catalog diagnostic for {key}")
         target = targets[key]
         target_by_source[source.path] = target.path
-        file_candidates, file_outcomes = convert_file(source, verified_at)
+        file_candidates, file_outcomes = convert_file(source, verified_at, answer_variants)
         candidates.extend(file_candidates)
         outcomes_by_source[source.path] = file_outcomes
 
@@ -919,7 +1235,14 @@ def main(argv: list[str] | None = None) -> int:
     for target in sorted(targets.values(), key=lambda item: item.path):
         additions = sorted(
             grouped.get(target.path, []),
-            key=lambda item: (item.source.year, item.source.path.name, item.task.number),
+            # Base diagnostics carry no topic slug and sort first, because the
+            # leading questions are the full diagnostic and the rest is bank.
+            key=lambda item: (
+                bool(item.source.topic_slug),
+                item.source.year,
+                item.source.path.name,
+                item.task.number,
+            ),
         )
         kept = [
             chunk for chunk in target.chunks if not chunk[0].startswith(ID_PREFIX)
@@ -928,6 +1251,16 @@ def main(argv: list[str] | None = None) -> int:
             (candidate.question["id"], render_question(candidate.question))
             for candidate in additions
         ]
+        collisions = [
+            identifier
+            for identifier, count in Counter(identifier for identifier, _ in chunks).items()
+            if count > 1
+        ]
+        if collisions:
+            raise ImportError(
+                f"Duplicate question ids in {target.path.name}: "
+                f"{', '.join(sorted(collisions)[:10])}"
+            )
         if len(chunks) > MAX_QUESTIONS_PER_DIAGNOSTIC:
             raise ImportError(f"Too many questions in {target.path.name}: {len(chunks)}")
         written.append((target.path.name, len(kept), len(additions)))

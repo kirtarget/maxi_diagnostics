@@ -89,6 +89,8 @@ def test_non_english_school_labels_flow_through_commands_and_all_keyboards():
         interface.command_diagnostics,
         interface.command_results,
         interface.command_plan,
+        "Отключить напоминания",
+        "Включить напоминания",
     ]
     assert [button.text for button in _buttons(webapp_keyboard(school, miniapp_url))] == [
         interface.start_diagnostic

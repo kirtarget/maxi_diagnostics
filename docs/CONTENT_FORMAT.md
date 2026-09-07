@@ -63,10 +63,11 @@ through the question count. Percentage accuracy is the only score unit, so
 strict integer from `quick_count` through the question count, and the full mode
 asks exactly the first `full_count` questions. Everything the full mode produces
 follows that subset: the expected answer set on progress and completion, the
-review snapshot, the PDF, and the public `full_count` the Mini App slices by. The
+review snapshot, and the public `full_count` the Mini App slices by. The
 trainer and the daily plan keep drawing from every question in the file, so
 questions past `full_count` stay available as practice. Set it when a catalog
-gains extra questions that should not lengthen the diagnostic itself.
+gains extra questions that should not lengthen the diagnostic itself. Every
+catalog in `school/diagnostics/` pins it for that reason.
 
 `max_primary_score` is a strict integer from 1 through 100 and defaults to `1`.
 The result keeps `accuracy_percent` as its score unit, but calculates that percentage
@@ -109,8 +110,8 @@ metadata already present in the supplied editorial documents.
 The public catalog may include `max_primary_score` and `source`. It never includes
 `correct`, `explanation`, or learning material fields before completion.
 
-Every catalog string that can appear in a PDF must have glyphs in both bundled
-Liberation Sans regular and bold fonts. The required validator checks this before
+Every catalog string must have glyphs in both bundled Liberation Sans regular and
+bold fonts. The required validator checks this before
 deployment. The bundled set covers the shipped Latin and Cyrillic examples; add and
 license an appropriate font before authoring content in another script.
 
@@ -132,7 +133,7 @@ diagnostic-detail response is at most 2 MiB.
   values. An unsubmitted trainer question receives only its maximum and attribution.
 - A missing verified study-book text is shown as an explicit "разбор пока не
   добавлен" message; the system does not fabricate a general algorithm.
-- Existing attempts without `review_snapshot` remain legacy reports.
+- Existing attempts without `review_snapshot` have no answer review.
 
 ## Brand and links
 
@@ -186,7 +187,7 @@ diagnostic-detail response is at most 2 MiB.
     "choose_option": "Choose option",
     "next_question": "Next question",
     "get_result": "Get result",
-    "result_in_telegram": "Result in Telegram",
+    "result_in_app": "Result in the app",
     "privacy_label": "Privacy",
     "support_label": "Support",
     "choose_label": "Choose",
@@ -194,7 +195,7 @@ diagnostic-detail response is at most 2 MiB.
     "illustration_alt": "Question illustration",
     "result_score": "Score",
     "result_correct": "Correct answers",
-    "delivery_note": "The detailed report will appear in Telegram."
+    "delivery_note": "The result and the answer review stay in the app."
   },
   "messages": {
     "welcome": "Welcome to {school_name}.",
@@ -214,8 +215,12 @@ diagnostic-detail response is at most 2 MiB.
 }
 ```
 
+The `pdf` block is a leftover of the removed PDF report. Only `correct_label` is
+still read, by the bot result message. The block stays until a separate task removes
+it from the schema and every school config.
+
 `school_id` is a 2–63 character lowercase slug. Names are at most 128/64 characters,
-PDF labels at most 128, interface labels at most 64, and message templates at most
+report labels at most 128, interface labels at most 64, and message templates at most
 2,048 characters. Labels and messages cannot contain control characters or line
 breaks. Message placeholders are limited to the names shown in the sample plus
 `school_short_name`, offer/website/support/privacy values, and `mode`; format specs,
@@ -315,7 +320,7 @@ A question may reference one illustration with `"asset": "assets/questions/task.
 or an ordered set of one to five illustrations with
 `"assets": ["assets/questions/task-1.png", "assets/questions/task-2.png"]`.
 Do not set both fields on the same question. Every referenced image is included in the
-completion snapshot and the frozen PDF asset bundle.
+completion snapshot.
 
 ## Single choice
 
@@ -383,7 +388,7 @@ The `text` type accepts a short written answer such as a conjunction or a single
 term. `correct` holds 1–20 accepted variants and `max_length` (a strict integer from
 1 through 200, default `80`) is the only public field of the type: it tells the Mini
 App how long the answer field may be. Every variant is 1–`max_length` characters,
-must not be blank or control-bearing, and must render with the bundled PDF fonts.
+must not be blank or control-bearing, and must render with the bundled fonts.
 Two variants that normalize to the same string are a duplicate and rejected.
 
 Both sides of the comparison pass through the same normalization before they are

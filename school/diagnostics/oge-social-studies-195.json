@@ -3,7 +3,8 @@
   "exam": "ОГЭ",
   "subject": "Обществознание",
   "mark": "Вариант 4",
-  "quick_count": 3,
+  "quick_count": 8,
+  "full_count": 16,
   "scoring": {
     "max_score": 100,
     "score_unit": "accuracy_percent"

@@ -10,6 +10,13 @@ import type {
   SchoolLinks,
 } from "./types";
 
+function questionWord(count: number): string {
+  const lastHundred = count % 100;
+  if (lastHundred >= 11 && lastHundred <= 14) return "заданий";
+  const last = count % 10;
+  return last === 1 ? "задание" : last >= 2 && last <= 4 ? "задания" : "заданий";
+}
+
 export function NotTelegramScreen({ botUrl }: { botUrl: string | null }) {
   return (
     <section className="screen centered-state not-telegram-screen" role="alert">
@@ -181,7 +188,7 @@ export function WelcomeScreen({
   onStart,
 }: WelcomeScreenProps) {
   const minimumQuestions = Math.min(...diagnostics.map((item) => item.quick_count));
-  const maximumQuestions = Math.max(...diagnostics.map((item) => item.full_count));
+  const maximumQuestions = Math.max(...diagnostics.map((item) => item.quick_count));
   const questionRange = minimumQuestions === maximumQuestions
     ? String(maximumQuestions)
     : `${minimumQuestions}–${maximumQuestions}`;
@@ -191,7 +198,7 @@ export function WelcomeScreen({
       <div className="welcome-copy">
         <span className="state-code">Подготовка к экзаменам</span>
         <h1 id="welcome-title">Твой путь к успеху <em>на ОГЭ и ЕГЭ</em></h1>
-        <p className="hero-copy">Пройди диагностику — увидишь карту тем, разбор ошибок и прогноз баллов.</p>
+        <p className="hero-copy">Начни с короткой диагностики. Получишь разбор ответов и задания для повторения.</p>
       </div>
       <div className="welcome-path" role="img" aria-label="Путь подготовки: от старта через шаги к цели">
         <svg viewBox="0 0 390 150" preserveAspectRatio="none" aria-hidden="true">
@@ -203,9 +210,9 @@ export function WelcomeScreen({
         <span className="welcome-path-goal" style={{ right: 40, top: 8, width: 54, height: 54 }} aria-hidden="true">🏆</span>
       </div>
       <div className="welcome-facts" aria-label="Параметры диагностики">
-        <div><strong>{questionRange}</strong><span>заданий</span></div>
+        <div><strong>{questionRange}</strong><span>{questionWord(maximumQuestions)}</span></div>
         <div><strong>Без таймера</strong><span>свой темп</span></div>
-        <div><strong>PDF</strong><span>в Telegram</span></div>
+        <div><strong>Разбор</strong><span>в приложении</span></div>
       </div>
       <button className="primary-button" onClick={onStart} type="button">
         {labels.start_diagnostic} <span aria-hidden="true">→</span>
@@ -238,7 +245,7 @@ export function ModeScreen({ labels, onBack, onSelect }: ModeScreenProps) {
             <span className="mode-card-icon" aria-hidden="true">🗺️</span>
             <div><strong>Полная диагностика</strong><div className="mode-card-meta">{labels.full_result}</div></div>
           </div>
-          <span>Полная карта тем, разбор ошибок, прогноз баллов и персональный маршрут.</span>
+          <span>Все задания этой диагностики, разбор ответов и план повторения.</span>
           <em>{labels.choose_label}</em>
         </button>
         <button className="mode-card" onClick={() => onSelect("quick")} type="button">
@@ -246,7 +253,7 @@ export function ModeScreen({ labels, onBack, onSelect }: ModeScreenProps) {
             <span className="mode-card-icon" aria-hidden="true">⚡</span>
             <div><strong>Быстрый замер</strong><div className="mode-card-meta">{labels.quick_result}</div></div>
           </div>
-          <span>Примерная оценка уровня без подробной карты. Хорош для первого раза.</span>
+          <span>Короткая проверка нескольких заданий и первый шаг для повторения.</span>
           <em>{labels.choose_label}</em>
         </button>
       </div>
@@ -307,7 +314,7 @@ export function SubjectsScreen({
               <SubjectIllustration subject={item.subject} />
               <span className="subject-copy">
                 <strong>{item.subject}</strong>
-                <small>{count} заданий · полный разбор</small>
+                <small>{count} {questionWord(count)} · разбор ответов</small>
               </span>
               <span className="subject-action">
                 <span>{labels.start_diagnostic}</span><span aria-hidden="true">→</span>

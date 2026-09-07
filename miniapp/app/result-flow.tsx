@@ -2,17 +2,17 @@ import type { ReactNode } from "react";
 
 import { FormattedMathText, FormattedStem } from "./math-display";
 import { normalizeOffer, OfferSurface, type OfferTelemetryEvent } from "./offer-ux";
+import { PromptTable } from "./prompt-table";
+import { parseQuestionPrompt } from "./question-prompt";
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import { safeAssetPath } from "./question-assets";
-import { shouldShowResultMetrics } from "./result-display";
-import { estimateCaption, estimateHeadline, forecastUnitLabel } from "./score-estimate";
-import { pdfStatusCopy, resultGameSummary, topicRecommendation, type PdfStatusCopy, type PersonalRouteAction } from "./result-flow-model";
+import { forecastUnitLabel } from "./score-estimate";
+import { topicRecommendation, type PersonalRouteAction } from "./result-flow-model";
 import type {
   ForecastKind,
   ForecastPoint,
   PublicDiagnostic,
   ReviewItem,
-  ReviewResponse,
   SchoolLinks,
   ServerResult,
   ServerTopic,
@@ -20,67 +20,63 @@ import type {
 
 export type RouteItem = PersonalRouteAction;
 
-function topicName(topic: ServerTopic | string): string {
-  return typeof topic === "string" ? topic : topic.topic;
+function ReviewPrompt({ prompt }: { prompt: string }) {
+  // The review shows the task again, so a table has to stay a table here too.
+  const blocks = parseQuestionPrompt(prompt);
+  const parts: ReactNode[] = [];
+  let text: string[] = [];
+  const flush = () => {
+    if (!text.length) return;
+    parts.push(
+      <p className="review-prompt" key={`text-${parts.length}`}>
+        <FormattedStem text={text.join("\n")} />
+      </p>,
+    );
+    text = [];
+  };
+  for (const block of blocks) {
+    if (block.kind === "table") {
+      flush();
+      parts.push(<PromptTable key={`table-${parts.length}`} rows={block.rows} />);
+      continue;
+    }
+    text.push(block.kind === "item" ? `${block.marker}) ${block.text}` : block.text);
+  }
+  flush();
+  return <>{parts}</>;
 }
 
-function resultLevel(result: ServerResult): string {
-  if (!result.max_score || !Number.isFinite(result.score)) return "Точка старта сохранена";
-  const ratio = result.score / result.max_score;
-  if (ratio >= 0.8) return "Сильная стартовая позиция";
-  if (ratio >= 0.5) return "Уверенная база";
-  return "Есть понятные точки роста";
+function topicName(topic: ServerTopic | string): string {
+  return typeof topic === "string" ? topic : topic.topic;
 }
 
 export function ResultScreen({
   result,
   diagnostic,
-  pdfStatus,
   onReview,
   onForecast,
   onReplayMistakes,
 }: {
   result: ServerResult;
-  diagnostic: PublicDiagnostic;
-  pdfStatus: ReviewResponse["pdf_status"];
+  diagnostic: Pick<PublicDiagnostic, "exam" | "subject">;
+  pdfStatus?: string;
   onReview: () => void;
   onForecast: () => void;
   onReplayMistakes?: () => void;
 }): ReactNode {
-  const pdf = pdfStatusCopy(pdfStatus);
-  const game = resultGameSummary(result);
   const recommendation = topicRecommendation(result.growth_topics);
-  const headline = estimateHeadline(result.estimate, diagnostic.exam);
-  const caption = estimateCaption(result.estimate);
   const incorrectCount = Math.max(
     0, result.question_count - result.correct_count - result.skipped_count,
   );
+  const accuracy = result.question_count > 0 ? Math.round(result.correct_count / result.question_count * 100) : 0;
   return (
     <section className="screen result-screen" aria-labelledby="result-title">
       <div className="result-hero">
         <p className="result-meta">{diagnostic.exam} · {diagnostic.subject}</p>
-        <h1 id="result-title">Карта знаний готова</h1>
-        {shouldShowResultMetrics(result) && (
+        <h1 id="result-title">Результат диагностики</h1>
+        {result.question_count > 0 && (
           <div className="result-overview" aria-label="Итог тестовой части">
-            {headline && caption ? (
-              <div className="result-estimate">
-                <span>Ожидаемый результат</span>
-                <strong>{headline}</strong>
-                <small>{caption}</small>
-              </div>
-            ) : (
-              <div className="result-score">
-                <span>Текущий балл</span>
-                <strong>{result.score}</strong>
-                <small>из {result.max_score} {result.score_unit}</small>
-              </div>
-            )}
-            {headline && caption && (
-              <div className="result-correct">
-                <span>Текущий балл</span>
-                <strong>{result.score} из {result.max_score}</strong>
-              </div>
-            )}
+            <div className="result-score"><span>Точность ответов</span><strong>{accuracy}%</strong><small>в этой диагностике</small></div>
             <div className="result-correct">
               <span>Верные ответы</span>
               <strong>{result.correct_count} из {result.question_count}</strong>
@@ -92,49 +88,22 @@ export function ResultScreen({
             {result.correct_count} верно · {incorrectCount} неверно · {result.skipped_count} пропущено
           </p>
         )}
-        <p>{resultLevel(result)}. Посмотри, что уже получается и что даст следующий прирост.</p>
+        <p>Результат относится только к этим заданиям. Он не предсказывает балл на экзамене и не оценивает весь предмет.</p>
       </div>
       <div className="result-body">
-      <section className="result-game-card" aria-labelledby="result-game-title">
-        <div className="result-game-heading">
-          <div>
-            <span className="result-game-kicker">MAXIMUM · эта диагностика</span>
-            <h2 id="result-game-title">Очки за этот результат</h2>
-          </div>
-          <strong className="result-game-points">{game.points}</strong>
-        </div>
-        <div className="result-game-level">
-          <div>
-            <span>Уровень {game.level}</span>
-            <strong>{game.levelTitle}</strong>
-          </div>
-          <span>{game.pointsToNextLevel > 0 ? `Ещё ${game.pointsToNextLevel} очков до следующего` : "Максимум для этой попытки"}</span>
-        </div>
-        <div className="result-game-progress" role="progressbar" aria-label={`Прогресс уровня: ${game.levelProgress}%`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={game.levelProgress}>
-          <span style={{ width: `${game.levelProgress}%` }} />
-        </div>
-        <div className="result-achievements" aria-label="Локальные достижения этой диагностики">
-          {game.achievements.map((achievement) => (
-            <div className={`result-achievement${achievement.earned ? " is-earned" : ""}`} key={achievement.id}>
-              <span aria-hidden="true">{achievement.earned ? "✓" : "·"}</span>
-              <div><strong>{achievement.title}</strong><small>{achievement.description}</small></div>
-            </div>
-          ))}
-        </div>
-      </section>
       {(result.strong_topics.length > 0 || result.growth_topics.length > 0) && (
         <section className="topic-section" aria-labelledby="topic-heading">
-          <h2 id="topic-heading">Карта тем</h2>
+          <h2 id="topic-heading">Проверенные задания</h2>
           <div className="topic-grid">
             {result.strong_topics.length > 0 && (
               <div className="topic-group topic-group-strong">
-                <span><b aria-hidden="true">✓</b> Сильные темы</span>
+                <span><b aria-hidden="true">✓</b> Получилось в этой попытке</span>
                 <ul>{result.strong_topics.map((topic) => <li key={topicName(topic)}>{topicName(topic)}</li>)}</ul>
               </div>
             )}
             {recommendation && (
               <div className="topic-group topic-group-growth">
-                <span><b aria-hidden="true">↗</b> {recommendation.heading}</span>
+                <span><b aria-hidden="true">↗</b> Задания для повторения</span>
                 <ul>{recommendation.topics.map((topic) => <li key={topic}>{topic}</li>)}</ul>
               </div>
             )}
@@ -147,14 +116,14 @@ export function ResultScreen({
           <span>{result.unassessed_part}</span>
         </div>
       )}
-      <div className={`delivery-note delivery-${pdfStatus}`} role="status" aria-live="polite">
-        <strong>{pdf.title}</strong>
-        <span>{pdf.description}</span>
+      <div className="scope-note">
+        <strong>Результат сохранён здесь</strong>
+        <span>Он останется в разделе «Мои результаты». Telegram присылает только короткое уведомление со ссылкой на этот экран.</span>
       </div>
       <div className="result-actions">
-        <button className="primary-button" onClick={onReview} type="button">Разобрать ошибки <span aria-hidden="true">→</span></button>
-        {onReplayMistakes && <button className="secondary-button" onClick={onReplayMistakes} type="button">Повторить ошибки</button>}
-        <button className="secondary-button" onClick={onForecast} type="button">Прогноз баллов</button>
+        <button className="primary-button" onClick={onReview} type="button">Посмотреть разбор <span aria-hidden="true">→</span></button>
+        {onReplayMistakes && <button className="secondary-button" onClick={onReplayMistakes} type="button">Отработать ошибки</button>}
+        <button className="secondary-button" onClick={onForecast} type="button">Мой план подготовки</button>
       </div>
       </div>
     </section>
@@ -216,7 +185,7 @@ export function ReviewScreen({
         <span className="status-symbol" aria-hidden="true">i</span>
         <h1>Для этого результата нет полного разбора</h1>
         <p>Попытка была завершена до обновления. Мы не восстанавливаем правильные ответы из текущего каталога.</p>
-        <button className="primary-button" onClick={onForecast} type="button">Перейти к прогнозу <span aria-hidden="true">→</span></button>
+        <button className="primary-button" onClick={onForecast} type="button">Мой план подготовки <span aria-hidden="true">→</span></button>
         <button className="secondary-button" onClick={onBack} type="button">Вернуться к результату</button>
       </section>
     );
@@ -228,7 +197,7 @@ export function ReviewScreen({
         <span className="status-symbol status-symbol-success" aria-hidden="true">🎉</span>
         <h1>Ни одной ошибки!</h1>
         <p>Ты решил всё верно — разбирать нечего. Так держать!</p>
-        <button className="primary-button" onClick={onForecast} type="button">К прогнозу баллов <span aria-hidden="true">→</span></button>
+        <button className="primary-button" onClick={onForecast} type="button">Мой план подготовки <span aria-hidden="true">→</span></button>
         <button className="secondary-button" onClick={onBack} type="button">Вернуться к результату</button>
       </section>
     );
@@ -254,7 +223,7 @@ export function ReviewScreen({
         {hasApprovedPrimaryScore(item.source) && <PrimaryScoreBadge maxPrimaryScore={item.max_primary_score} earnedPrimaryScore={item.earned_primary_score} />}
       </div>
       <h1 id="review-title">{item.title}</h1>
-      <p className="review-prompt"><FormattedStem text={item.prompt} /></p>
+      <ReviewPrompt prompt={item.prompt} />
       {imagePaths.length > 0 && (
         <div className="review-media">
           {imagePaths.map((path, imageIndex) => (
@@ -280,7 +249,7 @@ export function ReviewScreen({
         <p>{item.learning_material_text || item.guidance}</p>
       </section>
       <button className="primary-button" onClick={isLast ? onForecast : onNext} type="button">
-        {isLast ? "Перейти к прогнозу" : "Следующая ошибка"} <span aria-hidden="true">→</span>
+          {isLast ? "Мой план подготовки" : "Следующая ошибка"} <span aria-hidden="true">→</span>
       </button>
     </section>
   );
@@ -372,22 +341,18 @@ export function ForecastScreen({
 
 export function RouteScreen({
   items,
-  pdf,
   offers,
-  onRefreshPdf,
   onSubjects,
 }: {
   items: RouteItem[];
-  pdf: PdfStatusCopy;
   offers: SchoolLinks["offers"];
-  onRefreshPdf: () => void;
   onSubjects: () => void;
 }): ReactNode {
   return (
     <section className="screen route-screen" aria-labelledby="route-title">
       <span className="state-code">Персональный маршрут</span>
       <h1 id="route-title">Твой маршрут</h1>
-      <p className="lead">Темы по порядку — от самых важных. Затем подходящий формат поддержки школы.</p>
+      <p className="lead">Начни с заданий, в которых были ошибки. Этот план относится к пройденной диагностике.</p>
       <ol className="route-list">
         {items.map((item, index) => (
           <li key={`${item.id}-${index}`}>
@@ -396,10 +361,9 @@ export function RouteScreen({
           </li>
         ))}
       </ol>
-      <div className="delivery-note" role="status" aria-live="polite">
-        <strong>{pdf.title}</strong>
-        <span>{pdf.description}</span>
-        {pdf.action && <button className="inline-action" onClick={onRefreshPdf} type="button">{pdf.action}</button>}
+      <div className="scope-note">
+        <strong>Где найти этот план</strong>
+        <span>План и разбор ошибок открываются здесь в любой момент. Все пройденные диагностики лежат в разделе «Мои результаты».</span>
       </div>
       {offers.length > 0 && (
         <section className="school-actions" aria-labelledby="school-actions-title">

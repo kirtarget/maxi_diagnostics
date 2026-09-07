@@ -5,6 +5,7 @@ import {
   bootstrapResumeSummary,
   createProgressSaveQueue,
   loadReview,
+  loadBootstrap,
   loadLocalSession,
   postDiagnostic,
   recordOfferEvent,
@@ -26,6 +27,26 @@ import type {
   SavedSession,
   ServerAttempt,
 } from "./types";
+
+describe("bootstrap notification attribution", () => {
+  it.each([
+    ["?n=reminder-token", "reminder-token"],
+    ["?n=" + "a".repeat(161), undefined],
+    ["", undefined],
+  ])("forwards only a bounded n parameter from %s", async (search, expectedToken) => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("window", { location: { search } });
+    vi.stubGlobal("fetch", fetcher);
+    try {
+      await loadBootstrap("signed-init-data");
+      const payload = JSON.parse(String(fetcher.mock.calls[0][1]?.body));
+      expect(payload.init_data).toBe("signed-init-data");
+      expect(payload.notification_token).toBe(expectedToken);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
 
 function memoryStorage(): Storage {
   const values = new Map<string, string>();
@@ -332,7 +353,7 @@ describe("diagnostic API payloads", () => {
 
   it("posts only review authentication and session identifiers", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      ok: true, available: true, items: [], pdf_status: "pending",
+      ok: true, available: true, items: [],
     }), {
       status: 200,
       headers: { "Content-Type": "application/json" },

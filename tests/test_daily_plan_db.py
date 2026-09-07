@@ -300,15 +300,17 @@ async def test_streak_save_skips_an_active_streak_and_a_short_one(database):
 
     active = new_user_id()
     short = new_user_id()
+    expired = new_user_id()
     pool = await get_pool()
     async with pool.acquire() as connection:
         await connection.execute(
             """
             INSERT INTO diagnostic_progress_profiles (user_id, streak_days, streak_last_date)
             VALUES ($1, 5, (now() AT TIME ZONE 'Europe/Moscow')::date),
-                   ($2, 1, (now() AT TIME ZONE 'Europe/Moscow')::date - 1)
+                   ($2, 1, (now() AT TIME ZONE 'Europe/Moscow')::date - 1),
+                   ($3, 5, (now() AT TIME ZONE 'Europe/Moscow')::date - 7)
             """,
-            active, short,
+            active, short, expired,
         )
 
     await attempts.schedule_streak_save_notifications(timezone_name="Europe/Moscow")
@@ -317,6 +319,32 @@ async def test_streak_save_skips_an_active_streak_and_a_short_one(database):
         count = await connection.fetchval(
             "SELECT count(*) FROM diagnostic_notifications"
             " WHERE user_id = ANY($1::bigint[]) AND kind='streak_save'",
-            [active, short],
+            [active, short, expired],
         )
     assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_streak_scheduler_advances_past_already_queued_users(database):
+    from diagnostic.db import attempts
+
+    while await attempts.schedule_streak_save_notifications(timezone_name="Europe/Moscow"):
+        pass
+    users = [new_user_id(), new_user_id()]
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute(
+            """
+            INSERT INTO diagnostic_progress_profiles (user_id, streak_days, streak_last_date)
+            SELECT id, 3, (now() AT TIME ZONE 'Europe/Moscow')::date - 1
+              FROM unnest($1::bigint[]) AS id
+            """, users,
+        )
+    await attempts.schedule_streak_save_notifications(timezone_name="Europe/Moscow", limit=1)
+    await attempts.schedule_streak_save_notifications(timezone_name="Europe/Moscow", limit=1)
+    async with pool.acquire() as connection:
+        count = await connection.fetchval(
+            "SELECT count(*) FROM diagnostic_notifications WHERE user_id=ANY($1::bigint[])",
+            users,
+        )
+    assert count == 2

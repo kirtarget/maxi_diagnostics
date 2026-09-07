@@ -13,12 +13,11 @@ from fastapi.responses import JSONResponse
 from diagnostic.admin import install_admin
 from diagnostic.catalog import DiagnosticCatalog, load_catalog
 from diagnostic.db.core import close_db, database_ready, init_db
-from diagnostic.db.attempts import store_report_asset_bundle
 from diagnostic.logging_config import configure_logging
 from diagnostic.school import SchoolConfig, load_school
 from diagnostic.settings import Settings
 
-from .sessions import create_router, prepare_report_asset_bundles
+from .sessions import create_router
 from .league import create_league_router
 from .offer_events import create_offer_events_router
 from .trainer import create_trainer_router
@@ -35,7 +34,6 @@ def create_app(
     app.state.settings = settings
     app.state.school = school
     app.state.catalog = catalog
-    app.state.report_asset_bundles = prepare_report_asset_bundles(school, catalog)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[settings.miniapp_origin],
@@ -93,12 +91,6 @@ def create_default_app() -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         try:
             await init_db(settings.database_url, school)
-            stored_bundle_ids: set[str] = set()
-            for bundle_id, payload in app.state.report_asset_bundles.values():
-                if bundle_id in stored_bundle_ids:
-                    continue
-                await store_report_asset_bundle(bundle_id, payload)
-                stored_bundle_ids.add(bundle_id)
             yield
         finally:
             await close_db()

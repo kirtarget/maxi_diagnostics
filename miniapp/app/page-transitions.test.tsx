@@ -183,6 +183,91 @@ afterEach(async () => {
 });
 
 describe("Home screen transitions", () => {
+  it("persists first selection, runs quick diagnostic, then refreshes home and exposes the first route", async () => {
+    route("/api/diagnostics/bootstrap", bootstrapPayload({ onboarding: { status: "welcome" } }));
+    route("/api/diagnostics/onboarding", { status: "selection" });
+    route("/api/diagnostics/catalog", { diagnostic });
+    route("/api/diagnostics/session/complete", { ok: true, attempt: completedAttempt, result: serverResult });
+    await mountHome();
+    await clickAndSettle(".welcome-screen .primary-button");
+    expect(requestedPaths).toContain("/api/diagnostics/onboarding");
+    expect(container.querySelector("#subject-title")).not.toBeNull();
+    expect(container.querySelector("#mode-title")).toBeNull();
+    expect(screenClasses()).not.toContain("gameplay-home");
+    await clickAndSettle(".brand");
+    expect(container.querySelector("#subject-title")).not.toBeNull();
+    await clickAndSettle(".subject-card");
+    await clickAndSettle(".answer-option");
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      onboarding: { status: "completed" },
+      progress_profile: { completion_count: 1, achievement_keys: ["first_diagnostic_completed"] },
+      daily_plan: { status: "ready", diagnostic_id: diagnostic.id, subject: diagnostic.subject, exam: diagnostic.exam, plan_date: "2026-09-06", total: 1, completed: 0 },
+    }));
+    await clickAndSettle(".question-next");
+    expect(screenClasses()).toContain("result-screen");
+    const completionCall = vi.mocked(fetch).mock.calls.find(([path]) => String(path).endsWith("/session/complete"));
+    expect(JSON.parse(String(completionCall?.[1]?.body)).mode).toBe("quick");
+    expect(container.textContent).not.toContain("Прогноз баллов");
+    await clickAndSettle(".result-actions .secondary-button:last-child");
+    expect(screenClasses()).toContain("route-screen");
+    await clickAndSettle(".brand");
+    expect(screenClasses()).toContain("gameplay-home");
+    expect(container.textContent).toContain("1 диагностика завершена");
+    expect(container.textContent).toContain("План на сегодня");
+  });
+
+  it("resumes persisted selection without showing the dashboard", async () => {
+    route("/api/diagnostics/bootstrap", bootstrapPayload({ onboarding: { status: "selection" } }));
+    await mountHome();
+    expect(container.querySelector("#subject-title")).not.toBeNull();
+    expect(screenClasses()).not.toContain("gameplay-home");
+    await clickAndSettle(".brand");
+    expect(container.querySelector("#subject-title")).not.toBeNull();
+  });
+
+  it("refreshes completed trainer progress before returning home", async () => {
+    const initial = bootstrapPayload({
+      onboarding: { status: "completed" },
+      progress_profile: { completion_count: 1, achievement_keys: [] },
+      gameplay_profile: { xp_total: 0, level: 1, level_progress: 0, streak_days: 0, lives_remaining: 5, daily_goal: { date: null, target: 3, progress: 0, complete: false }, quest: null },
+    });
+    route("/api/diagnostics/bootstrap", initial);
+    route("/api/diagnostics/trainer/start", {
+      trainer_session_id: "s".repeat(32), diagnostic_id: diagnostic.id, content_version: CONTENT_VERSION,
+      mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1, status: "active", questions: diagnostic.questions, lives_remaining: 5,
+    });
+    route("/api/diagnostics/trainer/answer", {
+      trainer_session_id: "s".repeat(32), question_id: "q1", is_correct: true, correct_answer: "A", explanation: null,
+      xp_delta: 10, life_delta: 0, current_index: 1, revision: 2, status: "active", lives_remaining: 5,
+    });
+    route("/api/diagnostics/trainer/finish", {
+      trainer_session_id: "s".repeat(32), status: "completed", revision: 3, current_index: 1,
+      question_count: 1, answered_count: 1, correct_count: 1, xp_earned: 10, lives_spent: 0, lives_remaining: 5,
+    });
+    await mountHome();
+    await clickAndSettle(".gameplay-trainer-cta");
+    await clickAndSettle(".answer-option");
+    route("/api/diagnostics/bootstrap", { ...initial, gameplay_profile: { ...initial.gameplay_profile, xp_total: 10, streak_days: 1 } });
+    await clickAndSettle(".question-next");
+    await clickAndSettle(".question-next");
+    expect(container.querySelector(".trainer-complete")).not.toBeNull();
+    await clickAndSettle(".trainer-complete button");
+    expect(container.querySelector(".gameplay-dashboard")?.textContent).toContain("10 XP");
+  });
+
+  it("opens a persisted result after its diagnostic has left the catalog", async () => {
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      onboarding: { status: "completed" },
+      results: [{ ...completedAttempt, diagnostic_id: "removed", exam: "ОГЭ", subject: "Архивный предмет", result: { ...serverResult, diagnostic_id: "removed" } }],
+    }));
+    await mountHome();
+    await clickAndSettle('[aria-label="Предыдущие результаты"] button');
+    expect(screenClasses()).toContain("result-screen");
+    expect(container.textContent).toContain("Архивный предмет");
+    expect(requestedPaths).not.toContain("/api/diagnostics/catalog");
+    expect(container.textContent).not.toContain("Отработать ошибки");
+  });
+
   it("moves from loading to welcome on a first visit", async () => {
     const gate = deferred<BootstrapResponse>();
     routes["/api/diagnostics/bootstrap"] = () => gate.promise;
@@ -242,7 +327,6 @@ describe("Home screen transitions", () => {
     route("/api/diagnostics/session/review", {
       ok: true,
       available: true,
-      pdf_status: "sent",
       items: [{
         question_id: "q1",
         number: 1,

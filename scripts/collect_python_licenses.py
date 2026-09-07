@@ -11,13 +11,6 @@ import sys
 NOTICE_NAME = re.compile(r"^(license|licence|copying|notice)(\..*)?$", re.IGNORECASE)
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 AUDITED_FALLBACKS: dict[tuple[str, str], tuple[Path, ...]] = {
-    ("pycairo", "1.29.1"): (
-        REPOSITORY_ROOT / "third_party_licenses/python/pycairo-1.29.1-provenance.txt",
-        Path("/usr/share/common-licenses/LGPL-2.1"),
-    ),
-    ("rlpycairo", "0.4.0"): (
-        REPOSITORY_ROOT / "third_party_licenses/python/rlpycairo-0.4.0-BSD.txt",
-    ),
     ("webencodings", "0.5.1"): (
         REPOSITORY_ROOT / "third_party_licenses/python/webencodings-0.5.1-BSD.txt",
     ),
