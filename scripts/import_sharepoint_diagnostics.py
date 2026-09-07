@@ -552,6 +552,34 @@ def _flattened_numbered_choices(task: SourceTask) -> list[tuple[str, str]]:
     return list(zip((str(number) for number in numbers), labels))
 
 
+def _table_gap_markers(task: SourceTask) -> tuple[str, ...]:
+    """Return ordered letter markers present in a source table's blank cells."""
+    markers: list[str] = []
+    for table in task.prompt_tables:
+        for row in table.rows:
+            for cell in row:
+                for line in cell:
+                    for marker in re.findall(r"\(([А-ЯЁ])\)", line):
+                        if marker not in markers:
+                            markers.append(marker)
+    return tuple(markers)
+
+
+def _numbered_prompt_choices(task: SourceTask) -> list[tuple[str, str]]:
+    """Read a contiguous 1..N choice list kept as prompt paragraphs."""
+    choices: list[tuple[str, str]] = []
+    for line in task.prompt_blocks:
+        match = re.fullmatch(r"(\d)[.)]\s*(.+?)[;.]?", line.strip())
+        if match is None:
+            if choices:
+                break
+            continue
+        choices.append((match.group(1), clean_line(match.group(2))))
+    if len(choices) < 2 or [int(marker) for marker, _ in choices] != list(range(1, len(choices) + 1)):
+        return []
+    return choices
+
+
 def _numbered_choice_table(table: SourceTable) -> list[tuple[str, str]]:
     """Read the nine numbered cells of the known q05 three-by-three grid."""
     if len(table.rows) != 3 or table.columns != 3:
@@ -893,6 +921,25 @@ def classify(task: SourceTask) -> tuple[str, AnswerSpec | str]:
         if not reorderings:
             return "skip", "irregular_key"
         return "input", InputAnswerSpec(tuple(parts), sequence=True)
+
+    gap_markers = _table_gap_markers(task)
+    if len(parts) == 1 and DIGITS.fullmatch(key) and gap_markers and len(key) == len(gap_markers):
+        numbered = _flattened_numbered_choices(task) or _numbered_prompt_choices(task)
+        if not numbered and task.options:
+            numbered = [(str(index + 1), label) for index, label in enumerate(task.options)]
+        option_digits = {digit for digit, _ in numbered}
+        if len(numbered) >= len(gap_markers) and set(key) <= option_digits:
+            source_text = "\n".join(task.prompt_blocks)
+            allow_reuse = bool(re.search(r"могут\s+повторяться", source_text, re.IGNORECASE))
+            return "input", InputAnswerSpec(
+                (key,),
+                sequence=True,
+                answer_format="sequence",
+                answer_length=len(gap_markers),
+                allow_reuse=allow_reuse,
+                markers=gap_markers,
+                options=tuple(numbered),
+            )
 
     if task.options:
         if len(digit_parts) != len(parts) or any(len(part) != 1 for part in parts):

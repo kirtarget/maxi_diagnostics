@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState, type Dispatch, type ReactNode } from "react";
-import { AnswerEditor } from "./answer-editor";
+import { StructuredAnswerEditor } from "./question-screen";
 import { ConfirmSheet } from "./confirm-sheet";
 import { FormattedMathText, FormattedStem } from "./math-display";
+import { PromptTable } from "./prompt-table";
 import { normalizeOffer, OfferSurface, type OfferPlacement, type OfferTelemetryEvent } from "./offer-ux";
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import { parseQuestionPrompt } from "./question-prompt";
+import { parseSequenceMatchingPrompt } from "./sequence-matching";
+import { parseTableGapPrompt } from "./table-gap-matching";
 import type { AnswerValue, Question, SchoolLinks } from "./types";
 import {
   isTrainerAnswerComplete,
@@ -40,11 +43,21 @@ export type TrainerScreenProps = {
 };
 
 function QuestionPrompt({ question, subject, reason }: { question: Question; subject?: string; reason?: string | null }) {
-  const prompt = parseQuestionPrompt(question.prompt)
-    .filter((block) => block.kind !== "instruction")
-    .map((block) => block.kind === "item" ? `${block.marker}) ${block.text}` : block.kind === "table" ? block.rows.map((row) => row.join(" | ")).join("\n") : block.text)
+  const allBlocks = parseQuestionPrompt(question.prompt);
+  const tableGap = question.type === "input" ? parseTableGapPrompt(question.prompt, question) : null;
+  const sequence = question.type === "input" ? parseSequenceMatchingPrompt(question.prompt, question) : null;
+  const blocks = allBlocks.filter((block) => {
+    if (block.kind === "instruction") return false;
+    if (tableGap && block.kind !== "stem") return false;
+    if (sequence && (block.kind === "item" || block.kind === "heading" || block.kind === "table")) return false;
+    if (sequence && block.kind === "paragraph" && sequence.left.some((item) => item.marker === block.text)) return false;
+    return true;
+  });
+  const text = blocks
+    .filter((block) => block.kind !== "table")
+    .map((block) => block.kind === "item" ? `${block.marker}) ${block.text}` : block.text)
     .join("\n");
-  return <div className="trainer-prompt"><div className="trainer-prompt-meta">{reason && <span className="trainer-plan-reason">{reason}</span>}{hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}</div><h1><FormattedStem text={prompt} subject={subject} /></h1><small>{question.topic}</small></div>;
+  return <div className="trainer-prompt"><div className="trainer-prompt-meta">{reason && <span className="trainer-plan-reason">{reason}</span>}{hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}</div><h1><FormattedStem text={text || "Задание"} subject={subject} /></h1>{blocks.filter((block) => block.kind === "table").map((block, index) => block.kind === "table" ? <PromptTable key={index} headerRows={block.headerRows} rows={block.rows} columns={block.columns} subject={subject} /> : null)}<small>{question.topic}</small></div>;
 }
 
 const LIFE_REFILL_INTERVAL_MS = 4 * 60 * 60 * 1000;
@@ -178,7 +191,7 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
     <div className="question-progress-rail" role="progressbar" aria-valuemin={0} aria-valuemax={state.session.questions.length} aria-valuenow={Math.min(questionIndex + 1, state.session.questions.length)}><span className="question-progress-fill" style={{ width: `${(Math.min(questionIndex + 1, state.session.questions.length) / state.session.questions.length) * 100}%` }} /></div>
     <QuestionPrompt question={question} subject={subject} reason={planReasonLabel(state, question.id)} />
     {trainerInstructions.map((instruction, instructionIndex) => <p className="question-instruction" key={`trainer-instruction-${instructionIndex}`}><FormattedMathText text={instruction} subject={subject} /></p>)}
-    <AnswerEditor question={question} subject={subject} value={state.draftAnswer} disabled={locked} suppressAutoHint={trainerInstructions.length > 0} onChange={(answer) => dispatch({ type: "set_answer", answer })} />
+    <StructuredAnswerEditor question={question} subject={subject} value={state.draftAnswer} disabled={locked} suppressAutoHint={trainerInstructions.length > 0} onChange={(answer) => dispatch({ type: "set_answer", answer })} />
     {state.phase === "feedback" ? <><Feedback state={state} subject={subject} showPrimaryScore={hasApprovedPrimaryScore(question.source)} />{isLast ? <button className="primary-button question-next" type="button" onClick={() => { dispatch({ type: "finish_requested" }); onFinish?.(); }}>Завершить тренировку <span aria-hidden="true">→</span></button> : <button className="primary-button question-next" type="button" onClick={() => dispatch({ type: "next_question" })}>Следующий вопрос <span aria-hidden="true">→</span></button>}</> : <button className="primary-button question-next" type="button" disabled={!canSubmit || state.phase === "awaiting_result"} onClick={submit}>{state.phase === "awaiting_result" ? "Проверяем…" : "Проверить ответ"}<span aria-hidden="true">→</span></button>}
     <ConfirmSheet open={confirmOpen} onCancel={() => setConfirmOpen(false)} onConfirm={() => { setConfirmOpen(false); onHome?.(); }} />
   </section>;

@@ -516,6 +516,38 @@ def test_reordered_numeric_keys_become_accepted_input_variants():
     assert payload.sequence is True
 
 
+def test_table_gap_key_gets_sequence_metadata_from_source_shape():
+    task = importer.SourceTask(
+        number=20,
+        prompt_tables=[importer.SourceTable(rows=(
+            (("Железа",), ("Функция",), ("Изменения",)),
+            (("(А)________",), ("Функция",), ("Давление",)),
+            (("Поджелудочная",), ("(Б)________",), ("Голодание",)),
+            (("Щитовидная",), ("Обмен",), ("(В)________",)),
+        ))],
+        options=["Щитовидная железа", "Гипофиз", "Надпочечники", "Липидный обмен", "Углеводный обмен", "Обменные процессы"],
+        answer=["356"],
+    )
+    kind, payload = importer.classify(task)
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "sequence"
+    assert payload.answer_length == 3
+    assert payload.allow_reuse is False
+    assert payload.markers == ("А", "Б", "В")
+
+    task.prompt_blocks.append("Цифры в ответе могут повторяться.")
+    kind, payload = importer.classify(task)
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.allow_reuse is True
+
+    task.answer = ["35"]
+    kind, payload = importer.classify(task)
+    assert kind == "skip"
+    assert payload == "irregular_key"
+
+
 def test_guarded_q05_repair_removes_only_duplicate_marker_from_flattened_prompt():
     prompt = (
         "Установите соответствие. 1) Один 2) Два 3) Три 4) Гидроксид "

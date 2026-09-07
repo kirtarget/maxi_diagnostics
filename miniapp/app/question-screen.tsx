@@ -1,4 +1,4 @@
-import { AnswerEditor } from "./answer-editor";
+import { AnswerEditor, type AnswerEditorLabels } from "./answer-editor";
 import { FormattedMathText, FormattedStem } from "./math-display";
 import { isValidNumericInput, isValidTextInput, updateCompactAnswer } from "./answer-values";
 import { questionAssetPaths } from "./question-assets";
@@ -36,6 +36,26 @@ export type QuestionScreenProps = {
   skipped?: boolean;
   skippedIndexes?: readonly number[];
 };
+
+export function StructuredAnswerEditor({ question, subject, value, onChange, disabled = false, suppressAutoHint = false, labels }: {
+  question: Question;
+  subject?: string;
+  value: AnswerValue | undefined;
+  onChange: (value: AnswerValue) => void;
+  disabled?: boolean;
+  suppressAutoHint?: boolean;
+  labels?: Partial<AnswerEditorLabels>;
+}) {
+  const tableGap = question.type === "input" ? parseTableGapPrompt(question.prompt, question) : null;
+  if (tableGap) {
+    return <TableGapAnswer matching={tableGap} disabled={disabled} onChange={(next) => onChange(next)} value={typeof value === "string" ? value : ""} />;
+  }
+  const sequence = question.type === "input" ? parseSequenceMatchingPrompt(question.prompt, question) : null;
+  if (sequence) {
+    return <SequenceMatchingAnswer matching={sequence} disabled={disabled} onChange={(next) => onChange(next)} value={typeof value === "string" ? value : ""} />;
+  }
+  return <AnswerEditor question={question} subject={subject} value={value} disabled={disabled} suppressAutoHint={suppressAutoHint} labels={labels} onChange={onChange} />;
+}
 
 export type QuestionProgress = {
   current: number;
@@ -213,9 +233,12 @@ export function QuestionView({
         {hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}
       </div>
       <div className="question-copy">
+        {!promptBlocks.some((block) => block.kind === "stem") && (
+          <h1 id="question-title" className="question-title">Задание</h1>
+        )}
         {promptBlocks.map((block, blockIndex) => {
           if (tableGap && block.kind !== "stem") return null;
-          if (sequenceMatching && (block.kind === "item" || block.kind === "heading" || block.kind === "instruction")) {
+          if (sequenceMatching && (block.kind === "item" || block.kind === "heading" || block.kind === "instruction" || block.kind === "table")) {
             return null;
           }
           if (
@@ -245,7 +268,7 @@ export function QuestionView({
             );
           }
           if (block.kind === "table") {
-            return <PromptTable key={blockIndex} rows={block.rows} subject={subject} />;
+            return <PromptTable key={blockIndex} headerRows={block.headerRows} rows={block.rows} columns={block.columns} subject={subject} />;
           }
           if (block.kind === "instruction") return null;
           return <p className="question-paragraph" key={blockIndex}><FormattedMathText text={block.text} subject={subject} /></p>;
@@ -263,7 +286,7 @@ export function QuestionView({
       ) : sequenceMatching ? (
         <SequenceMatchingAnswer matching={sequenceMatching} onChange={onAnswer} value={typeof answer === "string" ? answer : ""} />
       ) : (
-        <AnswerEditor
+        <StructuredAnswerEditor
           question={question}
           subject={subject}
           value={answer}
@@ -296,8 +319,9 @@ export function QuestionView({
   );
 }
 
-function TableGapAnswer({ matching, onChange, value }: {
+function TableGapAnswer({ matching, onChange, value, disabled = false }: {
   matching: TableGapPrompt;
+  disabled?: boolean;
   onChange: (value: string) => void;
   value: string;
 }) {
@@ -335,11 +359,11 @@ function TableGapAnswer({ matching, onChange, value }: {
                   const used = new Set(selected.filter((choice, choiceIndex) => choiceIndex !== currentIndex));
                   const locked = currentIndex > selected.length;
                   return (
-                    <label className={`table-gap-field table-gap-select${locked ? " locked" : ""}`} key={cell.marker}>
+                    <label className={`table-gap-field table-gap-select${locked || disabled ? " locked" : ""}`} key={cell.marker}>
                       <small>{header}</small>
                       <select
                         aria-label={`${header || "Элемент"} для ячейки ${cell.marker}`}
-                        disabled={locked}
+                        disabled={locked || disabled}
                         value={selected[currentIndex] ?? ""}
                         onChange={(event) => onChange(
                           updateCompactAnswer(value, currentIndex, event.target.value),
@@ -347,7 +371,7 @@ function TableGapAnswer({ matching, onChange, value }: {
                       >
                         <option value="">Выбери…</option>
                         {matching.options.map((option) => (
-                          <option disabled={used.has(option.marker)} key={option.marker} value={option.marker}>
+                          <option disabled={!matching.allowReuse && used.has(option.marker)} key={option.marker} value={option.marker}>
                             {option.marker} — {option.label}
                           </option>
                         ))}
@@ -365,8 +389,9 @@ function TableGapAnswer({ matching, onChange, value }: {
   );
 }
 
-function SequenceMatchingAnswer({ matching, onChange, value }: {
+export function SequenceMatchingAnswer({ matching, onChange, value, disabled = false }: {
   matching: SequenceMatchingPrompt;
+  disabled?: boolean;
   onChange: (value: string) => void;
   value: string;
 }) {
@@ -384,28 +409,26 @@ function SequenceMatchingAnswer({ matching, onChange, value }: {
           const used = new Set(selected.filter((choice, choiceIndex) => choiceIndex !== index));
           const locked = index > selected.length;
           return (
-            <label className={`sequence-matching-row${locked ? " locked" : ""}`} key={item.marker}>
+            <div className={`sequence-matching-row${locked || disabled ? " locked" : ""}`} key={item.marker}>
               <span className="sequence-matching-row-copy"><strong>{item.marker}</strong><span>{item.label}</span></span>
-              <select
-                aria-label={`Вариант для пункта ${item.marker}`}
-                disabled={locked}
-                value={rowValue}
-                onChange={(event) => onChange(
-                  updateCompactAnswer(value, index, event.target.value),
-                )}
-              >
-                <option value="">Выберите вариант</option>
+              <div className="sequence-matching-options" role="group" aria-label={`Варианты для пункта ${item.marker}`}>
                 {matching.options.map((option) => (
-                  <option
-                    disabled={!matching.allowReuse && used.has(option.marker)}
+                  <button
+                    aria-label={`${option.marker} — ${option.label}`}
+                    aria-pressed={rowValue === option.marker}
+                    className={`sequence-matching-chip${rowValue === option.marker ? " selected" : ""}`}
+                    data-option-marker={option.marker}
+                    disabled={disabled || locked || (!matching.allowReuse && used.has(option.marker))}
                     key={option.marker}
-                    value={option.marker}
+                    onClick={() => onChange(updateCompactAnswer(value, index, option.marker))}
+                    type="button"
                   >
-                    {option.marker} — {option.label}
-                  </option>
+                    <strong>{option.marker}</strong>
+                    <span>{option.label}</span>
+                  </button>
                 ))}
-              </select>
-            </label>
+              </div>
+            </div>
           );
         })}
       </div>

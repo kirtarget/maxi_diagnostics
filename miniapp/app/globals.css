@@ -1299,6 +1299,7 @@ select:focus-visible,
 
 .question-table {
   width: 100%;
+  min-width: 0;
   border-collapse: collapse;
   font-size: 14px;
   line-height: 1.45;
@@ -1313,15 +1314,67 @@ select:focus-visible,
 }
 
 .question-table thead th {
-  font-size: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  font-size: 14px;
   font-weight: 800;
-  text-transform: uppercase;
   letter-spacing: 0.02em;
   background: color-mix(in srgb, var(--brand-ink) 5%, transparent);
 }
 
+.question-table th:first-child,
+.question-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--brand-background);
+}
+
+.question-table thead th:first-child { z-index: 3; }
+.question-table thead tr + tr th { top: 44px; }
+
+.question-table-scroll:not([data-columns="2"]) .question-table { min-width: 640px; }
+
+.question-table-cards { display: none; }
+
+.question-table-card-cell { font-size: 14px; }
+
 .question-table tbody tr:last-child td {
   border-bottom: none;
+}
+
+@media (max-width: 479px) {
+  .question-table-scroll[data-columns="2"] {
+    overflow-x: visible;
+    border: 0;
+  }
+
+  .question-table-scroll[data-columns="2"] .question-table { display: none; }
+
+  .question-table-scroll[data-columns="2"] .question-table-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .question-table-scroll[data-columns="2"] .question-table-card {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid color-mix(in srgb, var(--brand-ink) 10%, transparent);
+    border-radius: 12px;
+    background: var(--brand-background);
+  }
+
+  .question-table-scroll[data-columns="2"] .question-table-card-cell {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+    padding: 2px;
+  }
 }
 
 .question-media {
@@ -1604,18 +1657,44 @@ select:focus-visible,
   font-weight: 800;
 }
 
-.sequence-matching-row select {
-  min-height: 46px;
-  width: 100%;
+.sequence-matching-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+  gap: 8px;
+}
+
+.sequence-matching-chip {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: 1.5px solid color-mix(in srgb, var(--brand-primary) 45%, var(--line));
   border-radius: 11px;
-  padding: 0 34px 0 12px;
-  outline: none;
+  padding: 7px 10px;
   color: var(--brand-primary);
   background: var(--primary-tint);
   font-family: "Golos Text", sans-serif;
   font-size: 13px;
   font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sequence-matching-chip > strong {
+  flex: 0 0 auto;
+}
+
+.sequence-matching-chip.selected {
+  border-color: var(--brand-primary);
+  color: var(--brand-paper);
+  background: var(--brand-primary);
+}
+
+.sequence-matching-chip:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .sequence-answer-preview {

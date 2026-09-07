@@ -10,13 +10,41 @@ export type SequenceMatchingPrompt = {
 
 type SequenceMetadata = Pick<InputQuestion, "answer_format" | "answer_length" | "allow_reuse" | "markers">;
 
-const TABLE_OPTION_PATTERN = /(?:^|\s)(\d{1,2})[.)]\s*(.*?)(?=\s+\d{1,2}[.)]\s+|$)/gu;
+const TABLE_OPTION_PATTERN = /(?:^|\s)(\d)[.)]\s*(.*?)(?=\s+\d[.)]\s+|$)/gu;
+const LETTER_MARKER = /^[А-ЯЁA-Z]$/u;
+const NUMBER_MARKER = /^\d$/u;
+const INLINE_OPTION_PATTERN = /(?:^|[,;(]\s*)(\d)\s*[–—-]\s*(True|False|Not stated)\b/gu;
+const LOOKALIKE_LATIN: Record<string, string> = { А: "A", В: "B", С: "C", Е: "E", К: "K", М: "M", Н: "H", О: "O", Р: "P", Т: "T", Х: "X" };
+
+function markerScaffold(promptBlocks: ReturnType<typeof parseQuestionPrompt>): string[] {
+  for (const block of promptBlocks) {
+    if (block.kind !== "table") continue;
+    for (const row of [ ...block.headerRows, ...block.rows ]) {
+      if (row.length >= 2 && row.every((cell) => LETTER_MARKER.test(cell.trim()))) return row.map((cell) => cell.trim());
+    }
+  }
+  return [];
+}
+
+function parseTableLeft(promptBlocks: ReturnType<typeof parseQuestionPrompt>): Array<{ marker: string; label: string }> {
+  const left: Array<{ marker: string; label: string }> = [];
+  for (const block of promptBlocks) {
+    if (block.kind !== "table") continue;
+    for (const row of [ ...block.headerRows, ...block.rows ]) {
+      if (row.length >= 2 && row.every((cell) => LETTER_MARKER.test(cell.trim()))) continue;
+      const marker = row[0]?.trim() ?? "";
+      const label = row.slice(1).join(" ").trim();
+      if (LETTER_MARKER.test(marker) && label) left.push({ marker, label });
+    }
+  }
+  return left;
+}
 
 function parseTableOptions(promptBlocks: ReturnType<typeof parseQuestionPrompt>): Array<{ marker: string; label: string }> {
   const options: Array<{ marker: string; label: string }> = [];
   for (const block of promptBlocks) {
     if (block.kind !== "table") continue;
-    for (const cell of block.rows.flat()) {
+    for (const cell of [ ...block.headerRows.flat(), ...block.rows.flat() ]) {
       for (const match of cell.matchAll(TABLE_OPTION_PATTERN)) {
         const label = match[2].trim();
         if (label && label !== "___") options.push({ marker: match[1], label });
@@ -33,28 +61,44 @@ export function parseSequenceMatchingPrompt(
   if (metadata?.answer_format === "number") return null;
 
   const promptBlocks = parseQuestionPrompt(prompt);
+  const scaffold = markerScaffold(promptBlocks);
+  const normalizeMarker = (marker: string) => scaffold.find((candidate) => candidate === marker)
+    ?? scaffold.find((candidate) => LOOKALIKE_LATIN[marker] === candidate)
+    ?? marker;
   const items = promptBlocks.filter((block) => block.kind === "item");
-  const parsedLeft = items
-    .filter((item) => /^[А-ЯЁ]$/u.test(item.marker))
-    .map((item) => ({ marker: item.marker, label: item.text }));
+  const parsedLeft = [
+    ...items
+      .filter((item) => LETTER_MARKER.test(item.marker))
+      .map((item) => ({ marker: normalizeMarker(item.marker), label: item.text })),
+    ...parseTableLeft(promptBlocks),
+  ]
+    .filter((item, index, all) => all.findIndex((candidate) => candidate.marker === item.marker) === index)
   const numberedItems = items
-    .filter((item) => /^\d$/u.test(item.marker))
+    .filter((item) => NUMBER_MARKER.test(item.marker))
     .map((item) => ({ marker: item.marker, label: item.text }));
+  const inlineOptions = [...prompt.matchAll(INLINE_OPTION_PATTERN)].map((match) => ({ marker: match[1], label: match[2] }));
 
   const explicit = metadata?.answer_format === "sequence"
     || metadata?.answer_length !== undefined
     || metadata?.allow_reuse !== undefined
     || metadata?.markers !== undefined;
-  const options = metadata?.answer_format === "sequence"
-    ? [...numberedItems, ...parseTableOptions(promptBlocks)]
-    : numberedItems;
+  const candidateOptions = metadata?.answer_format === "sequence"
+    ? [...numberedItems, ...parseTableOptions(promptBlocks), ...inlineOptions]
+    : numberedItems.length > 0 ? numberedItems : inlineOptions;
+  const optionByMarker = new Map<string, { marker: string; label: string }>();
+  for (const option of candidateOptions) {
+    const previous = optionByMarker.get(option.marker);
+    if (previous && previous.label !== option.label) return null;
+    optionByMarker.set(option.marker, option);
+  }
+  const options = [...optionByMarker.values()];
   if (!explicit && (parsedLeft.length < 2 || options.length < 2)) return null;
   if (parsedLeft.length > 0 && new Set(parsedLeft.map((item) => item.marker)).size !== parsedLeft.length) return null;
   if (new Set(options.map((item) => item.marker)).size !== options.length) return null;
 
   const markers = metadata?.markers?.length
     ? [...metadata.markers]
-    : parsedLeft.map((item) => item.marker);
+    : scaffold.length > 0 ? scaffold : parsedLeft.map((item) => item.marker);
   const answerLength = metadata?.answer_length ?? markers.length;
   if (answerLength < 1 || options.length < 1) return null;
 

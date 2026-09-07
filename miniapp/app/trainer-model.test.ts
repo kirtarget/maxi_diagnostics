@@ -234,6 +234,28 @@ describe("trainer model", () => {
     expect(isTrainerAnswerComplete(questions[4], " Однако ")).toBe(true);
   });
 
+  it("uses structured completion rules for sequence and table-gap trainer inputs", () => {
+    const sequence = {
+      ...questions[3],
+      prompt: "Установите соответствие.\nА) Первый\nБ) Второй\n1) Один\n2) Два",
+      answer_format: "sequence",
+      answer_length: 2,
+      allow_reuse: false,
+    } as Question;
+    expect(isTrainerAnswerComplete(sequence, "12")).toBe(true);
+    expect(isTrainerAnswerComplete(sequence, "1")).toBe(false);
+
+    const tableGap = {
+      ...questions[3],
+      prompt: "Заполните таблицу.\nПоле 1 | Поле 2\n(А) | (Б)\nПропущенные элементы:\n1) один\n2) два",
+      answer_format: "sequence",
+      answer_length: 2,
+      allow_reuse: false,
+    } as Question;
+    expect(isTrainerAnswerComplete(tableGap, "12")).toBe(true);
+    expect(isTrainerAnswerComplete(tableGap, "1")).toBe(false);
+  });
+
   it("treats a blank or oversized free-text draft as incomplete", () => {
     expect(isTrainerAnswerComplete(questions[4], "   ")).toBe(false);
     expect(isTrainerAnswerComplete(questions[4], undefined)).toBe(false);

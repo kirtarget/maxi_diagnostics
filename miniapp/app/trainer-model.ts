@@ -1,5 +1,7 @@
 import type { AnswerValue, BootstrapResponse, PlanReason, Question } from "./types";
 import { isValidNumericInput, isValidTextInput } from "./answer-values";
+import { isCompleteSequenceMatchingAnswer, parseSequenceMatchingPrompt } from "./sequence-matching";
+import { isCompleteTableGapAnswer, parseTableGapPrompt } from "./table-gap-matching";
 
 /** Plan context the server attaches when a session runs today's plan. */
 export type TrainerPlanInfo = {
@@ -201,6 +203,10 @@ export function isTrainerAnswerComplete(question: Question, answer: AnswerValue 
       && question.items.every((item) => Boolean(answer[item.id])));
   }
   if (question.type === "text") return isValidTextInput(answer, question.max_length);
+  const tableGap = parseTableGapPrompt(question.prompt, question);
+  if (tableGap) return isCompleteTableGapAnswer(tableGap, answer);
+  const sequence = parseSequenceMatchingPrompt(question.prompt, question);
+  if (sequence) return isCompleteSequenceMatchingAnswer(sequence, answer);
   return isValidNumericInput(answer);
 }
 
