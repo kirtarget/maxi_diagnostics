@@ -1,6 +1,6 @@
 import { AnswerEditor } from "./answer-editor";
 import { FormattedMathText, FormattedStem } from "./math-display";
-import { isValidNumericInput, updateCompactAnswer } from "./answer-values";
+import { isValidNumericInput, isValidTextInput, updateCompactAnswer } from "./answer-values";
 import { questionAssetPaths } from "./question-assets";
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import {
@@ -55,24 +55,33 @@ export function questionProgress(index: number, total: number): QuestionProgress
 }
 
 function isAnswered(question: Question, answer: AnswerValue | undefined): boolean {
-  if (question.type === "single") return typeof answer === "string" && answer.length > 0;
-  if (question.type === "multiple") {
-    return Array.isArray(answer) && answer.length === question.selection_limit;
+  switch (question.type) {
+    case "single":
+      return typeof answer === "string" && answer.length > 0;
+    case "multiple":
+      return Array.isArray(answer) && answer.length === question.selection_limit;
+    case "matching":
+      return Boolean(
+        answer
+        && typeof answer === "object"
+        && !Array.isArray(answer)
+        && question.items.every((item) => Boolean(answer[item.id])),
+      );
+    case "text":
+      return isValidTextInput(answer, question.max_length);
+    case "input": {
+      const tableGap = parseTableGapPrompt(question.prompt);
+      if (tableGap) return isCompleteTableGapAnswer(tableGap, answer);
+      const matching = parseSequenceMatchingPrompt(question.prompt);
+      return matching
+        ? isCompleteSequenceMatchingAnswer(matching, answer)
+        : isValidNumericInput(answer);
+    }
+    default: {
+      const exhaustiveQuestion: never = question;
+      return exhaustiveQuestion;
+    }
   }
-  if (question.type === "matching") {
-    return Boolean(
-      answer
-      && typeof answer === "object"
-      && !Array.isArray(answer)
-      && question.items.every((item) => Boolean(answer[item.id])),
-    );
-  }
-  const tableGap = parseTableGapPrompt(question.prompt);
-  if (tableGap) return isCompleteTableGapAnswer(tableGap, answer);
-  const matching = parseSequenceMatchingPrompt(question.prompt);
-  return matching
-    ? isCompleteSequenceMatchingAnswer(matching, answer)
-    : isValidNumericInput(answer);
 }
 
 export function QuestionView({
@@ -347,4 +356,3 @@ function AnswerPreview({ markers, selected }: { markers: string[]; selected: str
     </div>
   );
 }
-
