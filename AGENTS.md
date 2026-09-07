@@ -199,7 +199,19 @@ py -3.11 -m venv .venv
 ```
 
 Для Python-тестов нужен `PYTHONPATH=backend`; DB-тесты используют
-`TEST_DATABASE_URL`. Полный CI-порядок:
+`TEST_DATABASE_URL`. Без него 79 тестов молча пропускаются, и поломка находится
+только в CI после слияния. Одноразовая база поднимается двумя командами:
+
+```text
+docker run -d --name maxi-test-db -e POSTGRES_DB=diagnostic_test -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=local-test-password -p 55434:5432 postgres:16-alpine
+$env:TEST_DATABASE_URL = "postgresql://postgres:local-test-password@127.0.0.1:55434/diagnostic_test"
+```
+
+С ней прогон даёт 930 passed и 1 skipped вместо 79 пропусков. Контейнер удаляется
+через `docker rm -f maxi-test-db`. Имя заканчивается на `-test-db`, чужие
+контейнеры трогать нельзя.
+
+Полный CI-порядок:
 
 ```text
 python scripts/validate_school.py
