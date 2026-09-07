@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { GameplayHomeScreen, GameplayProfileScreen, ModeScreen, NotTelegramScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
 import { QuestionView } from "./question-screen";
 import { ForecastEmptyScreen, ForecastScreen, ResultScreen, ReviewScreen, RouteScreen } from "./result-flow";
+import { ConfirmSheet } from "./confirm-sheet";
 import { TrainerScreen } from "./trainer-screen";
 import { LeagueScreen } from "./league-screen";
 import { gameplayProfileView } from "./gameplay-profile-model";
@@ -142,7 +143,7 @@ const screens: Array<[string, string]> = [
     retryPhase: null,
   } as never} dispatch={noop} livesReminder={{ status: "idle" }} onRemindLives={noop} offers={links.offers} />)],
   ["route", renderToStaticMarkup(<RouteScreen items={[{ id: "close-topic", title: "Квадратные уравнения", description: "Зона роста: начни с тренажёра по этой теме." }, { id: "strengthen-topic", title: "Геометрия · площади", description: "Повтори формулы площадей и реши подборку." }]} offers={links.offers} onSubjects={noop} />)],
-  ["trainer-feedback", renderToStaticMarkup(<TrainerScreen state={{
+  ["trainer-feedback", renderToStaticMarkup(<TrainerScreen header={{ diagnosticId: "phys", exam: "ОГЭ", subject: "Физика", mode: "normal", modeLabel: "Тренировка" }} state={{
     phase: "feedback",
     session: { trainer_session_id: "t", revision: 2, mode: "normal", lives_remaining: 4, question_ids: ["a", "b", "c", "d", "e"], questions: [q("a", { prompt: "Чему равно значение выражения 3 · (4 + 2)?", options: [{ id: "a", label: "14" }, { id: "b", label: "18" }, { id: "c", label: "20" }] } as never), q("b"), q("c"), q("d"), q("e")] },
     currentIndex: 1,
@@ -154,6 +155,19 @@ const screens: Array<[string, string]> = [
     error: null,
     retryPhase: "answering",
   } as never} dispatch={noop} offers={links.offers} />)],
+  ["trainer-exit-confirmation", renderToStaticMarkup(<ConfirmSheet open onCancel={noop} onConfirm={noop} />)],
+  ["trainer-complete", renderToStaticMarkup(<TrainerScreen state={{
+    phase: "completed",
+    session: { trainer_session_id: "t", diagnostic_id: "phys", revision: 3, mode: "normal", lives_remaining: 4, question_ids: [], questions: [] },
+    currentIndex: 0,
+    answeredQuestionIndex: null,
+    draftAnswer: undefined,
+    submittedAnswer: undefined,
+    answerResult: null,
+    finishResult: { trainer_session_id: "t", status: "completed", revision: 3, current_index: 0, question_count: 5, answered_count: 5, correct_count: 4, xp_earned: 80, lives_spent: 1, lives_remaining: 4 },
+    error: null,
+    retryPhase: null,
+  } as never} dispatch={noop} offers={[{ id: "trainer-course", label: "Разобрать темы с преподавателем", button: "Открыть курс", url: "https://school.example/course" }]} offerDismissed={{ trainer: false }} onOfferDismiss={() => undefined} onOfferEvent={noop} />)],
   ["league", renderToStaticMarkup(<LeagueScreen state={{ kind: "ready", data: { status: "active", week_start: "21 августа", week_end: "27 августа", rows: [
     { rank: 1, display_label: "Аня К.", xp_week: 2480, is_me: false },
     { rank: 2, display_label: "Дима С.", xp_week: 2120, is_me: false },

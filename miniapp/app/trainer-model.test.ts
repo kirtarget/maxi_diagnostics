@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
+  trainerDiagnosticId,
+  trainerFeedbackKind,
+  trainerHeaderView,
+  trainerModeLabel,
   isTrainerAnswerComplete,
   planProgress,
   planReasonLabel,
   trainerInitialState,
   trainerReducer,
+  type TrainerAnswerResponse,
   type TrainerStartResponse,
 } from "./trainer-model";
-import type { Question } from "./types";
+import type { BootstrapResponse, Brand, Question, SchoolLinks } from "./types";
 
 const questions: Question[] = [
   { id: "single", type: "single", topic: "t", title: "1", prompt: "p", options: [{ id: "a", label: "A" }] },
@@ -18,7 +23,209 @@ const questions: Question[] = [
 ];
 const start: TrainerStartResponse = { trainer_session_id: "s1", diagnostic_id: "d1", content_version: "v1", mode: "normal", question_ids: questions.map(({ id }) => id), current_index: 0, revision: 1, status: "in_progress", questions, lives_remaining: 3 };
 
+const fixtureBrand: Brand = {
+  school_id: "fixture-school",
+  name: "Fixture School",
+  short_name: "Fixture",
+  colors: {
+    primary: "#000000",
+    accent: "#111111",
+    background: "#222222",
+    signal: "#333333",
+    ink: "#444444",
+    paper: "#555555",
+  },
+  logo: "",
+  interface: {
+    command_start: "start",
+    command_diagnostics: "diagnostics",
+    command_results: "results",
+    command_plan: "plan",
+    start_diagnostic: "start diagnostic",
+    open_diagnostic: "open diagnostic",
+    results: "results",
+    plan: "plan",
+    home: "home",
+    take_full_diagnostic: "take full diagnostic",
+    check_another_subject: "check another subject",
+    take_another_diagnostic: "take another diagnostic",
+    quick_result: "quick result",
+    full_result: "full result",
+    ready_result: "ready result",
+    unassessed_full: "unassessed full",
+    results_heading: "results heading",
+    diagnostic_fallback: "diagnostic fallback",
+    plan_for: "plan for",
+    keep_strong: "keep strong",
+    focus_next: "focus next",
+    open_result_hint: "open result hint",
+    result_not_found: "result not found",
+    back: "back",
+    task_label: "task",
+    of_label: "of",
+    answer_label: "answer",
+    enter_answer: "enter answer",
+    choose_option: "choose option",
+    next_question: "next question",
+    get_result: "get result",
+    result_in_app: "result in app",
+    privacy_label: "privacy",
+    support_label: "support",
+    choose_label: "choose",
+    close_diagnostic: "close diagnostic",
+    illustration_alt: "illustration",
+    result_score: "score",
+    result_correct: "correct",
+    delivery_note: "delivery note",
+  },
+};
+
+const fixtureLinks: SchoolLinks = {
+  website: "https://school.example",
+  support: "https://school.example/support",
+  privacy: "https://school.example/privacy",
+  offers: [],
+};
+
+function bootstrapWith(overrides: Partial<BootstrapResponse> = {}): BootstrapResponse {
+  return {
+    catalog_contract: 3,
+    session_scope: "scope",
+    latest_attempt_id: null,
+    school: { brand: fixtureBrand, links: fixtureLinks },
+    diagnostics: [
+      { id: "math", content_version: "v1", exam: "ОГЭ", subject: "Математика", mark: "", quick_count: 1, full_count: 1, question_count: 1 },
+      { id: "english", content_version: "v1", exam: "ОГЭ", subject: "Английский язык", mark: "", quick_count: 1, full_count: 1, question_count: 1 },
+    ],
+    attempt: null,
+    results: [],
+    ...overrides,
+  };
+}
+
+function completedAttempt(attemptId: string, diagnosticId: string): BootstrapResponse["results"][number] {
+  return {
+    attempt_id: attemptId,
+    diagnostic_id: diagnosticId,
+    content_version: "v1",
+    mode: "full",
+    status: "completed",
+    question_index: 1,
+    question_count: 1,
+    progress_revision: 1,
+    answers: {},
+  };
+}
+
 describe("trainer model", () => {
+  it("selects the trainer diagnostic from the resumable attempt before plan and results", () => {
+    const bootstrap = bootstrapWith({
+      attempt: { ...completedAttempt("active", "math"), status: "in_progress" },
+      daily_plan: { plan_date: "2026-09-07", diagnostic_id: "english", subject: "Английский язык", exam: "ОГЭ", total: 1, completed: 0, status: "ready" },
+      latest_attempt_id: "completed",
+      results: [
+        completedAttempt("completed", "english"),
+      ],
+    });
+
+    expect(trainerDiagnosticId(bootstrap, "Английский язык")).toBe("math");
+  });
+
+  it("falls back through plan, latest completed result, first completed result, then subject", () => {
+    const plan = bootstrapWith({
+      daily_plan: { plan_date: "2026-09-07", diagnostic_id: "english", subject: "Английский язык", exam: "ОГЭ", total: 1, completed: 0, status: "ready" },
+      latest_attempt_id: "latest",
+      results: [
+        completedAttempt("older", "math"),
+        completedAttempt("latest", "english"),
+      ],
+    });
+    expect(trainerDiagnosticId(plan)).toBe("english");
+
+    const latest = bootstrapWith({ latest_attempt_id: "latest", results: [
+      completedAttempt("older", "math"),
+      completedAttempt("latest", "english"),
+    ] });
+    expect(trainerDiagnosticId(latest)).toBe("english");
+
+    const first = bootstrapWith({ results: [
+      completedAttempt("older", "math"),
+      completedAttempt("newer", "english"),
+    ] });
+    expect(trainerDiagnosticId(first)).toBe("math");
+
+    const subject = bootstrapWith({ diagnostics: [
+      { id: "math", content_version: "v1", exam: "ОГЭ", subject: "Математика", mark: "", quick_count: 1, full_count: 1, question_count: 1 },
+    ] });
+    expect(trainerDiagnosticId(subject, "Математика")).toBe("math");
+  });
+
+  it("does not select an arbitrary diagnostic when no fallback is eligible", () => {
+    const bootstrap = bootstrapWith({
+      diagnostics: [
+        { id: "math", content_version: "v1", exam: "ОГЭ", subject: "Математика", mark: "", quick_count: 1, full_count: 1, question_count: 1 },
+      ],
+      attempt: completedAttempt("finished", "math"),
+      results: [{ ...completedAttempt("unfinished", "math"), status: "in_progress" }],
+    });
+    expect(trainerDiagnosticId(bootstrap)).toBeNull();
+    expect(trainerDiagnosticId(bootstrapWith())).toBeNull();
+  });
+
+  it("returns a typed header view and labels each trainer mode", () => {
+    const bootstrap = bootstrapWith();
+    const planSession: TrainerStartResponse = { ...start, diagnostic_id: "english", mode: "plan" };
+    expect(trainerHeaderView(bootstrap, planSession)).toEqual({ diagnosticId: "english", exam: "ОГЭ", subject: "Английский язык", mode: "plan", modeLabel: "План на сегодня" });
+    expect(trainerModeLabel("normal")).toBe("Тренировка");
+    expect(trainerModeLabel("mistakes")).toBe("Повтор ошибок");
+    expect(trainerModeLabel("plan")).toBe("План на сегодня");
+  });
+
+  it("uses the running session diagnostic for plan and mistakes headers", () => {
+    const bootstrap = bootstrapWith({
+      attempt: { ...completedAttempt("active", "math"), status: "in_progress" },
+      daily_plan: { plan_date: "2026-09-07", diagnostic_id: "english", subject: "Английский язык", exam: "ОГЭ", total: 1, completed: 0, status: "ready" },
+      diagnostics: [
+        ...bootstrapWith().diagnostics,
+        { id: "physics", content_version: "v1", exam: "ЕГЭ", subject: "Физика", mark: "Ф", quick_count: 1, full_count: 1, question_count: 1 },
+      ],
+    });
+    expect(trainerDiagnosticId(bootstrap)).toBe("math");
+
+    expect(trainerHeaderView(bootstrap, { ...start, diagnostic_id: "english", mode: "plan" })).toMatchObject({
+      diagnosticId: "english",
+      exam: "ОГЭ",
+      subject: "Английский язык",
+      mode: "plan",
+    });
+    expect(trainerHeaderView(bootstrap, { ...start, diagnostic_id: "physics", mode: "mistakes" })).toMatchObject({
+      diagnosticId: "physics",
+      exam: "ЕГЭ",
+      subject: "Физика",
+      mode: "mistakes",
+    });
+  });
+
+  it("classifies partial primary credit separately from incorrect answers", () => {
+    const result = (overrides: Partial<TrainerAnswerResponse>): TrainerAnswerResponse => ({
+      trainer_session_id: "s1",
+      question_id: "single",
+      is_correct: false,
+      correct_answer: null,
+      explanation: null,
+      xp_delta: 0,
+      life_delta: 0,
+      current_index: 0,
+      revision: 1,
+      status: "active",
+      lives_remaining: 3,
+      ...overrides,
+    });
+    expect(trainerFeedbackKind(result({ is_correct: true }))).toBe("correct");
+    expect(trainerFeedbackKind(result({ earned_primary_score: 1, max_primary_score: 2 }))).toBe("partial");
+    expect(trainerFeedbackKind(result({ earned_primary_score: 0, max_primary_score: 2 }))).toBe("incorrect");
+    expect(trainerFeedbackKind(result({ earned_primary_score: 2, max_primary_score: 2 }))).toBe("incorrect");
+  });
   it("accepts complete answers for every public question kind", () => {
     expect(isTrainerAnswerComplete(questions[0], "a")).toBe(true);
     expect(isTrainerAnswerComplete(questions[1], ["a", "b"])).toBe(true);

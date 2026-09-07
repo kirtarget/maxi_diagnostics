@@ -10,6 +10,7 @@ import {
 import { gameplayProfileView } from "./gameplay-profile-model";
 import { GameplayHomeScreen } from "./navigation-screens";
 import { ResultScreen } from "./result-flow";
+import { ConfirmSheet } from "./confirm-sheet";
 import { TrainerScreen } from "./trainer-screen";
 import { trainerInitialState, trainerReducer, type TrainerState } from "./trainer-model";
 import type { Question } from "./types";
@@ -183,16 +184,90 @@ describe("trainer integration contracts", () => {
       state={state}
       dispatch={() => undefined}
       offers={[{ id: "school-course", label: "Разобрать тему с преподавателем", button: "Открыть", url: "https://school.example/course" }]}
-      offerDismissed={{ trainer_wrong: false }}
       onOfferDismiss={() => undefined}
       onOfferEvent={() => undefined}
     />);
-    expect(html).toContain("Почти");
+    expect(html).toContain("Неверно");
     expect(html).toContain("Проверь сложение.");
     expect(html).toContain("Завершить тренировку");
     expect(html).toContain("до 1 первичного балла");
     expect(html).toContain("0 из 1 первичного балла");
-    expect(html).toContain("offer-surface-trainer_wrong");
+    expect(html).not.toContain("offer-surface");
+  });
+
+  it("shows partial credit as Почти and formats explanation math", () => {
+    let state: TrainerState = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "physics", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [question], lives_remaining: 5,
+      },
+    });
+    state = trainerReducer(state, { type: "set_answer", answer: "b" });
+    state = trainerReducer(state, { type: "submit_answer" });
+    state = trainerReducer(state, {
+      type: "answer_result",
+      response: {
+        trainer_session_id: "s".repeat(32), question_id: "q1", is_correct: false,
+        correct_answer: "x = 2", explanation: "Подставь x^(2) в формулу.", xp_delta: 1,
+        max_primary_score: 2, earned_primary_score: 1,
+        life_delta: 0, current_index: 1, revision: 2, status: "exhausted", lives_remaining: 5,
+      },
+    });
+    const html = renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />);
+    expect(html).toContain("Почти");
+    expect(html).toContain("math-expression");
+    expect(html).not.toContain("x^(2)");
+  });
+
+  it("uses the subject in the trainer header and keeps the mode visible", () => {
+    const state = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "physics", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [question], lives_remaining: 5,
+      },
+    });
+    const html = renderToStaticMarkup(<TrainerScreen
+      state={state}
+      dispatch={() => undefined}
+      header={{ diagnosticId: "physics", exam: "ЕГЭ", subject: "Физика", mode: "normal", modeLabel: "Тренировка" }}
+    />);
+    expect(html).toContain("Тренажёр · Физика · 1 из 1");
+    expect(html).toContain("Тренировка");
+    expect(html).not.toContain("Задание 1");
+  });
+
+  it("renders the school offer only on the completed trainer screen", () => {
+    const state: TrainerState = {
+      ...trainerInitialState,
+      phase: "completed",
+      session: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "physics", content_version: "v1",
+        mode: "normal", question_ids: [], current_index: 0, revision: 2,
+        status: "completed", questions: [], lives_remaining: 5,
+      },
+      finishResult: {
+        trainer_session_id: "s".repeat(32), status: "completed", revision: 2, current_index: 0,
+        question_count: 0, answered_count: 0, correct_count: 0, xp_earned: 0, lives_spent: 0, lives_remaining: 5,
+      },
+    };
+    const html = renderToStaticMarkup(<TrainerScreen
+      state={state}
+      dispatch={() => undefined}
+      offers={[{ id: "school-course", label: "Продолжить подготовку", button: "Открыть", url: "https://school.example/course" }]}
+      offerDismissed={{ trainer: false }}
+      onOfferDismiss={() => undefined}
+      onOfferEvent={() => undefined}
+    />);
+    expect(html).toContain("offer-surface-trainer");
+  });
+
+  it("defines the shared exit confirmation copy", () => {
+    const html = renderToStaticMarkup(<ConfirmSheet open onCancel={() => undefined} onConfirm={() => undefined} />);
+    expect(html).toContain("Выйти из тренировки?");
   });
 
   it("formats trainer question math the same way as the diagnostic sheet", () => {
@@ -233,7 +308,6 @@ describe("trainer integration contracts", () => {
         livesReminder={{ status: "idle" }}
         onRemindLives={() => undefined}
         offers={[{ id: "school-course", label: "Продолжить подготовку", button: "Открыть", url: "https://school.example/course" }]}
-        offerDismissed={{ trainer_no_lives: false }}
         onOfferDismiss={() => undefined}
         onOfferEvent={() => undefined}
       />,
@@ -242,7 +316,7 @@ describe("trainer integration contracts", () => {
     expect(html).toContain("Восстановление");
     expect(html).toContain("Напомнить в Telegram");
     expect(html).toContain("Пройти диагностику");
-    expect(html).toContain("offer-surface-trainer_no_lives");
+    expect(html).not.toContain("offer-surface");
     expect(html).not.toContain("Проверить ответ");
   });
 
