@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from diagnostic.catalog import (
     DiagnosticCatalog,
+    is_skipped_answer,
     MatchingQuestion,
     MultipleQuestion,
     Question,
@@ -84,6 +85,7 @@ class ScoreResult(BaseModel):
     diagnostic_id: str
     mode: Literal["quick", "full"]
     correct_count: int = Field(ge=0)
+    skipped_count: int = Field(ge=0)
     question_count: int = Field(gt=0)
     primary_score: int = Field(ge=0)
     max_primary_score: int = Field(gt=0)
@@ -113,6 +115,10 @@ def score_answers(
         for question in questions
     }
     correct_count = sum(correct_by_question.values())
+    skipped_count = sum(
+        is_skipped_answer(question, answers.get(question.id))
+        for question in questions
+    )
     primary_score = sum(
         question.max_primary_score
         for question in questions
@@ -135,6 +141,7 @@ def score_answers(
         diagnostic_id=diagnostic.id,
         mode=mode,
         correct_count=correct_count,
+        skipped_count=skipped_count,
         question_count=len(questions),
         primary_score=primary_score,
         max_primary_score=max_primary_score,

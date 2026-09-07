@@ -292,6 +292,36 @@ def test_premium_report_contains_both_answers_guidance_forecast_and_route():
     assert "Персональный маршрут" in text
 
 
+def test_premium_report_shows_skipped_count_on_its_own_line():
+    from diagnostic.report import build_report
+
+    school = load_school(SAMPLE_SCHOOL)
+    diagnostic = load_catalog(school).get("demo-math")
+    review_snapshot = build_review_snapshot(
+        diagnostic.questions,
+        {"q1": "", "q2": [], "q3": {}, "q4": "", "q5": ""},
+    )
+    attempt = completed_attempt(
+        question_count=5,
+        correct_count=0,
+        result_snapshot={
+            "question_count": 5,
+            "correct_count": 0,
+            "skipped_count": 5,
+        },
+        report_snapshot=make_review_report_snapshot(
+            school, diagnostic, review_snapshot
+        ),
+    )
+
+    text = "\n".join(
+        page.extract_text() or ""
+        for page in PdfReader(BytesIO(build_report(attempt, school))).pages
+    )
+
+    assert "Пропущено: 5" in text
+
+
 def test_premium_report_renders_zero_summary_and_frozen_provenance_in_footer():
     from diagnostic.report import build_report
 

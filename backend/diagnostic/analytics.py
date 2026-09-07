@@ -22,6 +22,7 @@ ALLOWED_ACTIONS: Final[frozenset[str]] = frozenset(
         "diagnostic_pdf_failed",
         "diagnostic_followup_sent",
         "diagnostic_followup_failed",
+        "question_skipped",
     }
 )
 ALLOWED_DATA_KEYS: Final[frozenset[str]] = frozenset(

@@ -545,6 +545,17 @@ def public_question(question: Question) -> dict[str, Any]:
     )
 
 
+def is_skipped_answer(question: Question, answer: Any) -> bool:
+    """Whether ``answer`` is the canonical empty value for this question type."""
+    if isinstance(question, (SingleQuestion, InputQuestion, TextQuestion)):
+        return answer == ""
+    if isinstance(question, MultipleQuestion):
+        return answer == []
+    if isinstance(question, MatchingQuestion):
+        return answer == {}
+    return False
+
+
 def is_valid_answer_shape(question: Question, answer: Any, *, complete: bool) -> bool:
     """Whether an answer has the right shape for the question.
 

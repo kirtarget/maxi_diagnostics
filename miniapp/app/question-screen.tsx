@@ -31,6 +31,9 @@ export type QuestionScreenProps = {
   onAnswer: (value: AnswerValue) => void;
   onBack: () => void;
   onNext: () => void;
+  onSkip?: () => void;
+  skipped?: boolean;
+  skippedIndexes?: readonly number[];
 };
 
 export type QuestionProgress = {
@@ -138,6 +141,9 @@ export function QuestionView({
   onAnswer,
   onBack,
   onNext,
+  onSkip,
+  skipped = false,
+  skippedIndexes = [],
 }: QuestionScreenProps) {
   const progress = questionProgress(index, total);
   const readiness = answerReadiness(question, answer);
@@ -187,11 +193,9 @@ export function QuestionView({
               <span className="question-progress-nodes" aria-hidden="true">
                 {Array.from({ length: progress.total }, (_, nodeIndex) => (
                   <span
-                    className={nodeIndex < index
-                      ? "question-progress-node is-complete"
-                      : nodeIndex === index
-                        ? "question-progress-node is-current"
-                        : "question-progress-node"}
+                    className={`question-progress-node${
+                      nodeIndex < index ? " is-complete" : nodeIndex === index ? " is-current" : ""
+                    }${skippedIndexes.includes(nodeIndex) ? " is-skipped" : ""}`}
                     key={nodeIndex}
                   />
                 ))}
@@ -263,11 +267,18 @@ export function QuestionView({
       )}
 
       <div className="question-action-bar">
-        <button className="primary-button question-next" disabled={!readiness.isAnswered} onClick={onNext} type="button">
+        <button className="primary-button question-next" disabled={!readiness.isAnswered && !skipped} onClick={onNext} type="button">
           {index === total - 1 ? labels.get_result : labels.next_question}
           <span aria-hidden="true">→</span>
         </button>
-        {!readiness.isAnswered && <p className="question-next-status" role="status">{readiness.reason}</p>}
+        {!readiness.isAnswered && !skipped && onSkip && (
+          <button className="question-skip" onClick={onSkip} type="button">
+            {index === total - 1 ? "Не знаю, получить результат" : "Не знаю, дальше"}
+          </button>
+        )}
+        {skipped
+          ? <p className="question-next-status" role="status">Задание пропущено. Можно вернуться и ответить позже.</p>
+          : !readiness.isAnswered && <p className="question-next-status" role="status">{readiness.reason}</p>}
       </div>
       </div>
     </section>

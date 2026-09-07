@@ -283,6 +283,15 @@ describe("diagnostic API payloads", () => {
     });
   });
 
+  it("restores canonical empty skip markers for every question type", () => {
+    expect(validateSavedSession({
+      ...validSession,
+      answers: { q1: "", q2: [], q3: {}, q4: "", q5: "" },
+    }, diagnostics)).toMatchObject({
+      answers: { q1: "", q2: [], q3: {}, q4: "", q5: "" },
+    });
+  });
+
   it("posts Telegram authentication and retries a transient failure up to three attempts", async () => {
     const fetcher = vi.fn()
       .mockRejectedValueOnce(new TypeError("offline"))

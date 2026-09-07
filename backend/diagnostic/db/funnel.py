@@ -24,11 +24,12 @@ FUNNEL_STEPS: Final[tuple[str, ...]] = (
     "result_viewed",
 )
 FUNNEL_ACTIONS: Final[frozenset[str]] = frozenset(
-    (*FUNNEL_STEPS, "trainer_answered", "offer_clicked")
+    (*FUNNEL_STEPS, "question_skipped", "trainer_answered", "offer_clicked")
 )
 FUNNEL_RETENTION_DAYS: Final[int] = 90
 _COUNTED_ACTIONS: Final[tuple[str, ...]] = (
     *FUNNEL_STEPS,
+    "question_skipped",
     "trainer_answered",
     "offer_clicked",
 )
@@ -60,6 +61,8 @@ _SUMMARY_SQL = (
           WHERE action='completed') AS completed,
         (SELECT count(DISTINCT subject_hash) FROM window_events
           WHERE action='result_viewed') AS result_viewed,
+        (SELECT count(*) FROM window_events
+          WHERE action='question_skipped') AS question_skipped,
         (SELECT count(DISTINCT subject_hash) FROM window_events
           WHERE action='trainer_answered') AS trainer_answered,
         (SELECT count(DISTINCT subject_hash) FROM window_events
@@ -83,6 +86,7 @@ _BREAKDOWN_SQL = """
            count(DISTINCT subject_hash) FILTER (WHERE action='started') AS started,
            count(DISTINCT subject_hash) FILTER (WHERE action='completed') AS completed,
            count(DISTINCT subject_hash) FILTER (WHERE action='result_viewed') AS result_viewed,
+           count(*) FILTER (WHERE action='question_skipped') AS question_skipped,
            count(DISTINCT subject_hash) FILTER (WHERE action='trainer_answered') AS trainer_answered
       FROM diagnostic_funnel_events
      WHERE occurred_on > (now() AT TIME ZONE 'UTC')::date - $1::int
@@ -195,6 +199,7 @@ async def funnel_report(
                 "started": int(row["started"]),
                 "completed": int(row["completed"]),
                 "result_viewed": int(row["result_viewed"]),
+                "question_skipped": int(row["question_skipped"]),
                 "trainer_answered": int(row["trainer_answered"]),
             }
             for row in breakdown

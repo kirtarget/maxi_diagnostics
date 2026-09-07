@@ -202,6 +202,7 @@ export type ServerResult = {
   mode: DiagnosticMode;
   question_count: number;
   correct_count: number;
+  skipped_count: number;
   score: number;
   max_score: number;
   score_unit: string;
@@ -304,6 +305,7 @@ export type ReviewItem = {
   asset?: string;
   assets?: string[];
   is_correct: boolean;
+  status: "correct" | "incorrect" | "skipped";
   user_answer: string;
   expected_answer: string;
   guidance: string;

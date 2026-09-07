@@ -4,11 +4,40 @@ from pathlib import Path
 
 import pytest
 
-from diagnostic.catalog import Diagnostic, DiagnosticCatalog, load_catalog
+from diagnostic.catalog import (
+    Diagnostic,
+    DiagnosticCatalog,
+    is_skipped_answer,
+    is_valid_answer_shape,
+    load_catalog,
+)
 from diagnostic.school import load_school
 
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_SCHOOL = ROOT / "tests/fixtures/sample-school"
+
+
+def test_canonical_skipped_answers_are_recognized_for_every_question_type():
+    questions = load_catalog(load_school(SAMPLE_SCHOOL)).get("demo-math").questions
+    skipped_answers = ("", [], {}, "", "")
+
+    for question, answer in zip(questions, skipped_answers, strict=True):
+        assert is_skipped_answer(question, answer)
+
+
+def test_trainer_shape_validation_does_not_accept_skips():
+    questions = load_catalog(load_school(SAMPLE_SCHOOL)).get("demo-math").questions
+    skipped_answers = ("", [], {}, "", "")
+
+    for question, answer in zip(questions, skipped_answers, strict=True):
+        assert not is_valid_answer_shape(question, answer, complete=True)
+
+
+@pytest.mark.parametrize("answer", [None, " "])
+def test_noncanonical_empty_values_are_not_skipped(answer):
+    question = load_catalog(load_school(SAMPLE_SCHOOL)).get("demo-math").questions[0]
+
+    assert not is_skipped_answer(question, answer)
 
 
 def test_public_catalog_omits_explanation_and_correct():

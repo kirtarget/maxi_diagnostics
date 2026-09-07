@@ -261,6 +261,9 @@ def summary_story(
     max_score = _result_value(attempt, "max_score")
     score_unit = _score_unit_label(_result_value(attempt, "score_unit"))
     correct_count = _result_value(attempt, "correct_count")
+    skipped_count = _result_value(attempt, "skipped_count")
+    if not isinstance(skipped_count, int) or isinstance(skipped_count, bool):
+        skipped_count = 0
     question_count = _result_value(attempt, "question_count")
     subject = _display(_provenance_value(attempt, "subject"))
     mode = _mode_label(_provenance_value(attempt, "mode"))
@@ -303,6 +306,7 @@ def summary_story(
             f"{escape(_display(question_count))}</b>",
             styles["body"],
         ),
+        Paragraph(f"Пропущено: <b>{skipped_count}</b>", styles["body"]),
         Paragraph(f"Границы проверки: {escape(unassessed_part)}", styles["muted"]),
         Paragraph(
             f"Сильные темы: {escape(', '.join(strong_topics) if strong_topics else 'не выделены')}",

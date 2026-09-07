@@ -1,15 +1,35 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  emptyAnswerFor,
+  isEmptyAnswer,
   isValidNumericInput,
   isValidTextInput,
   updateCompactAnswer,
+  updateAnswerFromEditor,
   updateMatchingAnswer,
   updateNumericInputAnswer,
   updateTextInputAnswer,
 } from "./answer-values";
+import type { Question } from "./types";
 
 describe("shared answer value helpers", () => {
+  it.each([
+    ["single", { type: "single", options: [] }, ""],
+    ["multiple", { type: "multiple", options: [], selection_limit: 2 }, []],
+    ["matching", { type: "matching", items: [], options: [] }, {}],
+    ["input", { type: "input" }, ""],
+    ["text", { type: "text" }, ""],
+  ])("uses the canonical empty marker for %s questions", (_type, partial, expected) => {
+    const question = {
+      id: "q1", topic: "Тема", title: "Задание", prompt: "Условие", ...partial,
+    } as Question;
+    const empty = emptyAnswerFor(question);
+
+    expect(empty).toEqual(expected);
+    expect(isEmptyAnswer(question, empty)).toBe(true);
+  });
+
   it("validates bounded numeric drafts consistently", () => {
     expect(isValidNumericInput("-1.5")).toBe(true);
     expect(isValidNumericInput("1e999")).toBe(true);
@@ -24,9 +44,28 @@ describe("shared answer value helpers", () => {
     expect(current).toEqual({ a: "1", b: "2" });
   });
 
+  it.each([
+    [{ type: "multiple", options: [], selection_limit: 2 }, ["a"], []],
+    [{ type: "matching", items: [], options: [] }, { left: "right" }, {}],
+  ])("does not turn a naturally cleared %s answer into a skip", (partial, selected, cleared) => {
+    const question = {
+      id: "q1", topic: "Тема", title: "Задание", prompt: "Условие", ...partial,
+    } as Question;
+    const restoredSkip = { q1: emptyAnswerFor(question) };
+    const replaced = updateAnswerFromEditor(restoredSkip, question, selected);
+
+    expect(replaced).toEqual({ q1: selected });
+    expect(updateAnswerFromEditor(replaced, question, cleared)).toEqual({});
+  });
+
   it("stores only complete valid numeric answers", () => {
     expect(updateNumericInputAnswer({ q1: "7" }, "q2", "-2,5")).toEqual({ q1: "7", q2: "-2,5" });
     expect(updateNumericInputAnswer({ q1: "7", q2: "4" }, "q2", "-")).toEqual({ q1: "7" });
+  });
+
+  it("keeps an explicit numeric skip marker while its replacement is still an invalid draft", () => {
+    expect(updateNumericInputAnswer({ q2: "" }, "q2", "-")).toEqual({ q2: "" });
+    expect(updateNumericInputAnswer({ q2: "" }, "q2", "-2,5")).toEqual({ q2: "-2,5" });
   });
 
   it("accepts free text that survives trimming and trailing punctuation", () => {
@@ -45,6 +84,11 @@ describe("shared answer value helpers", () => {
     expect(updateTextInputAnswer({ q1: "7" }, "q5", " Однако ")).toEqual({ q1: "7", q5: " Однако " });
     expect(updateTextInputAnswer({ q1: "7", q5: "но" }, "q5", "  ")).toEqual({ q1: "7" });
     expect(updateTextInputAnswer({ q1: "7", q5: "но" }, "q5", "с".repeat(5), 3)).toEqual({ q1: "7" });
+  });
+
+  it("keeps an explicit text skip marker while its replacement is still an invalid draft", () => {
+    expect(updateTextInputAnswer({ q5: "" }, "q5", "  ")).toEqual({ q5: "" });
+    expect(updateTextInputAnswer({ q5: "" }, "q5", "однако")).toEqual({ q5: "однако" });
   });
 
   it("truncates later compact selections when the middle is cleared, then allows refill", () => {

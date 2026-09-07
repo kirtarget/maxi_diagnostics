@@ -52,6 +52,9 @@ export function ResultScreen({
   const recommendation = topicRecommendation(result.growth_topics);
   const headline = estimateHeadline(result.estimate, diagnostic.exam);
   const caption = estimateCaption(result.estimate);
+  const incorrectCount = Math.max(
+    0, result.question_count - result.correct_count - result.skipped_count,
+  );
   return (
     <section className="screen result-screen" aria-labelledby="result-title">
       <div className="result-hero">
@@ -83,6 +86,11 @@ export function ResultScreen({
               <strong>{result.correct_count} из {result.question_count}</strong>
             </div>
           </div>
+        )}
+        {result.skipped_count > 0 && (
+          <p className="result-answer-breakdown">
+            {result.correct_count} верно · {incorrectCount} неверно · {result.skipped_count} пропущено
+          </p>
         )}
         <p>{resultLevel(result)}. Посмотри, что уже получается и что даст следующий прирост.</p>
       </div>
@@ -235,10 +243,13 @@ export function ReviewScreen({
     <section className="screen review-screen" aria-labelledby="review-title">
       <div className="review-topline">
         <button className="text-back" onClick={onBack} type="button">Назад</button>
-        <span aria-live="polite">Разбор ошибок · {activeIndex + 1} из {mistakes.length}</span>
+        <span aria-live="polite">Разбор заданий · {activeIndex + 1} из {mistakes.length}</span>
       </div>
       <div className="review-heading">
-        <span className="mistake-status"><b aria-hidden="true">×</b> Неверно</span>
+        <span className="mistake-status">
+          <b aria-hidden="true">{item.status === "skipped" ? "−" : "×"}</b>
+          {item.status === "skipped" ? "Пропущено" : "Неверно"}
+        </span>
         <span>{item.topic}</span>
         {hasApprovedPrimaryScore(item.source) && <PrimaryScoreBadge maxPrimaryScore={item.max_primary_score} earnedPrimaryScore={item.earned_primary_score} />}
       </div>

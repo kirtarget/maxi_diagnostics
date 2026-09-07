@@ -13,6 +13,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from diagnostic.catalog import (
     is_valid_answer_shape,
+    is_skipped_answer,
     Diagnostic,
     DiagnosticCatalog,
 )
@@ -192,13 +193,17 @@ def serialize_result(row: Mapping[str, Any], fallback: ScoreResult | None) -> di
     available = set(row.keys())
     snapshot = row["result_snapshot"] if "result_snapshot" in available else None
     if snapshot:
-        return snapshot
+        result = dict(snapshot)
+        result.setdefault("skipped_count", 0)
+        return result
     keys = (
         "diagnostic_id", "mode", "correct_count", "question_count", "score", "max_score",
         "score_unit", "strong_topics", "growth_topics",
     )
     persisted = {key: row[key] for key in keys if key in available}
-    return persisted or (fallback.model_dump(mode="json") if fallback is not None else {})
+    result = persisted or (fallback.model_dump(mode="json") if fallback is not None else {})
+    result.setdefault("skipped_count", 0)
+    return result
 
 
 def serialize_progress_profile(row: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -542,6 +547,24 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
                 raise HTTPException(status_code=410, detail="diagnostic_user_erased") from exc
             raise
         if _transitioned(row, "completed_transition"):
+            selected_questions = diagnostic.questions_for_mode(body.mode)
+            for question_index, question in enumerate(selected_questions):
+                if is_skipped_answer(question, body.answers[question.id]):
+                    _funnel(
+                        background_tasks, request, user["id"], "question_skipped",
+                        diagnostic.exam, diagnostic.subject,
+                    )
+                    background_tasks.add_task(
+                        emit_event,
+                        "question_skipped",
+                        user["id"],
+                        {
+                            "attempt_id": body.attempt_id,
+                            "diagnostic_id": diagnostic.id,
+                            "mode": body.mode,
+                            "question_index": question_index,
+                        },
+                    )
             if _transitioned(row, "started_transition"):
                 background_tasks.add_task(
                     emit_event, "diagnostic_started", user["id"],
@@ -636,7 +659,11 @@ def _validate_answer_values(
     complete: bool = False,
 ) -> None:
     for question in catalog.questions_for_mode(diagnostic_id, mode):
-        if question.id in answers and not is_valid_answer_shape(
-            question, answers[question.id], complete=complete
+        if (
+            question.id in answers
+            and not is_skipped_answer(question, answers[question.id])
+            and not is_valid_answer_shape(
+                question, answers[question.id], complete=complete
+            )
         ):
             raise HTTPException(status_code=422, detail="invalid_answer_value")

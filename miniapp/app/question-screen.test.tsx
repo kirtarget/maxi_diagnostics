@@ -159,6 +159,53 @@ describe("QuestionView", () => {
     expect(renderAnswer("   ")).toContain('disabled=""');
   });
 
+  it("offers an explicit skip action and explains a restored skip marker", () => {
+    const available = renderToStaticMarkup(
+      <QuestionView
+        question={question}
+        index={0}
+        total={3}
+        answer={undefined}
+        skipped={false}
+        labels={{
+          back: "Назад", task_label: "Задание", of_label: "из",
+          illustration_alt: "Иллюстрация", next_question: "Следующее задание",
+          get_result: "Получить результат", answer_label: "Ваш ответ",
+          enter_answer: "Введите ответ", choose_option: "Выберите вариант",
+        } as unknown as Brand["interface"]}
+        onAnswer={() => undefined}
+        onBack={() => undefined}
+        onNext={() => undefined}
+        onSkip={() => undefined}
+      />,
+    );
+    const skipped = renderToStaticMarkup(
+      <QuestionView
+        question={question}
+        index={0}
+        total={3}
+        answer="черновик"
+        skipped
+        labels={{
+          back: "Назад", task_label: "Задание", of_label: "из",
+          illustration_alt: "Иллюстрация", next_question: "Следующее задание",
+          get_result: "Получить результат", answer_label: "Ваш ответ",
+          enter_answer: "Введите ответ", choose_option: "Выберите вариант",
+        } as unknown as Brand["interface"]}
+        onAnswer={() => undefined}
+        onBack={() => undefined}
+        onNext={() => undefined}
+        onSkip={() => undefined}
+      />,
+    );
+
+    expect(available).toContain('class="question-skip"');
+    expect(available).toContain("Не знаю, дальше");
+    expect(skipped).not.toContain('class="question-skip"');
+    expect(skipped).toContain("Задание пропущено. Можно вернуться и ответить позже.");
+    expect(skipped).not.toMatch(/class="primary-button question-next" disabled=""/);
+  });
+
   it("builds game-like progress from the server-owned question position", () => {
     expect(questionProgress(1, 4)).toEqual({
       current: 2,
@@ -173,6 +220,7 @@ describe("QuestionView", () => {
         index={1}
         total={4}
         answer={undefined}
+        skippedIndexes={[0]}
         labels={{
           back: "Назад",
           task_label: "Задание",
@@ -192,6 +240,7 @@ describe("QuestionView", () => {
     expect(html).toContain('aria-valuetext="Задание 2 из 4. Набираем темп"');
     expect(html.match(/class="question-progress-node(?: |\")/g)).toHaveLength(4);
     expect(html).toContain("question-progress-node is-current");
+    expect(html).toContain("question-progress-node is-complete is-skipped");
     expect(html).toContain("Набираем темп");
   });
 

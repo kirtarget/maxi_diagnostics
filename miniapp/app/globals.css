@@ -1099,6 +1099,7 @@ select:focus-visible,
   padding: 0;
   gap: 0;
   background: var(--brand-ink);
+  animation-name: question-screen-in;
 }
 
 .question-shell {
@@ -1174,6 +1175,11 @@ select:focus-visible,
   background: var(--brand-accent);
 }
 
+.question-progress-node.is-skipped {
+  border: 1.5px solid var(--brand-accent);
+  background: transparent;
+}
+
 .question-progress-motivation {
   margin: 12px 0 14px;
   color: var(--brand-accent);
@@ -1192,7 +1198,7 @@ select:focus-visible,
   max-width: 430px;
   margin: 0 auto;
   min-height: calc(100dvh - 200px);
-  padding: 26px 22px calc(28px + env(safe-area-inset-bottom));
+  padding: 26px 22px calc(180px + env(safe-area-inset-bottom));
   border-radius: 28px 28px 0 0;
   background: var(--paper);
 }
@@ -1728,16 +1734,18 @@ select:focus-visible,
 /* Next action */
 
 .question-action-bar {
-  position: sticky;
-  z-index: 3;
+  position: fixed;
+  z-index: 10;
+  left: 50%;
   bottom: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: auto;
-  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  width: min(100%, 430px);
+  padding: 12px 22px calc(12px + env(safe-area-inset-bottom));
   background: var(--paper);
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.06);
+  transform: translateX(-50%);
 }
 
 .question-screen .question-next {
@@ -1751,6 +1759,20 @@ select:focus-visible,
   color: var(--muted);
   background: color-mix(in srgb, var(--brand-ink) 8%, var(--brand-background));
 }
+
+.question-skip {
+  min-height: 44px;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.question-skip:hover { color: var(--ink); }
 
 .question-next-status {
   min-height: 20px;
@@ -2963,6 +2985,11 @@ select:focus-visible,
 @keyframes screen-in {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes question-screen-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes skeleton-move {

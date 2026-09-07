@@ -20,6 +20,7 @@ import {
   updateTextInputAnswer,
 } from "./api";
 import type { ProgressPayload, ProgressSaveQueue } from "./api";
+import { emptyAnswerFor, updateAnswerFromEditor } from "./answer-values";
 import {
   diagnosticLoadInitialState,
   diagnosticLoadReducer,
@@ -64,6 +65,7 @@ export type DiagnosticSessionActions = {
   chooseMode(mode: DiagnosticMode, exam: string): void;
   beginDiagnostic(selected: PublicDiagnosticSummary): Promise<void>;
   answerQuestion(value: AnswerValue): void;
+  skipQuestion(): void;
   previousQuestion(): void;
   nextQuestion(): void;
   openReview(): void;
@@ -459,12 +461,12 @@ export function useDiagnosticSession({
       setAnswers(nextAnswers);
       return;
     }
-    const nextAnswers = { ...answers, [question.id]: value };
+    const nextAnswers = updateAnswerFromEditor(answers, question, value);
     latestAnswers.current = nextAnswers;
     setAnswers(nextAnswers);
   };
 
-  const submit = async () => {
+  const submit = async (answersForSubmission: AnswerMap = answers) => {
     if (!diagnostic || !brand || !sessionScope) return;
     setScreen("submitting");
     setError(null);
@@ -484,7 +486,7 @@ export function useDiagnosticSession({
         initData.current,
         buildCompletionPayload(
           attemptId, sessionScope, diagnostic.id, diagnostic.content_version,
-          progressRevision.current + 1, mode, answers, supersedesAttemptId.current,
+          progressRevision.current + 1, mode, answersForSubmission, supersedesAttemptId.current,
         ),
       );
       if (
@@ -529,6 +531,23 @@ export function useDiagnosticSession({
   const nextQuestion = () => {
     if (questionIndex === questions.length - 1) {
       void submit();
+      return;
+    }
+    setQuestionIndex((current) => {
+      const next = current + 1;
+      latestQuestionIndex.current = next;
+      return next;
+    });
+  };
+
+  const skipQuestion = () => {
+    const question = questions[questionIndex];
+    if (!question) return;
+    const nextAnswers = { ...answers, [question.id]: emptyAnswerFor(question) };
+    latestAnswers.current = nextAnswers;
+    setAnswers(nextAnswers);
+    if (questionIndex === questions.length - 1) {
+      void submit(nextAnswers);
       return;
     }
     setQuestionIndex((current) => {
@@ -586,6 +605,7 @@ export function useDiagnosticSession({
       },
       beginDiagnostic,
       answerQuestion,
+      skipQuestion,
       previousQuestion,
       nextQuestion,
       openReview,
