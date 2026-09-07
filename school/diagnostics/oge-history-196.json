@@ -78,6 +78,7 @@
       "correct": [
         "2314"
       ],
+      "answer_format": "number",
       "source": {
         "provider": "maximum_editorial",
         "official_year": 2022,
@@ -206,6 +207,7 @@
         "1234",
         "3412"
       ],
+      "answer_format": "number",
       "source": {
         "provider": "maximum_editorial",
         "official_year": 2022,
@@ -328,6 +330,7 @@
       "correct": [
         "4"
       ],
+      "answer_format": "number",
       "source": {
         "provider": "maximum_editorial",
         "official_year": 2022,
