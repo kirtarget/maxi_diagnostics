@@ -10,6 +10,8 @@ import {
   questionTitleClassName,
 } from "./question-prompt";
 import type { Question } from "./types";
+import { isCompleteSequenceMatchingAnswer, parseSequenceMatchingPrompt } from "./sequence-matching";
+import { parseTableGapPrompt } from "./table-gap-matching";
 
 describe("answerTypeLabel", () => {
   const base = { id: "q", topic: "t", title: "1", prompt: "Вопрос" };
@@ -174,9 +176,11 @@ describe("parseQuestionPrompt", () => {
       "Выберите предложения, которые можно сформулировать на основании анализа представленных данных.",
     ].join("\n"));
     const table = blocks.find((block) => block.kind === "table");
-    expect(table && table.kind === "table" ? table.rows : []).toEqual([
+    expect(table && table.kind === "table" ? table.headerRows : null).toEqual([
       ["___", "Верхняя поверхность", "Нижняя поверхность"],
       ["Название растения", "Число устьиц", "Число устьиц"],
+    ]);
+    expect(table && table.kind === "table" ? table.rows : []).toEqual([
       ["Кувшинка белая", "406", "0"],
       ["Пшеница", "47", "32"],
       ["Овес", "40", "27"],
@@ -198,8 +202,10 @@ describe("parseQuestionPrompt", () => {
     ].join("\n"));
     const tables = blocks.filter((block): block is Extract<typeof blocks[number], { kind: "table" }> => block.kind === "table");
     expect(tables).toHaveLength(2);
-    expect(tables[0].rows).toHaveLength(3);
-    expect(tables[1].rows).toEqual([["Х", "Y"], ["(А)_______", "(Б)_______"]]);
+    expect(tables[0].headerRows).toEqual([["Реагент", "С_(2)Н_(4)", "Н_(2)", "С_(2)Н_(6)"]]);
+    expect(tables[0].rows).toHaveLength(2);
+    expect(tables[1].headerRows).toEqual([["Х", "Y"]]);
+    expect(tables[1].rows).toEqual([["(А)_______", "(Б)_______"]]);
     expect(blocks.some((block) => block.kind === "instruction"
       && "text" in block
       && block.text.startsWith("В ответ"))).toBe(true);
@@ -241,8 +247,8 @@ describe("table blocks", () => {
 
     const table = blocks.find((block) => block.kind === "table");
     expect(table).toBeDefined();
+    expect(table && table.kind === "table" && table.headerRows).toEqual([["Метод", "Применение метода"]]);
     expect(table && table.kind === "table" && table.rows).toEqual([
-      ["Метод", "Применение метода"],
       ["___", "Изучение кариотипа под микроскопом."],
       ["Популяционно-статистический", "Изучение гена в популяции."],
     ]);
@@ -267,6 +273,103 @@ describe("table blocks", () => {
           if (block.kind === "heading" && /[\p{Ll}\p{Nd}+\-−×÷*/=≤≥<>⇄→√^·∙:≠_]/u.test(block.text)) {
             violations.push(`${file}:${question.id ?? "?"}:${block.text}`);
           }
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});
+
+describe("catalog table contracts", () => {
+  const diagnosticsDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../school/diagnostics");
+  function catalogQuestion(id: string): { prompt: string; type: string; answer_format?: string; allow_reuse?: boolean } {
+    for (const file of readdirSync(diagnosticsDir).filter((name) => name.endsWith(".json"))) {
+      const diagnostic = JSON.parse(readFileSync(resolve(diagnosticsDir, file), "utf8")) as {
+        questions?: Array<{ id?: string; prompt?: string; type?: string; answer_format?: string; allow_reuse?: boolean }>;
+      };
+      const question = diagnostic.questions?.find((candidate) => candidate.id === id);
+      if (question?.prompt) return {
+        prompt: question.prompt,
+        type: question.type ?? "",
+        answer_format: question.answer_format,
+        allow_reuse: question.allow_reuse,
+      };
+    }
+    throw new Error(`Missing catalog question ${id}`);
+  }
+
+  it("normalizes ordinary catalog tables and the English matching source", () => {
+    for (const id of [
+      "sp-biology-ege-2022-q1",
+      "sp-biology-ege-2022-q21",
+      "sp-chemistry-ege-2022-q8",
+      "sp-chemistry-oge-2022-q7",
+    ]) {
+      const blocks = parseQuestionPrompt(catalogQuestion(id).prompt);
+      expect(blocks.some((block) => block.kind === "table"), id).toBe(true);
+      expect(blocks.flatMap((block) => block.kind === "table" ? [...block.headerRows.flat(), ...block.rows.flat()] : [])
+        .some((cell) => cell.includes("|")), id).toBe(false);
+    }
+    const englishQuestion = catalogQuestion("sp-english-language-ege-2022-q1");
+    const english = parseSequenceMatchingPrompt(englishQuestion.prompt);
+    expect(english?.left.map((item) => item.marker)).toEqual(["A", "B", "C", "D", "E", "F", "G"]);
+    expect(english?.options).toHaveLength(8);
+    expect(english?.allowReuse).toBe(false);
+    const ogeEnglish = parseSequenceMatchingPrompt(catalogQuestion("sp-english-language-oge-2022-q1").prompt);
+    expect(ogeEnglish?.left.map((item) => item.marker)).toEqual(["A", "B", "C", "D", "E", "F"]);
+    expect(ogeEnglish?.options).toHaveLength(7);
+    expect(ogeEnglish?.allowReuse).toBe(false);
+    expect(ogeEnglish && isCompleteSequenceMatchingAnswer(ogeEnglish, "624371")).toBe(true);
+    const ogeStatements = parseSequenceMatchingPrompt(catalogQuestion("sp-english-language-oge-2022-q2").prompt);
+    expect(ogeStatements?.left).toHaveLength(7);
+    expect(ogeStatements?.options.map((option) => option.marker)).toEqual(["1", "2", "3"]);
+    expect(ogeStatements?.allowReuse).toBe(true);
+    expect(ogeStatements && isCompleteSequenceMatchingAnswer(ogeStatements, "1231231")).toBe(true);
+  });
+
+  it("does not synthesize a table for the OGE chemistry q2 answer scaffold", () => {
+    const question = catalogQuestion("sp-chemistry-oge-2022-q2");
+    const blocks = parseQuestionPrompt(question.prompt);
+    expect(blocks.some((block) => block.kind === "table")).toBe(false);
+    expect(blocks.some((block) => "text" in block && /\s\|\s/u.test(block.text))).toBe(false);
+  });
+
+  it("keeps biology and history gaps structured and respects explicit numeric physics metadata", () => {
+    const biologyQuestion = catalogQuestion("sp-biology-ege-2022-q20");
+    const biology = parseTableGapPrompt(biologyQuestion.prompt, biologyQuestion as never);
+    expect(biology?.headers).toHaveLength(3);
+    expect(biology?.markers).toEqual(["А", "Б", "В"]);
+    const history = parseTableGapPrompt(catalogQuestion("sp-history-ege-2022-q4").prompt);
+    expect(history?.headers).toHaveLength(3);
+    expect(history?.rows).toHaveLength(4);
+    expect(history?.markers).toEqual(["А", "Б", "В", "Г", "Д", "Е"]);
+    expect(history?.options.map((option) => option.marker)).toEqual(["1", "2", "3", "4", "5", "6", "7", "8", "9"]);
+    const physics = catalogQuestion("sp-physics-ege-2022-q13");
+    expect(parseTableGapPrompt(physics.prompt, physics as never)).toBeNull();
+  });
+
+  it("leaves English reading prose without a synthetic table", () => {
+    const blocks = parseQuestionPrompt(catalogQuestion("sp-english-language-ege-2022-q23").prompt);
+    expect(blocks.some((block) => block.kind === "table")).toBe(false);
+  });
+
+  it("keeps all dotted literature list markers, including 10 and 11", () => {
+    const blocks = parseQuestionPrompt(catalogQuestion("sp-literature-ege-2025-pamatnik-q4").prompt);
+    expect(blocks.filter((block) => block.kind === "item").map((block) => block.marker)).toEqual(
+      Array.from({ length: 11 }, (_, index) => String(index + 1)),
+    );
+  });
+
+  it("consumes structural delimiters across the full catalog", () => {
+    const violations: string[] = [];
+    for (const file of readdirSync(diagnosticsDir).filter((name) => name.endsWith(".json"))) {
+      const diagnostic = JSON.parse(readFileSync(resolve(diagnosticsDir, file), "utf8")) as {
+        questions?: Array<{ id?: string; prompt?: string }>;
+      };
+      for (const question of diagnostic.questions ?? []) {
+        for (const block of parseQuestionPrompt(question.prompt ?? "")) {
+          if (block.kind === "table") continue;
+          if (/\s\|\s/u.test(block.text)) violations.push(`${file}:${question.id ?? "?"}`);
         }
       }
     }

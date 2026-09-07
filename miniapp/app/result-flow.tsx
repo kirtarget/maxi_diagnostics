@@ -37,7 +37,7 @@ function ReviewPrompt({ prompt, subject }: { prompt: string; subject?: string })
   for (const block of blocks) {
     if (block.kind === "table") {
       flush();
-      parts.push(<PromptTable key={`table-${parts.length}`} rows={block.rows} subject={subject} />);
+      parts.push(<PromptTable key={`table-${parts.length}`} headerRows={block.headerRows} rows={block.rows} columns={block.columns} subject={subject} />);
       continue;
     }
     text.push(block.kind === "item" ? `${block.marker}) ${block.text}` : block.text);

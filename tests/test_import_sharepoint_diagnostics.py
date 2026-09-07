@@ -516,6 +516,46 @@ def test_reordered_numeric_keys_become_accepted_input_variants():
     assert payload.sequence is True
 
 
+def test_table_gap_key_gets_sequence_metadata_from_source_shape():
+    task = importer.SourceTask(
+        number=20,
+        prompt_tables=[importer.SourceTable(rows=(
+            (("Железа",), ("Функция",), ("Изменения",)),
+            (("(А)________",), ("Функция",), ("Давление",)),
+            (("Поджелудочная",), ("(Б)________",), ("Голодание",)),
+            (("Щитовидная",), ("Обмен",), ("(В)________",)),
+        ))],
+        prompt_blocks=[
+            "1) Щитовидная железа",
+            "2) Гипофиз",
+            "3) Надпочечники",
+            "4) Липидный обмен",
+            "5) Углеводный обмен",
+            "6) Обменные процессы",
+        ],
+        answer=["356"],
+    )
+    kind, payload = importer.classify(task)
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "sequence"
+    assert payload.answer_length == 3
+    assert payload.allow_reuse is False
+    assert payload.markers == ("А", "Б", "В")
+
+    task.prompt_blocks.append("Цифры в ответе могут повторяться.")
+    kind, payload = importer.classify(task)
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.allow_reuse is True
+
+    task.answer = ["35"]
+    kind, payload = importer.classify(task)
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "number"
+
+
 def test_numbered_choice_grid_renders_one_choice_per_line():
     """A 3×3 grid of numbered choices is a list, not a data table: the app must not
     draw a header row over "1) Основный оксид | 2) Кислая соль | 3) Амфотерный оксид"."""
