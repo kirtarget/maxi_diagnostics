@@ -10,20 +10,24 @@ DEFAULT_TEXT_ANSWER_LENGTH = 80
 MAX_TEXT_ANSWER_LENGTH = 200
 
 _WHITESPACE = re.compile(r"\s+")
-_TRAILING_PUNCTUATION = ".,;!?"
-_CHARACTER_MAP = str.maketrans({"ё": "е", "–": "-", "—": "-"})
+_EDGE_PUNCTUATION = ".,;!?:«»\"“”„‘’'`"
+_CHARACTER_MAP = str.maketrans({
+    "ё": "е", "–": "-", "—": "-", "’": "'", "ʼ": "'", "`": "'",
+})
 
 
 def normalize_text_answer(value: str) -> str:
     """Fold a free-text answer to the form both sides of a comparison share.
 
-    NFC, trimmed, lowercase, ``ё`` folded to ``е``, runs of whitespace
-    collapsed to one space, trailing sentence punctuation dropped, and every
-    dash variant unified.  Pure: no length or character-class judgement here.
+    NFC, trimmed, lowercase, ``ё`` folded to ``е``, runs of whitespace collapsed
+    to one space, sentence punctuation and quotation marks dropped from both
+    ends, and every dash and apostrophe variant unified.  A hyphen is left
+    alone: in an orthography task it is the answer.  Pure: no length or
+    character-class judgement here.
     """
     text = unicodedata.normalize("NFC", value).strip().lower()
     text = _WHITESPACE.sub(" ", text)
-    text = text.rstrip(_TRAILING_PUNCTUATION).strip()
+    text = text.strip(_EDGE_PUNCTUATION).strip()
     return text.translate(_CHARACTER_MAP)
 
 

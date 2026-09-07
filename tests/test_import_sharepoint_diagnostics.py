@@ -808,3 +808,40 @@ def test_a_matching_task_keeps_the_data_table_it_reasons_about():
 
     assert "На армию | 40 %" in question["prompt"]
     assert "Составляли более половины" not in question["prompt"]
+
+
+def test_the_editor_can_add_an_accepted_wording_that_survives_a_reimport(tmp_path):
+    """A wording typed into the catalog would be lost on the next run; this file is not."""
+    variants = tmp_path / "answer-variants.json"
+    variants.write_text(
+        json.dumps({"variants": {"sp-chemistry-oge-2022-q1": ["иное название"]}}),
+        encoding="utf-8",
+    )
+
+    loaded = importer.load_answer_variants(variants)
+    assert loaded == {"sp-chemistry-oge-2022-q1": ["иное название"]}
+
+    question = {"id": "q", "type": "text", "correct": ["ответ"]}
+    assert importer.apply_answer_variants(question, ["Ответ.", "иное название"]) is None
+    # The first wording only differs by case and a full stop, so it adds nothing.
+    assert question["correct"] == ["ответ", "иное название"]
+
+
+def test_an_accepted_wording_needs_a_free_text_question():
+    question = {"id": "q", "type": "single", "correct": "a"}
+    assert importer.apply_answer_variants(question, ["что-то"]) == (
+        "answer_variants_need_a_text_question"
+    )
+
+
+def test_a_malformed_answer_variants_file_stops_the_import(tmp_path):
+    path = tmp_path / "answer-variants.json"
+    path.write_text(json.dumps({"variants": {"q": []}}), encoding="utf-8")
+    with pytest.raises(importer.ImportError):
+        importer.load_answer_variants(path)
+
+    path.write_text(json.dumps({"variants": {"q": ["x" * 200]}}), encoding="utf-8")
+    with pytest.raises(importer.ImportError):
+        importer.load_answer_variants(path)
+
+    assert importer.load_answer_variants(tmp_path / "missing.json") == {}
