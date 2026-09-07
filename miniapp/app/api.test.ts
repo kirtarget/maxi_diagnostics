@@ -846,3 +846,15 @@ describe("diagnostic API payloads", () => {
     expect(validateSavedSession(past, diagnostics)).not.toBeNull();
   });
 });
+
+describe("postDiagnostic error details", () => {
+  it("exposes the rejected question so the session can return to it", async () => {
+    const fetcher = (async () => new Response(
+      JSON.stringify({ detail: "invalid_answer_value", question_id: "q4" }),
+      { status: 422, headers: { "Content-Type": "application/json" } },
+    )) as unknown as typeof fetch;
+
+    await expect(postDiagnostic("/api/diagnostics/session/complete", "init", {}, fetcher))
+      .rejects.toMatchObject({ message: "diagnostic_api_422", detail: "invalid_answer_value", questionId: "q4" });
+  });
+});

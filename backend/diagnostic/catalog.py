@@ -61,7 +61,19 @@ _WINDOWS_RESERVED_BASENAMES = frozenset(
 _INPUT_METADATA_FIELDS = frozenset(
     {"answer_format", "answer_length", "allow_reuse", "markers"}
 )
-_SEQUENCE_PROMPT = re.compile(r"(?:последовательност\w*|sequence)", re.IGNORECASE)
+# A digit string is a sequence only when the prompt names positions (А), Б)…)
+# or asks for an order. The editorial footer "Введите последовательность цифр
+# без пробелов" also sits under plain numeric tasks, so it is not a signal:
+# treating "200" as a three-cell sequence made the completion request fail.
+_SEQUENCE_SIGNAL = re.compile(
+    r"соответству\w+\s+буквам"
+    r"|расположите"
+    r"|установите\s+(?:правильную\s+)?последовательность"
+    r"|в\s+порядке\s+(?:возрастания|убывания|ослабления|усиления|увеличения|уменьшения)"
+    r"|укажите\s+(?:все\s+)?цифр"
+    r"|последовательность\s+(?:этап|событ|действ|процесс|реакц|предлож|цифр,\s+соответству)",
+    re.IGNORECASE,
+)
 _SEQUENCE_MARKER = re.compile(r"(?m)^\s*([А-ЯЁA-Z])\s*[).|]")
 _LATIN_MARKER = re.compile(r"^[A-Za-z]$")
 _CYRILLIC_MARKER = re.compile(r"^[А-ЯЁа-яё]$")
@@ -506,9 +518,10 @@ def _infer_input_metadata(value: dict[str, Any]) -> dict[str, Any]:
     correct = value.get("correct")
     prompt = value.get("prompt")
     variants = tuple(correct) if isinstance(correct, (list, tuple)) else ()
+    prompt_markers = tuple(dict.fromkeys(_SEQUENCE_MARKER.findall(prompt or "")))
     sequence = (
         isinstance(prompt, str)
-        and bool(_SEQUENCE_PROMPT.search(prompt))
+        and (len(prompt_markers) >= 2 or bool(_SEQUENCE_SIGNAL.search(prompt)))
         and bool(variants)
         and all(isinstance(variant, str) and variant for variant in variants)
         and len({len(variant) for variant in variants}) == 1
@@ -517,7 +530,6 @@ def _infer_input_metadata(value: dict[str, Any]) -> dict[str, Any]:
     if not sequence:
         return {"answer_format": "number"}
     answer_length = len(variants[0])
-    prompt_markers = tuple(dict.fromkeys(_SEQUENCE_MARKER.findall(prompt or "")))
     markers = (
         prompt_markers[:answer_length]
         if len(prompt_markers) >= answer_length

@@ -104,7 +104,6 @@ TRUSTED_SOURCE_HASHES = {
     "mathematics-oge-2022": "105fef81980a74e066adc5ab430f7ae9cad4c7a6e7c1e343a313e2cc781b9c45",
     "russian-language-ege-2022": "d1b27c66126732e2c53e3bde730ecc955f359f825b8c34faafea87a8cabbad1f",
 }
-GUARDED_Q05_DUPLICATE_SOURCES = frozenset({"chemistry-ege-2022"})
 CHECKED_IN_SCORE_POLICY: dict[tuple[str, str, frozenset[int]], int] = {
     ("ЕГЭ", "chemistry", frozenset({1, 2, 3, 4, 5, 17})): 1,
     ("ЕГЭ", "biology", frozenset({18})): 2,
@@ -571,92 +570,6 @@ def _numbered_choice_table(table: SourceTable) -> list[tuple[str, str]]:
     return choices
 
 
-def _remove_table_choice(table: SourceTable, marker: str) -> SourceTable:
-    rows: list[tuple[tuple[str, ...], ...]] = []
-    cells: list[tuple[SourceCell, ...]] = []
-    for row_index, row in enumerate(table.rows):
-        new_row: list[tuple[str, ...]] = []
-        new_cells: list[SourceCell] = []
-        for column_index, lines in enumerate(row):
-            source_cell = (
-                table.cells[row_index][column_index]
-                if table.cells
-                else SourceCell(paragraphs=lines)
-            )
-            updated_lines = tuple(
-                line
-                for line in lines
-                if (
-                    (found := TABLE_NUMBERED_CHOICE.fullmatch(line or "")) is None
-                    or found.group("number") != marker
-                )
-            )
-            new_row.append(updated_lines)
-            new_cells.append(
-                SourceCell(
-                    paragraphs=updated_lines,
-                    images=source_cell.images,
-                )
-            )
-        rows.append(tuple(new_row))
-        cells.append(tuple(new_cells))
-    return SourceTable(rows=tuple(rows), cells=tuple(cells))
-
-
-def _normalized_choice_label(value: str) -> str:
-    return re.sub(r"\W+", "", clean_line(value).casefold())
-
-
-def _drop_guarded_q05_duplicate(task: SourceTask, source: SourceFile) -> bool:
-    """Drop only the known duplicate choice marker in the verified source shape."""
-    if (
-        task.number != 5
-        or source.slug not in GUARDED_Q05_DUPLICATE_SOURCES
-        or TRUSTED_SOURCE_HASHES.get(source.slug) != source.content_hash
-        or any("6" in part for part in task.answer)
-    ):
-        return False
-    table = next(
-        (candidate for candidate in task.prompt_tables if _numbered_choice_table(candidate)),
-        None,
-    )
-    choices = _flattened_numbered_choices(task) or [
-        (str(index), label) for index, label in enumerate(task.options, start=1)
-    ]
-    if len(choices) < 6:
-        return False
-    if _normalized_choice_label(choices[3][1]) != _normalized_choice_label(choices[5][1]):
-        return False
-    if task.options or (table is None and len(task.prompt_blocks) != 1):
-        return False
-    if table is not None:
-        updated_table = _remove_table_choice(table, "6")
-        task.prompt_tables[:] = [
-            updated_table if candidate is table else candidate
-            for candidate in task.prompt_tables
-        ]
-        task.prompt_nodes[:] = [
-            PromptTable(updated_table) if isinstance(node, PromptTable) and node.table is table else node
-            for node in task.prompt_nodes
-        ]
-        task.sequence_choices = [choice for choice in choices if choice[0] != "6"]
-        return True
-    prompt = task.prompt_blocks[0]
-    marker = re.compile(r"(?P<prefix>^|\s)6[.)]\s*.*?(?=\s+7[.)]\s+|\Z)", re.DOTALL)
-    updated, count = marker.subn(lambda match: match.group("prefix"), prompt, count=1)
-    if count != 1:
-        return False
-    task.prompt_blocks[0] = updated
-    task.sequence_choices = [choice for choice in choices if choice[0] != "6"]
-    task.prompt_nodes[:] = [
-        PromptParagraph(updated, node.images)
-        if isinstance(node, PromptParagraph) and node.text == prompt
-        else node
-        for node in task.prompt_nodes
-    ]
-    return True
-
-
 def _score_policy(exam: str, subject: str, position: int) -> int | None:
     """Return a primary score only for the checked-in evidence positions."""
     for (policy_exam, policy_subject, positions), score in CHECKED_IN_SCORE_POLICY.items():
@@ -825,6 +738,11 @@ def _render_table(table: SourceTable) -> str:
 
     Blank cells keep their column so a fill-in row still reads as a row.
     """
+    choices = _numbered_choice_table(table)
+    if choices:
+        # A grid of numbered choices is a list the student picks from, not a
+        # data table: one choice per line keeps the app from drawing a header.
+        return "\n".join(f"{number}) {label}" for number, label in choices)
     lines = []
     for row in table.rows:
         cells = [
@@ -990,9 +908,15 @@ def strip_answer_sheet_instructions(prompt: str) -> str:
     lines = []
     for line in prompt.split("\n"):
         for pattern in ANSWER_SHEET_SENTENCES:
-            line = pattern.sub("", line)
+            # A clause cut out of the middle of a sentence takes the full stop
+            # with it; hand the remaining sentence one back.
+            line = pattern.sub(
+                lambda match: "." if match.group(0).rstrip().endswith(".") else "", line
+            )
+        line = re.sub(r"\s+\.", ".", line)
+        line = re.sub(r"(?<!\.)\.\.(?!\.)", ".", line)
         line = re.sub(r"\s+", " ", line).strip()
-        if line:
+        if line and line != ".":
             lines.append(line)
     return "\n".join(lines)
 
@@ -1255,7 +1179,6 @@ def convert_file(
                 Outcome(task.number, "skipped", reason="unsupported_table_cell_figure")
             )
             continue
-        _drop_guarded_q05_duplicate(task, source)
         kind, payload = classify(task)
         if kind == "skip":
             outcomes.append(Outcome(task.number, "skipped", reason=str(payload)))

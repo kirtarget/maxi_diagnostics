@@ -516,50 +516,26 @@ def test_reordered_numeric_keys_become_accepted_input_variants():
     assert payload.sequence is True
 
 
-def test_guarded_q05_repair_removes_only_duplicate_marker_from_flattened_prompt():
-    prompt = (
-        "Установите соответствие. 1) Один 2) Два 3) Три 4) Гидроксид "
-        "5) Пять 6) Гидроксид 7) Кислота 8) Восемь 9) Девять"
-    )
-    task = importer.SourceTask(number=5, prompt_blocks=[prompt], answer=["277"])
-    source = importer.SourceFile(
-        Path("chemistry.docx"), "ЕГЭ", "chemistry", 2022, 1, (task,),
-        content_hash=importer.TRUSTED_SOURCE_HASHES["chemistry-ege-2022"],
-    )
-
-    assert importer._drop_guarded_q05_duplicate(task, source)
-    assert "6)" not in task.prompt_blocks[0]
-    assert "7) Кислота" in task.prompt_blocks[0]
-
-    kind, payload = importer.classify(task)
-    question = importer.build_question(source, task, kind, payload, verified_at="2026-09-01")
-    assert kind == "input"
-    assert isinstance(payload, importer.InputAnswerSpec)
-    assert payload.correct == ("277",)
-    assert payload.answer_format == "sequence"
-    assert payload.answer_length == 3
-    assert payload.allow_reuse is True
-    assert payload.markers == ("А", "Б", "В")
-    assert "6)" not in question["prompt"]
-    assert "7) Кислота" in question["prompt"]
-
-
-@pytest.mark.parametrize("content_hash", ["", "changed"])
-def test_q05_repair_does_not_change_untrusted_source(content_hash):
-    prompt = "1) Один 2) Два 3) Три 4) Гидроксид 5) Пять 6) Гидроксид 7) Кислота"
-    task = importer.SourceTask(number=5, prompt_blocks=[prompt], answer=["277"])
-    source = importer.SourceFile(
-        Path("chemistry.docx"), "ЕГЭ", "chemistry", 2022, 1, (task,), content_hash=content_hash
+def test_numbered_choice_grid_renders_one_choice_per_line():
+    """A 3×3 grid of numbered choices is a list, not a data table: the app must not
+    draw a header row over "1) Основный оксид | 2) Кислая соль | 3) Амфотерный оксид"."""
+    labels = [
+        "1) Основный оксид", "2) Кислая соль", "3) Амфотерный оксид",
+        "4) Кислота", "5) Средняя соль", "6) Кислота",
+        "7) Гидроксид", "8) Несолеобразующий оксид", "9) Комплексная соль",
+    ]
+    table = importer.SourceTable(
+        rows=tuple(tuple((label,) for label in labels[index:index + 3]) for index in range(0, 9, 3))
     )
 
-    assert not importer._drop_guarded_q05_duplicate(task, source)
-    assert task.prompt_blocks == [prompt]
+    assert importer._render_table(table) == "\n".join(labels)
 
 
-def test_q05_table_grid_repair_survives_real_docx_parse(tmp_path):
+def test_duplicate_choice_labels_survive_the_import(tmp_path):
+    """The source KIM lists «Кислота» twice on purpose; the catalog keeps all nine choices."""
     document = Document()
     _task(document, 5)
-    document.add_paragraph("Установите соответствие между веществами и реагентами.")
+    document.add_paragraph("Установите соответствие между веществами и классами.")
     table = document.add_table(rows=3, cols=3)
     labels = [
         "1) Один", "2) Два", "3) Три",
@@ -577,16 +553,26 @@ def test_q05_table_grid_repair_survives_real_docx_parse(tmp_path):
         source_path, "ЕГЭ", "chemistry", 2022, 28, (task,),
         content_hash=importer.TRUSTED_SOURCE_HASHES["chemistry-ege-2022"],
     )
-
-    assert importer._drop_guarded_q05_duplicate(task, source)
-    assert task.prompt_tables[0].rows[1][2] == ()
-    assert task.prompt_tables[0].rows[2][0] == ("7) Кислота",)
     kind, payload = importer.classify(task)
+    question = importer.build_question(source, task, kind, payload, verified_at="2026-09-01")
+    importer._repair_source_question(source, task, question)
+
     assert kind == "input"
     assert isinstance(payload, importer.InputAnswerSpec)
     assert payload.answer_format == "sequence"
-    assert payload.options[5][0] == "7"
-    assert payload.correct == ("277",)
+    assert [marker for marker, _ in payload.options] == [str(index) for index in range(1, 10)]
+    assert "6) Гидроксид" in question["prompt"]
+    assert "___" not in question["prompt"]
+
+
+def test_stripping_the_table_instruction_keeps_the_sentence_end():
+    stripped = importer.strip_answer_sheet_instructions(
+        "К каждой позиции первого столбца подберите соответствующую позицию из второго столбца "
+        "и запишите в таблицу выбранные цифры под соответствующими буквами."
+    )
+    assert stripped == (
+        "К каждой позиции первого столбца подберите соответствующую позицию из второго столбца."
+    )
 
 
 def test_score_policy_approves_only_pinned_q05_and_biology_q18():

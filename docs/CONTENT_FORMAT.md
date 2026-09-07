@@ -393,8 +393,13 @@ in an accepted key are allowed only when `allow_reuse` is `true`.
 
 Approved input questions must declare this metadata explicitly. Legacy draft
 questions without the fields remain loadable. The catalog infers `number` by
-default and infers `sequence` only when the prompt explicitly describes a
-sequence and the accepted keys have a shared length greater than one.
+default and infers `sequence` only when the prompt names positions (two or more
+lines that start with a letter marker such as `А)`, `Б)`, `A |`) or asks for an
+order («расположите», «установите последовательность», «в порядке
+возрастания», «укажите все цифры», «соответствующую буквам»), and the accepted
+keys share a length greater than one. The editorial footer «Введите
+последовательность цифр без пробелов» on its own is not a signal: it also sits
+under plain numeric tasks, and a numeric key must never be validated by length.
 
 ## Short free text
 
