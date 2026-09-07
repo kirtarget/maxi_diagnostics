@@ -6,10 +6,13 @@ tables, an optional `Решение:` and a mandatory `Ответ:` key. This co
 the machine-checkable subset onto catalog question types, extracts inline
 figures, and records every skipped task with a reason in a Markdown report.
 
-Every catalog question comes from these documents. A re-run replaces exactly the
-questions whose id starts with `sp-`, leaves every other byte of the file alone,
-and must produce byte-identical output. The source directory therefore has to
-hold the whole bank, the 20 base diagnostics included.
+Every catalog question comes from these documents. A full re-run replaces exactly
+the questions whose id starts with `sp-`, leaves every other byte of the file
+alone, and must produce byte-identical output. The source directory therefore
+has to hold the whole bank, the 20 base diagnostics included. A `--partial`
+re-run replaces only the prefixes derived from its selected source files and
+requires an explicit non-global `--report` path. Use it for a targeted export
+when the whole bank is not available.
 
 Subject, exam, season and topic come from the source filename. Thematic packages
 are named too freely for that, so `--plan` supplies the same fields explicitly
@@ -18,6 +21,8 @@ Their question ids carry the plan topic slug, which keeps two packages of one
 subject and season apart.
 
     python scripts/import_sharepoint_diagnostics.py <docx-dir> [--plan plan.json]
+    python scripts/import_sharepoint_diagnostics.py <docx-dir> --partial \
+        --report authoring/sharepoint-import/targeted-report.md
 """
 
 from __future__ import annotations
@@ -51,6 +56,7 @@ from diagnostic.numeric import is_valid_numeric_answer  # noqa: E402
 
 
 ID_PREFIX = "sp-"
+SOURCE_ARTIFACT = re.compile(r"q\d+(?:-\d+\.[^.]+)?\Z")
 MAX_PROMPT_CHARS = 10000
 MAX_EXPLANATION_CHARS = 2000
 MAX_OPTION_LABEL_CHARS = 500
@@ -319,6 +325,14 @@ class Outcome:
     question_type: str = ""
     reason: str = ""
     images: int = 0
+
+
+def _belongs_to_source_artifact(identifier: str, source_slug: str) -> bool:
+    """Match one source's question or generated asset without catching topic slugs."""
+    prefix = f"{ID_PREFIX}{source_slug}-"
+    return identifier.startswith(prefix) and bool(
+        SOURCE_ARTIFACT.fullmatch(identifier[len(prefix):])
+    )
 
 
 # --------------------------------------------------------------------------
@@ -1390,6 +1404,65 @@ def render_question(question: dict[str, Any]) -> str:
     return encoded.replace("\n", "\n    ")
 
 
+def _candidate_sort_key(candidate: Candidate) -> tuple[bool, int, str, int]:
+    return (
+        bool(candidate.source.topic_slug),
+        candidate.source.year,
+        candidate.source.path.name,
+        candidate.task.number,
+    )
+
+
+def render_partial_chunks(
+    target: Target,
+    additions: list[Candidate],
+    selected_slugs: set[str],
+) -> list[tuple[str, str]]:
+    """Replace selected source groups at their first existing position."""
+    by_slug: dict[str, list[Candidate]] = {slug: [] for slug in selected_slugs}
+    for candidate in additions:
+        by_slug[candidate.source.slug].append(candidate)
+    for group in by_slug.values():
+        group.sort(key=_candidate_sort_key)
+
+    anchored: dict[int, list[tuple[str, str]]] = {}
+    appended: list[list[Candidate]] = []
+    for slug, group in sorted(by_slug.items()):
+        first = next(
+            (
+                index
+                for index, (identifier, _) in enumerate(target.chunks)
+                if _belongs_to_source_artifact(identifier, slug)
+            ),
+            None,
+        )
+        rendered = [
+            (candidate.question["id"], render_question(candidate.question))
+            for candidate in group
+        ]
+        if first is None:
+            if group:
+                appended.append(group)
+        else:
+            anchored[first] = rendered
+    appended.sort(key=lambda group: _candidate_sort_key(group[0]))
+
+    chunks: list[tuple[str, str]] = []
+    for index, chunk in enumerate(target.chunks):
+        chunks.extend(anchored.get(index, []))
+        if any(
+            _belongs_to_source_artifact(chunk[0], slug) for slug in selected_slugs
+        ):
+            continue
+        chunks.append(chunk)
+    for group in appended:
+        chunks.extend(
+            (candidate.question["id"], render_question(candidate.question))
+            for candidate in group
+        )
+    return chunks
+
+
 def load_targets(diagnostics_root: Path) -> dict[tuple[str, str], Target]:
     targets = {}
     for path in sorted(diagnostics_root.glob("*.json")):
@@ -1409,14 +1482,22 @@ def write_report(
     path: Path,
     per_file: list[tuple[SourceFile, Path, list[Outcome]]],
     verified_at: str,
+    *,
+    partial: bool = False,
 ) -> None:
+    scope_note = (
+        "Это отчёт частичного импорта. Он покрывает только выбранные исходники. "
+        "Остальные задания и ресурсы каталога сохранены."
+        if partial
+        else "Каталог школы состоит только из этих заданий."
+    )
     lines = [
         "# Импорт диагностик SharePoint",
         "",
         f"Сгенерировано `python scripts/import_sharepoint_diagnostics.py <docx-dir>` "
         f"({verified_at}).",
         "",
-        "Каталог школы состоит только из этих заданий. Текст задания, вариантов и "
+        f"{scope_note} Текст задания, вариантов и "
         "ключ взяты из редакционно утверждённых документов MAXIMUM без правок. Тема "
         "берётся из плана источников, а без плана каждому вопросу проставлена "
         "тема «Задание N». Первичный балл берётся из закреплённой score policy "
@@ -1545,21 +1626,38 @@ def main(argv: list[str] | None = None) -> int:
             f"(defaults to the non-editorial sentinel {DEFAULT_VERIFIED_AT})"
         ),
     )
+    parser.add_argument(
+        "--partial",
+        action="store_true",
+        help=(
+            "Replace only questions and assets belonging to the selected source files. "
+            "Requires an explicit non-global --report path."
+        ),
+    )
+    parser.add_argument(
+        "--report",
+        type=Path,
+        help="Markdown report path. Required for --partial; defaults to the global report.",
+    )
     parser.add_argument("--dry-run", action="store_true")
     arguments = parser.parse_args(argv)
 
     root: Path = arguments.root.resolve()
     diagnostics_root = root / "school" / "diagnostics"
     assets_root = root / "school" / "assets" / "questions"
-    report_path = root / "authoring" / "sharepoint-import" / "report.md"
+    default_report_path = root / "authoring" / "sharepoint-import" / "report.md"
+    if arguments.partial and arguments.report is None:
+        parser.error("--partial requires an explicit --report path")
+    report_path = (
+        (arguments.report if arguments.report.is_absolute() else root / arguments.report).resolve()
+        if arguments.report
+        else default_report_path
+    )
+    if arguments.partial and report_path == default_report_path.resolve():
+        parser.error("--partial cannot overwrite the global sharepoint-import/report.md")
     verified_at = str(arguments.verified_at or DEFAULT_VERIFIED_AT)
 
     targets = load_targets(diagnostics_root)
-    kept_assets = {
-        path.relative_to(root / "school").as_posix()
-        for path in sorted((root / "school" / "assets").rglob("*"))
-        if path.is_file() and not path.name.startswith(ID_PREFIX)
-    }
 
     plan = load_plan(arguments.plan) if arguments.plan else {}
     answer_variants = load_answer_variants(
@@ -1571,6 +1669,22 @@ def main(argv: list[str] | None = None) -> int:
     ]
     if not sources:
         raise ImportError(f"No .docx files under {arguments.source}")
+    selected_slugs = {source.slug for source in sources}
+    kept_assets = {
+        path.relative_to(root / "school").as_posix()
+        for path in sorted((root / "school" / "assets").rglob("*"))
+        if path.is_file()
+        and (
+            (not arguments.partial and not path.name.startswith(ID_PREFIX))
+            or (
+                arguments.partial
+                and not any(
+                    _belongs_to_source_artifact(path.name, slug)
+                    for slug in selected_slugs
+                )
+            )
+        )
+    }
 
     candidates: list[Candidate] = []
     outcomes_by_source: dict[Path, list[Outcome]] = {}
@@ -1605,20 +1719,27 @@ def main(argv: list[str] | None = None) -> int:
             grouped.get(target.path, []),
             # Base diagnostics carry no topic slug and sort first, because the
             # leading questions are the full diagnostic and the rest is bank.
-            key=lambda item: (
-                bool(item.source.topic_slug),
-                item.source.year,
-                item.source.path.name,
-                item.task.number,
-            ),
+            key=_candidate_sort_key,
         )
-        kept = [
-            chunk for chunk in target.chunks if not chunk[0].startswith(ID_PREFIX)
-        ]
-        chunks = kept + [
-            (candidate.question["id"], render_question(candidate.question))
-            for candidate in additions
-        ]
+        if arguments.partial:
+            chunks = render_partial_chunks(target, additions, selected_slugs)
+            kept_count = sum(
+                1
+                for identifier, _ in target.chunks
+                if not any(
+                    _belongs_to_source_artifact(identifier, slug)
+                    for slug in selected_slugs
+                )
+            )
+        else:
+            kept = [
+                chunk for chunk in target.chunks if not chunk[0].startswith(ID_PREFIX)
+            ]
+            chunks = kept + [
+                (candidate.question["id"], render_question(candidate.question))
+                for candidate in additions
+            ]
+            kept_count = len(kept)
         collisions = [
             identifier
             for identifier, count in Counter(identifier for identifier, _ in chunks).items()
@@ -1631,14 +1752,18 @@ def main(argv: list[str] | None = None) -> int:
             )
         if len(chunks) > MAX_QUESTIONS_PER_DIAGNOSTIC:
             raise ImportError(f"Too many questions in {target.path.name}: {len(chunks)}")
-        written.append((target.path.name, len(kept), len(additions)))
+        written.append((target.path.name, kept_count, len(additions)))
         if not arguments.dry_run:
             write_diagnostic(target.path, render_target(target, chunks))
 
     if not arguments.dry_run:
         assets_root.mkdir(parents=True, exist_ok=True)
         for existing in sorted(assets_root.glob(f"{ID_PREFIX}*")):
-            existing.unlink()
+            if not arguments.partial or any(
+                _belongs_to_source_artifact(existing.name, slug)
+                for slug in selected_slugs
+            ):
+                existing.unlink()
         payload_by_digest = {
             hashlib.sha256(payload).hexdigest(): payload
             for candidate in candidates
@@ -1653,6 +1778,7 @@ def main(argv: list[str] | None = None) -> int:
                 for source in sources
             ],
             verified_at,
+            partial=arguments.partial,
         )
 
     reasons: dict[str, int] = {}

@@ -311,6 +311,134 @@ def test_rerunning_the_import_replaces_only_the_prefixed_questions(imported):
     } == assets_before
 
 
+def test_partial_import_preserves_unselected_questions_assets_and_report(tmp_path):
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    build_source_document(source_directory / SOURCE_NAME)
+    catalog_path = build_repository(tmp_path)
+
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    catalog["questions"].extend(
+        [
+            {
+                "id": "sp-chemistry-oge-2022-q1",
+                "type": "input",
+                "topic": "Старое задание",
+                "title": "Старое задание",
+                "prompt": "Старый выбранный вопрос",
+                "answer_format": "number",
+                "correct": ["1"],
+                "max_primary_score": 1,
+                "source": {"approval_status": "draft"},
+            },
+            {
+                "id": "sp-chemistry-oge-2022-kisloty-q1",
+                "type": "input",
+                "topic": "Кислоты",
+                "title": "Задание 1",
+                "prompt": "Невыбранный вопрос",
+                "answer_format": "number",
+                "correct": ["2"],
+                "max_primary_score": 1,
+                "source": {"approval_status": "draft"},
+            },
+        ]
+    )
+    catalog_path.write_text(
+        json.dumps(catalog, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    target_before = importer.read_target(catalog_path)
+    unselected_chunk = dict(target_before.chunks)["sp-chemistry-oge-2022-kisloty-q1"]
+
+    assets_root = tmp_path / "school" / "assets" / "questions"
+    selected_stale = assets_root / "sp-chemistry-oge-2022-q8-1.png"
+    selected_stale.write_bytes(_png(8, 8).getvalue())
+    unselected_asset = assets_root / "sp-chemistry-oge-2022-kisloty-q1-1.png"
+    unselected_asset.write_bytes(_png(9, 9).getvalue())
+    legacy_asset = assets_root / "legacy.png"
+    legacy_asset.write_bytes(_png(10, 10).getvalue())
+    report_path = tmp_path / "authoring" / "sharepoint-import" / "report.md"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text("global report\n", encoding="utf-8")
+    partial_report = tmp_path / "authoring" / "sharepoint-import" / "kir-223.md"
+
+    importer.main(
+        [
+            str(source_directory),
+            "--root",
+            str(tmp_path),
+            "--partial",
+            "--report",
+            "authoring/sharepoint-import/kir-223.md",
+        ]
+    )
+
+    target_after = importer.read_target(catalog_path)
+    after_chunks = dict(target_after.chunks)
+    assert after_chunks["sp-chemistry-oge-2022-kisloty-q1"] == unselected_chunk
+    identifiers = [key for key, _ in target_after.chunks]
+    assert identifiers.index("sp-chemistry-oge-2022-q8") < identifiers.index(
+        "sp-chemistry-oge-2022-kisloty-q1"
+    )
+    assert "sp-chemistry-oge-2022-q8" in identifiers
+    assert "Старый выбранный вопрос" not in catalog_path.read_text(encoding="utf-8")
+    assert unselected_asset.read_bytes() == _png(9, 9).getvalue()
+    assert legacy_asset.read_bytes() == _png(10, 10).getvalue()
+    assert selected_stale.read_bytes() != _png(8, 8).getvalue()
+    assert report_path.read_text(encoding="utf-8") == "global report\n"
+    partial_text = partial_report.read_text(encoding="utf-8")
+    assert "частичного импорта" in partial_text
+    assert "| 7 | skipped | - | irregular_key | 0 |" in partial_text
+    assert all(
+        importer.validate_question(question) is None
+        for question in json.loads(catalog_path.read_text(encoding="utf-8"))["questions"]
+        if question["id"].startswith("sp-chemistry-oge-2022-q")
+    )
+
+    catalog_before_repeat = catalog_path.read_bytes()
+    assets_before_repeat = {
+        path.name: path.read_bytes() for path in assets_root.iterdir()
+    }
+    report_before_repeat = partial_report.read_bytes()
+    importer.main(
+        [
+            str(source_directory),
+            "--root",
+            str(tmp_path),
+            "--partial",
+            "--report",
+            "authoring/sharepoint-import/kir-223.md",
+        ]
+    )
+    assert catalog_path.read_bytes() == catalog_before_repeat
+    assert {path.name: path.read_bytes() for path in assets_root.iterdir()} == assets_before_repeat
+    assert partial_report.read_bytes() == report_before_repeat
+
+
+def test_partial_import_requires_non_global_report(tmp_path):
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    build_source_document(source_directory / SOURCE_NAME)
+    build_repository(tmp_path)
+
+    with pytest.raises(SystemExit):
+        importer.main([str(source_directory), "--root", str(tmp_path), "--partial"])
+
+    with pytest.raises(SystemExit):
+        importer.main(
+            [
+                str(source_directory),
+                "--root",
+                str(tmp_path),
+                "--partial",
+                "--report",
+                str(tmp_path / "authoring" / "sharepoint-import" / "report.md"),
+            ]
+        )
+
+
 def test_stale_prefixed_assets_are_removed_on_reimport(imported):
     root, _, source_directory = imported
     stale = root / "school" / "assets" / "questions" / "sp-old-question-1.png"

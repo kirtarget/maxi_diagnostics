@@ -476,3 +476,16 @@ list of accepted wordings are emitted as `text`:
 Run `python scripts/validate_school.py` and `python scripts/check_brand_isolation.py`
 after every brand, link, content, or asset change. Both commands must print `OK`
 before deployment. They use the same runtime validation contract as the API and bot.
+
+For a targeted SharePoint export when the complete bank is unavailable, run the
+importer with `--partial` and an explicit report path:
+
+```text
+python scripts/import_sharepoint_diagnostics.py <docx-dir> --partial \
+  --report authoring/sharepoint-import/targeted-report.md
+```
+
+Partial mode replaces only questions and assets belonging to the selected source
+files. It preserves all other catalog bytes, assets, and the global import report.
+The report path is required and cannot be the global report. A partial report
+covers only its selected sources and does not claim catalog completeness.
