@@ -100,6 +100,15 @@ const tableGapPrompt = [
   "3) твёрдое.",
 ].join("\n");
 
+// A converted source table, exactly as the catalog stores it: one `cell | cell`
+// line per row.
+const tablePrompt = [
+  "Рассмотрите таблицу «Методы биологических исследований» и заполните пустую ячейку, вписав соответствующий термин.",
+  "Метод | Применение метода",
+  "___ | Изучение кариотипа в метафазной клетке под микроскопом.",
+  "Популяционно-статистический | Изучение распространения определённого гена в популяции.",
+].join("\n");
+
 const noop = () => undefined;
 
 const screens: Array<[string, string]> = [
@@ -112,6 +121,7 @@ const screens: Array<[string, string]> = [
   ["question-input", renderToStaticMarkup(<QuestionView question={q("5", { type: "input", options: undefined, prompt: "Найди значение выражения 2,4 · 5 − 3,6. Запиши ответ числом." } as never)} index={4} total={10} answer="8,4" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
   ["question-tablegap", renderToStaticMarkup(<QuestionView question={q("9", { type: "input", options: undefined, prompt: tableGapPrompt, topic: "Химия" } as never)} index={8} total={10} answer="1" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
   ["question-text", renderToStaticMarkup(<QuestionView question={q("7", { type: "text", options: undefined, max_length: 40, topic: "Союзы", prompt: "Выпишите подчинительный союз из предложения." } as never)} index={6} total={10} answer="однако" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
+  ["question-table", renderToStaticMarkup(<QuestionView question={q("1", { type: "text", options: undefined, max_length: 40, topic: "Биология", prompt: tablePrompt } as never)} index={0} total={8} answer="" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
   ["result", renderToStaticMarkup(<ResultScreen diagnostic={diagnostics[0]} result={result} onReview={noop} onForecast={noop} onReplayMistakes={noop} />)],
   ["review", renderToStaticMarkup(<ReviewScreen items={[{ question_id: "q8", number: 8, type: "single", topic: "Квадратные уравнения", title: "Задание 8", prompt: "Решите уравнение x² + 4x − 5 = 0. Укажите больший корень.", is_correct: false, user_answer: "−5", expected_answer: "1", guidance: "По теореме Виета: x₁ · x₂ = −5, x₁ + x₂ = −4. Корни: 1 и −5. Больший из них — 1.", guidance_kind: "fallback", max_primary_score: 2, earned_primary_score: 0, source: approvedSource }]} index={0} onBack={noop} onNext={noop} onForecast={noop} />)],
   ["review-clean", renderToStaticMarkup(<ReviewScreen items={[]} index={0} onBack={noop} onNext={noop} onForecast={noop} />)],

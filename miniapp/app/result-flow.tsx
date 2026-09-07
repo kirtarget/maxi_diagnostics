@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 
 import { FormattedMathText, FormattedStem } from "./math-display";
 import { normalizeOffer, OfferSurface, type OfferTelemetryEvent } from "./offer-ux";
+import { PromptTable } from "./prompt-table";
+import { parseQuestionPrompt } from "./question-prompt";
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import { safeAssetPath } from "./question-assets";
 import { forecastUnitLabel } from "./score-estimate";
@@ -17,6 +19,32 @@ import type {
 } from "./types";
 
 export type RouteItem = PersonalRouteAction;
+
+function ReviewPrompt({ prompt }: { prompt: string }) {
+  // The review shows the task again, so a table has to stay a table here too.
+  const blocks = parseQuestionPrompt(prompt);
+  const parts: ReactNode[] = [];
+  let text: string[] = [];
+  const flush = () => {
+    if (!text.length) return;
+    parts.push(
+      <p className="review-prompt" key={`text-${parts.length}`}>
+        <FormattedStem text={text.join("\n")} />
+      </p>,
+    );
+    text = [];
+  };
+  for (const block of blocks) {
+    if (block.kind === "table") {
+      flush();
+      parts.push(<PromptTable key={`table-${parts.length}`} rows={block.rows} />);
+      continue;
+    }
+    text.push(block.kind === "item" ? `${block.marker}) ${block.text}` : block.text);
+  }
+  flush();
+  return <>{parts}</>;
+}
 
 function topicName(topic: ServerTopic | string): string {
   return typeof topic === "string" ? topic : topic.topic;
@@ -183,7 +211,7 @@ export function ReviewScreen({
         {hasApprovedPrimaryScore(item.source) && <PrimaryScoreBadge maxPrimaryScore={item.max_primary_score} earnedPrimaryScore={item.earned_primary_score} />}
       </div>
       <h1 id="review-title">{item.title}</h1>
-      <p className="review-prompt"><FormattedStem text={item.prompt} /></p>
+      <ReviewPrompt prompt={item.prompt} />
       {imagePaths.length > 0 && (
         <div className="review-media">
           {imagePaths.map((path, imageIndex) => (

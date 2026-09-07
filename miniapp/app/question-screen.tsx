@@ -2,6 +2,7 @@ import { AnswerEditor } from "./answer-editor";
 import { FormattedMathText, FormattedStem } from "./math-display";
 import { isValidNumericInput, updateCompactAnswer } from "./answer-values";
 import { questionAssetPaths } from "./question-assets";
+import { PromptTable } from "./prompt-table";
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import {
   answerTypeLabel,
@@ -182,6 +183,9 @@ export function QuestionView({
                 <p><FormattedMathText text={block.text} /></p>
               </div>
             );
+          }
+          if (block.kind === "table") {
+            return <PromptTable key={blockIndex} rows={block.rows} />;
           }
           if (block.kind === "instruction") {
             return <p className="question-instruction" key={blockIndex}><FormattedMathText text={block.text} /></p>;
