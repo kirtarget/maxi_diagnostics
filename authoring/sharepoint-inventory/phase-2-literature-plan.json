@@ -1,0 +1,149 @@
+{
+  "captured_at": "2026-09-07",
+  "sources": [
+    {
+      "path": "/sites/razrabotka2025/Shared Documents/КОНТЕНТ ЛК/Контент приложения/ЛИТ/11 класс/Задания/произведения 19 века/Литература_Евгений Онегин_Заданий 6.docx",
+      "file_name": "Литература_Евгений Онегин_Заданий 6.docx",
+      "content_hash": "4aed6ee4a5cd822fdea329003eb8bc275cebfc739fdfb8d75ec5baab4c05d337",
+      "subject": "literature",
+      "exam": "ege",
+      "season": "24-25",
+      "topic": "произведения 19 века",
+      "topic_slug": "evgenij-onegin",
+      "task_blocks": 6,
+      "declared_question_count": null
+    },
+    {
+      "path": "/sites/razrabotka2025/Shared Documents/КОНТЕНТ ЛК/Контент приложения/ЛИТ/11 класс/Задания/произведения 19 века/Литература_Жуковский_Заданий 7.docx",
+      "file_name": "Литература_Жуковский_Заданий 7.docx",
+      "content_hash": "be68dc21f7f63bfe6cde9129d9b7e1d7e542fc38fc1290077aa20aeb32459867",
+      "subject": "literature",
+      "exam": "ege",
+      "season": "24-25",
+      "topic": "произведения 19 века",
+      "topic_slug": "zukovskij",
+      "task_blocks": 7,
+      "declared_question_count": null
+    },
+    {
+      "path": "/sites/razrabotka2025/Shared Documents/КОНТЕНТ ЛК/Контент приложения/ЛИТ/11 класс/Задания/произведения 19 века/Литература_Капитанская дочка_Заданий 7.docx",
+      "file_name": "Литература_Капитанская дочка_Заданий 7.docx",
+      "content_hash": "efde40e5bb803bbcc102097debb4d20b77ffbd433fd862a667e85844d2842eb6",
+      "subject": "literature",
+      "exam": "ege",
+      "season": "24-25",
+      "topic": "произведения 19 века",
+      "topic_slug": "kapitanskaa-docka",
+      "task_blocks": 7,
+      "declared_question_count": null
+    },
+    {
+      "path": "/sites/razrabotka2025/Shared Documents/КОНТЕНТ ЛК/Контент приложения/ЛИТ/11 класс/Задания/произведения 19 века/Литература_Лермонтов поэзия_Заданий 6.docx",
+      "file_name": "Литература_Лермонтов поэзия_Заданий 6.docx",
+      "content_hash": "f80e992a3040b02cfaf1c69b0855ae53b0f5a8c5d6674dde63d9d757163aa2a3",
+      "subject": "literature",
+      "exam": "ege",
+      "season": "24-25",
+      "topic": "произведения 19 века",
+      "topic_slug": "lermontov-poezia",
+      "task_blocks": 6,
+      "declared_question_count": null
+    },
+    {
+      "path": "/sites/razrabotka2025/Shared Documents/КОНТЕНТ ЛК/Контент приложения/ЛИТ/11 класс/Задания/произведения 19 века/Литература_Мёртвые души_Заданий 6.docx",
+      "file_name": "Литература_Мёртвые души_Заданий 6.docx",
+      "content_hash": "21cf7a2d037aa2215d24c4915ef0d0d99e4b308b5604feceb71f91a2249218ac",
+      "subject": "literature",
+      "exam": "ege",
+      "season": "24-25",
+      "topic": "произведения 19 века",
+      "topic_slug": "mertvye-dusi",
+      "task_blocks": 6,
+      "declared_question_count": null
+    },
+    {
+      "path": "/sites/razrabotka2025/Shared Documents/КОНТЕНТ ЛК/Контент приложения/ЛИТ/11 класс/Задания/произведения до 19 века/Литература_Недоросль_Заданий 6.docx",
+      "file_name": "Литература_Недоросль_Заданий 6.docx",
+      "content_hash": "9e527666c7f0bc6900f49aa2de68cdfb5781f3e8902a093896827db1689047ab",
+      "subject": "literature",
+      "exam": "ege",
+      "season": "24-25",
+      "topic": "произведения до 19 века",
+      "topic_slug": "nedorosl",
+      "task_blocks": 6,
+      "declared_question_count": null
+    },
+    {
+      "path": "/sites/razrabotka2025/Shared Documents/КОНТЕНТ ЛК/Контент приложения/ЛИТ/11 класс/Задания/произведения до 19 века/Литература_Памятник_Заданий 6.docx",
+      "file_name": "Литература_Памятник_Заданий 6.docx",
+      "content_hash": "aa314110230fc44df33d3e9c9d85b9e494d3e6389162b19ef196addc228eac3b",
+      "subject": "literature",
+      "exam": "ege",
+      "season": "24-25",
+      "topic": "произведения до 19 века",
+      "topic_slug": "pamatnik",
+      "task_blocks": 6,
+      "declared_question_count": null
+    },
+    {
+      "path": "/sites/razrabotka2025/Shared Documents/КОНТЕНТ ЛК/Контент приложения/ЛИТ/11 класс/Задания/сочинения/ЛИТ_ЕГЭ_Мини-сочинения 5 и 10_ОДЗ_21-22_Заданий 2.docx",
+      "file_name": "ЛИТ_ЕГЭ_Мини-сочинения 5 и 10_ОДЗ_21-22_Заданий 2.docx",
+      "content_hash": "ef669231f7ef83e2cfa27394fc17c466b2640e118fd9334a48ed743a88736280",
+      "subject": "literature",
+      "exam": "ege",
+      "season": "21-22",
+      "topic": "сочинения",
+      "topic_slug": "mini-socinenia-5-i-10-odz-21-22",
+      "task_blocks": 2,
+      "declared_question_count": null
+    },
+    {
+      "path": "/sites/razrabotka2025/Shared Documents/КОНТЕНТ ЛК/Контент приложения/ЛИТ/11 класс/Задания/сочинения/ЛИТ_ЕГЭ_Сочинение 12_ОДЗ_21-22_Заданий 3.docx",
+      "file_name": "ЛИТ_ЕГЭ_Сочинение 12_ОДЗ_21-22_Заданий 3.docx",
+      "content_hash": "1291a6eaa3df4725c816d8ece941f5ba363f3ba95f8b21e6935b2408197d15d8",
+      "subject": "literature",
+      "exam": "ege",
+      "season": "21-22",
+      "topic": "сочинения",
+      "topic_slug": "socinenie-12-odz-21-22",
+      "task_blocks": 3,
+      "declared_question_count": null
+    },
+    {
+      "path": "/sites/razrabotka2025/Shared Documents/КОНТЕНТ ЛК/Контент приложения/ЛИТ/11 класс/Задания/теория литературы/Литература_Направления и представители_Заданий 6.docx",
+      "file_name": "Литература_Направления и представители_Заданий 6.docx",
+      "content_hash": "db1db57251081e48fa9770babb5aa22e9a454497c2ce6ba548edcbd1b0583da8",
+      "subject": "literature",
+      "exam": "ege",
+      "season": "24-25",
+      "topic": "теория литературы",
+      "topic_slug": "napravlenia-i-predstaviteli",
+      "task_blocks": 6,
+      "declared_question_count": null
+    },
+    {
+      "path": "/sites/razrabotka2025/Shared Documents/КОНТЕНТ ЛК/Контент приложения/ЛИТ/11 класс/Задания/теория литературы/Литература_Роды литературы_Заданий 6.docx",
+      "file_name": "Литература_Роды литературы_Заданий 6.docx",
+      "content_hash": "c53948ef2310e9f99fde276827862be547522cab550d85d2cfb6319d46159b21",
+      "subject": "literature",
+      "exam": "ege",
+      "season": "24-25",
+      "topic": "теория литературы",
+      "topic_slug": "rody-literatury",
+      "task_blocks": 6,
+      "declared_question_count": null
+    },
+    {
+      "path": "/sites/razrabotka2025/Shared Documents/КОНТЕНТ ЛК/Контент приложения/ЛИТ/11 класс/Задания/теория литературы/Литература_Система стихосложения_Заданий 6.docx",
+      "file_name": "Литература_Система стихосложения_Заданий 6.docx",
+      "content_hash": "ff9c22b1bbb52f503311abe1c5f0a05791b41cebe43ffd4f2486a43e69aacc11",
+      "subject": "literature",
+      "exam": "ege",
+      "season": "24-25",
+      "topic": "теория литературы",
+      "topic_slug": "sistema-stihoslozenia",
+      "task_blocks": 6,
+      "declared_question_count": null
+    }
+  ]
+}

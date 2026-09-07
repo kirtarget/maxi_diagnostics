@@ -103,8 +103,12 @@ TASK_HEADING = re.compile(r"^Задание\s*(\d+)\.?$")
 SEASON = re.compile(r"^(?P<start>\d{2})-(?P<end>\d{2})$")
 TOPIC_SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 OPEN_ANSWER = re.compile(r"максимальный балл", re.IGNORECASE)
-MATCHING_ITEM = re.compile(r"^([А-ЯЁ])\)\s*(.*)$", re.DOTALL)
-MATCHING_OPTION = re.compile(r"^(\d)\)\s*(.*)$", re.DOTALL)
+# Editors label the two columns with either a bracket or a dot, and a table
+# that uses dots is the same table.
+# Latin capitals sneak into these tables as look-alikes of the Cyrillic
+# enumeration letters, so a table can label its rows А, Б, B.
+MATCHING_ITEM = re.compile(r"^([А-ЯЁA-Z])[.)]\s*(.*)$", re.DOTALL)
+MATCHING_OPTION = re.compile(r"^(\d)[.)]\s*(.*)$", re.DOTALL)
 INLINE_OPTION = re.compile(r"^(\d+)\)\s*\S")
 INLINE_OPTION_NUMBER = re.compile(r"^\d+\)\s*")
 MIN_INLINE_OPTIONS = 3
@@ -118,6 +122,18 @@ FIGURE_WORDS = re.compile(
 EXTERNAL_RESOURCE = re.compile(r"https?://|воспользуйтесь файлом|аудиозапис|прослушайте", re.IGNORECASE)
 SEQUENCE_MARKERS = re.compile(r"^[А-ЯЁ]\)", re.MULTILINE)
 SEQUENCE_HINT = "Введите последовательность цифр без пробелов."
+# A two-column matching table the converter could not read stays in the prompt as
+# `left | right` lines. That is unreadable, so the task is dropped instead.
+FLATTENED_MATCHING = re.compile(r"^\s*(?:[А-ЯЁA-Z][.)]|_{3,})\s.*\|\s*\d[.)]\s", re.MULTILINE)
+# The printed exam tells the student where to write the answer. The Mini App
+# collects it, so those sentences only contradict what is on screen.
+ANSWER_SHEET_SENTENCES = (
+    re.compile(r"(?:\s*и)?\s*запиш\w+\s+в\s+таблиц\w+[^.]*(?:\.|$)", re.IGNORECASE),
+    re.compile(r"\s*в\s+ответе?\s+запиш\w+[^.]*(?:\.|$)", re.IGNORECASE),
+    re.compile(r"\s*запиш\w+\s+в\s+ответе\s+цифры[^.]*(?:\.|$)", re.IGNORECASE),
+    re.compile(r"\s*запиш\w+\s+цифры,\s+под\s+которыми[^.]*(?:\.|$)", re.IGNORECASE),
+)
+UI_COLLECTS_THE_ANSWER = {"single", "multiple", "matching"}
 WORD_FORMATION_HINT = re.compile(r"\|\s*(?P<hint>[A-Z]+(?:\s+[A-Z]+)*)\s*\Z")
 AUXILIARY_WORDS = frozenset(
     {
@@ -477,8 +493,10 @@ def read_source_file(path: Path, entry: PlanEntry | None = None) -> SourceFile:
 # --------------------------------------------------------------------------
 
 
-def _matching_table(tables: list[SourceTable]) -> tuple[list[str], list[tuple[str, str]]] | None:
-    """Return (item labels, [(option digit, label)]) for a two-column matching table."""
+def _matching_table(
+    tables: list[SourceTable],
+) -> tuple[SourceTable, list[str], list[tuple[str, str]]] | None:
+    """Return (source table, item labels, [(option digit, label)]) for a matching table."""
     for table in tables:
         if table.columns != 2 or len(table.rows) < 3:
             continue
@@ -496,7 +514,7 @@ def _matching_table(tables: list[SourceTable]) -> tuple[list[str], list[tuple[st
                 if found:
                     options.append((found.group(1), line))
         if len(items) >= 2 and len(options) >= 2:
-            return items, options
+            return table, items, options
     return None
 
 
@@ -517,13 +535,19 @@ def _render_table(table: SourceTable) -> str:
     return "\n".join(lines)
 
 
-def build_prompt(task: SourceTask, *, skip_tables: bool) -> str:
+def build_prompt(task: SourceTask, *, skip_table: SourceTable | None = None) -> str:
+    # A matching task shows its pairs as controls, so only that one table is
+    # dropped. A data table the question reasons about has to stay.
     parts = list(task.prompt_blocks)
-    if not skip_tables:
-        parts.extend(
-            rendered for rendered in (_render_table(table) for table in task.prompt_tables)
-            if rendered
+    parts.extend(
+        rendered
+        for rendered in (
+            _render_table(table)
+            for table in task.prompt_tables
+            if table is not skip_table
         )
+        if rendered
+    )
     return clean_block(parts)
 
 
@@ -569,10 +593,12 @@ def classify(task: SourceTask) -> tuple[str, dict[str, Any] | str]:
 
     matching = _matching_table(task.prompt_tables)
     if matching is not None and len(parts) == 1 and DIGITS.fullmatch(key):
-        items, options = matching
+        table, items, options = matching
         option_digits = {digit for digit, _ in options}
         if len(key) == len(items) and set(key) <= option_digits:
-            return "matching", {"items": items, "options": options, "key": key}
+            return "matching", {
+                "items": items, "options": options, "key": key, "table": table,
+            }
 
     if len(parts) == 1 and is_valid_numeric_answer(key):
         variants = [key]
@@ -628,8 +654,21 @@ def _glued_answer(prompt: str, variants: list[str]) -> bool:
     return False
 
 
+def strip_answer_sheet_instructions(prompt: str) -> str:
+    """Drop the sentences that tell the student where to write the answer."""
+    lines = []
+    for line in prompt.split("\n"):
+        for pattern in ANSWER_SHEET_SENTENCES:
+            line = pattern.sub("", line)
+        line = re.sub(r"\s+", " ", line).strip()
+        if line:
+            lines.append(line)
+    return "\n".join(lines)
+
+
 def _option_label(value: str) -> str | None:
-    cleaned = clean_line(value)
+    # List punctuation reads as a typo once every option is its own control.
+    cleaned = clean_line(value).rstrip(";,").rstrip()
     return cleaned if 1 <= len(cleaned) <= MAX_OPTION_LABEL_CHARS else None
 
 
@@ -641,7 +680,9 @@ def build_question(
     *,
     verified_at: str,
 ) -> dict[str, Any] | str:
-    prompt = build_prompt(task, skip_tables=kind == "matching")
+    prompt = build_prompt(task, skip_table=payload.get("table") if kind == "matching" else None)
+    if kind in UI_COLLECTS_THE_ANSWER:
+        prompt = strip_answer_sheet_instructions(prompt)
     if not prompt:
         return "empty_prompt"
     if kind == "input" and payload.get("sequence") and not SEQUENCE_MARKERS.search(prompt):
@@ -832,6 +873,8 @@ def _rejection(
         return "too_many_figures"
     if not images and FIGURE_WORDS.search(question["prompt"]):
         return "missing_figure"
+    if len(FLATTENED_MATCHING.findall(question["prompt"])) >= 2:
+        return "unreadable_matching"
     if EXTERNAL_RESOURCE.search(question["prompt"]):
         return "external_resource"
     return validate_question(question)

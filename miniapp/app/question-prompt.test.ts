@@ -82,6 +82,8 @@ describe("parseQuestionPrompt", () => {
 describe("cleanAnswerLabel", () => {
   it("removes duplicated source numbering from answer buttons", () => {
     expect(cleanAnswerLabel("3) расщепление углеводов")).toBe("расщепление углеводов");
+    expect(cleanAnswerLabel("А. Восстание декабристов")).toBe("Восстание декабристов");
+    expect(cleanAnswerLabel("1. 1185 г.")).toBe("1185 г.");
   });
 
   it("keeps ordinary answer text unchanged", () => {

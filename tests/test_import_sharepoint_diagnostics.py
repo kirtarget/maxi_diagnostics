@@ -345,8 +345,9 @@ def test_the_repository_catalog_holds_only_sharepoint_questions():
             question["id"].startswith(importer.ID_PREFIX)
             for question in document["questions"]
         ), path.name
-        assert 1 <= document["quick_count"] <= 5, path.name
-        assert document["quick_count"] <= len(document["questions"]), path.name
+        # The quick diagnostic asks eight questions, or the whole file when it
+        # holds fewer than eight.
+        assert document["quick_count"] == min(8, len(document["questions"])), path.name
 
 
 def test_reordered_numeric_keys_become_accepted_input_variants():
@@ -703,3 +704,107 @@ def test_verified_at_can_be_pinned_to_a_given_day(tmp_path):
         question["source"]["verified_at"] == "2026-09-04"
         for question in imported_questions
     )
+
+
+def test_a_matching_table_labelled_with_dots_becomes_a_matching_question():
+    """Editors label the two columns with a dot as often as with a bracket."""
+    table = importer.SourceTable(rows=(
+        (("События",), ("Годы",)),
+        (("А. Первое событие",), ("1. 1185 г.",)),
+        (("Б. Второе событие",), ("2. 1825 г.",)),
+        (("B. Третье событие",), ("3. 1613 г.",)),
+        ((), ("4. 1762 г.",)),
+    ))
+    task = importer.SourceTask(
+        number=1,
+        prompt_blocks=["Установите соответствие."],
+        prompt_tables=[table],
+        answer=["213"],
+    )
+
+    kind, payload = importer.classify(task)
+
+    assert kind == "matching"
+    # The third row is labelled with a Latin B that looks like the Cyrillic one.
+    assert len(payload["items"]) == 3
+    assert [digit for digit, _ in payload["options"]] == ["1", "2", "3", "4"]
+
+
+def test_an_unreadable_matching_table_is_skipped_instead_of_flattened():
+    """A table the converter cannot read renders as `left | right` noise."""
+    table = importer.SourceTable(rows=(
+        (("Величины",), ("Значения",)),
+        (("Первый пункт без буквы",), ("1) Первое",)),
+        (("Б) Второй пункт",), ("2) Второе",)),
+        ((), ("3) Третье",)),
+    ))
+    task = importer.SourceTask(
+        number=1,
+        prompt_blocks=["Установите соответствие."],
+        prompt_tables=[table],
+        answer=["12"],
+    )
+    kind, payload = importer.classify(task)
+    assert kind == "input"
+
+    question = importer.build_question(
+        importer.SourceFile(Path("f.docx"), "ЕГЭ", "physics", 2022, 1, ()),
+        task, kind, payload, verified_at="2026-09-04",
+    )
+
+    assert importer._rejection(question, []) == "unreadable_matching"
+
+
+def test_answer_sheet_instructions_leave_the_prompt_the_app_collects():
+    """The Mini App collects the answer, so telling the student where to write it lies."""
+    stripped = importer.strip_answer_sheet_instructions(
+        "Установите соответствие между событиями и годами.\n"
+        "В ответ запишите последовательность цифр, соответствующую буквам АБВ."
+    )
+    assert stripped == "Установите соответствие между событиями и годами."
+
+    # The sentence survives without its full stop in some documents.
+    assert importer.strip_answer_sheet_instructions(
+        "Подберите позицию второго столбца.\nВ ответ запишите последовательность цифр"
+    ) == "Подберите позицию второго столбца."
+
+    # A task that is genuinely about writing a measurement keeps its wording.
+    kept = "Запишите результат измерения напряжения с учётом погрешности."
+    assert importer.strip_answer_sheet_instructions(kept) == kept
+
+
+def test_option_labels_drop_the_list_punctuation_of_their_source():
+    assert importer._option_label("Реформация в Германии;") == "Реформация в Германии"
+    assert importer._option_label("вторая позиция,") == "вторая позиция"
+    assert importer._option_label("обычный вариант") == "обычный вариант"
+
+
+def test_a_matching_task_keeps_the_data_table_it_reasons_about():
+    """Only the table that became the pairs is dropped from the prompt."""
+    data = importer.SourceTable(rows=(
+        (("Статья",), ("Доля",)),
+        (("На армию",), ("40 %",)),
+        (("На флот",), ("10 %",)),
+    ))
+    pairs = importer.SourceTable(rows=(
+        (("Начала",), ("Завершения",)),
+        (("А) Расходы на армию",), ("1) Составляли более половины.",)),
+        (("Б) Расходы на флот",), ("2) Были меньше десятой части.",)),
+    ))
+    task = importer.SourceTask(
+        number=7,
+        prompt_blocks=["Используя данные таблицы, завершите суждения."],
+        prompt_tables=[data, pairs],
+        answer=["12"],
+    )
+
+    kind, payload = importer.classify(task)
+    assert kind == "matching"
+
+    question = importer.build_question(
+        importer.SourceFile(Path("f.docx"), "ОГЭ", "history", 2022, 1, ()),
+        task, kind, payload, verified_at="2026-09-04",
+    )
+
+    assert "На армию | 40 %" in question["prompt"]
+    assert "Составляли более половины" not in question["prompt"]

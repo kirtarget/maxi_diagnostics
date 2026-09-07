@@ -3,8 +3,8 @@
   "exam": "ЕГЭ",
   "subject": "Литература",
   "mark": "Диагностика",
-  "quick_count": 3,
-  "full_count": 7,
+  "quick_count": 8,
+  "full_count": 13,
   "scoring": {
     "max_score": 100,
     "score_unit": "accuracy_percent"
@@ -56,14 +56,48 @@
     },
     {
       "id": "sp-literature-ege-2022-q3",
-      "type": "input",
+      "type": "matching",
       "topic": "Задание 3",
       "title": "Задание 3",
-      "prompt": "Установите соответствие между персонажами романа И. А. Гончарова и их дальнейшей судьбой: к каждой позиции первого столбца подберите соответствующую позицию из второго столбца.\nВ ответ запишите последовательность цифр, соответствующую буквам АБВ.\nПЕРСОНАЖИ | ПРОИЗВЕДЕНИЯ\nА. Штольц | 1. Цинично присвоит чужое имущество\nБ. Захар | 2. Тихо уйдет из жизни\nВ. Обломов | 3. Окажется на паперти\n___ | 4. Женится на Ольге Ильинской\nВведите последовательность цифр без пробелов.",
+      "prompt": "Установите соответствие между персонажами романа И. А. Гончарова и их дальнейшей судьбой: к каждой позиции первого столбца подберите соответствующую позицию из второго столбца.",
       "max_primary_score": 1,
-      "correct": [
-        "432"
+      "items": [
+        {
+          "id": "i1",
+          "label": "А. Штольц"
+        },
+        {
+          "id": "i2",
+          "label": "Б. Захар"
+        },
+        {
+          "id": "i3",
+          "label": "В. Обломов"
+        }
       ],
+      "options": [
+        {
+          "id": "o1",
+          "label": "1. Цинично присвоит чужое имущество"
+        },
+        {
+          "id": "o2",
+          "label": "2. Тихо уйдет из жизни"
+        },
+        {
+          "id": "o3",
+          "label": "3. Окажется на паперти"
+        },
+        {
+          "id": "o4",
+          "label": "4. Женится на Ольге Ильинской"
+        }
+      ],
+      "correct": {
+        "i1": "o4",
+        "i2": "o3",
+        "i3": "o2"
+      },
       "explanation": "Штольц женится на Ольге Ильинской, Обломов найдет тихое семейное счастье в доме Агафьи Пшеницыной, однако рано уйдет из жизни из-за апоплексического удара. Его слуга Захар, оставшийся без хозяина, окажется на паперти.",
       "source": {
         "provider": "maximum_editorial",
@@ -182,6 +216,1842 @@
       "source": {
         "provider": "maximum_editorial",
         "official_year": 2022,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-evgenij-onegin-q1",
+      "type": "single",
+      "topic": "произведения 19 века",
+      "title": "Задание 1",
+      "prompt": "В каком году вышло первое полное издание романа?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "1823"
+        },
+        {
+          "id": "b",
+          "label": "1830"
+        },
+        {
+          "id": "c",
+          "label": "1832"
+        },
+        {
+          "id": "d",
+          "label": "1833"
+        }
+      ],
+      "correct": "d",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-evgenij-onegin-q2",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 2",
+      "prompt": "К какому литературному жанру относится «Евгений Онегин»?",
+      "max_primary_score": 1,
+      "correct": [
+        "роман в стихах"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-evgenij-onegin-q3",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 3",
+      "prompt": "Как называется композиция, свойственная «Евгению Онегину»?",
+      "max_primary_score": 1,
+      "correct": [
+        "зеркальная"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-evgenij-onegin-q4",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 4",
+      "prompt": "Какой критик называл «ЕО» «энциклопедией русской жизни»?",
+      "max_primary_score": 1,
+      "correct": [
+        "Белинский"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-evgenij-onegin-q5",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 5",
+      "prompt": "Какое название получила строфа, которой написано произведение?",
+      "max_primary_score": 1,
+      "correct": [
+        "Онегинская"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-evgenij-onegin-q6",
+      "type": "multiple",
+      "topic": "произведения 19 века",
+      "title": "Задание 6",
+      "prompt": "Какие из перечисленных качеств характерны для литературного типа «лишнего человека»?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Одиночество"
+        },
+        {
+          "id": "b",
+          "label": "Внутренний бунт"
+        },
+        {
+          "id": "c",
+          "label": "Низкое социальное положение"
+        },
+        {
+          "id": "d",
+          "label": "Душевная усталость"
+        },
+        {
+          "id": "e",
+          "label": "Неудовлетворённая потребность в самореализации"
+        }
+      ],
+      "selection_limit": 3,
+      "correct": [
+        "a",
+        "d",
+        "e"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-zukovskij-q1",
+      "type": "multiple",
+      "topic": "произведения 19 века",
+      "title": "Задание 1",
+      "prompt": "Что из перечисленного является чертами романтизма?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Культ природы"
+        },
+        {
+          "id": "b",
+          "label": "Три единства"
+        },
+        {
+          "id": "c",
+          "label": "Объективность изображения"
+        },
+        {
+          "id": "d",
+          "label": "Воспевание индивидуализма"
+        },
+        {
+          "id": "e",
+          "label": "Тема долга"
+        },
+        {
+          "id": "f",
+          "label": "Культ чувства"
+        }
+      ],
+      "selection_limit": 3,
+      "correct": [
+        "a",
+        "d",
+        "f"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-zukovskij-q2",
+      "type": "multiple",
+      "topic": "произведения 19 века",
+      "title": "Задание 2",
+      "prompt": "Чьё творчество относится к романтизму?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Шиллер"
+        },
+        {
+          "id": "b",
+          "label": "Тютчев"
+        },
+        {
+          "id": "c",
+          "label": "Пушкин"
+        },
+        {
+          "id": "d",
+          "label": "Фет"
+        },
+        {
+          "id": "e",
+          "label": "Гоголь"
+        }
+      ],
+      "selection_limit": 3,
+      "correct": [
+        "a",
+        "b",
+        "c"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-zukovskij-q3",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 3",
+      "prompt": "К какому жанру, связанному с печальным настроением и философскими размышлениями, относится «Море»?",
+      "max_primary_score": 1,
+      "correct": [
+        "элегия"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-zukovskij-q4",
+      "type": "multiple",
+      "topic": "произведения 19 века",
+      "title": "Задание 4",
+      "prompt": "Какие средства выразительности используются в следующих строках?\nТекст: Безмолвное море, лазурное море,\nСтою очарован над бездной твоей.\nТы живо; ты дышишь; смятенной любовью,\nТревожною думой наполнено ты.",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Эпитет"
+        },
+        {
+          "id": "b",
+          "label": "Повтор"
+        },
+        {
+          "id": "c",
+          "label": "Метонимия"
+        },
+        {
+          "id": "d",
+          "label": "Олицетворение"
+        },
+        {
+          "id": "e",
+          "label": "Риторическое восклицание"
+        }
+      ],
+      "selection_limit": 3,
+      "correct": [
+        "a",
+        "b",
+        "d"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-zukovskij-q5",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 5",
+      "prompt": "Определите стихотворный размер стихотворения «Море»",
+      "max_primary_score": 1,
+      "correct": [
+        "амфибрахий"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-zukovskij-q6",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 6",
+      "prompt": "Кто был автором немецкой баллады, послужившей прототипом «Светлане»?",
+      "max_primary_score": 1,
+      "correct": [
+        "Бюргер"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-zukovskij-q7",
+      "type": "multiple",
+      "topic": "произведения 19 века",
+      "title": "Задание 7",
+      "prompt": "Какие из перечисленных черт характерны для жанра баллады?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Обращение к фольклору"
+        },
+        {
+          "id": "b",
+          "label": "Лирические отступления"
+        },
+        {
+          "id": "c",
+          "label": "Трагический финал"
+        },
+        {
+          "id": "d",
+          "label": "Мистика"
+        },
+        {
+          "id": "e",
+          "label": "Напряжённый сюжет"
+        }
+      ],
+      "selection_limit": 3,
+      "correct": [
+        "a",
+        "d",
+        "e"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-kapitanskaa-docka-q1",
+      "type": "matching",
+      "topic": "произведения 19 века",
+      "title": "Задание 1",
+      "prompt": "Установите соответствие, между именами героев и событиями, случившимися с ними. К каждой позиции из первого столбца подберите соответствующую позицию из второго столбца. В ответе укажите цифры в соответствии буквам АБВГД.",
+      "max_primary_score": 1,
+      "items": [
+        {
+          "id": "i1",
+          "label": "А. Савельич"
+        },
+        {
+          "id": "i2",
+          "label": "Б. Капитан Миронов"
+        },
+        {
+          "id": "i3",
+          "label": "В. Швабрин"
+        },
+        {
+          "id": "i4",
+          "label": "Г. Андрей Карлович Р."
+        }
+      ],
+      "options": [
+        {
+          "id": "o1",
+          "label": "1. присягает Пугачёву"
+        },
+        {
+          "id": "o2",
+          "label": "2. не помогает Петруше спасти Машу"
+        },
+        {
+          "id": "o3",
+          "label": "3. спасает своего барина от казни"
+        },
+        {
+          "id": "o4",
+          "label": "4. погибает от рук пугачёвцев"
+        },
+        {
+          "id": "o5",
+          "label": "5. казнён Пугачёвым"
+        }
+      ],
+      "correct": {
+        "i1": "o3",
+        "i2": "o5",
+        "i3": "o1",
+        "i4": "o2"
+      },
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-kapitanskaa-docka-q2",
+      "type": "input",
+      "topic": "произведения 19 века",
+      "title": "Задание 2",
+      "prompt": "Какая/какие из перечисленных тем не поднимаются в «Капитанской дочке»?\nВарианты ответа:\nНравственный выбор\nНарод и власть\nДружба\nВоспитание\nЖизнь и смерть",
+      "max_primary_score": 1,
+      "correct": [
+        "5"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-kapitanskaa-docka-q3",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 3",
+      "prompt": "Какой эпиграф предпослан всему произведению?",
+      "max_primary_score": 1,
+      "correct": [
+        "Береги честь смолоду"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-kapitanskaa-docka-q4",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 4",
+      "prompt": "Как называется фольклорный жанр - нравоучительная законченная фраза или словосочетание? К этому жанру относится выражение, из которого взят эпиграф «Капитанской дочки».",
+      "max_primary_score": 1,
+      "correct": [
+        "пословица"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-kapitanskaa-docka-q5",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 5",
+      "prompt": "К какому роду литературы относится «Капитанская дочка»?",
+      "max_primary_score": 1,
+      "correct": [
+        "эпос"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-kapitanskaa-docka-q6",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 6",
+      "prompt": "К какому литературному жанру относится «Капитанская дочка»?",
+      "max_primary_score": 1,
+      "correct": [
+        "роман"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-kapitanskaa-docka-q7",
+      "type": "matching",
+      "topic": "произведения 19 века",
+      "title": "Задание 7",
+      "prompt": "Установите соответствие, между названием глав и событиями, происходящими в них. К каждой позиции первого столбца подберите соответствующую позицию из второго столбца. В ответе укажите цифры в соответствии буквам АБВГДЕ.",
+      "max_primary_score": 1,
+      "items": [
+        {
+          "id": "i1",
+          "label": "А. Вожатый"
+        },
+        {
+          "id": "i2",
+          "label": "Б. Поединок"
+        },
+        {
+          "id": "i3",
+          "label": "В. Приступ"
+        },
+        {
+          "id": "i4",
+          "label": "Г. Незваный гость"
+        },
+        {
+          "id": "i5",
+          "label": "Д. Мятежная слобода"
+        },
+        {
+          "id": "i6",
+          "label": "Е. Суд"
+        }
+      ],
+      "options": [
+        {
+          "id": "o1",
+          "label": "1. Швабрин высмеивает стихи Гринёва, посвящённые Маше. Между ними происходит дуэль."
+        },
+        {
+          "id": "o2",
+          "label": "2. Гринёв пытается узнать о судьбе Марьи Ивановны и присутствует на пире приспешников Пугачёва."
+        },
+        {
+          "id": "o3",
+          "label": "3. Петруша возвращается в Белогорскую крепость и по пути встречает Пугачёва. Он рассказывает Гринёву сказку об орле и вороне."
+        },
+        {
+          "id": "o4",
+          "label": "4. Гринёв и Савельич теряются во время метели, дорогу им помогает найти неизвестный крестьянин."
+        },
+        {
+          "id": "o5",
+          "label": "5. Марья Ивановна едет в Петербург хлопотать об освобождении Петра."
+        },
+        {
+          "id": "o6",
+          "label": "6. Войско Пугачёва осаждает Белогорскую крепость. Погибают Иван Кузьмич и Василиса Егоровна."
+        }
+      ],
+      "correct": {
+        "i1": "o4",
+        "i2": "o1",
+        "i3": "o6",
+        "i4": "o2",
+        "i5": "o3",
+        "i6": "o5"
+      },
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-lermontov-poezia-q1",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 1",
+      "prompt": "Из какого стихотворения взят данный отрывок?\n«С души как бремя скатится,\nСомненье далеко —\nИ верится, и плачется,\nИ так легко, легко…»",
+      "max_primary_score": 1,
+      "correct": [
+        "Молитва"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-lermontov-poezia-q2",
+      "type": "multiple",
+      "topic": "произведения 19 века",
+      "title": "Задание 2",
+      "prompt": "Выберите стихотворения Лермонтова, которые посвящены теме любви:",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Из-под таинственной, холодной полумаски"
+        },
+        {
+          "id": "b",
+          "label": "Нет, не тебя так пылко я люблю"
+        },
+        {
+          "id": "c",
+          "label": "Молитва"
+        },
+        {
+          "id": "d",
+          "label": "Валерик"
+        },
+        {
+          "id": "e",
+          "label": "Нищий"
+        },
+        {
+          "id": "f",
+          "label": "Выхожу один я на дорогу"
+        }
+      ],
+      "selection_limit": 4,
+      "correct": [
+        "a",
+        "b",
+        "d",
+        "e"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-lermontov-poezia-q3",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 3",
+      "prompt": "Определите стихотворный размер стихотворения «Выхожу один я на дорогу» (без количества стоп).\nВыхожу один я на дорогу;\nСквозь туман кремнистый путь блестит;\nНочь тиха. Пустыня внемлет богу,\nИ звезда с звездою говорит.",
+      "max_primary_score": 1,
+      "correct": [
+        "хорей"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-lermontov-poezia-q4",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 4",
+      "prompt": "Какова основная тема стихотворения «Когда волнуется желтеющая нива»?",
+      "max_primary_score": 1,
+      "correct": [
+        "природа"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-lermontov-poezia-q5",
+      "type": "matching",
+      "topic": "произведения 19 века",
+      "title": "Задание 5",
+      "prompt": "Установите соответствие между названиями стихотворений и их идеями. К каждой позиции первого столбца подберите соответствующую позицию из второго столбца. В ответе укажите цифры в соответствии буквамАБВГД.",
+      "max_primary_score": 1,
+      "items": [
+        {
+          "id": "i1",
+          "label": "А) «Нет, я не Байрон, я другой…»"
+        },
+        {
+          "id": "i2",
+          "label": "Б) Парус"
+        },
+        {
+          "id": "i3",
+          "label": "В) Бородино"
+        },
+        {
+          "id": "i4",
+          "label": "Г) Дума"
+        },
+        {
+          "id": "i5",
+          "label": "Д) Три пальмы"
+        }
+      ],
+      "options": [
+        {
+          "id": "o1",
+          "label": "1) Борьба человека с жизненными трудностями, одиночество"
+        },
+        {
+          "id": "o2",
+          "label": "2) Осуждение своего поколения"
+        },
+        {
+          "id": "o3",
+          "label": "3) Анализ своего жизненного и поэтического пути"
+        },
+        {
+          "id": "o4",
+          "label": "4) Патриотизм, восхищение героическим прошлым России"
+        },
+        {
+          "id": "o5",
+          "label": "5) Отражение мира человеческих отношений в природе"
+        }
+      ],
+      "correct": {
+        "i1": "o3",
+        "i2": "o1",
+        "i3": "o4",
+        "i4": "o2",
+        "i5": "o5"
+      },
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-lermontov-poezia-q6",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 6",
+      "prompt": "Определите жанр стихотворения «И скучно и грустно…»",
+      "max_primary_score": 1,
+      "correct": [
+        "элегия"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-mertvye-dusi-q1",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 1",
+      "prompt": "Какое жанровое определение дал Гоголь своему произведению?",
+      "max_primary_score": 1,
+      "correct": [
+        "поэма"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-mertvye-dusi-q2",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 2",
+      "prompt": "Какая основная тема «Мёртвых душ»?",
+      "max_primary_score": 1,
+      "correct": [
+        "Россия"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-mertvye-dusi-q3",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 3",
+      "prompt": "Из труда какого критика, анализировавшего творчество Гоголя, взяты слова: «Все эти ноздревы,маниловы и все прочие — вот мертвые души, и мы их встречаем на каждом шагу»?",
+      "max_primary_score": 1,
+      "correct": [
+        "Герцен"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-mertvye-dusi-q4",
+      "type": "matching",
+      "topic": "произведения 19 века",
+      "title": "Задание 4",
+      "prompt": "Установите соответствие, сопоставив персонажей, с деталями, характеризующими их. К каждой позиции первого столбца подберите соответствующую позицию из второго столбца. В ответе укажите цифры в соответствии буквам АБВГ.",
+      "max_primary_score": 1,
+      "items": [
+        {
+          "id": "i1",
+          "label": "А) Чичиков"
+        },
+        {
+          "id": "i2",
+          "label": "Б) Манилов"
+        },
+        {
+          "id": "i3",
+          "label": "В) Коробочка"
+        },
+        {
+          "id": "i4",
+          "label": "Г) Губернатор"
+        }
+      ],
+      "options": [
+        {
+          "id": "o1",
+          "label": "1. Книга, открытая на 14 странице"
+        },
+        {
+          "id": "o2",
+          "label": "2. Вышивка по тюлю"
+        },
+        {
+          "id": "o3",
+          "label": "3. Шкатулка"
+        },
+        {
+          "id": "o4",
+          "label": "4. Мешочки, конверты, сумочки"
+        }
+      ],
+      "correct": {
+        "i1": "o3",
+        "i2": "o1",
+        "i3": "o4",
+        "i4": "o2"
+      },
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-mertvye-dusi-q5",
+      "type": "matching",
+      "topic": "произведения 19 века",
+      "title": "Задание 5",
+      "prompt": "Установите соответствие, сопоставив персонажей из народа и их характеристики. К каждой позиции первого столбца подберите соответствующую позицию из второго столбца. В ответе укажите цифры в соответствии буквам АБВГД.",
+      "max_primary_score": 1,
+      "items": [
+        {
+          "id": "i1",
+          "label": "А) Дядя Митяй"
+        },
+        {
+          "id": "i2",
+          "label": "Б) Селифан"
+        },
+        {
+          "id": "i3",
+          "label": "В) Девчонка Коробочки"
+        },
+        {
+          "id": "i4",
+          "label": "Г) Петрушка"
+        },
+        {
+          "id": "i5",
+          "label": "Д) Степан Пробка"
+        }
+      ],
+      "options": [
+        {
+          "id": "o1",
+          "label": "1. Пьяный разговаривает с лошадьми"
+        },
+        {
+          "id": "o2",
+          "label": "2. Любит книги"
+        },
+        {
+          "id": "o3",
+          "label": "3. Не знает, где право и где лево"
+        },
+        {
+          "id": "o4",
+          "label": "4. Не может развести запутавшихся в упряжи лошадей"
+        },
+        {
+          "id": "o5",
+          "label": "5. Талантливый плотник богатырского телосложения"
+        }
+      ],
+      "correct": {
+        "i1": "o4",
+        "i2": "o1",
+        "i3": "o3",
+        "i4": "o2",
+        "i5": "o5"
+      },
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-mertvye-dusi-q6",
+      "type": "text",
+      "topic": "произведения 19 века",
+      "title": "Задание 6",
+      "prompt": "К какому литературному направлению относится творчество Гоголя?",
+      "max_primary_score": 1,
+      "correct": [
+        "реализм"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-napravlenia-i-predstaviteli-q1",
+      "type": "text",
+      "topic": "теория литературы",
+      "title": "Задание 1",
+      "prompt": "К какой группе литературных направлений относятся имажинизм, акмеизм, символизм и футуризм?",
+      "max_primary_score": 1,
+      "correct": [
+        "модернизм"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-napravlenia-i-predstaviteli-q2",
+      "type": "single",
+      "topic": "теория литературы",
+      "title": "Задание 2",
+      "prompt": "Для какого литературного направления характерна строгая иерархия жанров?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Классицизм"
+        },
+        {
+          "id": "b",
+          "label": "Романтизм"
+        },
+        {
+          "id": "c",
+          "label": "Постмодернизм"
+        },
+        {
+          "id": "d",
+          "label": "Соцреализм"
+        }
+      ],
+      "correct": "a",
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-napravlenia-i-predstaviteli-q3",
+      "type": "multiple",
+      "topic": "теория литературы",
+      "title": "Задание 3",
+      "prompt": "Какие из перечисленных черт свойственны реализму?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Три единства"
+        },
+        {
+          "id": "b",
+          "label": "Культ природы"
+        },
+        {
+          "id": "c",
+          "label": "Историзм"
+        },
+        {
+          "id": "d",
+          "label": "Исключительный герой в исключительных обстоятельствах"
+        },
+        {
+          "id": "e",
+          "label": "Типичный герой в типичных обстоятельствах"
+        },
+        {
+          "id": "f",
+          "label": "Психологизм"
+        }
+      ],
+      "selection_limit": 3,
+      "correct": [
+        "c",
+        "e",
+        "f"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-napravlenia-i-predstaviteli-q4",
+      "type": "text",
+      "topic": "теория литературы",
+      "title": "Задание 4",
+      "prompt": "Какому направлению свойственны двоемирие, идея эскапизма и идея самоценности личности?",
+      "max_primary_score": 1,
+      "correct": [
+        "романтизм"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-napravlenia-i-predstaviteli-q5",
+      "type": "text",
+      "topic": "теория литературы",
+      "title": "Задание 5",
+      "prompt": "К какому литературному направлению относится творчество В. Ерофеева?",
+      "max_primary_score": 1,
+      "correct": [
+        "постмодернизм"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-napravlenia-i-predstaviteli-q6",
+      "type": "multiple",
+      "topic": "теория литературы",
+      "title": "Задание 6",
+      "prompt": "Какие из перечисленных черт свойственны сентиментализму?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Бунтарство"
+        },
+        {
+          "id": "b",
+          "label": "Элегия как один из основных жанров"
+        },
+        {
+          "id": "c",
+          "label": "Объективное изображение действительности"
+        },
+        {
+          "id": "d",
+          "label": "Культ чувств"
+        },
+        {
+          "id": "e",
+          "label": "Тема смерти"
+        }
+      ],
+      "selection_limit": 3,
+      "correct": [
+        "b",
+        "d",
+        "e"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-nedorosl-q1",
+      "type": "text",
+      "topic": "произведения до 19 века",
+      "title": "Задание 1",
+      "prompt": "Государственная политика какого императора стала основой для комедии? Имя напишите в именительном падеже",
+      "max_primary_score": 1,
+      "correct": [
+        "Екатерина Вторая"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-nedorosl-q3",
+      "type": "text",
+      "topic": "произведения до 19 века",
+      "title": "Задание 3",
+      "prompt": "Как называется конфликт, обязательно заканчивающийся победой одной из противоборствующих сторон и проходящий через всё произведение?",
+      "max_primary_score": 1,
+      "correct": [
+        "Драматический"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-nedorosl-q5",
+      "type": "matching",
+      "topic": "произведения до 19 века",
+      "title": "Задание 5",
+      "prompt": "Установите соответствие, сопоставив персонажей, с деталями их образов.\nК каждой позиции первого столбца подберите соответствующую позицию из второго столбца. В ответе укажите цифры без пробелов, в соответствии буквам АБВГ.",
+      "max_primary_score": 1,
+      "items": [
+        {
+          "id": "i1",
+          "label": "А. Простакова"
+        },
+        {
+          "id": "i2",
+          "label": "Б. Стародум"
+        },
+        {
+          "id": "i3",
+          "label": "В. Правдин"
+        },
+        {
+          "id": "i4",
+          "label": "Г. Простаков"
+        }
+      ],
+      "options": [
+        {
+          "id": "o1",
+          "label": "1. Называет узкий кафтан мешковатым"
+        },
+        {
+          "id": "o2",
+          "label": "2. Любит французские романы"
+        },
+        {
+          "id": "o3",
+          "label": "3. Не умеет читать"
+        },
+        {
+          "id": "o4",
+          "label": "4. Наказывает пороки других"
+        },
+        {
+          "id": "o5",
+          "label": "5. Офицер Петровского времени"
+        }
+      ],
+      "correct": {
+        "i1": "o3",
+        "i2": "o5",
+        "i3": "o4",
+        "i4": "o1"
+      },
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-nedorosl-q6",
+      "type": "text",
+      "topic": "произведения до 19 века",
+      "title": "Задание 6",
+      "prompt": "Как называется форма общения двух и более персонажей, заключающаяся в обмене репликами?",
+      "max_primary_score": 1,
+      "correct": [
+        "диалог"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-pamatnik-q1",
+      "type": "text",
+      "topic": "произведения до 19 века",
+      "title": "Задание 1",
+      "prompt": "К какому литературному направлению относится творчество Державина?",
+      "max_primary_score": 1,
+      "correct": [
+        "классицизм"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-pamatnik-q2",
+      "type": "text",
+      "topic": "произведения до 19 века",
+      "title": "Задание 2",
+      "prompt": "Какой ключевой конфликт в этом направлении? Ответ напишите в именительном падеже.",
+      "max_primary_score": 1,
+      "correct": [
+        "долг и чувство"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-pamatnik-q3",
+      "type": "text",
+      "topic": "произведения до 19 века",
+      "title": "Задание 3",
+      "prompt": "Как называются устойчивые характеры персонажей, переходящие из пьесы в пьесу?",
+      "max_primary_score": 1,
+      "correct": [
+        "амплуа"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-pamatnik-q4",
+      "type": "input",
+      "topic": "произведения до 19 века",
+      "title": "Задание 4",
+      "prompt": "Дополните стихотворение словами из списка.\nВ ответе укажите последовательность цифр без пробелов, мысленно заполняя словами пустые места в стихотворении.\nТекст стихотворения:\nЯ памятник себе воздвиг ___ ___,\nМеталлов тверже он и выше пирамид;\nНи вихрь его, ни гром не сломит быстротечный,\nИ времени полет его не сокрушит.\nТак! ― весь я не умру, но часть меня большая,\nОт тлена убежав, по смерти станет жить,\nИ слава возрастет моя, не увядая,\nДоколь ___ род вселенна будет чтить.\nСлух пройдет обо мне от Белых вод до Черных,\nГде Волга, Дон, Нева, с Рифея льет Урал;\nВсяк будет помнить то в народах неисчетных,\nКак из безвестности я тем известен стал,\nЧто первый я дерзнул в ____ русском слоге\nО добродетелях Фелицы возгласить,\nВ сердечной простоте беседовать о боге\nИ истину царям ____ говорить.\nО ___! возгордись заслугой справедливой,\nИ презрит кто тебя, сама тех презирай;\nНепринужденною рукой неторопливой\nЧело твое зарей бессмертия венчай.\nСписок слов:\n1. С улыбкой\n2. Чудесный\n3. Открыто\n4. Славянов\n5. Муза\n6. Вечный\n7. Нерукотворный\n8. Наш\n9. Екатерина\n10. Забавном\n11. Великом\nВведите последовательность цифр без пробелов.",
+      "max_primary_score": 1,
+      "correct": [
+        "2641015"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-pamatnik-q5",
+      "type": "text",
+      "topic": "произведения до 19 века",
+      "title": "Задание 5",
+      "prompt": "Определите стихотворный размер стихотворения «Памятник».",
+      "max_primary_score": 1,
+      "correct": [
+        "ямб"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-pamatnik-q6",
+      "type": "multiple",
+      "topic": "произведения до 19 века",
+      "title": "Задание 6",
+      "prompt": "Какие из перечисленных средств художественной выразительности есть во второй строфе стихотворения «Памятник»?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Метафора"
+        },
+        {
+          "id": "b",
+          "label": "Эпитет"
+        },
+        {
+          "id": "c",
+          "label": "Риторическое восклицание"
+        },
+        {
+          "id": "d",
+          "label": "Архаизм"
+        },
+        {
+          "id": "e",
+          "label": "Олицетворение"
+        }
+      ],
+      "selection_limit": 3,
+      "correct": [
+        "a",
+        "c",
+        "d"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-rody-literatury-q1",
+      "type": "multiple",
+      "topic": "теория литературы",
+      "title": "Задание 1",
+      "prompt": "Что из перечисленного относится к родам литературы?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Лирика"
+        },
+        {
+          "id": "b",
+          "label": "Комедия"
+        },
+        {
+          "id": "c",
+          "label": "Повесть"
+        },
+        {
+          "id": "d",
+          "label": "Пьеса"
+        },
+        {
+          "id": "e",
+          "label": "Эпос"
+        },
+        {
+          "id": "f",
+          "label": "Проза"
+        },
+        {
+          "id": "g",
+          "label": "Лироэпос"
+        },
+        {
+          "id": "h",
+          "label": "Драма"
+        }
+      ],
+      "selection_limit": 4,
+      "correct": [
+        "a",
+        "e",
+        "g",
+        "h"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-rody-literatury-q2",
+      "type": "text",
+      "topic": "теория литературы",
+      "title": "Задание 2",
+      "prompt": "Какой литературный критик создал теорию о родах литературы, на которую мы опираемся?\nВ ответ запишите фамилию.",
+      "max_primary_score": 1,
+      "correct": [
+        "Белинский"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-rody-literatury-q4",
+      "type": "multiple",
+      "topic": "теория литературы",
+      "title": "Задание 4",
+      "prompt": "Какие из перечисленных черт характерны для эпоса?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Поэтическая форма"
+        },
+        {
+          "id": "b",
+          "label": "Сюжет"
+        },
+        {
+          "id": "c",
+          "label": "Подробное описание героев"
+        },
+        {
+          "id": "d",
+          "label": "Изображение событий в действии"
+        },
+        {
+          "id": "e",
+          "label": "Отстранённость автора"
+        }
+      ],
+      "selection_limit": 3,
+      "correct": [
+        "b",
+        "c",
+        "e"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-rody-literatury-q5",
+      "type": "text",
+      "topic": "теория литературы",
+      "title": "Задание 5",
+      "prompt": "К какому роду литературы относятся баллада и поэма?",
+      "max_primary_score": 1,
+      "correct": [
+        "лироэпос"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-rody-literatury-q6",
+      "type": "multiple",
+      "topic": "теория литературы",
+      "title": "Задание 6",
+      "prompt": "Какие из перечисленных характеристик относятся к лирике?",
+      "max_primary_score": 1,
+      "options": [
+        {
+          "id": "a",
+          "label": "Объективность"
+        },
+        {
+          "id": "b",
+          "label": "Фокус на чувствах"
+        },
+        {
+          "id": "c",
+          "label": "Лирические отступления"
+        },
+        {
+          "id": "d",
+          "label": "Поэтическая форма"
+        },
+        {
+          "id": "e",
+          "label": "Бессюжетность"
+        }
+      ],
+      "selection_limit": 3,
+      "correct": [
+        "b",
+        "d",
+        "e"
+      ],
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-sistema-stihoslozenia-q1",
+      "type": "text",
+      "topic": "теория литературы",
+      "title": "Задание 1",
+      "prompt": "В основе какой из систем стихосложения лежит деление стиха на равные части вне зависимости от ударения?",
+      "max_primary_score": 1,
+      "correct": [
+        "силлабическая",
+        "силлабической",
+        "силлабические"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-sistema-stihoslozenia-q2",
+      "type": "text",
+      "topic": "теория литературы",
+      "title": "Задание 2",
+      "prompt": "Как называется стихотворение, в котором не соблюдается ни число ударных, ни число безударных слогов?",
+      "max_primary_score": 1,
+      "correct": [
+        "свободный стих",
+        "верлибр"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-sistema-stihoslozenia-q4",
+      "type": "text",
+      "topic": "теория литературы",
+      "title": "Задание 4",
+      "prompt": "Как называется тонический размер, в котором допускаются любые интервалы между ударными слогами?",
+      "max_primary_score": 1,
+      "correct": [
+        "акцентный стих",
+        "акцентный"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-sistema-stihoslozenia-q5",
+      "type": "text",
+      "topic": "теория литературы",
+      "title": "Задание 5",
+      "prompt": "Определите размер стихотворения А. Блока:\nЕго встречали повсюду,\nНа улицах в сонные дни.\nОн шёл и нёс своё чудо,\nСпотыкаясь в морозной тени.",
+      "max_primary_score": 1,
+      "correct": [
+        "дольник"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
+        "approval_status": "draft",
+        "source_kind": "original",
+        "source_url": "https://maximumtest.ru/",
+        "rights_status": "original",
+        "verified_at": "2026-09-04"
+      }
+    },
+    {
+      "id": "sp-literature-ege-2025-sistema-stihoslozenia-q6",
+      "type": "text",
+      "topic": "теория литературы",
+      "title": "Задание 6",
+      "prompt": "Определите размер стихотворения М. Лермонтова:\nТучки небесные, вечные странники!\nСтепью лазурною, цепью жемчужною\nМчитесь вы, будто как я же, изгнанники\nС милого севера в сторону южную.",
+      "max_primary_score": 1,
+      "correct": [
+        "дактиль"
+      ],
+      "max_length": 80,
+      "source": {
+        "provider": "maximum_editorial",
+        "official_year": 2025,
         "approval_status": "draft",
         "source_kind": "original",
         "source_url": "https://maximumtest.ru/",
