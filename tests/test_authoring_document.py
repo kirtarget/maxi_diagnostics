@@ -228,7 +228,7 @@ def test_a_converted_editorial_document_marks_what_it_could_not_read(tmp_path):
     report = migrate.convert(legacy, tmp_path / "authoring.docx")
 
     assert report["tasks"] == 2
-    assert report["clean"] == 1
+    assert report["counts"][authoring.SINGLE] == 1
     assert [number for number, _ in report["marked"]] == [2]
     assert "Тема" in report["header"]
 
@@ -238,3 +238,44 @@ def test_a_converted_editorial_document_marks_what_it_could_not_read(tmp_path):
     assert "Тип: один ответ" in text
     assert f"Тип: {authoring.SEQUENCE}" in text
     assert migrate.REVIEW in text
+
+
+def test_the_migration_moves_a_numbered_list_out_of_the_condition(tmp_path):
+    """A sequence task prints its choices inside the condition; the field is their place."""
+    rest, options = migrate._numbered_run([
+        "Установите соответствие заголовков абзацам.",
+        "1. Первый заголовок",
+        "2. Второй заголовок",
+        "3. Третий заголовок",
+        "Текст, к которому они относятся.",
+    ])
+
+    assert options == ["Первый заголовок", "Второй заголовок", "Третий заголовок"]
+    assert rest == [
+        "Установите соответствие заголовков абзацам.",
+        "Текст, к которому они относятся.",
+    ]
+
+
+def test_the_migration_leaves_a_list_that_does_not_start_at_one(tmp_path):
+    blocks = ["Текст.", "5) Пятый", "6) Шестой"]
+    assert migrate._numbered_run(blocks) == (blocks, [])
+
+
+def test_the_migration_drops_the_answer_sheet_wording(tmp_path):
+    legacy_document = tmp_path / "legacy.docx"
+    document = Document()
+    document.add_paragraph("Задание 1")
+    document.add_paragraph("Установите соответствие между событиями и годами.")
+    document.add_paragraph("В ответ запишите последовательность цифр, соответствующую буквам АБ.")
+    document.add_paragraph("Ответ:")
+    document.add_paragraph("12")
+    document.save(str(legacy_document))
+
+    migrate.convert(legacy_document, tmp_path / "authoring.docx")
+
+    text = "\n".join(
+        paragraph.text for paragraph in Document(str(tmp_path / "authoring.docx")).paragraphs
+    )
+    assert "запишите последовательность" not in text
+    assert "Установите соответствие между событиями и годами." in text
