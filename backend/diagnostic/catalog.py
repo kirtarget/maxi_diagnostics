@@ -679,6 +679,7 @@ def load_catalog(school: SchoolConfig) -> DiagnosticCatalog:
         raise ValueError("diagnostics_not_found")
     catalog = DiagnosticCatalog(diagnostics=tuple(diagnostics))
     references = [school.brand.logo]
+    references.extend(sorted(set(school.brand.message_images.keyed().values())))
     references.extend(
         asset
         for diagnostic in catalog.diagnostics

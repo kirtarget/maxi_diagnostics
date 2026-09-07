@@ -53,6 +53,55 @@ async def test_followup_sends_known_kind_and_finalizes_exact_lease(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_followup_sends_configured_image_as_one_captioned_message(monkeypatch):
+    from diagnostic import followups
+    from diagnostic.bot import sender
+
+    lease = claimed("quick_to_full")
+    context = lease | {
+        "attempt_status": "completed",
+        "result_viewed_at": None,
+        "subject": "Математика",
+        "mode": "quick",
+        "payload": {},
+    }
+    monkeypatch.setattr(
+        followups.attempts, "claim_due_notifications", AsyncMock(return_value=[lease])
+    )
+    monkeypatch.setattr(
+        followups.attempts,
+        "get_claimed_notification",
+        AsyncMock(return_value=context),
+    )
+    monkeypatch.setattr(followups, "render_message", AsyncMock(return_value="safe"))
+    monkeypatch.setattr(
+        followups.attempts, "mark_notification_sent", AsyncMock(return_value=True)
+    )
+    monkeypatch.setattr(
+        sender.message_media,
+        "get_telegram_file_id",
+        AsyncMock(return_value="full-diagnostic-file-id"),
+    )
+    bot = SimpleNamespace(
+        send_message=AsyncMock(),
+        send_photo=AsyncMock(
+            return_value=SimpleNamespace(message_id=3, photo=[])
+        ),
+    )
+
+    sent = await followups.dispatch_followups(
+        bot,
+        SimpleNamespace(miniapp_url="https://app.example"),
+        load_school(ROOT / "school"),
+    )
+
+    assert sent == 1
+    bot.send_message.assert_not_awaited()
+    assert bot.send_photo.await_args.kwargs["photo"] == "full-diagnostic-file-id"
+    assert bot.send_photo.await_args.kwargs["caption"] == "safe"
+
+
+@pytest.mark.asyncio
 async def test_followup_sends_lives_refill_reminder_without_attempt(monkeypatch):
     from diagnostic import followups
 

@@ -22,8 +22,33 @@ MESSAGE_DESCRIPTIONS: Final[dict[str, str]] = {
     "MONTH_RETEST": "Monthly retest",
     "LIVES_REFILL": "Trainer lives refilled reminder",
     "STREAK_SAVE": "Evening nudge to save an idle streak",
+    "GENERIC": "Generic diagnostic menu reminder",
 }
 MESSAGE_KEYS: Final[frozenset[str]] = frozenset(MESSAGE_DESCRIPTIONS)
+PREVIOUS_DEFAULTS: Final[dict[str, str]] = {
+    "WELCOME": "Привет! Это {school_name} — начнём готовиться?",
+    "RESULTS_EMPTY": "У тебя пока нет завершённых диагностик.",
+    "PLAN_EMPTY": "Твой учебный план появится после диагностики.",
+    "DATA_ERASED": (
+        "Данные диагностики удалены. Новую попытку можно начать через 15 минут."
+    ),
+    "QUICK_COMPLETE": "Быстрый результат по предмету «{subject}» готов!",
+    "FULL_COMPLETE": "Полный результат по предмету «{subject}» готов!",
+    "NOT_STARTED": "Начни диагностику, когда будет удобно.",
+    "INCOMPLETE": "Продолжи диагностику по предмету «{subject}».",
+    "RESULT_UNVIEWED": "Тебя ждёт результат по предмету «{subject}».",
+    "DAY_FOLLOWUP": "Вернись к результату диагностики по предмету «{subject}».",
+    "QUICK_TO_FULL": (
+        "Пройди полную диагностику и загляни в «{primary_offer_label}»: "
+        "{primary_offer_url}"
+    ),
+    "MONTH_RETEST": "Повтори диагностику по предмету «{subject}» через месяц.",
+    "LIVES_REFILL": (
+        "Жизни в тренажёре восстановились — продолжай готовиться!"
+    ),
+    "STREAK_SAVE": "Серия ещё держится. Открой план на сегодня и сохрани её.",
+    "GENERIC": "{school_name}: открой меню диагностики, чтобы продолжить.",
+}
 
 
 async def seed_messages(connection, school: SchoolConfig) -> None:
@@ -33,10 +58,15 @@ async def seed_messages(connection, school: SchoolConfig) -> None:
         INSERT INTO message_templates (key, text, description)
         VALUES ($1, $2, $3)
         ON CONFLICT (key) DO UPDATE
-           SET description=EXCLUDED.description, updated_at=now()
+           SET text=CASE
+                    WHEN message_templates.text=$4 THEN EXCLUDED.text
+                    ELSE message_templates.text
+               END,
+               description=EXCLUDED.description,
+               updated_at=now()
         """,
         [
-            (key, text, MESSAGE_DESCRIPTIONS[key])
+            (key, text, MESSAGE_DESCRIPTIONS[key], PREVIOUS_DEFAULTS.get(key, text))
             for key, text in school.brand.messages.keyed().items()
         ],
     )

@@ -37,6 +37,38 @@ def test_bot_command_menu_is_diagnostic_only():
 
 
 @pytest.mark.asyncio
+async def test_start_sends_welcome_as_photo_caption(monkeypatch):
+    from diagnostic.bot import handlers, sender
+
+    monkeypatch.setattr(handlers.attempts, "mark_opened", AsyncMock(return_value=False))
+    monkeypatch.setattr(
+        handlers,
+        "render_message",
+        AsyncMock(return_value="Привет 👋 Готовимся к ЕГЭ."),
+    )
+    monkeypatch.setattr(
+        sender.message_media,
+        "get_telegram_file_id",
+        AsyncMock(return_value="welcome-file-id"),
+    )
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=731),
+        answer=AsyncMock(),
+        answer_photo=AsyncMock(
+            return_value=SimpleNamespace(message_id=1, photo=[])
+        ),
+    )
+    school = load_school()
+
+    await handlers.send_home(message, _settings(), school, load_catalog(school))
+
+    message.answer.assert_not_awaited()
+    assert message.answer_photo.await_args.args[0] == "welcome-file-id"
+    assert "ЕГЭ" in message.answer_photo.await_args.kwargs["caption"]
+    assert message.answer_photo.await_args.kwargs["reply_markup"] is not None
+
+
+@pytest.mark.asyncio
 async def test_results_handler_reads_only_telegram_users_results(monkeypatch):
     from diagnostic.bot import handlers
 

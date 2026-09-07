@@ -259,6 +259,7 @@ def validate_repository(root: Path) -> tuple[list[str], dict[str, int | str]]:
     assets: set[str] = set()
     if brand is not None:
         assets.add(brand.logo)
+        assets.update(brand.message_images.keyed().values())
     for diagnostic in diagnostics:
         assets.update(
             asset

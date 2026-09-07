@@ -33,6 +33,7 @@ def expected_summary(root: Path) -> str:
     school = load_school(root / "school")
     catalog = load_catalog(school)
     assets = {school.brand.logo}
+    assets.update(school.brand.message_images.keyed().values())
     assets.update(
         asset
         for diagnostic in catalog.diagnostics

@@ -12,6 +12,7 @@ from aiogram import Bot
 from diagnostic import alerts
 from diagnostic.analytics import fire_event
 from diagnostic.bot.keyboards import home_keyboard, result_keyboard, webapp_keyboard
+from diagnostic.bot.sender import send_school_message
 from diagnostic.db import attempts, funnel
 from diagnostic.delivery_state import reconcile_sent_finalizer
 from diagnostic.messages import render_message
@@ -146,13 +147,27 @@ async def dispatch_followups(
                 subject=_value(row, "subject", "diagnostic"),
                 mode=_value(row, "mode", "full"),
             )
+
+            async def send_text(actual_text: str, **kwargs):
+                return await bot.send_message(
+                    chat_id=row["user_id"], text=actual_text, **kwargs
+                )
+
+            send_photo_method = getattr(bot, "send_photo", None)
+
+            async def send_photo(photo, **kwargs):
+                return await send_photo_method(
+                    chat_id=row["user_id"], photo=photo, **kwargs
+                )
+
             message = await asyncio.wait_for(
-                bot.send_message(
-                    chat_id=row["user_id"],
+                send_school_message(
+                    send_text=send_text,
+                    send_photo=send_photo if send_photo_method is not None else None,
+                    school=school,
+                    message_key=_MESSAGE_KEYS[kind],
                     text=text,
-                    parse_mode="HTML",
                     reply_markup=_keyboard(row, settings, school),
-                    disable_web_page_preview=True,
                 ),
                 timeout=30,
             )
