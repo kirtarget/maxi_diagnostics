@@ -40,6 +40,11 @@ export type QuestionProgress = {
   message: string;
 };
 
+type AnswerReadiness = {
+  isAnswered: boolean;
+  reason: string;
+};
+
 export function questionProgress(index: number, total: number): QuestionProgress {
   const current = index + 1;
   const percent = Math.round((current / total) * 100);
@@ -54,28 +59,67 @@ export function questionProgress(index: number, total: number): QuestionProgress
   return { current, total, percent, message };
 }
 
-function isAnswered(question: Question, answer: AnswerValue | undefined): boolean {
+function answerReadiness(question: Question, answer: AnswerValue | undefined): AnswerReadiness {
   switch (question.type) {
     case "single":
-      return typeof answer === "string" && answer.length > 0;
-    case "multiple":
-      return Array.isArray(answer) && answer.length === question.selection_limit;
-    case "matching":
-      return Boolean(
-        answer
+      return typeof answer === "string" && answer.length > 0
+        ? { isAnswered: true, reason: "" }
+        : { isAnswered: false, reason: "Выбери вариант" };
+    case "multiple": {
+      const selected = Array.isArray(answer) ? answer.length : 0;
+      return selected === question.selection_limit
+        ? { isAnswered: true, reason: "" }
+        : { isAnswered: false, reason: `Выбрано ${selected} из ${question.selection_limit}` };
+    }
+    case "matching": {
+      const value = answer
         && typeof answer === "object"
         && !Array.isArray(answer)
-        && question.items.every((item) => Boolean(answer[item.id])),
-      );
+          ? answer
+          : {};
+      const missing = question.items.flatMap((item, index) => {
+        if (value[item.id]) return [];
+        const marker = /^\s*([А-ЯЁA-Z0-9]+)(?:[).]|\s|$)/u.exec(item.label)?.[1];
+        return [marker ?? String(index + 1)];
+      });
+      return missing.length === 0
+        ? { isAnswered: true, reason: "" }
+        : { isAnswered: false, reason: `Осталось заполнить: ${missing.join(", ")}` };
+    }
     case "text":
-      return isValidTextInput(answer, question.max_length);
+      return isValidTextInput(answer, question.max_length)
+        ? { isAnswered: true, reason: "" }
+        : { isAnswered: false, reason: "Введи ответ" };
     case "input": {
       const tableGap = parseTableGapPrompt(question.prompt);
-      if (tableGap) return isCompleteTableGapAnswer(tableGap, answer);
+      if (tableGap) {
+        if (isCompleteTableGapAnswer(tableGap, answer)) return { isAnswered: true, reason: "" };
+        const selected = typeof answer === "string" ? [...answer] : [];
+        const duplicate = selected.find((value, index) => selected.indexOf(value) !== index);
+        return duplicate
+          ? { isAnswered: false, reason: `Вариант ${duplicate} выбран дважды` }
+          : {
+            isAnswered: false,
+            reason: `Осталось заполнить: ${tableGap.markers.slice(selected.length).join(", ")}`,
+          };
+      }
       const matching = parseSequenceMatchingPrompt(question.prompt);
-      return matching
-        ? isCompleteSequenceMatchingAnswer(matching, answer)
-        : isValidNumericInput(answer);
+      if (matching) {
+        if (isCompleteSequenceMatchingAnswer(matching, answer)) return { isAnswered: true, reason: "" };
+        const selected = typeof answer === "string" ? [...answer] : [];
+        const duplicate = matching.allowReuse
+          ? undefined
+          : selected.find((value, index) => selected.indexOf(value) !== index);
+        return duplicate
+          ? { isAnswered: false, reason: `Вариант ${duplicate} выбран дважды` }
+          : {
+            isAnswered: false,
+            reason: `Заполнено ${Math.min(selected.length, matching.left.length)} из ${matching.left.length}`,
+          };
+      }
+      return isValidNumericInput(answer)
+        ? { isAnswered: true, reason: "" }
+        : { isAnswered: false, reason: "Введи число" };
     }
     default: {
       const exhaustiveQuestion: never = question;
@@ -96,6 +140,7 @@ export function QuestionView({
   onNext,
 }: QuestionScreenProps) {
   const progress = questionProgress(index, total);
+  const readiness = answerReadiness(question, answer);
   const imagePaths = questionAssetPaths(question);
   const promptBlocks = parseQuestionPrompt(question.prompt);
   const sequenceMatching = question.type === "input"
@@ -127,6 +172,7 @@ export function QuestionView({
           <button className="back-button" onClick={onBack} type="button" aria-label={labels.back}>{labels.back}</button>
           <div className="question-progress-copy" aria-live="polite">
             <span>{labels.task_label} {progress.current} {labels.of_label} {progress.total}</span>
+            <small className="question-save-state">Прогресс сохраняется</small>
             <strong>{progress.message}</strong>
             <div
               className="question-progress-rail"
@@ -216,11 +262,13 @@ export function QuestionView({
         />
       )}
 
-      <p className="question-autosave">Прогресс сохраняется автоматически</p>
-      <button className="primary-button question-next" disabled={!isAnswered(question, answer)} onClick={onNext} type="button">
-        {index === total - 1 ? labels.get_result : labels.next_question}
-        <span aria-hidden="true">→</span>
-      </button>
+      <div className="question-action-bar">
+        <button className="primary-button question-next" disabled={!readiness.isAnswered} onClick={onNext} type="button">
+          {index === total - 1 ? labels.get_result : labels.next_question}
+          <span aria-hidden="true">→</span>
+        </button>
+        {!readiness.isAnswered && <p className="question-next-status" role="status">{readiness.reason}</p>}
+      </div>
       </div>
     </section>
   );

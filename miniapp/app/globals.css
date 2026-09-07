@@ -32,6 +32,7 @@
   --faint: color-mix(in srgb, var(--brand-ink) 42%, white);
   --line: color-mix(in srgb, var(--brand-ink) 10%, transparent);
   --line-strong: color-mix(in srgb, var(--brand-ink) 16%, transparent);
+  --control-line: color-mix(in srgb, var(--brand-ink) 38%, white);
 
   --primary-deep: color-mix(in srgb, var(--brand-primary) 68%, #150a38);
   --primary-tint: color-mix(in srgb, var(--brand-primary) 9%, var(--brand-paper));
@@ -1142,6 +1143,12 @@ select:focus-visible,
 
 .question-progress-copy strong { display: none; }
 
+.question-save-state {
+  color: color-mix(in srgb, white 72%, transparent);
+  font-size: 11px;
+  font-weight: 500;
+}
+
 .question-progress-rail {
   position: relative;
   flex: 1;
@@ -1718,7 +1725,20 @@ select:focus-visible,
 
 .table-gap-select.locked { opacity: 0.55; }
 
-/* Next + autosave */
+/* Next action */
+
+.question-action-bar {
+  position: sticky;
+  z-index: 3;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  background: var(--paper);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.06);
+}
 
 .question-screen .question-next {
   color: white;
@@ -1727,15 +1747,16 @@ select:focus-visible,
 }
 
 .question-screen .question-next:disabled {
-  color: var(--faint);
+  border: 1.5px dashed var(--control-line);
+  color: var(--muted);
   background: color-mix(in srgb, var(--brand-ink) 8%, var(--brand-background));
 }
 
-.question-autosave {
-  margin: auto 0 -6px;
-  padding-top: 10px;
-  color: var(--faint);
-  font-size: 12px;
+.question-next-status {
+  min-height: 20px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
   text-align: center;
 }
 
@@ -2963,7 +2984,7 @@ select:focus-visible,
 
 @media (min-width: 760px) {
   .app-shell { padding-bottom: 40px; }
-  .question-screen { border-radius: 28px; max-width: 430px; margin: 0 auto; overflow: hidden; }
+  .question-screen { border-radius: 28px; max-width: 430px; margin: 0 auto; overflow: clip; }
   .question-worksheet { min-height: 640px; }
 }
 
