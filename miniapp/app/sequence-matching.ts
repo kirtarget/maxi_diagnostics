@@ -62,10 +62,11 @@ export function parseSequenceMatchingPrompt(
 
   const promptBlocks = parseQuestionPrompt(prompt);
   const scaffold = markerScaffold(promptBlocks);
+  const items = promptBlocks.filter((block) => block.kind === "item");
+  const hasLatinItemMarker = items.some((item) => /^[A-Z]$/u.test(item.marker));
   const normalizeMarker = (marker: string) => scaffold.find((candidate) => candidate === marker)
     ?? scaffold.find((candidate) => LOOKALIKE_LATIN[marker] === candidate)
-    ?? marker;
-  const items = promptBlocks.filter((block) => block.kind === "item");
+    ?? (scaffold.length === 0 && hasLatinItemMarker ? LOOKALIKE_LATIN[marker] ?? marker : marker);
   const parsedLeft = [
     ...items
       .filter((item) => LETTER_MARKER.test(item.marker))

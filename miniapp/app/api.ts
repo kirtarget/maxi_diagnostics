@@ -51,6 +51,13 @@ export function apiErrorDetail(error: unknown): string | null {
   return typeof detail === "string" ? detail : null;
 }
 
+/** The question the server refused in a 422 `invalid_answer_value`, when it named one. */
+export function apiErrorQuestionId(error: unknown): string | null {
+  if (!(error instanceof Error)) return null;
+  const questionId = (error as Error & { questionId?: unknown }).questionId;
+  return typeof questionId === "string" ? questionId : null;
+}
+
 export type ProgressPayload = {
   attempt_id: string;
   session_scope: string;
@@ -568,9 +575,12 @@ export async function postDiagnostic<T>(
       if (!response.ok) {
         const error = new Error(`diagnostic_api_${response.status}`);
         try {
-          const body = await response.clone().json() as { detail?: unknown };
+          const body = await response.clone().json() as { detail?: unknown; question_id?: unknown };
           if (typeof body.detail === "string") {
             (error as Error & { detail?: string }).detail = body.detail;
+          }
+          if (typeof body.question_id === "string") {
+            (error as Error & { questionId?: string }).questionId = body.question_id;
           }
         } catch {
           // Keep the stable status error when the response has no JSON body.

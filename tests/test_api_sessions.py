@@ -287,6 +287,17 @@ def test_progress_rejects_values_that_cannot_be_restored(
     assert response.json()["detail"] == "invalid_answer_value"
 
 
+def test_invalid_answer_names_the_question_so_the_client_can_return_to_it(monkeypatch):
+    client = make_client(monkeypatch)
+    body = full_completion()
+    body["answers"]["q4"] = "не число"
+
+    response = client.post("/api/diagnostics/session/complete", json=body)
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "invalid_answer_value", "question_id": "q4"}
+
+
 @pytest.mark.parametrize(
     ("question_id", "answer"),
     [("q2", ["1"]), ("q3", {"a": "2"})],

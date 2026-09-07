@@ -11,7 +11,7 @@ import {
 } from "./question-prompt";
 import type { Question } from "./types";
 import { isCompleteSequenceMatchingAnswer, parseSequenceMatchingPrompt } from "./sequence-matching";
-import { isCompleteTableGapAnswer, parseTableGapPrompt } from "./table-gap-matching";
+import { parseTableGapPrompt } from "./table-gap-matching";
 
 describe("answerTypeLabel", () => {
   const base = { id: "q", topic: "t", title: "1", prompt: "Вопрос" };
@@ -303,7 +303,6 @@ describe("catalog table contracts", () => {
       "sp-biology-ege-2022-q1",
       "sp-biology-ege-2022-q21",
       "sp-chemistry-ege-2022-q8",
-      "sp-chemistry-oge-2022-q2",
       "sp-chemistry-oge-2022-q7",
     ]) {
       const blocks = parseQuestionPrompt(catalogQuestion(id).prompt);
@@ -328,7 +327,14 @@ describe("catalog table contracts", () => {
     expect(ogeStatements && isCompleteSequenceMatchingAnswer(ogeStatements, "1231231")).toBe(true);
   });
 
-  it("keeps biology and history gaps structured, including repeated physics choices", () => {
+  it("does not synthesize a table for the OGE chemistry q2 answer scaffold", () => {
+    const question = catalogQuestion("sp-chemistry-oge-2022-q2");
+    const blocks = parseQuestionPrompt(question.prompt);
+    expect(blocks.some((block) => block.kind === "table")).toBe(false);
+    expect(blocks.some((block) => "text" in block && /\s\|\s/u.test(block.text))).toBe(false);
+  });
+
+  it("keeps biology and history gaps structured and respects explicit numeric physics metadata", () => {
     const biologyQuestion = catalogQuestion("sp-biology-ege-2022-q20");
     const biology = parseTableGapPrompt(biologyQuestion.prompt, biologyQuestion as never);
     expect(biology?.headers).toHaveLength(3);
@@ -339,9 +345,7 @@ describe("catalog table contracts", () => {
     expect(history?.markers).toEqual(["А", "Б", "В", "Г", "Д", "Е"]);
     expect(history?.options.map((option) => option.marker)).toEqual(["1", "2", "3", "4", "5", "6", "7", "8", "9"]);
     const physics = catalogQuestion("sp-physics-ege-2022-q13");
-    const repeated = parseTableGapPrompt(physics.prompt);
-    expect(repeated?.allowReuse).toBe(true);
-    expect(repeated && isCompleteTableGapAnswer(repeated, "11")).toBe(true);
+    expect(parseTableGapPrompt(physics.prompt, physics as never)).toBeNull();
   });
 
   it("leaves English reading prose without a synthetic table", () => {
