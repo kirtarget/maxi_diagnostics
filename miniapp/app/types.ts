@@ -69,6 +69,11 @@ export type MatchingQuestion = BaseQuestion & {
 
 export type InputQuestion = BaseQuestion & {
   type: "input";
+  /** Contract-4 answer metadata. Older catalogs omit these fields. */
+  answer_format?: "number" | "sequence";
+  answer_length?: number;
+  allow_reuse?: boolean;
+  markers?: string[];
 };
 
 /** Short written answer. The server holds every accepted spelling; `max_length` only sizes the field. */
@@ -279,7 +284,7 @@ export type DailyPlanSummary = {
 
 export type BootstrapResponse = {
   onboarding?: { status: "welcome" | "selection" | "completed" };
-  catalog_contract: 3;
+  catalog_contract: 3 | 4;
   session_scope: string;
   latest_attempt_id: string | null;
   school: {

@@ -95,7 +95,7 @@ function answerReadiness(question: Question, answer: AnswerValue | undefined): A
         ? { isAnswered: true, reason: "" }
         : { isAnswered: false, reason: "Введи ответ" };
     case "input": {
-      const tableGap = parseTableGapPrompt(question.prompt);
+      const tableGap = parseTableGapPrompt(question.prompt, question);
       if (tableGap) {
         if (isCompleteTableGapAnswer(tableGap, answer)) return { isAnswered: true, reason: "" };
         const selected = typeof answer === "string" ? [...answer] : [];
@@ -107,7 +107,7 @@ function answerReadiness(question: Question, answer: AnswerValue | undefined): A
             reason: `Осталось заполнить: ${tableGap.markers.slice(selected.length).join(", ")}`,
           };
       }
-      const matching = parseSequenceMatchingPrompt(question.prompt);
+      const matching = parseSequenceMatchingPrompt(question.prompt, question);
       if (matching) {
         if (isCompleteSequenceMatchingAnswer(matching, answer)) return { isAnswered: true, reason: "" };
         const selected = typeof answer === "string" ? [...answer] : [];
@@ -118,7 +118,7 @@ function answerReadiness(question: Question, answer: AnswerValue | undefined): A
           ? { isAnswered: false, reason: `Вариант ${duplicate} выбран дважды` }
           : {
             isAnswered: false,
-            reason: `Заполнено ${Math.min(selected.length, matching.left.length)} из ${matching.left.length}`,
+            reason: `Заполнено ${Math.min(selected.length, matching.answerLength)} из ${matching.answerLength}`,
           };
       }
       return isValidNumericInput(answer)
@@ -151,10 +151,10 @@ export function QuestionView({
   const imagePaths = questionAssetPaths(question);
   const promptBlocks = parseQuestionPrompt(question.prompt);
   const sequenceMatching = question.type === "input"
-    ? parseSequenceMatchingPrompt(question.prompt)
+    ? parseSequenceMatchingPrompt(question.prompt, question)
     : null;
   const tableGap = question.type === "input"
-    ? parseTableGapPrompt(question.prompt)
+    ? parseTableGapPrompt(question.prompt, question)
     : null;
   const questionMedia = imagePaths.length > 0 && (
     <div className="question-media">
@@ -363,7 +363,7 @@ function SequenceMatchingAnswer({ matching, onChange, value }: {
   onChange: (value: string) => void;
   value: string;
 }) {
-  const selected = [...value.slice(0, matching.left.length)];
+  const selected = [...value.slice(0, matching.answerLength)];
   return (
     <section className="sequence-matching" aria-labelledby="sequence-matching-title">
       <div className="sequence-matching-intro">
@@ -372,7 +372,7 @@ function SequenceMatchingAnswer({ matching, onChange, value }: {
         <p>Для каждого пункта по очереди выберите подходящий вариант.</p>
       </div>
       <div className="sequence-matching-rows">
-        {matching.left.map((item, index) => {
+        {matching.left.slice(0, matching.answerLength).map((item, index) => {
           const rowValue = selected[index] ?? "";
           const used = new Set(selected.filter((choice, choiceIndex) => choiceIndex !== index));
           const locked = index > selected.length;

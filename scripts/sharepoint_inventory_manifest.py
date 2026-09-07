@@ -72,11 +72,20 @@ def task_fingerprint(task: importer.SourceTask) -> str:
     so hashing the key hid exactly the pairs this tool exists to find. The
     statement, the tables and the options still have to match in full.
     """
-    parts = [
-        importer.clean_block(task.prompt_blocks),
-        "\n".join(importer._render_table(table) for table in task.prompt_tables),
-        importer.clean_block(task.options),
-    ]
+    if task.prompt_nodes:
+        parts = []
+        for node in task.prompt_nodes:
+            if isinstance(node, importer.PromptParagraph):
+                parts.append(f"paragraph\n{node.text}")
+            else:
+                parts.append(f"table\n{importer._render_table(node.table)}")
+        parts.append(f"options\n{importer.clean_block(task.options)}")
+    else:
+        parts = [
+            importer.clean_block(task.prompt_blocks),
+            "\n".join(importer._render_table(table) for table in task.prompt_tables),
+            importer.clean_block(task.options),
+        ]
     return sha256_bytes("\x1f".join(parts).casefold().encode("utf-8"))
 
 

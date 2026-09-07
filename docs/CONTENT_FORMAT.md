@@ -3,6 +3,8 @@
 All files are UTF-8 strict JSON: duplicate keys, `NaN`, and `Infinity` are rejected.
 Keep IDs stable after launch. Before completion, `correct` and `explanation` are
 server-only and excluded from bootstrap, TypeScript, HTML, and public assets.
+The bootstrap `catalog_contract` is `4`. Older clients may continue to consume the
+existing fields; contract 4 adds explicit input-answer metadata.
 
 The shipped catalog is generated from the editor-approved MAXIMUM diagnostics
 exported from SharePoint by `scripts/import_sharepoint_diagnostics.py`. Every
@@ -364,7 +366,7 @@ of unique IDs in `correct`.
 
 ## Numeric input
 
-The `input` type is numeric only; free-text answers use the `text` type below. A comma or dot
+The `input` type supports numeric values and fixed marker sequences; free-text answers use the `text` type below. A comma or dot
 decimal separator is accepted: `3.5` and `3,5` compare equally, as do `42`,
 `42.0`, and `42,0`. Values are 1–64 characters and use an optional sign, digits,
 comma/dot, and optional scientific exponent with 1–3 digits (for example `1e999`).
@@ -381,6 +383,18 @@ allowed.
   "correct": ["3.5"]
 }
 ```
+
+An `input` question has the public `answer_format` field. It is `number` for a
+numeric value and `sequence` for a fixed sequence of markers. Number questions
+must not include `answer_length`, `allow_reuse`, or `markers`. Sequence questions
+must include all three fields. `answer_length` equals the number of unique,
+nonblank `markers`; every accepted key has exactly that length. Repeated characters
+in an accepted key are allowed only when `allow_reuse` is `true`.
+
+Approved input questions must declare this metadata explicitly. Legacy draft
+questions without the fields remain loadable. The catalog infers `number` by
+default and infers `sequence` only when the prompt explicitly describes a
+sequence and the accepted keys have a shared length greater than one.
 
 ## Short free text
 
@@ -462,3 +476,16 @@ list of accepted wordings are emitted as `text`:
 Run `python scripts/validate_school.py` and `python scripts/check_brand_isolation.py`
 after every brand, link, content, or asset change. Both commands must print `OK`
 before deployment. They use the same runtime validation contract as the API and bot.
+
+For a targeted SharePoint export when the complete bank is unavailable, run the
+importer with `--partial` and an explicit report path:
+
+```text
+python scripts/import_sharepoint_diagnostics.py <docx-dir> --partial \
+  --report authoring/sharepoint-import/targeted-report.md
+```
+
+Partial mode replaces only questions and assets belonging to the selected source
+files. It preserves all other catalog bytes, assets, and the global import report.
+The report path is required and cannot be the global report. A partial report
+covers only its selected sources and does not claim catalog completeness.

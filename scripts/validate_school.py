@@ -108,6 +108,13 @@ def _validation_error(label: str, path: str, exc: ValidationError) -> str:
     known_reasons = (
         "invalid_selection_limit", "invalid_option_reference", "invalid_input_variant",
         "invalid_text_variant", "duplicate_text_variant",
+        "duplicate_option_label", "placeholder_matching_marker",
+        "mixed_matching_marker_scripts", "mixed_matching_marker_columns",
+        "matching_positions_options_mixed", "mixed_sequence_marker_scripts",
+        "input_metadata_required", "number_sequence_metadata",
+        "sequence_metadata_required", "blank_sequence_marker",
+        "duplicate_sequence_marker", "sequence_length_mismatch",
+        "invalid_sequence_variant", "sequence_reuse_not_allowed",
         "invalid_quick_count", "duplicate_question_id", "duplicate_diagnostic_id",
         "invalid_asset_path", "invalid_public_url", "duplicate_offer_id",
         "invalid_score_scale_table_length", "invalid_score_scale_table_value",

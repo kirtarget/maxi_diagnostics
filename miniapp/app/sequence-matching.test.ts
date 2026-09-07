@@ -79,3 +79,49 @@ describe("isCompleteSequenceMatchingAnswer", () => {
     expect(isCompleteSequenceMatchingAnswer(reusable, "212")).toBe(true);
   });
 });
+
+describe("contract-4 sequence metadata", () => {
+  const chemistryPrompt = [
+    "Установите соответствие между веществами и продуктами реакции.",
+    "В) третье вещество",
+    "Б) второе вещество",
+    "А) первое вещество",
+    "1) продукт один | 2) продукт два | 3) продукт три",
+    "4) продукт четыре | 5) продукт пять | ___",
+    "7) продукт семь | 8) продукт восемь | 9) продукт девять",
+  ].join("\n");
+
+  it("uses metadata markers as slot order and keeps explicit reusable choices", () => {
+    const matching = parseSequenceMatchingPrompt(chemistryPrompt, {
+      answer_format: "sequence",
+      answer_length: 3,
+      allow_reuse: true,
+      markers: ["А", "Б", "В"],
+    });
+
+    expect(matching).toMatchObject({
+      left: [
+        { marker: "А", label: "первое вещество" },
+        { marker: "Б", label: "второе вещество" },
+        { marker: "В", label: "третье вещество" },
+      ],
+      options: [
+        { marker: "1", label: "продукт один" },
+        { marker: "2", label: "продукт два" },
+        { marker: "3", label: "продукт три" },
+        { marker: "4", label: "продукт четыре" },
+        { marker: "5", label: "продукт пять" },
+        { marker: "7", label: "продукт семь" },
+        { marker: "8", label: "продукт восемь" },
+        { marker: "9", label: "продукт девять" },
+      ],
+      answerLength: 3,
+      allowReuse: true,
+    });
+    expect(isCompleteSequenceMatchingAnswer(matching!, "277")).toBe(true);
+  });
+
+  it("lets explicit numeric metadata disable prompt matching heuristics", () => {
+    expect(parseSequenceMatchingPrompt(chemistryPrompt, { answer_format: "number" })).toBeNull();
+  });
+});

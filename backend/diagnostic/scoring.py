@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from diagnostic.catalog import (
     DiagnosticCatalog,
+    InputQuestion,
     is_skipped_answer,
     MatchingQuestion,
     MultipleQuestion,
@@ -178,6 +179,8 @@ def is_answer_correct(question: Question, answer: Any) -> bool:
             normalized_text == normalize_text_answer(variant)
             for variant in question.correct
         )
+    if isinstance(question, InputQuestion) and question.answer_format == "sequence":
+        return isinstance(answer, str) and answer in question.correct
     normalized_answer = _normalize_decimal(answer)
     return normalized_answer is not None and any(
         normalized_answer == _normalize_decimal(variant) for variant in question.correct
