@@ -25,29 +25,66 @@ MESSAGE_DESCRIPTIONS: Final[dict[str, str]] = {
     "GENERIC": "Generic diagnostic menu reminder",
 }
 MESSAGE_KEYS: Final[frozenset[str]] = frozenset(MESSAGE_DESCRIPTIONS)
-PREVIOUS_DEFAULTS: Final[dict[str, str]] = {
-    "WELCOME": "Привет! Это {school_name} — начнём готовиться?",
-    "RESULTS_EMPTY": "У тебя пока нет завершённых диагностик.",
-    "PLAN_EMPTY": "Твой учебный план появится после диагностики.",
+PREVIOUS_DEFAULTS: Final[dict[str, tuple[str, ...]]] = {
+    "WELCOME": (
+        "Привет! Это {school_name} — начнём готовиться?",
+        "Добро пожаловать в {school_name}.",
+    ),
+    "RESULTS_EMPTY": (
+        "У тебя пока нет завершённых диагностик.",
+        "У вас пока нет завершённых диагностик.",
+    ),
+    "PLAN_EMPTY": (
+        "Твой учебный план появится после диагностики.",
+        "Ваш учебный план появится после диагностики.",
+    ),
     "DATA_ERASED": (
-        "Данные диагностики удалены. Новую попытку можно начать через 15 минут."
+        "Данные диагностики удалены. Новую попытку можно начать через 15 минут.",
     ),
-    "QUICK_COMPLETE": "Быстрый результат по предмету «{subject}» готов!",
-    "FULL_COMPLETE": "Полный результат по предмету «{subject}» готов!",
-    "NOT_STARTED": "Начни диагностику, когда будет удобно.",
-    "INCOMPLETE": "Продолжи диагностику по предмету «{subject}».",
-    "RESULT_UNVIEWED": "Тебя ждёт результат по предмету «{subject}».",
-    "DAY_FOLLOWUP": "Вернись к результату диагностики по предмету «{subject}».",
+    "QUICK_COMPLETE": (
+        "Быстрый результат по предмету «{subject}» готов!",
+        "Быстрый результат по предмету «{subject}» готов.",
+    ),
+    "FULL_COMPLETE": (
+        "Полный результат по предмету «{subject}» готов!",
+        "Полный результат по предмету «{subject}» готов.",
+    ),
+    "NOT_STARTED": (
+        "Начни диагностику, когда будет удобно.",
+        "Начните диагностику, когда будете готовы.",
+    ),
+    "INCOMPLETE": (
+        "Продолжи диагностику по предмету «{subject}».",
+        "Продолжите диагностику по предмету «{subject}».",
+    ),
+    "RESULT_UNVIEWED": (
+        "Тебя ждёт результат по предмету «{subject}».",
+        "Вас ждёт результат по предмету «{subject}».",
+    ),
+    "DAY_FOLLOWUP": (
+        "Вернись к результату диагностики по предмету «{subject}».",
+        "Вернитесь к результату диагностики по предмету «{subject}».",
+    ),
     "QUICK_TO_FULL": (
-        "Пройди полную диагностику и загляни в «{primary_offer_label}»: "
-        "{primary_offer_url}"
+        (
+            "Пройди полную диагностику и загляни в «{primary_offer_label}»: "
+            "{primary_offer_url}"
+        ),
+        (
+            "Пройдите полную диагностику и изучите предложение "
+            "«{primary_offer_label}»: {primary_offer_url}"
+        ),
     ),
-    "MONTH_RETEST": "Повтори диагностику по предмету «{subject}» через месяц.",
+    "MONTH_RETEST": (
+        "Повтори диагностику по предмету «{subject}» через месяц.",
+        "Повторите диагностику по предмету «{subject}» через месяц.",
+    ),
     "LIVES_REFILL": (
-        "Жизни в тренажёре восстановились — продолжай готовиться!"
+        "Жизни в тренажёре восстановились — продолжай готовиться!",
+        "Жизни в тренажёре восстановились — можно продолжать подготовку.",
     ),
-    "STREAK_SAVE": "Серия ещё держится. Открой план на сегодня и сохрани её.",
-    "GENERIC": "{school_name}: открой меню диагностики, чтобы продолжить.",
+    "STREAK_SAVE": ("Серия ещё держится. Открой план на сегодня и сохрани её.",),
+    "GENERIC": ("{school_name}: открой меню диагностики, чтобы продолжить.",),
 }
 
 
@@ -59,14 +96,14 @@ async def seed_messages(connection, school: SchoolConfig) -> None:
         VALUES ($1, $2, $3)
         ON CONFLICT (key) DO UPDATE
            SET text=CASE
-                    WHEN message_templates.text=$4 THEN EXCLUDED.text
+                    WHEN message_templates.text=ANY($4::text[]) THEN EXCLUDED.text
                     ELSE message_templates.text
                END,
                description=EXCLUDED.description,
                updated_at=now()
         """,
         [
-            (key, text, MESSAGE_DESCRIPTIONS[key], PREVIOUS_DEFAULTS.get(key, text))
+            (key, text, MESSAGE_DESCRIPTIONS[key], PREVIOUS_DEFAULTS.get(key, (text,)))
             for key, text in school.brand.messages.keyed().items()
         ],
     )
