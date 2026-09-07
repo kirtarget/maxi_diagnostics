@@ -1283,6 +1283,40 @@ select:focus-visible,
   line-height: 1.45;
 }
 
+.question-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--brand-ink) 10%, transparent);
+}
+
+.question-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.question-table th,
+.question-table td {
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid color-mix(in srgb, var(--brand-ink) 8%, transparent);
+}
+
+.question-table thead th {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  background: color-mix(in srgb, var(--brand-ink) 5%, transparent);
+}
+
+.question-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 .question-media {
   display: flex;
   flex-direction: column;
