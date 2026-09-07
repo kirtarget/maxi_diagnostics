@@ -103,8 +103,12 @@ TASK_HEADING = re.compile(r"^Задание\s*(\d+)\.?$")
 SEASON = re.compile(r"^(?P<start>\d{2})-(?P<end>\d{2})$")
 TOPIC_SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 OPEN_ANSWER = re.compile(r"максимальный балл", re.IGNORECASE)
-MATCHING_ITEM = re.compile(r"^([А-ЯЁ])\)\s*(.*)$", re.DOTALL)
-MATCHING_OPTION = re.compile(r"^(\d)\)\s*(.*)$", re.DOTALL)
+# Editors label the two columns with either a bracket or a dot, and a table
+# that uses dots is the same table.
+# Latin capitals sneak into these tables as look-alikes of the Cyrillic
+# enumeration letters, so a table can label its rows А, Б, B.
+MATCHING_ITEM = re.compile(r"^([А-ЯЁA-Z])[.)]\s*(.*)$", re.DOTALL)
+MATCHING_OPTION = re.compile(r"^(\d)[.)]\s*(.*)$", re.DOTALL)
 INLINE_OPTION = re.compile(r"^(\d+)\)\s*\S")
 INLINE_OPTION_NUMBER = re.compile(r"^\d+\)\s*")
 MIN_INLINE_OPTIONS = 3
@@ -118,6 +122,9 @@ FIGURE_WORDS = re.compile(
 EXTERNAL_RESOURCE = re.compile(r"https?://|воспользуйтесь файлом|аудиозапис|прослушайте", re.IGNORECASE)
 SEQUENCE_MARKERS = re.compile(r"^[А-ЯЁ]\)", re.MULTILINE)
 SEQUENCE_HINT = "Введите последовательность цифр без пробелов."
+# A two-column matching table the converter could not read stays in the prompt as
+# `left | right` lines. That is unreadable, so the task is dropped instead.
+FLATTENED_MATCHING = re.compile(r"^\s*(?:[А-ЯЁA-Z][.)]|_{3,})\s.*\|\s*\d[.)]\s", re.MULTILINE)
 WORD_FORMATION_HINT = re.compile(r"\|\s*(?P<hint>[A-Z]+(?:\s+[A-Z]+)*)\s*\Z")
 AUXILIARY_WORDS = frozenset(
     {
@@ -832,6 +839,8 @@ def _rejection(
         return "too_many_figures"
     if not images and FIGURE_WORDS.search(question["prompt"]):
         return "missing_figure"
+    if len(FLATTENED_MATCHING.findall(question["prompt"])) >= 2:
+        return "unreadable_matching"
     if EXTERNAL_RESOURCE.search(question["prompt"]):
         return "external_resource"
     return validate_question(question)

@@ -37,7 +37,7 @@ export function parseQuestionPrompt(prompt: string): PromptBlock[] {
 }
 
 export function cleanAnswerLabel(label: string): string {
-  const cleaned = label.replace(/^\s*(?:[А-ЯЁA-Z]|\d{1,2})\)\s*/u, "").trim();
+  const cleaned = label.replace(/^\s*(?:[А-ЯЁA-Z]|\d{1,2})[.)]\s*/u, "").trim();
   return cleaned || label;
 }
 

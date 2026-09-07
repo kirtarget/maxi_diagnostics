@@ -703,3 +703,52 @@ def test_verified_at_can_be_pinned_to_a_given_day(tmp_path):
         question["source"]["verified_at"] == "2026-09-04"
         for question in imported_questions
     )
+
+
+def test_a_matching_table_labelled_with_dots_becomes_a_matching_question():
+    """Editors label the two columns with a dot as often as with a bracket."""
+    table = importer.SourceTable(rows=(
+        (("События",), ("Годы",)),
+        (("А. Первое событие",), ("1. 1185 г.",)),
+        (("Б. Второе событие",), ("2. 1825 г.",)),
+        (("B. Третье событие",), ("3. 1613 г.",)),
+        ((), ("4. 1762 г.",)),
+    ))
+    task = importer.SourceTask(
+        number=1,
+        prompt_blocks=["Установите соответствие."],
+        prompt_tables=[table],
+        answer=["213"],
+    )
+
+    kind, payload = importer.classify(task)
+
+    assert kind == "matching"
+    # The third row is labelled with a Latin B that looks like the Cyrillic one.
+    assert len(payload["items"]) == 3
+    assert [digit for digit, _ in payload["options"]] == ["1", "2", "3", "4"]
+
+
+def test_an_unreadable_matching_table_is_skipped_instead_of_flattened():
+    """A table the converter cannot read renders as `left | right` noise."""
+    table = importer.SourceTable(rows=(
+        (("Величины",), ("Значения",)),
+        (("Первый пункт без буквы",), ("1) Первое",)),
+        (("Б) Второй пункт",), ("2) Второе",)),
+        ((), ("3) Третье",)),
+    ))
+    task = importer.SourceTask(
+        number=1,
+        prompt_blocks=["Установите соответствие."],
+        prompt_tables=[table],
+        answer=["12"],
+    )
+    kind, payload = importer.classify(task)
+    assert kind == "input"
+
+    question = importer.build_question(
+        importer.SourceFile(Path("f.docx"), "ЕГЭ", "physics", 2022, 1, ()),
+        task, kind, payload, verified_at="2026-09-04",
+    )
+
+    assert importer._rejection(question, []) == "unreadable_matching"
