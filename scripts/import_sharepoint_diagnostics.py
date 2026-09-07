@@ -750,7 +750,7 @@ def _render_table(table: SourceTable) -> str:
             else "___"
             for cell in row
         ]
-        if any(cell != "___" for cell in cells):
+        if any(cell != "___" for cell in cells) and not _is_answer_grid_row(cells):
             lines.append(" | ".join(cells))
     return "\n".join(lines)
 
@@ -903,18 +903,33 @@ def _glued_answer(prompt: str, variants: list[str]) -> bool:
     return False
 
 
+def _restore_sentence_end(match: re.Match[str]) -> str:
+    """A clause cut out of the middle of a sentence takes the full stop with it.
+
+    Hand it back unless the text before the cut already ends a sentence, so
+    the author's «!..» and «?..» never gain an extra dot.
+    """
+    before = match.string[: match.start()].rstrip()
+    if not match.group(0).rstrip().endswith(".") or not before or before[-1] in ".!?…":
+        return ""
+    return "."
+
+
+ANSWER_GRID_CELL = re.compile(r"^(?:[A-ZА-ЯЁ]|[XYХУ]|\(?[А-ЯЁA-Z]\)?\s*_{2,})$")
+
+
+def _is_answer_grid_row(cells: list[str]) -> bool:
+    """A row of bare markers or blanks is the paper answer grid, not task data."""
+    return all(cell == "___" or ANSWER_GRID_CELL.match(cell) for cell in cells)
+
+
 def strip_answer_sheet_instructions(prompt: str) -> str:
     """Drop the sentences that tell the student where to write the answer."""
     lines = []
     for line in prompt.split("\n"):
         for pattern in ANSWER_SHEET_SENTENCES:
-            # A clause cut out of the middle of a sentence takes the full stop
-            # with it; hand the remaining sentence one back.
-            line = pattern.sub(
-                lambda match: "." if match.group(0).rstrip().endswith(".") else "", line
-            )
+            line = pattern.sub(_restore_sentence_end, line)
         line = re.sub(r"\s+\.", ".", line)
-        line = re.sub(r"(?<!\.)\.\.(?!\.)", ".", line)
         line = re.sub(r"\s+", " ", line).strip()
         if line and line != ".":
             lines.append(line)

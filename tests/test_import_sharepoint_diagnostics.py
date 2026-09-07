@@ -565,6 +565,36 @@ def test_duplicate_choice_labels_survive_the_import(tmp_path):
     assert "___" not in question["prompt"]
 
 
+def test_stripping_leaves_the_source_punctuation_alone():
+    """Only the full stop the cut clause took with it is restored; «!..» and «?..» in
+    the source text are the author's and must survive untouched."""
+    poem = "Облитый горечью и злостью!..\n(М. Ю. Лермонтов, 1840)\n— (29)А где?.. (30)Тут полбуханка была!"
+    assert importer.strip_answer_sheet_instructions(poem) == poem
+    assert importer.strip_answer_sheet_instructions(
+        "Выберите верные утверждения. В ответ запишите цифры."
+    ) == "Выберите верные утверждения."
+
+
+def test_blank_answer_grid_rows_are_not_rendered():
+    """«A | B | C | D» and «(А)____ | (Б)____» are the paper answer grid, not data."""
+    grid = importer.SourceTable(rows=(
+        (("A",), ("B",), ("C",), ("D",)),
+        (("",), ("",), ("",), ("",)),
+    ))
+    assert importer._render_table(grid) == ""
+    fill_in = importer.SourceTable(rows=(
+        (("(А)______",), ("(Б)______",)),
+    ))
+    assert importer._render_table(fill_in) == ""
+    xy = importer.SourceTable(rows=((("Х",), ("Y",)), (("",), ("",))))
+    assert importer._render_table(xy) == ""
+    data = importer.SourceTable(rows=(
+        (("Вещество",), ("Формула",)),
+        (("Кислород",), ("O2",)),
+    ))
+    assert importer._render_table(data) == "Вещество | Формула\nКислород | O2"
+
+
 def test_stripping_the_table_instruction_keeps_the_sentence_end():
     stripped = importer.strip_answer_sheet_instructions(
         "К каждой позиции первого столбца подберите соответствующую позицию из второго столбца "
