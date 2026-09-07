@@ -2472,16 +2472,51 @@ select:focus-visible,
 
 .trainer-screen { gap: 12px; }
 
-.trainer-screen .question-topline {
+.trainer-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trainer-header-row,
+.trainer-header-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.trainer-progress {
   font-size: 13px;
   font-weight: 700;
 }
 
-.trainer-screen .question-topline strong.trainer-lives { color: var(--brand-signal); letter-spacing: 2px; }
+.trainer-exit {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--brand-ink) 7%, var(--brand-background));
+  font: inherit;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.trainer-mode {
+  color: var(--brand-primary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.trainer-header-meta {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.trainer-screen .trainer-lives { color: var(--brand-signal); letter-spacing: 2px; }
 
 .trainer-lives-empty { color: color-mix(in srgb, var(--brand-ink) 16%, white); }
 
@@ -2726,6 +2761,44 @@ select:focus-visible,
   line-height: 1.5;
 }
 
+.confirm-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--brand-ink) 32%, transparent);
+}
+
+.confirm-sheet {
+  width: min(100%, 440px);
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--brand-paper);
+  box-shadow: 0 18px 50px color-mix(in srgb, var(--brand-ink) 22%, transparent);
+}
+
+.confirm-sheet h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.confirm-sheet p {
+  margin: 8px 0 18px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.confirm-sheet-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.confirm-sheet-actions button { flex: 1; }
+
 /* ============ League ============ */
 
 .league-screen {
@@ -2906,6 +2979,7 @@ select:focus-visible,
 }
 
 .offer-surface-forecast,
+.offer-surface-trainer,
 .offer-surface-trainer_wrong,
 .offer-surface-trainer_no_lives {
   width: 100%;

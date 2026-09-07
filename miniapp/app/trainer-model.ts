@@ -1,4 +1,4 @@
-import type { AnswerValue, PlanReason, Question } from "./types";
+import type { AnswerValue, BootstrapResponse, PlanReason, Question } from "./types";
 import { isValidNumericInput, isValidTextInput } from "./answer-values";
 
 /** Plan context the server attaches when a session runs today's plan. */
@@ -26,6 +26,80 @@ export type TrainerStartResponse = {
 };
 
 export type TrainerMode = "normal" | "mistakes" | "plan";
+
+export type TrainerHeaderView = {
+  diagnosticId: string;
+  exam: string;
+  subject: string;
+  mode: TrainerMode;
+  modeLabel: string;
+};
+
+export type TrainerSessionIdentity = Pick<TrainerStartResponse, "diagnostic_id" | "mode">;
+
+export type TrainerFeedbackKind = "correct" | "partial" | "incorrect";
+
+export const TRAINER_MODE_LABELS: Record<TrainerMode, string> = {
+  normal: "Тренировка",
+  mistakes: "Повтор ошибок",
+  plan: "План на сегодня",
+};
+
+export function trainerModeLabel(mode: TrainerMode): string {
+  return TRAINER_MODE_LABELS[mode];
+}
+
+function completedAttemptDiagnosticId(attempt: BootstrapResponse["results"][number] | null | undefined): string | null {
+  return attempt?.status === "completed" && attempt.diagnostic_id ? attempt.diagnostic_id : null;
+}
+
+export function trainerDiagnosticId(
+  bootstrap: BootstrapResponse | null | undefined,
+  subjectChoice?: string | null,
+): string | null {
+  if (!bootstrap) return null;
+  if (bootstrap.attempt?.status === "in_progress" && bootstrap.attempt.diagnostic_id) {
+    return bootstrap.attempt.diagnostic_id;
+  }
+  if (bootstrap.daily_plan?.diagnostic_id) return bootstrap.daily_plan.diagnostic_id;
+
+  const latest = bootstrap.latest_attempt_id
+    ? bootstrap.results.find((attempt) => attempt.attempt_id === bootstrap.latest_attempt_id)
+    : null;
+  const latestDiagnosticId = completedAttemptDiagnosticId(latest);
+  if (latestDiagnosticId) return latestDiagnosticId;
+
+  const firstCompleted = bootstrap.results.map(completedAttemptDiagnosticId).find((diagnosticId): diagnosticId is string => diagnosticId !== null);
+  if (firstCompleted) return firstCompleted;
+
+  if (subjectChoice) return bootstrap.diagnostics.find((diagnostic) => diagnostic.subject === subjectChoice)?.id ?? null;
+  return null;
+}
+
+export function trainerHeaderView(
+  bootstrap: BootstrapResponse | null | undefined,
+  session: TrainerSessionIdentity | null | undefined,
+): TrainerHeaderView | null {
+  if (!session) return null;
+  const diagnostic = bootstrap?.diagnostics.find((candidate) => candidate.id === session.diagnostic_id);
+  if (!diagnostic) return null;
+  return {
+    diagnosticId: diagnostic.id,
+    exam: diagnostic.exam,
+    subject: diagnostic.subject,
+    mode: session.mode,
+    modeLabel: trainerModeLabel(session.mode),
+  };
+}
+
+export function trainerFeedbackKind(result: Pick<TrainerAnswerResponse, "is_correct" | "earned_primary_score" | "max_primary_score">): TrainerFeedbackKind {
+  if (result.is_correct) return "correct";
+  const earned = result.earned_primary_score;
+  const maximum = result.max_primary_score;
+  return typeof earned === "number" && typeof maximum === "number" && earned > 0 && earned < maximum
+    ? "partial"
+    : "incorrect";
+}
 
 export const PLAN_REASON_LABELS: Record<PlanReason, string> = {
   mistake_review: "повтор ошибки",

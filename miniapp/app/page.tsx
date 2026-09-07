@@ -14,6 +14,7 @@ import { personalRoute } from "./result-flow-model";
 import { requestedAttemptId } from "./api";
 import { gameplayProfileView } from "./gameplay-profile-model";
 import { TrainerScreen } from "./trainer-screen";
+import { trainerDiagnosticId, trainerHeaderView } from "./trainer-model";
 import { LeagueScreen } from "./league-screen";
 import { useBootstrap } from "./use-bootstrap";
 import { useDiagnosticSession } from "./use-diagnostic-session";
@@ -117,6 +118,11 @@ export default function Home() {
   };
   const routeItems = result ? personalRoute(result.growth_topics) : [];
   const replayAttemptId = session.actions.persistedAttemptId();
+  const selectedTrainerSubject = diagnostic?.subject
+    ?? resultDiagnostic?.subject
+    ?? (bootstrap?.diagnostics.length === 1 ? bootstrap.diagnostics.at(0)?.subject : null);
+  const trainerDiagnostic = trainerDiagnosticId(bootstrap, selectedTrainerSubject);
+  const trainerHeader = trainerHeaderView(bootstrap, trainer.state.trainer.session);
 
   const style = brand ? {
     "--brand-primary": brand.colors.primary,
@@ -227,7 +233,9 @@ export default function Home() {
           onStartPlan={dailyPlan?.diagnostic_id
             ? () => void trainer.actions.start(dailyPlan.diagnostic_id!, "plan")
             : undefined}
-          onStartTrainer={() => void trainer.actions.start(bootstrap.diagnostics[0]?.id ?? "")}
+          onStartTrainer={() => {
+            if (trainerDiagnostic) void trainer.actions.start(trainerDiagnostic);
+          }}
           onOpenProfile={() => setScreen("profile")}
           onOpenLeague={() => void openLeague()}
           offers={bootstrap.school.links.offers}
@@ -350,6 +358,7 @@ export default function Home() {
           livesReminder={trainer.state.livesReminder}
           onRemindLives={() => void trainer.actions.remindLives()}
           offers={bootstrap?.school.links.offers}
+          header={trainerHeader}
           offerDismissed={dismissedOfferPlacements}
           onOfferDismiss={dismissOfferPlacement}
           onOfferEvent={handleOfferEvent}

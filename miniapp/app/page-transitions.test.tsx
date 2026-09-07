@@ -33,6 +33,12 @@ const diagnostic: PublicDiagnostic = {
   }],
 };
 
+const secondDiagnostic: PublicDiagnostic = {
+  ...diagnostic,
+  id: "demo-english",
+  subject: "Английский язык",
+};
+
 const completedAttempt: ServerAttempt = {
   attempt_id: "attempt-done",
   diagnostic_id: "demo-math",
@@ -457,14 +463,82 @@ describe("Home screen transitions", () => {
     expect(requestedPaths).toContain("/api/diagnostics/trainer/start");
   });
 
+  it("confirms the trainer exit before returning to the home screen", async () => {
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      progress_profile: { completion_count: 1, achievement_keys: [] },
+    }));
+    route("/api/diagnostics/trainer/start", {
+      trainer_session_id: "s".repeat(32),
+      diagnostic_id: diagnostic.id,
+      content_version: CONTENT_VERSION,
+      mode: "normal",
+      question_ids: ["q1"],
+      current_index: 0,
+      revision: 1,
+      status: "active",
+      questions: diagnostic.questions,
+      lives_remaining: 5,
+    });
+
+    await mountHome();
+    await clickAndSettle(".gameplay-trainer-cta");
+    await settle();
+    expect(screenClasses()).toContain("trainer-screen");
+
+    await clickAndSettle(".trainer-exit");
+    expect(container.querySelector('[role="dialog"]')?.textContent).toContain("Выйти из тренировки?");
+    await clickAndSettle(".confirm-sheet .secondary-button");
+    expect(screenClasses()).toContain("trainer-screen");
+    await clickAndSettle(".trainer-exit");
+    await clickAndSettle(".confirm-sheet .primary-button");
+    expect(screenClasses()).toContain("gameplay-home");
+  });
+
+  it("starts the trainer from the latest completed diagnostic instead of the first catalog item", async () => {
+    const latestAttempt: ServerAttempt = {
+      ...completedAttempt,
+      attempt_id: "attempt-latest",
+      diagnostic_id: secondDiagnostic.id,
+      exam: secondDiagnostic.exam,
+      subject: secondDiagnostic.subject,
+      result: { ...serverResult, diagnostic_id: secondDiagnostic.id },
+    };
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      diagnostics: [diagnostic, secondDiagnostic],
+      latest_attempt_id: latestAttempt.attempt_id,
+      results: [latestAttempt],
+      progress_profile: { completion_count: 1, achievement_keys: [] },
+    }));
+    route("/api/diagnostics/trainer/start", {
+      trainer_session_id: "s".repeat(32),
+      diagnostic_id: secondDiagnostic.id,
+      content_version: CONTENT_VERSION,
+      mode: "normal",
+      question_ids: ["q1"],
+      current_index: 0,
+      revision: 1,
+      status: "active",
+      questions: secondDiagnostic.questions,
+      lives_remaining: 5,
+    });
+
+    await mountHome();
+    await clickAndSettle(".gameplay-trainer-cta");
+    await settle();
+
+    const startCall = vi.mocked(fetch).mock.calls.find(([path]) => String(path).endsWith("/api/diagnostics/trainer/start"));
+    expect(JSON.parse(String(startCall?.[1]?.body))).toMatchObject({ diagnostic_id: secondDiagnostic.id });
+  });
+
   it("moves from the home plan CTA into the plan trainer", async () => {
     route("/api/diagnostics/bootstrap", bootstrapPayload({
+      diagnostics: [diagnostic, secondDiagnostic],
       progress_profile: { completion_count: 1, achievement_keys: [] },
       daily_plan: {
         plan_date: "2026-09-02",
-        diagnostic_id: "demo-math",
-        subject: "Математика",
-        exam: "ЕГЭ",
+        diagnostic_id: secondDiagnostic.id,
+        subject: secondDiagnostic.subject,
+        exam: secondDiagnostic.exam,
         total: 5,
         completed: 2,
         status: "ready",
@@ -473,14 +547,14 @@ describe("Home screen transitions", () => {
     let startPayload: unknown;
     routes["/api/diagnostics/trainer/start"] = async () => ({
       trainer_session_id: "s".repeat(32),
-      diagnostic_id: "demo-math",
+      diagnostic_id: secondDiagnostic.id,
       content_version: CONTENT_VERSION,
       mode: "plan",
       question_ids: ["q1"],
       current_index: 0,
       revision: 1,
       status: "active",
-      questions: diagnostic.questions,
+      questions: secondDiagnostic.questions,
       lives_remaining: 5,
       plan: { plan_date: "2026-09-02", total: 5, completed: 2, reasons: { q1: "mistake_review" } },
     });
@@ -499,7 +573,8 @@ describe("Home screen transitions", () => {
     await settle();
 
     expect(screenClasses()).toContain("trainer-screen");
-    expect(startPayload).toMatchObject({ mode: "plan", diagnostic_id: "demo-math" });
+    expect(startPayload).toMatchObject({ mode: "plan", diagnostic_id: secondDiagnostic.id });
+    expect(container.querySelector(".trainer-progress")?.textContent).toContain(secondDiagnostic.subject);
     expect(container.textContent).toContain("План: 2 из 5");
     expect(container.textContent).toContain("повтор ошибки");
   });
