@@ -5,10 +5,16 @@ import { useEffect, useRef } from "react";
 export type ConfirmSheetProps = {
   open: boolean;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
+  title?: string;
+  message?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  confirmDisabled?: boolean;
+  messageRole?: "alert";
 };
 
-export function ConfirmSheet({ open, onCancel, onConfirm }: ConfirmSheetProps) {
+export function ConfirmSheet({ open, onCancel, onConfirm, title = "Выйти из тренировки?", message = "Прогресс текущего вопроса не сохранится.", confirmLabel = "Выйти", cancelLabel = "Остаться", confirmDisabled = false, messageRole }: ConfirmSheetProps) {
   const sheetRef = useRef<HTMLElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const onCancelRef = useRef(onCancel);
@@ -35,7 +41,6 @@ export function ConfirmSheet({ open, onCancel, onConfirm }: ConfirmSheetProps) {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        restoreFocus();
         onCancelRef.current();
         return;
       }
@@ -66,12 +71,10 @@ export function ConfirmSheet({ open, onCancel, onConfirm }: ConfirmSheetProps) {
   }, [open]);
 
   const cancel = () => {
-    restoreFocus();
     onCancelRef.current();
   };
 
   const confirm = () => {
-    restoreFocus();
     onConfirmRef.current();
   };
 
@@ -86,11 +89,11 @@ export function ConfirmSheet({ open, onCancel, onConfirm }: ConfirmSheetProps) {
         aria-labelledby="confirm-sheet-title"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 id="confirm-sheet-title">Выйти из тренировки?</h2>
-        <p>Прогресс текущего вопроса не сохранится.</p>
+        <h2 id="confirm-sheet-title">{title}</h2>
+        <p role={messageRole}>{message}</p>
         <div className="confirm-sheet-actions">
-          <button className="secondary-button" type="button" onClick={cancel}>Остаться</button>
-          <button className="primary-button" type="button" onClick={confirm}>Выйти</button>
+          <button className="secondary-button" type="button" onClick={cancel}>{cancelLabel}</button>
+          <button className="primary-button" type="button" disabled={confirmDisabled} aria-busy={confirmDisabled || undefined} onClick={confirm}>{confirmLabel}</button>
         </div>
       </section>
     </div>

@@ -133,7 +133,10 @@ describe("QuestionView", () => {
     );
 
     expect(html).toContain('class="question-action-bar"');
-    expect(html).toContain('class="question-save-state"');
+    expect(html).not.toContain('class="question-save-state"');
+    expect(html).not.toContain("question-progress-copy");
+    expect(html).not.toContain("question-progress-motivation");
+    expect(html).not.toContain("<strong>");
   });
 
   it("accepts either a word or digits as a valid text answer", () => {
@@ -161,10 +164,10 @@ describe("QuestionView", () => {
       />,
     );
 
-    expect(renderAnswer("но")).not.toContain('disabled=""');
-    expect(renderAnswer("12")).not.toContain('disabled=""');
-    expect(renderAnswer("")).toContain('disabled=""');
-    expect(renderAnswer("   ")).toContain('disabled=""');
+    expect(renderAnswer("но")).not.toMatch(/class="primary-button question-next"[^>]*disabled/);
+    expect(renderAnswer("12")).not.toMatch(/class="primary-button question-next"[^>]*disabled/);
+    expect(renderAnswer("")).toMatch(/class="primary-button question-next"[^>]*disabled/);
+    expect(renderAnswer("   ")).toMatch(/class="primary-button question-next"[^>]*disabled/);
   });
 
   it("offers an explicit skip action and explains a restored skip marker", () => {

@@ -20,6 +20,7 @@ import { useBootstrap } from "./use-bootstrap";
 import { useDiagnosticSession } from "./use-diagnostic-session";
 import { useTrainer } from "./use-trainer";
 import { isEmptyAnswer } from "./answer-values";
+import { ConfirmSheet } from "./confirm-sheet";
 import type { Brand, Screen } from "./types";
 
 type DisplayBrand = Pick<Brand, "name" | "short_name" | "logo"> & {
@@ -66,6 +67,9 @@ function BrandHeader({
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("loading");
+  const [diagnosticExitOpen, setDiagnosticExitOpen] = useState(false);
+  const [diagnosticExitSaving, setDiagnosticExitSaving] = useState(false);
+  const [diagnosticExitError, setDiagnosticExitError] = useState<string | null>(null);
   const bootstrapSession = useBootstrap(setScreen);
   const session = useDiagnosticSession({ bootstrap: bootstrapSession, screen, setScreen });
   const trainer = useTrainer({
@@ -116,6 +120,23 @@ export default function Home() {
     else if (bootstrap?.onboarding?.status === "selection") session.actions.chooseMode("quick", exam);
     else setScreen("welcome");
   };
+  const requestDiagnosticExit = () => {
+    setDiagnosticExitError(null);
+    setDiagnosticExitOpen(true);
+  };
+  const confirmDiagnosticExit = async () => {
+    if (diagnosticExitSaving) return;
+    setDiagnosticExitSaving(true);
+    setDiagnosticExitError(null);
+    const saved = await session.actions.flushProgressForExit();
+    setDiagnosticExitSaving(false);
+    if (!saved) {
+      setDiagnosticExitError("Не удалось сохранить прогресс. Проверьте связь и повторите попытку.");
+      return;
+    }
+    setDiagnosticExitOpen(false);
+    goHome();
+  };
   const routeItems = result ? personalRoute(result.growth_topics) : [];
   const replayAttemptId = session.actions.persistedAttemptId();
   const selectedTrainerSubject = diagnostic?.subject
@@ -123,6 +144,7 @@ export default function Home() {
     ?? (bootstrap?.diagnostics.length === 1 ? bootstrap.diagnostics.at(0)?.subject : null);
   const trainerDiagnostic = trainerDiagnosticId(bootstrap, selectedTrainerSubject);
   const trainerHeader = trainerHeaderView(bootstrap, trainer.state.trainer.session);
+  const activeAssessment = screen === "question" || screen === "trainer";
 
   const style = brand ? {
     "--brand-primary": brand.colors.primary,
@@ -158,12 +180,12 @@ export default function Home() {
 
   return (
     <main className="app-shell" style={style}>
-      <BrandHeader
+      {!activeAssessment && <BrandHeader
         brand={displayBrand}
         disabled={!brand || screen === "submitting"}
         onHome={goHome}
-      />
-      {error && bootstrap && screen !== "question" && (
+      />}
+      {error && bootstrap && !activeAssessment && (
         <div role="alert" className="inline-warning">{error}<button type="button" onClick={() => void bootstrapSession.actions.refreshProgress()}>Обновить прогресс</button></div>
       )}
 
@@ -298,7 +320,6 @@ export default function Home() {
 
       {screen === "question" && diagnostic && questions[questionIndex] && (
         <>
-          {syncWarning && <p className="inline-warning" role="status">{syncWarning}</p>}
           {error && <p className="inline-error" role="alert">{error}</p>}
           <TrainingQuestionView
             question={questions[questionIndex]}
@@ -317,6 +338,10 @@ export default function Home() {
             ))}
             onAnswer={session.actions.answerQuestion}
             onBack={session.actions.previousQuestion}
+            onExit={requestDiagnosticExit}
+            progressSaveState={session.state.progressSaveState}
+            progressAnnouncement={syncWarning ?? session.state.progressToast}
+            progressAnnouncementRole={syncWarning ? "alert" : "status"}
             onNext={session.actions.nextQuestion}
             onSkip={session.actions.skipQuestion}
             labels={brand!.interface}
@@ -362,8 +387,20 @@ export default function Home() {
           offerDismissed={dismissedOfferPlacements}
           onOfferDismiss={dismissOfferPlacement}
           onOfferEvent={handleOfferEvent}
+          labels={brand?.interface}
         />
       )}
+
+      <ConfirmSheet
+        open={diagnosticExitOpen}
+        title="Выйти из диагностики?"
+        message={diagnosticExitError ?? "Прогресс сохранится, и диагностику можно будет продолжить позже."}
+        messageRole={diagnosticExitError ? "alert" : undefined}
+        confirmLabel={diagnosticExitSaving ? "Сохраняем…" : "Выйти"}
+        confirmDisabled={diagnosticExitSaving}
+        onCancel={() => { if (!diagnosticExitSaving) setDiagnosticExitOpen(false); }}
+        onConfirm={confirmDiagnosticExit}
+      />
 
       {screen === "review" && result && (
         <ReviewScreen

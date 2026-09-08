@@ -235,9 +235,32 @@ describe("trainer integration contracts", () => {
       dispatch={() => undefined}
       header={{ diagnosticId: "physics", exam: "ЕГЭ", subject: "Физика", mode: "normal", modeLabel: "Тренировка" }}
     />);
-    expect(html).toContain("Тренажёр · Физика · 1 из 1");
+    expect(html).toContain("Задание 1 из 1 · Алгебра");
     expect(html).toContain("Тренировка");
-    expect(html).not.toContain("Задание 1");
+  });
+
+  it("collapses a long trainer reference without duplicating the question heading", () => {
+    const longQuestion = { ...question, id: "q-long", prompt: [
+      "Какие высказывания соответствуют содержанию текста?",
+      ...Array.from({ length: 9 }, (_, index) => `(${index + 1}) Фрагмент текста для тренировки чтения и анализа.`),
+    ].join("\n") };
+    const state = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "physics", content_version: "v1",
+        mode: "normal", question_ids: ["q-long"], current_index: 0, revision: 1,
+        status: "active", questions: [longQuestion], lives_remaining: 5,
+      },
+    });
+    const html = renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />);
+    expect(html.match(/<h1\b/g)).toHaveLength(1);
+    expect(html).toContain('id="trainer-title"');
+    expect(html).toContain('tabindex="-1"');
+    expect(html).toContain("К тексту ↑");
+    expect(html).toContain('aria-controls="trainer-reference"');
+    expect(html).toContain("prompt-reference-long");
+    expect(html).toContain("Развернуть текст");
+    expect(html).toContain("prompt-sentence-1");
   });
 
   it("uses the shared image viewer for trainer questions", () => {

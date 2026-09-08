@@ -95,7 +95,8 @@ select:focus-visible,
   min-height: 100dvh;
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   background: var(--brand-background);
 }
 
@@ -1090,47 +1091,62 @@ select:focus-visible,
   animation-name: question-screen-in;
 }
 
+.assessment-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 56px;
+  min-height: calc(56px + env(safe-area-inset-top));
+  box-sizing: border-box;
+  padding: env(safe-area-inset-top) 16px 0;
+  color: white;
+  background: var(--brand-ink);
+}
+
+.assessment-header button {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.assessment-header-back,
+.assessment-header-exit,
+.assessment-reference-button {
+  border: 0;
+  color: inherit;
+  background: color-mix(in srgb, white 10%, transparent);
+}
+
+.assessment-header-back:disabled { opacity: 0.35; cursor: default; }
+.assessment-header-exit { font-size: 24px; line-height: 1; }
+.assessment-header-main { min-width: 0; flex: 1; display: grid; gap: 3px; }
+.assessment-header-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+.assessment-header-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 750; }
+.assessment-header-count { flex: 0 0 auto; color: color-mix(in srgb, white 72%, transparent); font-size: 12px; }
+.assessment-progress { position: relative; height: 6px; overflow: hidden; border-radius: var(--r-pill); background: color-mix(in srgb, white 18%, transparent); }
+.assessment-progress-fill { display: block; height: 100%; border-radius: inherit; background: var(--brand-accent); }
+.assessment-progress-dots { display: flex; gap: 4px; height: 100%; }
+.assessment-progress-dots i { flex: 1; min-width: 3px; border-radius: var(--r-pill); background: color-mix(in srgb, white 18%, transparent); }
+.assessment-progress-dots i.is-complete { background: var(--brand-accent); }
+.assessment-save-state { color: color-mix(in srgb, white 72%, transparent); font-size: 11px; line-height: 1.1; }
+.assessment-save-state-error { color: #ffd0c8; }
+.assessment-announcement { position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); padding: 7px 10px; color: var(--ink); background: var(--paper); border-radius: var(--r-sm); box-shadow: 0 5px 16px rgb(0 0 0 / 18%); font-size: 12px; white-space: nowrap; }
+.assessment-reference-button { padding: 0 8px; font-size: 12px; white-space: nowrap; }
+
 .question-shell {
   width: 100%;
-  max-width: 430px;
+  max-width: none;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 10px 20px 0;
-  color: white;
-}
-
-.question-topline {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.question-screen .back-button {
-  width: 42px;
   padding: 0;
-  border: 0;
   color: white;
-  background: color-mix(in srgb, white 10%, transparent);
-  font-size: 0;
 }
-
-.question-screen .back-button::before {
-  content: "←";
-  font-size: 18px;
-}
-
-.question-progress-copy {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.question-progress-copy strong { display: none; }
 
 .question-save-state {
   color: color-mix(in srgb, white 72%, transparent);
@@ -1142,13 +1158,6 @@ select:focus-visible,
   position: relative;
   flex: 1;
   display: block;
-}
-
-.question-progress-fill { display: none; }
-
-.question-progress-nodes {
-  display: flex;
-  gap: 5px;
 }
 
 .question-progress-node {
@@ -1166,15 +1175,6 @@ select:focus-visible,
 .question-progress-node.is-skipped {
   border: 1.5px solid var(--brand-accent);
   background: transparent;
-}
-
-.question-progress-motivation {
-  margin: 12px 0 14px;
-  color: var(--brand-accent);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  text-align: center;
 }
 
 .question-worksheet {
@@ -1209,6 +1209,14 @@ select:focus-visible,
 }
 
 .question-copy { display: flex; flex-direction: column; gap: 10px; }
+
+.question-title:focus { outline: 3px solid color-mix(in srgb, var(--brand-accent) 65%, transparent); outline-offset: 4px; }
+.prompt-reference { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.prompt-reference [id^="prompt-sentence-"] { scroll-margin-top: 64px; }
+.prompt-reference-long { max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; padding-right: 3px; }
+.prompt-reference-long.is-expanded { max-height: none; overflow: visible; }
+.prompt-reference-toggle { align-self: flex-start; min-height: 44px; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--ink) 20%, transparent); color: var(--ink); background: transparent; font-size: 13px; font-weight: 700; }
+.question-stem-repeat { margin: 0; color: var(--ink); font-size: 15px; font-weight: 750; line-height: 1.4; }
 
 .question-screen h1,
 .question-title {
@@ -1652,7 +1660,7 @@ select:focus-visible,
   top: 50%;
   right: 10px;
   transform: translateY(-50%);
-  min-height: 40px;
+  min-height: 44px;
   border: 0;
   padding: 6px 12px;
   border-radius: 10px;
@@ -1830,7 +1838,7 @@ select:focus-visible,
 
 .matching-answer-clear {
   align-self: flex-start;
-  min-height: 40px;
+  min-height: 44px;
   border: 0;
   padding: 6px 12px;
   border-radius: 10px;
@@ -2853,7 +2861,21 @@ select:focus-visible,
 
 /* ============ Trainer ============ */
 
-.trainer-screen { gap: 12px; }
+.trainer-screen {
+  max-width: none;
+  padding: 0;
+  gap: 0;
+}
+
+.trainer-body {
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  padding: 8px 18px calc(30px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
 .trainer-header {
   display: flex;
@@ -2902,16 +2924,6 @@ select:focus-visible,
 .trainer-screen .trainer-lives { color: var(--brand-signal); letter-spacing: 2px; }
 
 .trainer-lives-empty { color: color-mix(in srgb, var(--brand-ink) 16%, white); }
-
-.trainer-screen .question-progress-rail { flex: none; width: 100%; height: 6px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--brand-ink) 10%, var(--brand-background)); overflow: hidden; }
-
-.trainer-screen .question-progress-fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--r-pill);
-  background: var(--brand-primary);
-  transition: width 300ms ease;
-}
 
 .trainer-prompt {
   display: flex;
@@ -3116,6 +3128,7 @@ select:focus-visible,
   border: 0;
   background: none;
   padding: 10px;
+  min-height: 44px;
   font: inherit;
   font-size: 13px;
   font-weight: 700;
