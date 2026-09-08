@@ -317,8 +317,8 @@ function SequenceAnswer({ model, value, subject, disabled = false, onChange }: {
     <section className="matching-answer matching-answer-sequence" aria-labelledby="sequence-answer-title">
       <div className="matching-answer-intro">
         <span>Ответ без ручного ввода</span>
-        <h2 id="sequence-answer-title">Составьте последовательность</h2>
-        <p>Нажмите на ячейку, затем выберите цифру.</p>
+        <h2 id="sequence-answer-title">Составь последовательность</h2>
+        <p>Нажми на ячейку, затем выбери цифру.</p>
       </div>
       <div className="sequence-answer-cells" aria-label="Позиции ответа">
         {model.rows.map((row, index) => {
@@ -474,8 +474,8 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
     <section className={`matching-answer matching-answer-${model.source}`} aria-labelledby="matching-answer-title">
       <div className="matching-answer-intro">
         <span>Ответ без ручного ввода</span>
-        <h2 id="matching-answer-title">Составьте соответствие</h2>
-        <p>Для каждого пункта выберите подходящий вариант.</p>
+        <h2 id="matching-answer-title">Составь соответствие</h2>
+        <p>Для каждого пункта выбери подходящий вариант.</p>
       </div>
       <div className="matching-answer-option-list" aria-label="Список вариантов" role="list">
         {model.options.map((option) => (
@@ -506,7 +506,7 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
                   ref={(element) => { triggerRefs.current[rowIndex] = element; }}
                   type="button"
                 >
-                  {selectedMarker ? <><strong>{selectedMarker}</strong> <span>{model.options.find((option) => option.marker === selectedMarker)?.label}</span></> : "Выберите вариант"}
+                  {selectedMarker ? <><strong>{selectedMarker}</strong> <span>{model.options.find((option) => option.marker === selectedMarker)?.label}</span></> : "Выбери вариант"}
                 </button>
               ) : (
                 <div className="matching-answer-options" aria-label={`Варианты для пункта ${row.marker}`} role="radiogroup">

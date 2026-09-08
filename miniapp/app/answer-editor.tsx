@@ -4,6 +4,7 @@ import { FormattedMathText } from "./math-display";
 import { answerInputConfig } from "./math-text";
 import { cleanAnswerLabel } from "./question-prompt";
 import { DEFAULT_TEXT_ANSWER_LENGTH, normalizeNumericInput } from "./answer-values";
+import { plural } from "./text-utils";
 import { AnswerPreview, MatchingAnswer, matchingModelFromQuestion } from "./matching-answer";
 import type {
   AnswerValue,
@@ -33,7 +34,7 @@ export type AnswerEditorProps = {
 const DEFAULT_LABELS: AnswerEditorLabels = {
   answer: "Твой ответ",
   placeholder: "Введи ответ",
-  choose: "Выберите",
+  choose: "Выбери",
 };
 
 const STRESS_CONTEXT = /ошибк\p{L}*\s+в\s+постановк\p{L}*\s+ударени\p{L}*.*выделен\p{L}*\s+букв\p{L}*.*ударн\p{L}*\s+гласн/isu;
@@ -137,7 +138,7 @@ function SingleEditor({ question, subject, value, disabled, onChange }: {
     optionRefs.current[nextIndex]?.focus();
   };
   return (
-    <div className="answer-list" role="radiogroup" aria-label="Выберите один вариант">
+    <div className="answer-list" role="radiogroup" aria-label="Выбери один вариант">
       {question.options.map((option, index) => (
         <OptionButton
           key={option.id}
@@ -174,7 +175,7 @@ function MultipleEditor({ question, subject, value, disabled, onChange }: {
   const markers = question.options.map((_, index) => String.fromCharCode(65 + index));
   return (
     <>
-      <div className="answer-list" role="group" aria-label={`Выберите ${question.selection_limit} варианта`} aria-describedby={selectionCountId}>
+      <div className="answer-list" role="group" aria-label={`Выбери ${question.selection_limit} ${plural(question.selection_limit, ["вариант", "варианта", "вариантов"])}`} aria-describedby={selectionCountId}>
         {question.options.map((option, index) => (
           <OptionButton
             key={option.id}
@@ -251,7 +252,7 @@ function ShortTextEditor({ question, value, disabled, suppressAutoHint, label, p
   onChange: (value: AnswerValue) => void;
 }) {
   const textPlaceholder = question.lang === "en" ? "Your answer" : placeholder;
-  const hint = textAnswerGuidance(question) ?? "Введите только ответ — без пояснений и лишних слов.";
+  const hint = textAnswerGuidance(question) ?? "Введи только ответ — без пояснений и лишних слов.";
   return (
     <label className="short-answer">
       <span>{label}</span>

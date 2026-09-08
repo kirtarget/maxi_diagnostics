@@ -21,7 +21,7 @@ describe("result flow screens", () => {
     expect(html).toContain("10 из 18");
     expect(html).not.toContain("Точность ответов");
     expect(html).toContain("Задание 10, Механика, ошибка");
-    expect(html).toContain("Посмотреть, где ошибся (1)");
+    expect(html).toContain("Посмотреть, где ошибся (1 ошибка)");
     expect((html.match(/result-question-cell/g) ?? []).length).toBe(18);
   });
 
@@ -90,7 +90,7 @@ describe("result flow screens", () => {
       question_id: "q10", number: 10, type: "single", topic: "Механика", title: "Задание 10", prompt: "Условие", is_correct: false, status: "incorrect", user_answer: "1", expected_answer: "2", guidance: "Повтори тему.", guidance_kind: "fallback",
     }]} index={0} onBack={() => undefined} onNext={() => undefined} onForecast={() => undefined} onSelectQuestion={() => undefined} />);
 
-    expect(html).toContain("Где ошибся (1)");
+    expect(html).toContain("Где ошибся (1 ошибка)");
     expect(html).toContain("Открыть задание 10");
     expect(html).not.toContain("Ваш ответ");
   });
@@ -206,7 +206,7 @@ describe("result flow screens", () => {
         onForecast={() => undefined}
       />,
     );
-    expect(html).toContain("Ваш ответ");
+    expect(html).toContain("Твой ответ");
     expect(html).toContain("Правильный ответ");
     expect(html).toContain("Как решать");
     expect(html).toContain("0 из 2 первичных баллов");

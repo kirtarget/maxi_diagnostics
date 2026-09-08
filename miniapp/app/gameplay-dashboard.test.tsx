@@ -55,8 +55,32 @@ describe("gameplay dashboard", () => {
     expect(html).toContain("140 XP");
     expect(html).toContain("4");
     expect(html).toContain("1/1");
-    expect(html).toContain("2/3 активностей");
+    expect(html).toContain("2/3 активности");
     expect(html).toContain("жизни");
+  });
+
+  it.each([
+    [1, "1 диагностика завершена", "Сейчас доступен 1 предмет"],
+    [2, "2 диагностики завершены", "Сейчас доступны 2 предмета"],
+    [5, "5 диагностик завершено", "Сейчас доступны 5 предметов"],
+    [11, "11 диагностик завершено", "Сейчас доступны 11 предметов"],
+    [21, "21 диагностика завершена", "Сейчас доступен 21 предмет"],
+  ])("keeps count agreement for %s", (count, completion, availability) => {
+    const diagnosticsForCount = Array.from({ length: count as number }, (_, index) => ({
+      ...diagnostics[0],
+      id: `subject-${index}`,
+      subject: index === 0 ? "Биология" : `Предмет ${index + 1}`,
+    }));
+    const html = renderToStaticMarkup(<GameplayHomeScreen
+      diagnostics={diagnosticsForCount}
+      labels={{ start_diagnostic: "Начать" } as never}
+      profile={gameplayProfileView({ completion_count: count as number, achievement_keys: [] })}
+      onStart={() => undefined}
+      onOpenProfile={() => undefined}
+    />);
+    expect(html).toContain(completion);
+    expect(html).toContain(availability);
+    if (count === 1) expect(html).toContain("включая биологию");
   });
 
   it("does not claim server gameplay facts in the fallback", () => {

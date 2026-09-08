@@ -14,6 +14,7 @@ import { createPromptAnchorAllocator, focusPromptReference, promptLayout } from 
 import { ImageViewer } from "./image-viewer";
 import { parseSequenceMatchingPrompt } from "./sequence-matching";
 import { parseTableGapPrompt } from "./table-gap-matching";
+import { plural } from "./text-utils";
 import type { AnswerValue, Brand, Question, SchoolLinks } from "./types";
 import {
   isTrainerAnswerComplete,
@@ -121,7 +122,7 @@ function TrainerNoLivesScreen({ nextLifeAt, livesReminder, onRemindLives, onHome
     <h1 id="no-lives-title">Жизни закончились</h1>
     {ready
       ? <p>Жизнь уже должна вернуться — обнови тренировку и продолжай.</p>
-      : <p>{minutesLeft !== null ? <>Одна жизнь восстановится через <b>{minutesLeft} мин</b>. </> : null}А диагностику можно проходить без жизней — там они не тратятся.</p>}
+      : <p>{minutesLeft !== null ? <>Одна жизнь восстановится через <b>{minutesLeft} {plural(minutesLeft, ["минуту", "минуты", "минут"])}</b>. </> : null}А диагностику можно проходить без жизней — там они не тратятся.</p>}
     {remainingMs !== null && !ready && (
       <div className="lives-recovery">
         <span className="lives-recovery-icon" aria-hidden="true">⏳</span>

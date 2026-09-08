@@ -35,7 +35,7 @@
     "strong_topics_label": "Сильные темы",
     "growth_topics_label": "Точки роста",
     "forecast_label": "Прогноз результата",
-    "answer_label": "Ваш ответ"
+    "answer_label": "Твой ответ"
   },
   "interface": {
     "command_start": "Открыть меню",
@@ -64,8 +64,8 @@
     "back": "Назад",
     "task_label": "Задание",
     "of_label": "из",
-    "answer_label": "Ваш ответ",
-    "enter_answer": "Введите ответ",
+    "answer_label": "Твой ответ",
+    "enter_answer": "Введи ответ",
     "choose_option": "Выбрать вариант",
     "next_question": "Следующее задание",
     "get_result": "Получить результат",

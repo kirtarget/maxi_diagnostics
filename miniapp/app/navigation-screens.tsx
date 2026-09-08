@@ -11,12 +11,22 @@ import type {
   SchoolLinks,
 } from "./types";
 import { formatCompletedDate, formatDiagnosticCount, formatDiagnosticMeta, homePrimaryAction, resultFact } from "./navigation-model";
+import { plural } from "./text-utils";
 
-function questionWord(count: number): string {
-  const lastHundred = count % 100;
-  if (lastHundred >= 11 && lastHundred <= 14) return "заданий";
-  const last = count % 10;
-  return last === 1 ? "задание" : last >= 2 && last <= 4 ? "задания" : "заданий";
+const SUBJECT_OBJECT_FORMS: Record<string, string> = {
+  "биология": "биологию",
+  "информатика": "информатику",
+  "история": "историю",
+  "математика": "математику",
+  "обществознание": "обществознание",
+  "русский язык": "русский язык",
+  "физика": "физику",
+  "химия": "химию",
+};
+
+function subjectObjectLabel(subject: string): string {
+  const normalized = subject.trim().toLocaleLowerCase("ru-RU");
+  return SUBJECT_OBJECT_FORMS[normalized] ?? `предмет «${subject}»`;
 }
 
 export function BottomNav({
@@ -114,18 +124,18 @@ export function GameplayHomeScreen({
           <div className="gameplay-progress" role="progressbar" aria-label="Прогресс уровня" aria-valuenow={profile.levelProgress} aria-valuemin={0} aria-valuemax={100}>
             <span style={{ width: `${profile.levelProgress}%` }} />
           </div>
-          <small>{profile.completionCount} {profile.completionCount === 1 ? "диагностика завершена" : "диагностик завершено"}</small>
+          <small>{profile.completionCount} {plural(profile.completionCount, ["диагностика", "диагностики", "диагностик"])} {plural(profile.completionCount, ["завершена", "завершены", "завершено"])}</small>
         </div>
         {profile.serverBacked && (
           <div className="gameplay-dashboard" aria-label="Игровой прогресс">
             <div><strong>{profile.xpTotal} XP</strong><small>опыт</small></div>
-            <div><strong>{profile.streakDays}</strong><small>дней подряд</small></div>
+            <div><strong>{profile.streakDays}</strong><small>{plural(profile.streakDays ?? 0, ["день", "дня", "дней"])} подряд</small></div>
             <div className="gameplay-dashboard-lives"><strong>{"♥".repeat(profile.livesRemaining ?? 0)}</strong><small>жизни</small></div>
             <div><strong>{profile.dailyGoal?.progress}/{profile.dailyGoal?.target}</strong><small>цель дня</small></div>
           </div>
         )}
         {profile.serverBacked && profile.quest && (
-          <div className="gameplay-quest"><div><small>Квест</small><strong>{profile.quest.progress}/{profile.quest.target} активностей</strong></div></div>
+          <div className="gameplay-quest"><div><small>Квест</small><strong>{profile.quest.progress}/{profile.quest.target} {plural(profile.quest.target ?? 0, ["активность", "активности", "активностей"])}</strong></div></div>
         )}
         {dailyPlan?.status === "done" && (
           <p className="gameplay-plan-done" role="status">
@@ -161,7 +171,7 @@ export function GameplayHomeScreen({
             </button>
           ))}
         </div>
-        <p className="gameplay-path-note">Сейчас доступны {subjects.length || 1} {subjects.length === 1 ? "предмет" : "предмета"}, включая {firstSubject}.</p>
+        <p className="gameplay-path-note">Сейчас {plural(subjects.length || 1, ["доступен", "доступны", "доступны"])} {subjects.length || 1} {plural(subjects.length || 1, ["предмет", "предмета", "предметов"])}, включая {subjectObjectLabel(firstSubject)}.</p>
 
         {completedResults.length > 0 && (
           <section className="gameplay-results" aria-label="Предыдущие результаты" aria-labelledby="gameplay-results-title">
@@ -186,7 +196,7 @@ export function GameplayHomeScreen({
 
         <button className="gameplay-profile-card" onClick={onOpenProfile} type="button">
           <span className="gameplay-profile-icon" aria-hidden="true">✦</span>
-          <span><strong>Твой профиль</strong><small>{profile.unlockedAchievements.length > 0 ? `${profile.unlockedAchievements.length} достижение открыто` : "Заверши первую диагностику, чтобы открыть достижение"}</small></span>
+          <span><strong>Твой профиль</strong><small>{profile.unlockedAchievements.length > 0 ? `Открыто ${profile.unlockedAchievements.length} ${plural(profile.unlockedAchievements.length, ["достижение", "достижения", "достижений"])}` : "Заверши первую диагностику, чтобы открыть достижение"}</small></span>
           <span aria-hidden="true">→</span>
         </button>
       </div>
@@ -203,7 +213,7 @@ export function GameplayProfileScreen({ profile, onBack, onStart }: { profile: G
       <span className="state-code">Профиль</span>
       <h1 id="gameplay-profile-title">Твой прогресс</h1>
       <div className="gameplay-profile-summary"><strong>Уровень {profile.level}</strong><span>{profile.levelLabel}</span><div className="gameplay-progress" role="progressbar" aria-label="Прогресс уровня" aria-valuenow={profile.levelProgress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${profile.levelProgress}%` }} /></div></div>
-      <div className="gameplay-stat-grid"><div><strong>{profile.completionCount}</strong><span>завершено</span></div><div><strong>{profile.unlockedAchievements.length}</strong><span>достижения</span></div></div>
+      <div className="gameplay-stat-grid"><div><strong>{profile.completionCount}</strong><span>завершено</span></div><div><strong>{profile.unlockedAchievements.length}</strong><span>{plural(profile.unlockedAchievements.length, ["достижение", "достижения", "достижений"])}</span></div></div>
       {profile.serverBacked && (
         <div className="gameplay-dashboard gameplay-dashboard-profile" aria-label="Игровой прогресс">
           <div><strong>{profile.xpTotal} XP</strong><small>опыт</small></div>
@@ -212,7 +222,7 @@ export function GameplayProfileScreen({ profile, onBack, onStart }: { profile: G
           <div><strong>{profile.dailyGoal?.progress}/{profile.dailyGoal?.target}</strong><small>цель дня</small></div>
         </div>
       )}
-      {profile.serverBacked && profile.quest && <div className="gameplay-quest"><small>Квест</small><strong>{profile.quest.progress}/{profile.quest.target} активностей</strong></div>}
+      {profile.serverBacked && profile.quest && <div className="gameplay-quest"><small>Квест</small><strong>{profile.quest.progress}/{profile.quest.target} {plural(profile.quest.target ?? 0, ["активность", "активности", "активностей"])}</strong></div>}
       <div className="gameplay-achievements"><h2>Достижения</h2>{profile.unlockedAchievements.map((achievement) => <div className="gameplay-achievement is-unlocked" key={achievement.key}><span aria-hidden="true">✓</span><span><strong>{achievement.title}</strong><small>{achievement.description}</small></span></div>)}{lockedAchievements.map((achievement) => <div className="gameplay-achievement is-locked" aria-disabled="true" key={achievement.key}><span aria-hidden="true">🔒</span><span><strong>{achievement.title}</strong><small>{achievement.key === "three_diagnostics_completed" ? "Заверши три диагностики, чтобы открыть достижение." : "Заверши первую диагностику, чтобы открыть достижение."}</small></span></div>)}</div>
       <button className="primary-button" onClick={onStart} type="button">Начать диагностику <span aria-hidden="true">→</span></button>
     </section>
@@ -248,7 +258,7 @@ export function WelcomeScreen({
         <span className="welcome-path-goal" style={{ right: 40, top: 8, width: 54, height: 54 }} aria-hidden="true">🏆</span>
       </div>
       <div className="welcome-facts" aria-label="Параметры диагностики">
-        <div><strong>{questionRange}</strong><span>{questionWord(maximumQuestions)}</span></div>
+        <div><strong>{questionRange}</strong><span>{plural(maximumQuestions, ["задание", "задания", "заданий"])}</span></div>
         <div><strong>Без таймера</strong><span>свой темп</span></div>
         <div><strong>Разбор</strong><span>в приложении</span></div>
       </div>
@@ -352,7 +362,7 @@ export function SubjectsScreen({
               <SubjectIllustration subject={item.subject} />
               <span className="subject-copy">
                 <strong>{item.subject}</strong>
-                <small>{mode ? `${mode === "quick" ? item.quick_count : item.full_count} ${questionWord(mode === "quick" ? item.quick_count : item.full_count)} · разбор ответов` : `${item.full_count} ${questionWord(item.full_count)} · два формата`}</small>
+                <small>{mode ? `${mode === "quick" ? item.quick_count : item.full_count} ${plural(mode === "quick" ? item.quick_count : item.full_count, ["задание", "задания", "заданий"])} · разбор ответов` : `${item.full_count} ${plural(item.full_count, ["задание", "задания", "заданий"])} · два формата`}</small>
               </span>
               <span className="subject-action">
                 <span>Выбрать предмет</span><span aria-hidden="true">→</span>

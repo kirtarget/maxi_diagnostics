@@ -155,7 +155,7 @@ export default function Home() {
     const saved = await session.actions.flushProgressForExit();
     setDiagnosticExitSaving(false);
     if (!saved) {
-      setDiagnosticExitError("Не удалось сохранить прогресс. Проверьте связь и повторите попытку.");
+      setDiagnosticExitError("Не удалось сохранить прогресс. Проверь связь и повтори попытку.");
       return;
     }
     setDiagnosticExitOpen(false);
