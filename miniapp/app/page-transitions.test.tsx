@@ -245,7 +245,7 @@ describe("Home screen transitions", () => {
     expect(container.querySelector("#review-title")?.textContent).toBe("Задание 10");
     await clickAndSettle(".review-topline .text-back");
     expect(container.querySelector("#review-list-title")?.textContent).toContain("Где ошибся");
-    await clickAndSettle(".brand");
+    await clickAndSettle(".review-direct-actions .text-back:last-child");
     const secondResult = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
       .find((button) => button.textContent?.includes("17 из 18"));
     expect(secondResult).not.toBeUndefined();
@@ -455,23 +455,33 @@ describe("Home screen transitions", () => {
     expect(container.querySelector("#subject-title")).not.toBeNull();
     expect(container.querySelector("#mode-title")).toBeNull();
     expect(screenClasses()).not.toContain("gameplay-home");
-    await clickAndSettle(".brand");
     expect(container.querySelector("#subject-title")).not.toBeNull();
     await clickAndSettle(".subject-card");
+    expect(container.querySelector("#mode-title")).not.toBeNull();
+    await clickAndSettle(".mode-card:not(.featured)");
     await clickAndSettle(".answer-option");
     route("/api/diagnostics/bootstrap", bootstrapPayload({
       onboarding: { status: "completed" },
       progress_profile: { completion_count: 1, achievement_keys: ["first_diagnostic_completed"] },
       daily_plan: { status: "ready", diagnostic_id: diagnostic.id, subject: diagnostic.subject, exam: diagnostic.exam, plan_date: "2026-09-06", total: 1, completed: 0 },
     }));
+    vi.useFakeTimers();
     await clickAndSettle(".question-next");
+    expect(screenClasses()).toContain("submit-screen");
+    expect(container.querySelector(".submit-note")).toBeNull();
+    await act(async () => { vi.advanceTimersByTime(299); await Promise.resolve(); });
+    expect(screenClasses()).toContain("submit-screen");
+    await act(async () => { vi.advanceTimersByTime(1); await Promise.resolve(); });
+    await settle();
     expect(screenClasses()).toContain("result-screen");
+    expect(container.querySelector(".submit-note")).toBeNull();
     const completionCall = vi.mocked(fetch).mock.calls.find(([path]) => String(path).endsWith("/session/complete"));
     expect(JSON.parse(String(completionCall?.[1]?.body)).mode).toBe("quick");
     expect(container.textContent).not.toContain("Прогноз баллов");
+    vi.useRealTimers();
     await clickAndSettle(".result-actions .secondary-button:last-child");
     expect(screenClasses()).toContain("route-screen");
-    await clickAndSettle(".brand");
+    await clickAndSettle(".bottom-nav button:first-child");
     expect(screenClasses()).toContain("gameplay-home");
     expect(container.textContent).toContain("1 диагностика завершена");
     expect(container.textContent).toContain("План на сегодня");
@@ -482,7 +492,6 @@ describe("Home screen transitions", () => {
     await mountHome();
     expect(container.querySelector("#subject-title")).not.toBeNull();
     expect(screenClasses()).not.toContain("gameplay-home");
-    await clickAndSettle(".brand");
     expect(container.querySelector("#subject-title")).not.toBeNull();
   });
 
@@ -506,7 +515,7 @@ describe("Home screen transitions", () => {
       question_count: 1, answered_count: 1, correct_count: 1, xp_earned: 10, lives_spent: 0, lives_remaining: 5,
     });
     await mountHome();
-    await clickAndSettle(".gameplay-trainer-cta");
+    await clickAndSettle(".bottom-nav button:nth-child(2)");
     await clickAndSettle(".answer-option");
     route("/api/diagnostics/bootstrap", { ...initial, gameplay_profile: { ...initial.gameplay_profile, xp_total: 10, streak_days: 1 } });
     await clickAndSettle(".question-next");
@@ -538,6 +547,9 @@ describe("Home screen transitions", () => {
 
     await act(async () => { gate.resolve(bootstrapPayload()); });
     expect(screenClasses()).toContain("welcome-screen");
+    const brand = container.querySelector(".brand");
+    expect(brand?.tagName).toBe("DIV");
+    expect(brand?.closest("button, a")).toBeNull();
     expect(requestedPaths).toContain("/api/diagnostics/bootstrap");
   });
 
@@ -564,13 +576,13 @@ describe("Home screen transitions", () => {
     expect(screenClasses()).toContain("gameplay-home");
 
     await clickAndSettle(".gameplay-home-cta");
-    expect(container.querySelector("#mode-title")).not.toBeNull();
-
-    await clickAndSettle(".mode-card.featured");
     expect(container.querySelector("#subject-title")).not.toBeNull();
 
-    // The catalog request is still open, so the interstitial has to be visible.
     await clickAndSettle(".subject-card");
+    expect(container.querySelector("#mode-title")).not.toBeNull();
+    await clickAndSettle(".mode-card.featured");
+
+    // The catalog request is still open, so the interstitial has to be visible.
     expect(container.textContent).toContain("Загружаем задания…");
 
     await act(async () => { catalog.resolve({ diagnostic }); });
@@ -589,8 +601,8 @@ describe("Home screen transitions", () => {
 
     await mountHome();
     await clickAndSettle(".gameplay-home-cta");
-    await clickAndSettle(".mode-card.featured");
     await clickAndSettle(".subject-card");
+    await clickAndSettle(".mode-card.featured");
     await settle();
 
     const trigger = container.querySelector<HTMLButtonElement>(".assessment-header-exit");
@@ -627,8 +639,8 @@ describe("Home screen transitions", () => {
 
     await mountHome();
     await clickAndSettle(".gameplay-home-cta");
-    await clickAndSettle(".mode-card.featured");
     await clickAndSettle(".subject-card");
+    await clickAndSettle(".mode-card.featured");
     await settle();
     await clickAndSettle(".answer-option");
     await clickAndSettle(".assessment-header-exit");
@@ -673,8 +685,8 @@ describe("Home screen transitions", () => {
 
     await mountHome();
     await clickAndSettle(".gameplay-home-cta");
-    await clickAndSettle(".mode-card.featured");
     await clickAndSettle(".subject-card");
+    await clickAndSettle(".mode-card.featured");
     await settle();
     await clickAndSettle(".answer-option");
     await clickAndSettle(".assessment-header-exit");
@@ -708,8 +720,8 @@ describe("Home screen transitions", () => {
 
     await mountHome();
     await clickAndSettle(".gameplay-home-cta");
-    await clickAndSettle(".mode-card.featured");
     await clickAndSettle(".subject-card");
+    await clickAndSettle(".mode-card.featured");
     await settle();
     await clickAndSettle(".answer-option");
     await clickAndSettle(".assessment-header-exit");
@@ -749,14 +761,22 @@ describe("Home screen transitions", () => {
 
     await mountHome();
     await clickAndSettle(".gameplay-home-cta");
-    await clickAndSettle(".mode-card.featured");
     await clickAndSettle(".subject-card");
+    await clickAndSettle(".mode-card.featured");
     await settle();
     expect(screenClasses()).toContain("question-screen");
 
     await clickAndSettle(".answer-option");
+    vi.useFakeTimers();
     await clickAndSettle(".question-next");
     expect(screenClasses()).toContain("submit-screen");
+    expect(container.querySelector(".submit-note")).toBeNull();
+
+    await act(async () => { vi.advanceTimersByTime(299); await Promise.resolve(); });
+    expect(screenClasses()).toContain("submit-screen");
+    expect(container.querySelector(".submit-note")).toBeNull();
+    await act(async () => { vi.advanceTimersByTime(1); await Promise.resolve(); });
+    expect(container.querySelector(".submit-note")?.textContent).toBe("Не закрывай приложение");
 
     await act(async () => {
       completion.resolve({
@@ -767,6 +787,7 @@ describe("Home screen transitions", () => {
     });
     await settle();
     expect(screenClasses()).toContain("result-screen");
+    vi.useRealTimers();
     expect(requestedPaths).toContain("/api/diagnostics/session/viewed");
 
     await clickAndSettle(".result-actions .primary-button");
@@ -785,8 +806,8 @@ describe("Home screen transitions", () => {
 
     await mountHome();
     await clickAndSettle(".gameplay-home-cta");
-    await clickAndSettle(".mode-card.featured");
     await clickAndSettle(".subject-card");
+    await clickAndSettle(".mode-card.featured");
     await settle();
 
     expect(container.textContent).toContain("Не знаю, получить результат");
@@ -796,6 +817,31 @@ describe("Home screen transitions", () => {
       question_count: 1,
       answers: { q1: "" },
     });
+  });
+
+  it("cleans the submit warning timer after a completion error", async () => {
+    route("/api/diagnostics/bootstrap", bootstrapPayload({ progress_profile: { completion_count: 1, achievement_keys: [] } }));
+    route("/api/diagnostics/catalog", { diagnostic });
+    routes["/api/diagnostics/session/complete"] = async () => new Response(
+      JSON.stringify({ detail: "temporary_unavailable" }),
+      { status: 503, headers: { "Content-Type": "application/json" } },
+    );
+
+    await mountHome();
+    await clickAndSettle(".gameplay-home-cta");
+    await clickAndSettle(".subject-card");
+    await clickAndSettle(".mode-card.featured");
+    await settle();
+    await clickAndSettle(".answer-option");
+
+    vi.useFakeTimers();
+    await clickAndSettle(".question-next");
+    await settle();
+    expect(screenClasses()).toContain("question-screen");
+    expect(container.querySelector(".submit-note")).toBeNull();
+    await act(async () => { vi.advanceTimersByTime(1_000); await Promise.resolve(); });
+    expect(container.querySelector(".submit-note")).toBeNull();
+    vi.useRealTimers();
   });
 
   it("lets the user replace a skipped answer after going back", async () => {
@@ -817,8 +863,8 @@ describe("Home screen transitions", () => {
 
     await mountHome();
     await clickAndSettle(".gameplay-home-cta");
-    await clickAndSettle(".mode-card.featured");
     await clickAndSettle(".subject-card");
+    await clickAndSettle(".mode-card.featured");
     await settle();
 
     await clickAndSettle(".question-skip");
@@ -854,7 +900,7 @@ describe("Home screen transitions", () => {
     });
 
     await mountHome();
-    await clickAndSettle(".gameplay-trainer-cta");
+    await clickAndSettle(".bottom-nav button:nth-child(2)");
     await settle();
 
     expect(screenClasses()).toContain("trainer-screen");
@@ -879,7 +925,7 @@ describe("Home screen transitions", () => {
     });
 
     await mountHome();
-    await clickAndSettle(".gameplay-trainer-cta");
+    await clickAndSettle(".bottom-nav button:nth-child(2)");
     await settle();
     expect(screenClasses()).toContain("trainer-screen");
 
@@ -921,7 +967,7 @@ describe("Home screen transitions", () => {
     });
 
     await mountHome();
-    await clickAndSettle(".gameplay-trainer-cta");
+    await clickAndSettle(".bottom-nav button:nth-child(2)");
     await settle();
 
     const startCall = vi.mocked(fetch).mock.calls.find(([path]) => String(path).endsWith("/api/diagnostics/trainer/start"));
@@ -975,6 +1021,77 @@ describe("Home screen transitions", () => {
     expect(container.querySelector(".trainer-progress")?.textContent).toContain("Тема 1");
     expect(container.textContent).toContain("План: 2 из 5");
     expect(container.textContent).toContain("повтор ошибки");
+  });
+
+  it("loads the league through the bottom navigation on first visit", async () => {
+    route("/api/diagnostics/bootstrap", bootstrapPayload({ onboarding: { status: "completed" } }));
+    route("/api/diagnostics/league", {
+      status: "active", week_start: "2026-09-07", week_end: "2026-09-13",
+      rows: [{ rank: 1, display_label: "Аня", xp_week: 42, is_me: true }],
+      me: { rank: 1, xp_week: 42 },
+    });
+
+    await mountHome();
+    await clickAndSettle(".bottom-nav button:nth-child(3)");
+    await settle();
+
+    expect(screenClasses()).toContain("league-screen");
+    expect(requestedPaths).toContain("/api/diagnostics/league");
+    expect(container.textContent).toContain("7–13 сентября");
+  });
+
+  it("routes a missing trainer selection through subjects and starts directly", async () => {
+    route("/api/diagnostics/bootstrap", bootstrapPayload({ onboarding: { status: "completed" }, diagnostics: [diagnostic, secondDiagnostic], results: [], progress_profile: { completion_count: 0, achievement_keys: [] } }));
+    route("/api/diagnostics/trainer/start", {
+      trainer_session_id: "s".repeat(32), diagnostic_id: diagnostic.id, content_version: CONTENT_VERSION,
+      mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1, status: "active", questions: diagnostic.questions, lives_remaining: 5,
+    });
+
+    await mountHome();
+    await clickAndSettle(".bottom-nav button:nth-child(2)");
+    expect(container.querySelector("#subject-title")).not.toBeNull();
+    expect(container.querySelector("#mode-title")).toBeNull();
+    await clickAndSettle(".subject-card");
+    await settle();
+
+    expect(container.querySelector("#mode-title")).toBeNull();
+    expect(screenClasses()).toContain("trainer-screen");
+    expect(requestedPaths).toContain("/api/diagnostics/trainer/start");
+  });
+
+  it("clears a cancelled trainer intent before a fresh onboarding selection", async () => {
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      onboarding: { status: "welcome" },
+      diagnostics: [diagnostic, secondDiagnostic],
+      results: [],
+      progress_profile: { completion_count: 0, achievement_keys: [] },
+    }));
+    route("/api/diagnostics/onboarding", { status: "selection" });
+
+    await mountHome();
+    await clickAndSettle(".bottom-nav button:nth-child(2)");
+    expect(container.querySelector("#subject-title")).not.toBeNull();
+    await clickAndSettle(".navigation-screen .text-back");
+    expect(container.querySelector("#welcome-title")).not.toBeNull();
+
+    await clickAndSettle(".welcome-screen .primary-button");
+    expect(container.querySelector("#subject-title")).not.toBeNull();
+    await clickAndSettle(".subject-card");
+
+    expect(container.querySelector("#mode-title")).not.toBeNull();
+    expect(container.querySelector(".trainer-screen")).toBeNull();
+    expect(requestedPaths).not.toContain("/api/diagnostics/trainer/start");
+  });
+
+  it("uses the same subject-first start from profile as from home", async () => {
+    route("/api/diagnostics/bootstrap", bootstrapPayload({ onboarding: { status: "completed" } }));
+    await mountHome();
+    await clickAndSettle(".bottom-nav button:nth-child(4)");
+    expect(screenClasses()).toContain("gameplay-profile");
+    await clickAndSettle(".gameplay-profile .primary-button");
+
+    expect(container.querySelector("#subject-title")).not.toBeNull();
+    expect(container.querySelector("#mode-title")).toBeNull();
   });
 
   it("marks the plan done on the home screen once every question is answered", async () => {

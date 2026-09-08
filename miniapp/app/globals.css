@@ -135,10 +135,8 @@ select:disabled {
   font-size: 13px;
   font-weight: 700;
   text-align: left;
-  cursor: pointer;
+  cursor: default;
 }
-
-.brand:disabled { cursor: default; }
 
 .brand-mark {
   width: 36px;
@@ -634,21 +632,22 @@ select:disabled {
 
 .gameplay-dashboard {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .gameplay-dashboard > div {
   display: flex;
   flex-direction: column-reverse;
   gap: 2px;
-  padding: 14px;
+  padding: 11px 8px;
   border-radius: 18px;
+  color: var(--ink);
   background: var(--surface);
   box-shadow: var(--shadow-glow);
 }
 
-.gameplay-dashboard strong { font-size: 21px; font-weight: 800; }
+.gameplay-dashboard strong { font-size: 17px; font-weight: 800; }
 
 .gameplay-dashboard small {
   color: var(--muted);
@@ -700,6 +699,19 @@ select:disabled {
 
 .gameplay-home-cta { width: 100%; }
 
+.gameplay-next-subject {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  color: white;
+  background: var(--brand-ink);
+}
+
+.gameplay-next-subject small { color: var(--brand-accent); font-size: 12px; font-weight: 700; }
+.gameplay-next-subject strong { font-size: 14px; }
+
 .gameplay-plan-done {
   display: flex;
   align-items: center;
@@ -712,10 +724,6 @@ select:disabled {
   font-size: 14px;
   font-weight: 700;
 }
-
-.gameplay-cta-row { display: flex; gap: 10px; }
-
-.gameplay-cta-row .secondary-button { flex: 1; }
 
 .gameplay-section-heading {
   display: flex;
@@ -832,6 +840,24 @@ select:disabled {
 
 .gameplay-profile-card small { color: var(--muted); font-size: 12px; }
 
+.gameplay-results { display: flex; flex-direction: column; gap: 8px; }
+.gameplay-result-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 15px;
+  border: 1px solid var(--decor-line);
+  border-radius: 16px;
+  color: var(--ink);
+  background: var(--surface);
+  text-align: left;
+}
+.gameplay-result-card > span { display: flex; flex-direction: column; gap: 3px; }
+.gameplay-result-card > span:last-child { align-items: flex-end; }
+.gameplay-result-card strong { font-size: 14px; }
+.gameplay-result-card small { color: var(--muted); font-size: 12px; }
+
 /* ============ Profile ============ */
 
 .gameplay-profile { gap: 12px; }
@@ -914,6 +940,9 @@ select:disabled {
 
 .gameplay-achievement small { color: var(--muted); font-size: 12px; }
 
+.gameplay-achievement.is-locked { opacity: 0.62; border: 1px dashed var(--decor-line); box-shadow: none; }
+.gameplay-achievement.is-locked > span:first-child { color: var(--muted); background: color-mix(in srgb, var(--muted) 16%, white); }
+
 /* ============ Mode ============ */
 
 .navigation-screen { gap: 12px; }
@@ -992,6 +1021,7 @@ select:disabled {
 .mode-card strong { font-size: 18px; font-weight: 800; }
 
 .mode-card-meta { color: var(--muted); font-size: 13px; }
+.mode-card-meta small { display: block; margin-top: 3px; color: var(--brand-primary); font-size: 12px; font-weight: 700; }
 
 .mode-card > span:not(.mode-badge) {
   color: var(--muted);
@@ -3424,6 +3454,33 @@ select:disabled {
 }
 
 .league-state .text-back { align-self: center; }
+
+.bottom-nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  width: min(100%, 430px);
+  margin: 12px auto 0;
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--decor-line);
+  background: color-mix(in srgb, var(--brand-paper) 94%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.bottom-nav button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bottom-nav button.is-active { color: var(--brand-primary); background: var(--primary-tint); }
 
 /* ============ Offers ============ */
 

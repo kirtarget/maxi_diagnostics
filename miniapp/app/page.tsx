@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { GameplayHomeScreen, GameplayProfileScreen, ModeScreen, NotTelegramScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
+import { BottomNav, GameplayHomeScreen, GameplayProfileScreen, ModeScreen, NotTelegramScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
 import { safeAssetPath } from "./question-assets";
 import { QuestionView as TrainingQuestionView } from "./question-screen";
 import {
@@ -21,7 +21,9 @@ import { useDiagnosticSession } from "./use-diagnostic-session";
 import { useTrainer } from "./use-trainer";
 import { isEmptyAnswer } from "./answer-values";
 import { ConfirmSheet } from "./confirm-sheet";
-import type { Brand, DeliveryStatus, Screen } from "./types";
+import type { Brand, DeliveryStatus, PublicDiagnosticSummary, Screen } from "./types";
+import type { NavigationIntent, NavigationSelection } from "./navigation-model";
+import { shouldShowBottomNav } from "./navigation-model";
 
 type DisplayBrand = Pick<Brand, "name" | "short_name" | "logo"> & {
   resultStatus: string;
@@ -41,17 +43,13 @@ const BUILD_BRAND: DisplayBrand = {
 
 function BrandHeader({
   brand,
-  disabled,
-  onHome,
 }: {
   brand: DisplayBrand;
-  disabled: boolean;
-  onHome: () => void;
 }) {
   const logo = safeAssetPath(brand.logo);
   return (
     <header className="brand-bar">
-      <button className="brand" type="button" onClick={onHome} disabled={disabled}>
+      <div className="brand" aria-label={brand.name}>
         {logo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img className="brand-mark brand-logo" src={logo} alt={brand.short_name} />
@@ -59,7 +57,7 @@ function BrandHeader({
           <span className="brand-mark" aria-hidden="true">{brand.short_name.slice(0, 2)}</span>
         )}
         <span>{brand.name}</span>
-      </button>
+      </div>
       <span className="status-pill">{brand.resultStatus}</span>
     </header>
   );
@@ -71,6 +69,8 @@ export default function Home() {
   const [diagnosticExitSaving, setDiagnosticExitSaving] = useState(false);
   const [diagnosticExitError, setDiagnosticExitError] = useState<string | null>(null);
   const [deliveryStatus, setDeliveryStatus] = useState<DeliveryStatus | null>(null);
+  const [navigationSelection, setNavigationSelection] = useState<NavigationSelection>({ exam: "", diagnosticId: null, mode: null });
+  const [navigationIntent, setNavigationIntent] = useState<NavigationIntent>(null);
   const bootstrapSession = useBootstrap(setScreen);
   const session = useDiagnosticSession({ bootstrap: bootstrapSession, screen, setScreen });
   const trainer = useTrainer({
@@ -84,9 +84,14 @@ export default function Home() {
   const { bootstrap, error, outsideTelegram, dismissedOfferPlacements, leagueState } = bootstrapSession.state;
   const { dismissOfferPlacement, handleOfferEvent, openLeague } = bootstrapSession.actions;
   const {
-    diagnostic, diagnosticLoad, questions, exam, mode, questionIndex,
+    diagnostic, diagnosticLoad, questions, exam, questionIndex,
     answers, inputDrafts, result, resultDiagnostic, review, reviewIndex, reviewError, syncWarning,
   } = session.state;
+
+  useEffect(() => {
+    if (!exam) return;
+    setNavigationSelection((current) => current.exam === exam ? current : { ...current, exam });
+  }, [exam]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -116,10 +121,25 @@ export default function Home() {
   const onboardingComplete = bootstrap?.onboarding?.status === "completed"
     || (!bootstrap?.onboarding && Boolean(bootstrap?.progress_profile?.completion_count));
   const goHome = () => {
+    setNavigationIntent(null);
     void bootstrapSession.actions.refreshProgress();
     if (onboardingComplete) setScreen("home");
-    else if (bootstrap?.onboarding?.status === "selection") session.actions.chooseMode("quick", exam);
+    else if (bootstrap?.onboarding?.status === "selection") {
+      setNavigationSelection((current) => ({ ...current, diagnosticId: null, mode: null }));
+      setScreen("subjects");
+    }
     else setScreen("welcome");
+  };
+  const openNewDiagnostic = () => {
+    setNavigationSelection({ exam, diagnosticId: null, mode: null });
+    setNavigationIntent(null);
+    setScreen("subjects");
+  };
+  const openSubject = (summary: PublicDiagnosticSummary) => {
+    setNavigationIntent(null);
+    setNavigationSelection({ exam: summary.exam, diagnosticId: summary.id, mode: null });
+    session.actions.setExam(summary.exam);
+    setScreen("mode");
   };
   const requestDiagnosticExit = () => {
     setDiagnosticExitError(null);
@@ -186,6 +206,16 @@ export default function Home() {
     ?? resultDiagnostic?.subject
     ?? (bootstrap?.diagnostics.length === 1 ? bootstrap.diagnostics.at(0)?.subject : null);
   const trainerDiagnostic = trainerDiagnosticId(bootstrap, selectedTrainerSubject);
+  const selectedDiagnostic = bootstrap?.diagnostics.find((item) => item.id === navigationSelection.diagnosticId) ?? null;
+  const openTrainer = () => {
+    if (trainerDiagnostic) {
+      void trainer.actions.start(trainerDiagnostic);
+      return;
+    }
+    setNavigationIntent({ kind: "trainer" });
+    setNavigationSelection((current) => ({ ...current, diagnosticId: null, mode: null }));
+    setScreen("subjects");
+  };
   const trainerHeader = trainerHeaderView(bootstrap, trainer.state.trainer.session);
   const activeAssessment = screen === "question" || screen === "trainer";
 
@@ -201,7 +231,7 @@ export default function Home() {
   if (outsideTelegram && !bootstrap) {
     return (
       <main className="app-shell" style={style}>
-        <BrandHeader brand={displayBrand} disabled onHome={() => undefined} />
+        <BrandHeader brand={displayBrand} />
         <NotTelegramScreen botUrl={BUILD_BOT_URL} />
       </main>
     );
@@ -210,7 +240,7 @@ export default function Home() {
   if (error && !bootstrap) {
     return (
       <main className="app-shell" style={style}>
-        <BrandHeader brand={displayBrand} disabled onHome={() => undefined} />
+        <BrandHeader brand={displayBrand} />
         <section className="screen centered-state" role="alert">
           <span className="state-icon" aria-hidden="true">✈️</span>
           <h1>Диагностика пока недоступна</h1>
@@ -223,11 +253,7 @@ export default function Home() {
 
   return (
     <main className="app-shell" style={style}>
-      {!activeAssessment && <BrandHeader
-        brand={displayBrand}
-        disabled={!brand || screen === "submitting"}
-        onHome={goHome}
-      />}
+      {!activeAssessment && <BrandHeader brand={displayBrand} />}
       {error && bootstrap && !activeAssessment && (
         <div role="alert" className="inline-warning">{error}<button type="button" onClick={() => void bootstrapSession.actions.refreshProgress()}>Обновить прогресс</button></div>
       )}
@@ -280,7 +306,11 @@ export default function Home() {
           labels={bootstrap.school.brand.interface}
           onStart={() => {
             void bootstrapSession.actions.beginOnboarding().then((saved) => {
-              if (saved) session.actions.chooseMode("quick", bootstrap.diagnostics[0]?.exam ?? "");
+              if (saved) {
+                setNavigationIntent(null);
+                setNavigationSelection((current) => ({ ...current, diagnosticId: null, mode: null }));
+                setScreen("subjects");
+              }
             });
           }}
           links={bootstrap.school.links}
@@ -291,34 +321,25 @@ export default function Home() {
         <>
         <GameplayHomeScreen
           diagnostics={bootstrap.diagnostics}
+          results={bootstrap.results}
+          resumableAttempt={bootstrap.attempt}
+          lastSubject={bootstrap.results.find((attempt) => attempt.result)?.subject ?? null}
           labels={bootstrap.school.brand.interface}
           profile={gameplayProfile}
           dailyPlan={dailyPlan}
-          onStart={() => setScreen("mode")}
+          onStart={openNewDiagnostic}
+          onResume={() => void session.actions.hydrate(true)}
+          onOpenSubject={openSubject}
+          onOpenResult={session.actions.openSavedResult}
           onStartPlan={dailyPlan?.diagnostic_id
             ? () => void trainer.actions.start(dailyPlan.diagnostic_id!, "plan")
             : undefined}
-          onStartTrainer={() => {
-            if (trainerDiagnostic) void trainer.actions.start(trainerDiagnostic);
-          }}
           onOpenProfile={() => setScreen("profile")}
-          onOpenLeague={() => void openLeague()}
           offers={bootstrap.school.links.offers}
           onOfferEvent={handleOfferEvent}
           offerDismissed={Boolean(dismissedOfferPlacements.home)}
           onOfferDismiss={() => dismissOfferPlacement("home")}
         />
-        {bootstrap.results.some((attempt) => attempt.result) && (
-          <section className="screen" aria-label="Предыдущие результаты">
-            <h2>Мои результаты</h2>
-            <p className="lead">Каждый результат и разбор ошибок хранятся здесь. Открой любую пройденную диагностику.</p>
-            {bootstrap.results.filter((attempt) => attempt.result).map((attempt) => (
-              <button key={attempt.attempt_id} type="button" className="secondary-button" onClick={() => session.actions.openSavedResult(attempt)}>
-                {attempt.exam} · {attempt.subject ?? "Диагностика"} · {attempt.result!.correct_count} из {attempt.result!.question_count}
-              </button>
-            ))}
-          </section>
-        )}
         </>
       )}
 
@@ -326,7 +347,7 @@ export default function Home() {
         <GameplayProfileScreen
           profile={gameplayProfile}
           onBack={() => setScreen("home")}
-          onStart={() => setScreen("mode")}
+          onStart={openNewDiagnostic}
         />
       )}
 
@@ -335,17 +356,18 @@ export default function Home() {
           state={leagueState}
           onRetry={() => void openLeague()}
           onHome={() => setScreen(bootstrap?.diagnostics.length ? "home" : "welcome")}
+          onTrain={openTrainer}
         />
       )}
 
       {screen === "mode" && bootstrap && (
-        <ModeScreen
+        selectedDiagnostic && <ModeScreen
+          diagnostic={selectedDiagnostic}
           labels={bootstrap.school.brand.interface}
-          onBack={() => setScreen("home")}
-          onSelect={(selectedMode) => session.actions.chooseMode(
-            selectedMode,
-            bootstrap.diagnostics[0]?.exam ?? "",
-          )}
+          onBack={() => setScreen(navigationSelection.diagnosticId ? "subjects" : "home")}
+          onSelect={(selectedMode) => {
+            void session.actions.chooseFormat(selectedMode, selectedDiagnostic);
+          }}
         />
       )}
 
@@ -354,10 +376,20 @@ export default function Home() {
           diagnostics={bootstrap.diagnostics}
           exam={exam}
           labels={bootstrap.school.brand.interface}
-          mode={mode}
-          onBack={() => setScreen(onboardingComplete ? "mode" : "welcome")}
+          mode={navigationSelection.mode ?? undefined}
+          onBack={() => {
+            setNavigationIntent(null);
+            setScreen(onboardingComplete ? "home" : "welcome");
+          }}
           onExam={session.actions.setExam}
-          onSelect={session.actions.beginDiagnostic}
+          onSelect={(summary) => {
+            setNavigationSelection((current) => ({ ...current, diagnosticId: summary.id }));
+            if (navigationIntent?.kind === "trainer") {
+              setNavigationIntent(null);
+              void trainer.actions.start(summary.id);
+            } else if (navigationSelection.mode) void session.actions.chooseFormat(navigationSelection.mode, summary);
+            else setScreen("mode");
+          }}
         />
       )}
 
@@ -397,7 +429,7 @@ export default function Home() {
           <div className="submit-orbit" aria-hidden="true"><span>🧠</span></div>
           <h1>Считаем результат</h1>
           <p>Сервер проверяет ответы и собирает твою карту знаний. Обычно это меньше минуты.</p>
-          <span className="submit-note">Не закрывай приложение</span>
+          {session.state.submitWarning && <span className="submit-note">Не закрывай приложение</span>}
         </section>
       )}
 
@@ -488,6 +520,17 @@ export default function Home() {
           offers={bootstrap.school.links.offers}
           onRepeat={bootstrap.diagnostics.some((item) => item.id === result.diagnostic_id) ? repeatDiagnostic : undefined}
           onSubjects={() => setScreen("subjects")}
+        />
+      )}
+      {shouldShowBottomNav(screen) && (
+        <BottomNav
+          screen={screen}
+          onNavigate={(nextScreen) => {
+            if (nextScreen === "home") goHome();
+            else if (nextScreen === "league") void openLeague();
+            else if (nextScreen === "trainer") openTrainer();
+            else setScreen(nextScreen);
+          }}
         />
       )}
     </main>

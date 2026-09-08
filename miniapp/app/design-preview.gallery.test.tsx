@@ -140,9 +140,9 @@ const noop = () => undefined;
 
 const screens: Array<[string, string]> = [
   ["welcome", renderToStaticMarkup(<WelcomeScreen diagnostics={diagnostics} labels={labels} links={links} onStart={noop} />)],
-  ["home", renderToStaticMarkup(<GameplayHomeScreen diagnostics={diagnostics} labels={labels} profile={profile} onStart={noop} onOpenProfile={noop} onOpenLeague={noop} offers={links.offers} />)],
+  ["home", renderToStaticMarkup(<GameplayHomeScreen diagnostics={diagnostics} labels={labels} profile={profile} onStart={noop} onOpenProfile={noop} offers={links.offers} />)],
   ["profile", renderToStaticMarkup(<GameplayProfileScreen profile={profile} onBack={noop} onStart={noop} />)],
-  ["mode", renderToStaticMarkup(<ModeScreen labels={labels} onBack={noop} onSelect={noop} />)],
+  ["mode", renderToStaticMarkup(<ModeScreen diagnostic={diagnostics[0]} labels={labels} onBack={noop} onSelect={noop} />)],
   ["subjects", renderToStaticMarkup(<SubjectsScreen diagnostics={diagnostics} exam="ОГЭ" labels={labels} mode="full" onBack={noop} onExam={noop} onSelect={noop} />)],
   ["question-single", renderToStaticMarkup(<QuestionView question={q("3")} index={2} total={10} answer="b" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
   ["question-input", renderToStaticMarkup(<QuestionView question={q("5", { type: "input", options: undefined, prompt: "Найди значение выражения 2,4 · 5 − 3,6. Запиши ответ числом." } as never)} index={4} total={10} answer="8,4" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
@@ -215,7 +215,7 @@ describe("design preview gallery", () => {
     const style = brand.colors;
     const vars = `--brand-primary:${style.primary};--brand-accent:${style.accent};--brand-signal:${style.signal};--brand-ink:${style.ink};--brand-paper:${style.paper};--brand-background:${style.background}`;
     for (const [name, html] of screens) {
-      writeFileSync(`${OUT_DIR}/${name}.html`, `<!doctype html><html lang="ru" style="${vars}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="globals.css"></head><body><main class="app-shell">${name.startsWith("question-") ? "" : `<header class="brand-bar"><button class="brand" type="button"><span class="brand-mark">MA</span><span>MAXIMUM Education</span></button><span class="status-pill">${labels.result_in_app}</span></header>`}${html}</main></body></html>`);
+      writeFileSync(`${OUT_DIR}/${name}.html`, `<!doctype html><html lang="ru" style="${vars}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="globals.css"></head><body><main class="app-shell">${name.startsWith("question-") ? "" : `<header class="brand-bar"><div class="brand" aria-label="MAXIMUM Education"><span class="brand-mark">MA</span><span>MAXIMUM Education</span></div><span class="status-pill">${labels.result_in_app}</span></header>`}${html}</main></body></html>`);
     }
     writeFileSync(`${OUT_DIR}/index.html`, `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;grid-template-columns:repeat(auto-fill,400px);gap:20px;background:#ddd;padding:20px">${screens.map(([name]) => `<div><p style="font:700 13px sans-serif;margin:0 0 6px">${name}</p><iframe src="${name}.html" style="width:390px;height:844px;border:1px solid #999;border-radius:20px;background:#fff"></iframe></div>`).join("")}</body>`);
     expect(screens.length).toBeGreaterThan(0);
