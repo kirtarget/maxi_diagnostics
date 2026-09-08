@@ -45,6 +45,7 @@ import type {
   ServerAttempt,
   Screen,
 } from "./types";
+import { readExamPreference, SUBMIT_MINIMUM_MS, submitPresentation, writeExamPreference } from "./navigation-model";
 
 export type DiagnosticSessionState = {
   /** Non-null only while the loaded diagnostic matches the selected one. */
@@ -67,12 +68,14 @@ export type DiagnosticSessionState = {
   syncWarning: string | null;
   progressSaveState: ProgressSaveState;
   progressToast: string | null;
+  submitWarning: boolean;
 };
 
 export type DiagnosticSessionActions = {
   hydrate(preserveCurrentScreen?: boolean): Promise<boolean>;
   setExam(exam: string): void;
   chooseMode(mode: DiagnosticMode, exam: string): void;
+  chooseFormat(mode: DiagnosticMode, diagnostic: PublicDiagnosticSummary): Promise<void>;
   beginDiagnostic(selected: PublicDiagnosticSummary): Promise<void>;
   answerQuestion(value: AnswerValue): void;
   skipQuestion(): void;
@@ -137,6 +140,7 @@ export function useDiagnosticSession({
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [progressSaveState, setProgressSaveState] = useState<ProgressSaveState>("idle");
   const [progressToast, setProgressToast] = useState<string | null>(null);
+  const [submitWarning, setSubmitWarning] = useState(false);
 
   const progressRevision = useRef(0);
   const syncedQuestionIndex = useRef(0);
@@ -288,7 +292,16 @@ export function useDiagnosticSession({
       if (!preserveProgressError) progressQueue.current?.cancel();
       loaded.apply();
       setLoadedDiagnostic(null);
-      setExam((current) => current || data.diagnostics[0]?.exam || "");
+      const preferredExam = readExamPreference(data.school.brand.school_id);
+      setExam((current) => {
+        const next = preferredExam && data.diagnostics.some((item) => item.exam === preferredExam)
+          ? preferredExam
+          : current && data.diagnostics.some((item) => item.exam === current)
+            ? current
+            : data.diagnostics[0]?.exam || "";
+        if (next) writeExamPreference(data.school.brand.school_id, next);
+        return next;
+      });
       if (data.diagnostics.length === 0) {
         setScreen("welcome");
         return true;
@@ -372,7 +385,6 @@ export function useDiagnosticSession({
         setReviewIndex(0);
         setReviewError(null);
         const onboarding = data.onboarding?.status ?? (data.progress_profile?.completion_count ? "completed" : "welcome");
-        if (onboarding === "selection") setMode("quick");
         setScreen(onboarding === "completed" ? "home" : onboarding === "selection" ? "subjects" : "welcome");
       }
       return true;
@@ -467,7 +479,7 @@ export function useDiagnosticSession({
     void markResultViewed(initData.current, attemptId, sessionScope).catch(() => undefined);
   }, [attemptId, initData, screen, sessionScope]);
 
-  const beginLoadedDiagnostic = (selected: PublicDiagnostic) => {
+  const beginLoadedDiagnostic = (selected: PublicDiagnostic, selectedMode: DiagnosticMode = mode) => {
     skipAutoSaveAfterRecovery.current = false;
     progressQueue.current?.cancel();
     attemptGeneration.current += 1;
@@ -481,6 +493,7 @@ export function useDiagnosticSession({
     setAttemptId(nextAttemptId);
     setLoadedDiagnostic(selected);
     setDiagnosticId(selected.id);
+    setMode(selectedMode);
     setQuestionIndex(0);
     latestQuestionIndex.current = 0;
     progressRevision.current = 0;
@@ -500,7 +513,7 @@ export function useDiagnosticSession({
     setScreen("question");
   };
 
-  const beginDiagnostic = async (selected: PublicDiagnosticSummary) => {
+  const beginDiagnostic = async (selected: PublicDiagnosticSummary, selectedMode: DiagnosticMode = mode) => {
     if (!sessionScope) return;
     const requestId = diagnosticLoadRequestId.current + 1;
     diagnosticLoadRequestId.current = requestId;
@@ -510,7 +523,7 @@ export function useDiagnosticSession({
       const loaded = await loadCachedDiagnostic(selected, sessionScope);
       if (requestId !== diagnosticLoadRequestId.current) return;
       dispatchDiagnosticLoad({ type: "loaded", requestId, diagnostic: loaded });
-      beginLoadedDiagnostic(loaded);
+      beginLoadedDiagnostic(loaded, selectedMode);
     } catch {
       if (requestId !== diagnosticLoadRequestId.current) return;
       dispatchDiagnosticLoad({
@@ -540,6 +553,9 @@ export function useDiagnosticSession({
 
   const submit = async (answersForSubmission: AnswerMap = answers) => {
     if (!diagnostic || !brand || !sessionScope) return;
+    const submitStartedAt = Date.now();
+    const warningTimer = window.setTimeout(() => setSubmitWarning(true), SUBMIT_MINIMUM_MS);
+    setSubmitWarning(false);
     setScreen("submitting");
     setError(null);
     const submittedAttemptId = attemptId;
@@ -561,6 +577,8 @@ export function useDiagnosticSession({
           progressRevision.current + 1, mode, answersForSubmission, supersedesAttemptId.current,
         ),
       );
+      const remainingMs = submitPresentation(Date.now() - submitStartedAt).remainingMs;
+      if (remainingMs > 0) await new Promise<void>((resolve) => window.setTimeout(resolve, remainingMs));
       if (
         submittedAttemptId !== activeAttemptId.current ||
         submittedGeneration !== attemptGeneration.current
@@ -604,6 +622,9 @@ export function useDiagnosticSession({
         setError("Не удалось получить результат. Ответы сохранены — повторите отправку.");
       }
       setScreen("question");
+    } finally {
+      window.clearTimeout(warningTimer);
+      setSubmitWarning(false);
     }
   };
 
@@ -757,6 +778,7 @@ export function useDiagnosticSession({
       syncWarning,
       progressSaveState,
       progressToast,
+      submitWarning,
     },
     actions: {
       hydrate,
@@ -780,11 +802,21 @@ export function useDiagnosticSession({
         reviewSelectionIdentity.current = { attemptId: attempt.attempt_id, contentVersion: attempt.content_version };
         setScreen("result");
       },
-      setExam,
+      setExam: (nextExam) => {
+        setExam(nextExam);
+        if (brand?.school_id) writeExamPreference(brand.school_id, nextExam);
+      },
       chooseMode: (selectedMode, nextExam) => {
         setMode(selectedMode);
         setExam(nextExam);
+        if (brand?.school_id) writeExamPreference(brand.school_id, nextExam);
         setScreen("subjects");
+      },
+      chooseFormat: (selectedMode, selectedDiagnostic) => {
+        setMode(selectedMode);
+        setExam(selectedDiagnostic.exam);
+        if (brand?.school_id) writeExamPreference(brand.school_id, selectedDiagnostic.exam);
+        return beginDiagnostic(selectedDiagnostic, selectedMode);
       },
       beginDiagnostic,
       answerQuestion,

@@ -43,8 +43,22 @@ describe("gameplayProfileView", () => {
       level: 5,
       levelProgress: 100,
       onboardingState: "returning",
-      unlockedAchievements: [expect.objectContaining({ key: "first_diagnostic_completed" })],
+      unlockedAchievements: [
+        expect.objectContaining({ key: "first_diagnostic_completed" }),
+        expect.objectContaining({ key: "three_diagnostics_completed" }),
+      ],
     });
+  });
+
+  it("derives completion achievements without duplicates or trusting unknown keys", () => {
+    expect(gameplayProfileView({ completion_count: 0, achievement_keys: ["three_diagnostics_completed", "unknown"] }).unlockedAchievements).toEqual([]);
+    expect(gameplayProfileView({ completion_count: 1, achievement_keys: [] }).unlockedAchievements.map(({ key }) => key)).toEqual([
+      "first_diagnostic_completed",
+    ]);
+    expect(gameplayProfileView({ completion_count: 3, achievement_keys: ["first_diagnostic_completed", "first_diagnostic_completed", "unknown"] }).unlockedAchievements.map(({ key }) => key)).toEqual([
+      "first_diagnostic_completed",
+      "three_diagnostics_completed",
+    ]);
   });
 
   it("prefers the server-owned gameplay projection", () => {

@@ -1,20 +1,40 @@
 import { useMemo } from "react";
 import { normalizeOffer, OfferSurface, type OfferTelemetryEvent } from "./offer-ux";
 import { subjectIconKind, type SubjectIconKind } from "./subject-illustration";
-import type { GameplayProfileView } from "./gameplay-profile-model";
+import { achievementCatalog, type GameplayProfileView } from "./gameplay-profile-model";
 import type {
   Brand,
   DailyPlanSummary,
   DiagnosticMode,
   PublicDiagnosticSummary,
+  ServerAttempt,
   SchoolLinks,
 } from "./types";
+import { formatCompletedDate, formatDiagnosticCount, formatDiagnosticMeta, homePrimaryAction, resultFact } from "./navigation-model";
 
 function questionWord(count: number): string {
   const lastHundred = count % 100;
   if (lastHundred >= 11 && lastHundred <= 14) return "заданий";
   const last = count % 10;
   return last === 1 ? "задание" : last >= 2 && last <= 4 ? "задания" : "заданий";
+}
+
+export function BottomNav({
+  screen,
+  onNavigate,
+}: {
+  screen: string;
+  onNavigate: (screen: "home" | "trainer" | "league" | "profile") => void;
+}) {
+  const items = [
+    ["home", "Главная"],
+    ["trainer", "Тренажёр"],
+    ["league", "Лига"],
+    ["profile", "Профиль"],
+  ] as const;
+  return <nav className="bottom-nav" aria-label="Основная навигация">{items.map(([target, label]) => (
+    <button key={target} className={screen === target ? "is-active" : ""} aria-current={screen === target ? "page" : undefined} onClick={() => onNavigate(target)} type="button">{label}</button>
+  ))}</nav>;
 }
 
 export function NotTelegramScreen({ botUrl }: { botUrl: string | null }) {
@@ -37,14 +57,18 @@ export type WelcomeScreenProps = {
 
 export type GameplayHomeScreenProps = {
   diagnostics: PublicDiagnosticSummary[];
+  results?: ServerAttempt[];
+  resumableAttempt?: ServerAttempt | null;
+  lastSubject?: string | null;
   labels: Brand["interface"];
   profile: GameplayProfileView;
   dailyPlan?: DailyPlanSummary | null;
   onStart: () => void;
+  onResume?: () => void;
+  onOpenSubject?: (diagnostic: PublicDiagnosticSummary) => void;
+  onOpenResult?: (attempt: ServerAttempt) => void;
   onStartPlan?: () => void;
-  onStartTrainer?: () => void;
   onOpenProfile: () => void;
-  onOpenLeague?: () => void;
   offers?: SchoolLinks["offers"];
   onOfferEvent?: (event: OfferTelemetryEvent) => void;
   offerDismissed?: boolean;
@@ -53,14 +77,18 @@ export type GameplayHomeScreenProps = {
 
 export function GameplayHomeScreen({
   diagnostics,
+  results = [],
+  resumableAttempt,
+  lastSubject,
   labels,
   profile,
   dailyPlan,
   onStart,
+  onResume,
+  onOpenSubject,
+  onOpenResult,
   onStartPlan,
-  onStartTrainer,
   onOpenProfile,
-  onOpenLeague,
   offers = [],
   onOfferEvent,
   offerDismissed = false,
@@ -68,9 +96,10 @@ export function GameplayHomeScreen({
 }: GameplayHomeScreenProps) {
   const offer = useMemo(() => normalizeOffer(offers[0] ?? {}), [offers]);
   const subjects = [...new Set(diagnostics.map((item) => item.subject))];
-  const pathItems = diagnostics.slice(0, 3);
+  const pathItems = diagnostics;
   const firstSubject = subjects[0] ?? "предмет";
-  const planReady = dailyPlan?.status === "ready" && Boolean(onStartPlan);
+  const primary = homePrimaryAction({ resumableAttempt, dailyPlan });
+  const completedResults = results.filter((attempt) => attempt.result);
 
   return (
     <section className="screen gameplay-home" aria-labelledby="gameplay-home-title">
@@ -87,9 +116,6 @@ export function GameplayHomeScreen({
           </div>
           <small>{profile.completionCount} {profile.completionCount === 1 ? "диагностика завершена" : "диагностик завершено"}</small>
         </div>
-      </div>
-
-      <div className="gameplay-home-body">
         {profile.serverBacked && (
           <div className="gameplay-dashboard" aria-label="Игровой прогресс">
             <div><strong>{profile.xpTotal} XP</strong><small>опыт</small></div>
@@ -101,29 +127,54 @@ export function GameplayHomeScreen({
         {profile.serverBacked && profile.quest && (
           <div className="gameplay-quest"><div><small>Квест</small><strong>{profile.quest.progress}/{profile.quest.target} активностей</strong></div></div>
         )}
-        {planReady && dailyPlan && (
-          <button className="primary-button gameplay-home-cta gameplay-plan-cta" onClick={onStartPlan} type="button">
-            План на сегодня: {dailyPlan.completed} из {dailyPlan.total} <span aria-hidden="true">→</span>
-          </button>
-        )}
         {dailyPlan?.status === "done" && (
           <p className="gameplay-plan-done" role="status">
             <span aria-hidden="true">✓</span> План выполнен
           </p>
         )}
-        <button className={`${planReady ? "secondary-button" : "primary-button"} gameplay-home-cta`} onClick={onStart} type="button">
-          {profile.completionCount > 0 ? "Продолжить диагностику" : labels.start_diagnostic} <span aria-hidden="true">→</span>
+      </div>
+
+      <div className="gameplay-home-body">
+        <button
+          className={`primary-button gameplay-home-cta${primary.kind === "daily-plan" ? " gameplay-plan-cta" : ""}`}
+          onClick={primary.kind === "resume" ? (onResume ?? onStart) : primary.kind === "daily-plan" ? onStartPlan : onStart}
+          type="button"
+        >
+          {primary.label} <span aria-hidden="true">→</span>
         </button>
-        <div className="gameplay-cta-row">
-          <button className="secondary-button gameplay-trainer-cta" onClick={onStartTrainer ?? onStart} type="button">
-            Тренировка
-          </button>
-          {onOpenLeague && (
-            <button className="secondary-button gameplay-league-cta" onClick={onOpenLeague} type="button">
-              Лига недели
-            </button>
-          )}
+        {lastSubject && (
+          <section className="gameplay-next-subject" aria-label={`Следующее для ${lastSubject}`}>
+            <small>Следующее для {lastSubject}</small>
+            <strong>Закрепи тему и двигайся дальше</strong>
+          </section>
+        )}
+        <div className="gameplay-section-heading">
+          <div><h2>Доступные предметы</h2></div>
+          <span className="gameplay-count">Все {diagnostics.length} →</span>
         </div>
+        <div className="gameplay-path" aria-label="Доступные диагностики">
+          {pathItems.map((item, index) => (
+            <button className="gameplay-path-item" key={item.id} onClick={() => (onOpenSubject ?? onStart)(item)} type="button">
+              <span className={`gameplay-path-node ${index === 0 ? "is-current" : ""}`}>{index + 1}</span>
+              <div><strong>{item.subject}</strong><small>{item.exam} · {formatDiagnosticMeta("quick", item)}</small></div>
+              <span className="gameplay-path-arrow" aria-hidden="true">→</span>
+            </button>
+          ))}
+        </div>
+        <p className="gameplay-path-note">Сейчас доступны {subjects.length || 1} {subjects.length === 1 ? "предмет" : "предмета"}, включая {firstSubject}.</p>
+
+        {completedResults.length > 0 && (
+          <section className="gameplay-results" aria-label="Предыдущие результаты" aria-labelledby="gameplay-results-title">
+            <div className="gameplay-section-heading"><h2 id="gameplay-results-title">Мои результаты</h2></div>
+            {completedResults.map((attempt) => (
+              <button className="gameplay-result-card secondary-button" key={attempt.attempt_id} onClick={() => onOpenResult?.(attempt)} type="button">
+                <span><strong>{attempt.subject ?? "Диагностика"}</strong><small>{formatCompletedDate(attempt.completed_at)}</small></span>
+                <span><strong>{resultFact(attempt)}</strong><small>{attempt.exam ?? ""}</small></span>
+              </button>
+            ))}
+          </section>
+        )}
+
         {offer && !offerDismissed && (
           <OfferSurface
             offer={offer}
@@ -132,21 +183,6 @@ export function GameplayHomeScreen({
             onEvent={onOfferEvent}
           />
         )}
-
-        <div className="gameplay-section-heading">
-          <div><h2>Ближайшие диагностики</h2></div>
-          <span className="gameplay-count">{diagnostics.length}</span>
-        </div>
-        <div className="gameplay-path" aria-label="Доступные диагностики">
-          {pathItems.map((item, index) => (
-            <button className="gameplay-path-item" key={item.id} onClick={onStart} type="button">
-              <span className={`gameplay-path-node ${index === 0 ? "is-current" : ""}`}>{index + 1}</span>
-              <div><strong>{item.subject}</strong><small>{item.exam} · {item.quick_count} заданий</small></div>
-              <span className="gameplay-path-arrow" aria-hidden="true">→</span>
-            </button>
-          ))}
-        </div>
-        <p className="gameplay-path-note">Сейчас доступны {subjects.length || 1} {subjects.length === 1 ? "предмет" : "предмета"}, включая {firstSubject}.</p>
 
         <button className="gameplay-profile-card" onClick={onOpenProfile} type="button">
           <span className="gameplay-profile-icon" aria-hidden="true">✦</span>
@@ -159,6 +195,8 @@ export function GameplayHomeScreen({
 }
 
 export function GameplayProfileScreen({ profile, onBack, onStart }: { profile: GameplayProfileView; onBack: () => void; onStart: () => void }) {
+  const unlockedKeys = new Set(profile.unlockedAchievements.map((achievement) => achievement.key));
+  const lockedAchievements = achievementCatalog.filter((achievement) => !unlockedKeys.has(achievement.key));
   return (
     <section className="screen gameplay-profile" aria-labelledby="gameplay-profile-title">
       <button className="text-back" onClick={onBack} type="button">Назад</button>
@@ -175,7 +213,7 @@ export function GameplayProfileScreen({ profile, onBack, onStart }: { profile: G
         </div>
       )}
       {profile.serverBacked && profile.quest && <div className="gameplay-quest"><small>Квест</small><strong>{profile.quest.progress}/{profile.quest.target} активностей</strong></div>}
-      <div className="gameplay-achievements"><h2>Достижения</h2>{profile.unlockedAchievements.length > 0 ? profile.unlockedAchievements.map((achievement) => <div className="gameplay-achievement" key={achievement.key}><span aria-hidden="true">✓</span><span><strong>{achievement.title}</strong><small>{achievement.description}</small></span></div>) : <p>Первые достижения появятся после завершённой диагностики.</p>}</div>
+      <div className="gameplay-achievements"><h2>Достижения</h2>{profile.unlockedAchievements.map((achievement) => <div className="gameplay-achievement is-unlocked" key={achievement.key}><span aria-hidden="true">✓</span><span><strong>{achievement.title}</strong><small>{achievement.description}</small></span></div>)}{lockedAchievements.map((achievement) => <div className="gameplay-achievement is-locked" aria-disabled="true" key={achievement.key}><span aria-hidden="true">🔒</span><span><strong>{achievement.title}</strong><small>{achievement.key === "three_diagnostics_completed" ? "Заверши три диагностики, чтобы открыть достижение." : "Заверши первую диагностику, чтобы открыть достижение."}</small></span></div>)}</div>
       <button className="primary-button" onClick={onStart} type="button">Начать диагностику <span aria-hidden="true">→</span></button>
     </section>
   );
@@ -226,24 +264,25 @@ export function WelcomeScreen({
 }
 
 export type ModeScreenProps = {
+  diagnostic: PublicDiagnosticSummary;
   labels: Brand["interface"];
   onBack: () => void;
   onSelect: (mode: DiagnosticMode) => void;
 };
 
-export function ModeScreen({ labels, onBack, onSelect }: ModeScreenProps) {
+export function ModeScreen({ diagnostic, labels, onBack, onSelect }: ModeScreenProps) {
   return (
     <section className="screen navigation-screen" aria-labelledby="mode-title">
       <button className="text-back" onClick={onBack} type="button">{labels.back}</button>
-      <span className="step-label">Шаг 1 из 2</span>
-      <h1 id="mode-title">Как будем проверять знания?</h1>
-      <p className="lead">Выбери формат — переиграть можно всегда.</p>
+      <span className="step-label">Шаг 2 из 2</span>
+      <h1 id="mode-title">Формат: {diagnostic.subject}</h1>
+      <p className="lead">Сначала короткий замер или все задания предмета.</p>
       <div className="mode-list">
         <button className="mode-card featured" onClick={() => onSelect("full")} type="button">
           <span className="mode-badge">Рекомендуем</span>
           <div className="mode-card-head">
             <span className="mode-card-icon" aria-hidden="true">🗺️</span>
-            <div><strong>Полная диагностика</strong><div className="mode-card-meta">{labels.full_result}</div></div>
+            <div><strong>Полный маршрут</strong><div className="mode-card-meta">{formatDiagnosticMeta("full", diagnostic)} <small>{formatDiagnosticCount("full", diagnostic)}</small></div></div>
           </div>
           <span>Все задания этой диагностики, разбор ответов и план повторения.</span>
           <em>{labels.choose_label}</em>
@@ -251,7 +290,7 @@ export function ModeScreen({ labels, onBack, onSelect }: ModeScreenProps) {
         <button className="mode-card" onClick={() => onSelect("quick")} type="button">
           <div className="mode-card-head">
             <span className="mode-card-icon" aria-hidden="true">⚡</span>
-            <div><strong>Быстрый замер</strong><div className="mode-card-meta">{labels.quick_result}</div></div>
+            <div><strong>Короткий замер</strong><div className="mode-card-meta">{formatDiagnosticMeta("quick", diagnostic)} <small>{formatDiagnosticCount("quick", diagnostic)}</small></div></div>
           </div>
           <span>Короткая проверка нескольких заданий и первый шаг для повторения.</span>
           <em>{labels.choose_label}</em>
@@ -265,7 +304,7 @@ export type SubjectsScreenProps = {
   diagnostics: PublicDiagnosticSummary[];
   exam: string;
   labels: Brand["interface"];
-  mode: DiagnosticMode;
+  mode?: DiagnosticMode;
   onBack: () => void;
   onExam: (exam: string) => void;
   onSelect: (diagnostic: PublicDiagnosticSummary) => void;
@@ -287,7 +326,7 @@ export function SubjectsScreen({
   return (
     <section className="screen navigation-screen" aria-labelledby="subject-title">
       <button className="text-back" onClick={onBack} type="button">{labels.back}</button>
-      <span className="step-label">Шаг 2 из 2</span>
+      <span className="step-label">Шаг 1 из 2</span>
       <h1 id="subject-title">Какой предмет?</h1>
       <p className="lead">Прогресс сохраняется — можно вернуться в любой момент.</p>
       {exams.length > 1 && (
@@ -308,16 +347,15 @@ export function SubjectsScreen({
       )}
       <div className="subject-list">
         {visibleDiagnostics.map((item) => {
-          const count = mode === "quick" ? item.quick_count : item.full_count;
           return (
             <button className="subject-card" key={item.id} onClick={() => onSelect(item)} type="button">
               <SubjectIllustration subject={item.subject} />
               <span className="subject-copy">
                 <strong>{item.subject}</strong>
-                <small>{count} {questionWord(count)} · разбор ответов</small>
+                <small>{mode ? `${mode === "quick" ? item.quick_count : item.full_count} ${questionWord(mode === "quick" ? item.quick_count : item.full_count)} · разбор ответов` : `${item.full_count} ${questionWord(item.full_count)} · два формата`}</small>
               </span>
               <span className="subject-action">
-                <span>{labels.start_diagnostic}</span><span aria-hidden="true">→</span>
+                <span>Выбрать предмет</span><span aria-hidden="true">→</span>
               </span>
             </button>
           );

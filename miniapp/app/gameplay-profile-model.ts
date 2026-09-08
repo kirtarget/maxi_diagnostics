@@ -15,7 +15,7 @@ export type GameplayProfilePayload = {
 export type OnboardingState = "new" | "first_completion" | "returning";
 
 export type UnlockedAchievement = {
-  key: "first_diagnostic_completed";
+  key: "first_diagnostic_completed" | "three_diagnostics_completed";
   title: string;
   description: string;
 };
@@ -50,7 +50,14 @@ const ACHIEVEMENTS: Record<UnlockedAchievement["key"], UnlockedAchievement> = {
     title: "Первое завершение",
     description: "Первая диагностика завершена, точка старта зафиксирована.",
   },
+  three_diagnostics_completed: {
+    key: "three_diagnostics_completed",
+    title: "Три шага подряд",
+    description: "Три диагностики завершены, маршрут набирает темп.",
+  },
 };
+
+export const achievementCatalog: UnlockedAchievement[] = Object.values(ACHIEVEMENTS);
 
 function normalizedCompletionCount(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return 0;
@@ -140,8 +147,18 @@ export function gameplayProfileView(payload: GameplayProfilePayload | null | und
   const completionCount = normalizedCompletionCount(payload?.completion_count);
   const level = levelFor(completionCount);
   const keys = normalizedAchievementKeys(payload?.achievement_keys);
+  const earnedKeys = new Set<string>([
+    ...(completionCount >= 1 ? ["first_diagnostic_completed"] : []),
+    ...(completionCount >= 3 ? ["three_diagnostics_completed"] : []),
+  ]);
+  for (const key of keys) {
+    if ((key === "first_diagnostic_completed" && completionCount >= 1)
+      || (key === "three_diagnostics_completed" && completionCount >= 3)) {
+      earnedKeys.add(key);
+    }
+  }
   const unlockedAchievements = (Object.keys(ACHIEVEMENTS) as Array<UnlockedAchievement["key"]>)
-    .filter((key) => keys.has(key))
+    .filter((key) => earnedKeys.has(key))
     .map((key) => ACHIEVEMENTS[key]);
 
   const serverProfile = normalizedServerProfile(payload);
