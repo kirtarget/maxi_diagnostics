@@ -33,6 +33,18 @@ def test_review_snapshot_formats_every_question_type():
     assert snapshot[4]["expected_answer"] == "но / однако"
     assert snapshot[4]["user_answer"] == "зато"
     assert all(item["is_correct"] is False for item in snapshot)
+    assert snapshot[1]["answer_preview"] == {
+        "kind": "multiple",
+        "markers": ["A", "B", "C"],
+        "user": ["A", "B"],
+        "expected": ["A", "C"],
+    }
+    assert snapshot[2]["answer_preview"] == {
+        "kind": "matching",
+        "markers": ["1", "2"],
+        "user": ["1", "2"],
+        "expected": ["2", "1"],
+    }
 
 
 def test_review_snapshot_labels_every_canonical_skip():
@@ -72,6 +84,8 @@ def test_individual_explanation_wins_and_public_review_drops_raw_values():
     assert payload[0]["guidance"] == "Сложите два и два: получится четыре."
     assert "expected_value" not in payload[0]
     assert "user_value" not in payload[0]
+    assert payload[1]["answer_preview"]["kind"] == "multiple"
+    assert payload[2]["answer_preview"]["kind"] == "matching"
 
 
 def test_review_exposes_earned_primary_score_and_safe_source_attribution():
@@ -179,3 +193,23 @@ def test_public_review_never_exposes_unanswered_as_the_expected_answer():
         "expected_answer": "Эталонный ответ не сохранён",
         "status": "incorrect",
     }]
+
+
+def test_public_review_keeps_legacy_snapshots_without_optional_preview():
+    public = public_review_items({
+        "review_snapshot": [{
+            "question_id": "legacy-q1",
+            "is_correct": False,
+            "user_answer": "2",
+            "expected_answer": "3",
+        }]
+    })
+
+    assert public == [{
+        "question_id": "legacy-q1",
+        "is_correct": False,
+        "user_answer": "2",
+        "expected_answer": "3",
+        "status": "incorrect",
+    }]
+    assert "answer_preview" not in public[0]

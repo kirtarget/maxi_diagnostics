@@ -324,6 +324,14 @@ export type ReviewItem = {
   max_primary_score?: number;
   earned_primary_score?: number;
   source?: QuestionSourceAttribution;
+  answer_preview?: ReviewAnswerPreview;
+};
+
+export type ReviewAnswerPreview = {
+  kind: "matching" | "multiple" | "sequence";
+  markers: string[];
+  user: string[];
+  expected: string[];
 };
 
 export type ReviewResponse = {

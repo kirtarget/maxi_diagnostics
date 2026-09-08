@@ -1,4 +1,5 @@
 import { AnswerEditor, type AnswerEditorLabels } from "./answer-editor";
+import { AnswerPreview, MatchingAnswer, matchingModelFromSequence } from "./matching-answer";
 import { FormattedMathText, FormattedStem } from "./math-display";
 import { isValidNumericInput, isValidTextInput, updateCompactAnswer } from "./answer-values";
 import { questionAssetPaths } from "./question-assets";
@@ -12,7 +13,6 @@ import {
 import {
   isCompleteSequenceMatchingAnswer,
   parseSequenceMatchingPrompt,
-  type SequenceMatchingPrompt,
 } from "./sequence-matching";
 import {
   isCompleteTableGapAnswer,
@@ -52,7 +52,7 @@ export function StructuredAnswerEditor({ question, subject, value, onChange, dis
   }
   const sequence = question.type === "input" ? parseSequenceMatchingPrompt(question.prompt, question) : null;
   if (sequence) {
-    return <SequenceMatchingAnswer matching={sequence} disabled={disabled} onChange={(next) => onChange(next)} value={typeof value === "string" ? value : ""} />;
+    return <MatchingAnswer model={matchingModelFromSequence(sequence, subject)} subject={subject} disabled={disabled} onChange={onChange} value={typeof value === "string" ? value : ""} />;
   }
   return <AnswerEditor question={question} subject={subject} value={value} disabled={disabled} suppressAutoHint={suppressAutoHint} labels={labels} onChange={onChange} />;
 }
@@ -299,7 +299,7 @@ export function QuestionView({
       {tableGap ? (
         <TableGapAnswer matching={tableGap} onChange={onAnswer} value={typeof answer === "string" ? answer : ""} />
       ) : sequenceMatching ? (
-        <SequenceMatchingAnswer matching={sequenceMatching} onChange={onAnswer} value={typeof answer === "string" ? answer : ""} />
+        <MatchingAnswer model={matchingModelFromSequence(sequenceMatching, subject)} subject={subject} onChange={onAnswer} value={typeof answer === "string" ? answer : ""} />
       ) : (
         <StructuredAnswerEditor
           question={question}
@@ -401,66 +401,5 @@ function TableGapAnswer({ matching, onChange, value, disabled = false }: {
       </div>
       <AnswerPreview markers={matching.markers} selected={selected} />
     </section>
-  );
-}
-
-export function SequenceMatchingAnswer({ matching, onChange, value, disabled = false }: {
-  matching: SequenceMatchingPrompt;
-  disabled?: boolean;
-  onChange: (value: string) => void;
-  value: string;
-}) {
-  const selected = [...value.slice(0, matching.answerLength)];
-  return (
-    <section className="sequence-matching" aria-labelledby="sequence-matching-title">
-      <div className="sequence-matching-intro">
-        <span>Ответ без ручного ввода</span>
-        <h2 id="sequence-matching-title">Составьте соответствие</h2>
-        <p>Для каждого пункта по очереди выберите подходящий вариант.</p>
-      </div>
-      <div className="sequence-matching-rows">
-        {matching.left.slice(0, matching.answerLength).map((item, index) => {
-          const rowValue = selected[index] ?? "";
-          const used = new Set(selected.filter((choice, choiceIndex) => choiceIndex !== index));
-          const locked = index > selected.length;
-          return (
-            <div className={`sequence-matching-row${locked || disabled ? " locked" : ""}`} key={item.marker}>
-              <span className="sequence-matching-row-copy"><strong>{item.marker}</strong><span>{item.label}</span></span>
-              <div className="sequence-matching-options" role="group" aria-label={`Варианты для пункта ${item.marker}`}>
-                {matching.options.map((option) => (
-                  <button
-                    aria-label={`${option.marker} — ${option.label}`}
-                    aria-pressed={rowValue === option.marker}
-                    className={`sequence-matching-chip${rowValue === option.marker ? " selected" : ""}`}
-                    data-option-marker={option.marker}
-                    disabled={disabled || locked || (!matching.allowReuse && used.has(option.marker))}
-                    key={option.marker}
-                    onClick={() => onChange(updateCompactAnswer(value, index, option.marker))}
-                    type="button"
-                  >
-                    <strong>{option.marker}</strong>
-                    <span>{option.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <AnswerPreview markers={matching.left.map((item) => item.marker)} selected={selected} />
-    </section>
-  );
-}
-
-function AnswerPreview({ markers, selected }: { markers: string[]; selected: string[] }) {
-  return (
-    <div className={`sequence-answer-preview${selected.length === markers.length ? " complete" : ""}`} aria-live="polite">
-      <span>Твой ответ</span>
-      <strong>
-        {markers.map((marker, index) => (
-          <span key={marker}>{selected[index] ?? "—"}<small>{marker}</small></span>
-        ))}
-      </strong>
-    </div>
   );
 }

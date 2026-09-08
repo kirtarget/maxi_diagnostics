@@ -1,12 +1,11 @@
 import { FormattedMathText } from "./math-display";
-import { answerInputConfig, plainMathText } from "./math-text";
-import { updateMatchingAnswer } from "./answer-values";
+import { answerInputConfig } from "./math-text";
 import { cleanAnswerLabel } from "./question-prompt";
 import { DEFAULT_TEXT_ANSWER_LENGTH } from "./answer-values";
+import { AnswerPreview, MatchingAnswer, matchingModelFromQuestion } from "./matching-answer";
 import type {
   AnswerValue,
   InputQuestion,
-  MatchingQuestion,
   MultipleQuestion,
   Question,
   SingleQuestion,
@@ -46,7 +45,7 @@ export function AnswerEditor({ question, subject, value, onChange, disabled = fa
   }
   if (question.type === "matching") {
     const pairs = value && typeof value === "object" && !Array.isArray(value) ? value : {};
-    return <MatchingEditor question={question} subject={subject} value={pairs} disabled={disabled} chooseLabel={text.choose} onChange={onChange} />;
+    return <MatchingAnswer model={matchingModelFromQuestion(question, subject)} subject={subject} value={pairs} disabled={disabled} onChange={onChange} />;
   }
   if (question.type === "text") {
     return <ShortTextEditor question={question} value={asText} disabled={disabled} suppressAutoHint={suppressAutoHint} label={text.answer} placeholder={text.placeholder} onChange={onChange} />;
@@ -114,52 +113,28 @@ function MultipleEditor({ question, subject, value, disabled, onChange }: {
     else if (value.length < question.selection_limit) onChange([...value, id]);
   };
 
+  const markers = question.options.map((_, index) => String.fromCharCode(65 + index));
   return (
-    <div className="answer-list" role="group" aria-label={`Выберите ${question.selection_limit} варианта`}>
-      {question.options.map((option, index) => (
-        <OptionButton
-          key={option.id}
-          label={option.label}
-          marker={String.fromCharCode(65 + index)}
-          selected={value.includes(option.id)}
-          disabled={disabled}
-          subject={subject}
-          square
-          onClick={() => toggle(option.id)}
-        />
-      ))}
-    </div>
-  );
-}
-
-function MatchingEditor({ question, subject, value, disabled, chooseLabel, onChange }: {
-  question: MatchingQuestion;
-  subject?: string;
-  value: Record<string, string>;
-  disabled: boolean;
-  chooseLabel: string;
-  onChange: (value: AnswerValue) => void;
-}) {
-  return (
-    <div className="matching-list">
-      {question.items.map((item, index) => (
-        <label className="matching-row" key={item.id}>
-          <span className="matching-index">{index + 1}</span>
-          <span><FormattedMathText text={cleanAnswerLabel(item.label)} subject={subject} /></span>
-          <select
-            aria-label={`Соответствие для ${item.label}`}
+    <>
+      <div className="answer-list" role="group" aria-label={`Выберите ${question.selection_limit} варианта`}>
+        {question.options.map((option, index) => (
+          <OptionButton
+            key={option.id}
+            label={option.label}
+            marker={markers[index]}
+            selected={value.includes(option.id)}
             disabled={disabled}
-            value={value[item.id] ?? ""}
-            onChange={(event) => onChange(updateMatchingAnswer(value, item.id, event.target.value))}
-          >
-            <option value="">{chooseLabel}</option>
-            {question.options.map((option) => (
-              <option value={option.id} key={option.id}>{plainMathText(cleanAnswerLabel(option.label), subject)}</option>
-            ))}
-          </select>
-        </label>
-      ))}
-    </div>
+            subject={subject}
+            square
+            onClick={() => toggle(option.id)}
+          />
+        ))}
+      </div>
+      <AnswerPreview
+        markers={markers}
+        selected={question.options.map((option, index) => value.includes(option.id) ? markers[index] : "")}
+      />
+    </>
   );
 }
 

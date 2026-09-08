@@ -67,6 +67,7 @@ describe("result flow screens", () => {
     expect(html).toContain("Правильный ответ");
     expect(html).toContain("Как решать");
     expect(html).toContain("0 из 2 первичных баллов");
+    expect(html).not.toContain("Схема ответа");
   });
 
   it("formats review question math like the worksheet", () => {
@@ -97,6 +98,41 @@ describe("result flow screens", () => {
     expect(html).not.toContain("x^(2)");
     expect(html).toContain("Пропущено");
     expect(html).not.toContain(">Неверно<");
+  });
+
+  it("renders the structured answer preview from the immutable review item", () => {
+    const html = renderToStaticMarkup(
+      <ReviewScreen
+        items={[{
+          question_id: "matching-q1",
+          number: 1,
+          type: "matching",
+          topic: "Вещества",
+          title: "Задание 1",
+          prompt: "Установите соответствие.",
+          is_correct: false,
+          status: "incorrect",
+          user_answer: "А: 2; Б: 1",
+          expected_answer: "А: 1; Б: 2",
+          answer_preview: {
+            kind: "matching",
+            markers: ["А", "Б"],
+            user: ["2", "1"],
+            expected: ["1", "2"],
+          },
+          guidance: "Проверьте соответствие.",
+          guidance_kind: "fallback",
+        }]}
+        index={0}
+        onBack={() => undefined}
+        onNext={() => undefined}
+        onForecast={() => undefined}
+      />,
+    );
+    expect(html).toContain("Схема ответа");
+    expect(html).toContain("Ваш выбор");
+    expect(html).toContain("Правильная схема");
+    expect(html.match(/matching-answer-preview/g)?.length).toBe(2);
   });
 
   it("uses the review subject for chemistry and language math rendering", () => {
