@@ -64,6 +64,35 @@ const serverResult: ServerResult = {
   growth_topics: ["Тема 1"],
 };
 
+const resultWithGrid: ServerResult = {
+  ...serverResult,
+  question_count: 18,
+  correct_count: 17,
+  max_score: 18,
+  per_question: Array.from({ length: 18 }, (_, index) => ({
+    question_id: `q${index + 1}`,
+    number: index + 1,
+    topic: "Механика",
+    status: index === 9 ? "incorrect" as const : "correct" as const,
+    is_correct: index !== 9,
+  })),
+};
+
+const resultWithThreeMistakes: ServerResult = {
+  ...resultWithGrid,
+  correct_count: 15,
+  per_question: resultWithGrid.per_question?.map((question) => {
+    const isMistake = [10, 11, 18].includes(question.number);
+    return { ...question, status: isMistake ? "incorrect" as const : "correct" as const, is_correct: !isMistake };
+  }),
+};
+
+const reviewQ10 = {
+  question_id: "q10", number: 10, type: "single" as const, topic: "Механика",
+  title: "Задание 10", prompt: "Условие", is_correct: false, status: "incorrect" as const,
+  user_answer: "1", expected_answer: "2", guidance: "Проверьте.", guidance_kind: "fallback" as const,
+};
+
 function bootstrapPayload(overrides: Partial<BootstrapResponse> = {}): BootstrapResponse {
   return {
     catalog_contract: 3,
@@ -190,6 +219,231 @@ afterEach(async () => {
 });
 
 describe("Home screen transitions", () => {
+  it("keeps a real q10 result-grid selection through deferred review loading and scopes it by attempt", async () => {
+    const firstAttempt = { ...completedAttempt, attempt_id: "attempt-done", result: resultWithGrid };
+    const secondAttempt = { ...firstAttempt, attempt_id: "attempt-second", content_version: "b".repeat(64), result: { ...resultWithGrid, diagnostic_id: "demo-math" } };
+    let reviewCalls = 0;
+    const firstReview = deferred<unknown>();
+    const secondReview = deferred<unknown>();
+    routes["/api/diagnostics/bootstrap"] = async () => bootstrapPayload({ onboarding: { status: "completed" }, results: [firstAttempt, secondAttempt] });
+    routes["/api/diagnostics/session/review"] = async () => {
+      reviewCalls += 1;
+      return reviewCalls === 1 ? firstReview.promise : secondReview.promise;
+    };
+
+    await mountHome();
+    const resultButtons = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+      .filter((button) => button.textContent?.includes("17 из 18"));
+    expect(resultButtons).toHaveLength(2);
+    await act(async () => resultButtons[0].click());
+    const q10 = container.querySelector<HTMLButtonElement>('button[aria-label="Задание 10, Механика, ошибка"]');
+    expect(q10).not.toBeNull();
+    await act(async () => q10?.click());
+    expect(reviewCalls).toBe(1);
+    firstReview.resolve({ ok: true, available: true, items: [reviewQ10], pdf_status: "sent" });
+    await settle();
+    expect(container.querySelector("#review-title")?.textContent).toBe("Задание 10");
+    await clickAndSettle(".review-topline .text-back");
+    expect(container.querySelector("#review-list-title")?.textContent).toContain("Где ошибся");
+    await clickAndSettle(".brand");
+    const secondResult = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+      .find((button) => button.textContent?.includes("17 из 18"));
+    expect(secondResult).not.toBeUndefined();
+    await act(async () => secondResult?.click());
+    await clickAndSettle(".result-actions .primary-button");
+    expect(reviewCalls).toBe(2);
+    secondReview.resolve({ ok: true, available: true, items: [{ ...reviewQ10, question_id: "q11", number: 11 }], pdf_status: "sent" });
+    await settle();
+    expect(container.querySelector("#review-list-title")?.textContent).toContain("Где ошибся");
+    expect(window.sessionStorage.getItem("diagnostic-review:attempt-done:" + CONTENT_VERSION)).toBe("q10");
+    expect(window.sessionStorage.getItem("diagnostic-review:attempt-second:" + "b".repeat(64))).toBeNull();
+  });
+
+  it("restores the last deferred mistake, advances to the route, and does not reopen review", async () => {
+    vi.useFakeTimers();
+    const attempt = { ...completedAttempt, result: resultWithThreeMistakes, pdf_status: "sent" as const };
+    const reviewResponse = deferred<unknown>();
+    const mistakes = [10, 11, 18].map((number) => ({
+      ...reviewQ10,
+      question_id: `q${number}`,
+      number,
+      title: `Задание ${number}`,
+    }));
+    routes["/api/diagnostics/bootstrap"] = async () => bootstrapPayload({ onboarding: { status: "completed" }, results: [attempt] });
+    routes["/api/diagnostics/session/review"] = async () => reviewResponse.promise;
+    window.sessionStorage.setItem("diagnostic-review:attempt-done:" + CONTENT_VERSION, "q18");
+
+    try {
+      await mountHome();
+      const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+        .find((button) => button.textContent?.includes("15 из 18"));
+      expect(resultButton).not.toBeUndefined();
+      await act(async () => resultButton?.click());
+      await clickAndSettle(".result-actions .primary-button");
+      reviewResponse.resolve({ ok: true, available: true, items: mistakes, pdf_status: "sent" });
+      await settle();
+
+      expect(container.textContent).toContain("Разбор ошибок · 3 из 3");
+      const routeButton = [...container.querySelectorAll<HTMLButtonElement>(".review-screen .primary-button")]
+        .find((button) => button.textContent?.includes("Мой план подготовки"));
+      expect(routeButton).not.toBeUndefined();
+      await act(async () => routeButton?.click());
+      expect(screenClasses()).toContain("route-screen");
+      expect(requestedPaths.filter((path) => path.endsWith("/session/review"))).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("repeats the saved diagnostic from the route with its original mode", async () => {
+    const attempt = { ...completedAttempt, result: serverResult, mode: "full" as const };
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      onboarding: { status: "completed" },
+      results: [attempt],
+    }));
+    route("/api/diagnostics/catalog", { diagnostic });
+
+    await mountHome();
+    const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+      .find((button) => button.textContent?.includes("0 из 1"));
+    expect(resultButton).not.toBeUndefined();
+    await act(async () => resultButton?.click());
+    await clickAndSettle(".result-actions .secondary-button:last-child");
+    expect(screenClasses()).toContain("route-screen");
+
+    await clickAndSettle(".route-repeat");
+    await settle();
+    expect(screenClasses()).toContain("question-screen");
+    expect(requestedBodies.find(({ path }) => path === "/api/diagnostics/catalog")?.body).toMatchObject({ diagnostic_id: diagnostic.id });
+
+    route("/api/diagnostics/session/complete", {
+      ok: true,
+      attempt: { ...attempt, attempt_id: "attempt-repeat", status: "completed" },
+      result: { ...serverResult, mode: "full" },
+    });
+    await clickAndSettle(".question-skip");
+    await settle();
+    expect(requestedBodies.find(({ path }) => path === "/api/diagnostics/session/complete")?.body).toMatchObject({ mode: "full" });
+  });
+
+  it("shows an actionable trainer message when mistake replay has no source mistakes", async () => {
+    const attempt = { ...completedAttempt, result: serverResult };
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      onboarding: { status: "completed" },
+      results: [attempt],
+    }));
+    routes["/api/diagnostics/trainer/start"] = async () => new Response(
+      JSON.stringify({ detail: "trainer_no_mistakes" }),
+      { status: 409, headers: { "Content-Type": "application/json" } },
+    );
+
+    await mountHome();
+    const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+      .find((button) => button.textContent?.includes("0 из 1"));
+    await act(async () => resultButton?.click());
+    await clickAndSettle(".result-actions .secondary-button");
+    await settle();
+    expect(screenClasses()).toContain("trainer-screen");
+    expect(container.textContent).toContain("нет ошибок для тренировки");
+  });
+
+  it("polls delivery immediately, retries pending work, and stops on terminal status", async () => {
+    vi.useFakeTimers();
+    const attempt = { ...completedAttempt, result: resultWithGrid, pdf_status: null };
+    const pending = deferred<unknown>();
+    const failed = deferred<unknown>();
+    const retryPending = deferred<unknown>();
+    const sent = deferred<unknown>();
+    let deliveryCalls = 0;
+    routes["/api/diagnostics/bootstrap"] = async () => bootstrapPayload({ onboarding: { status: "completed" }, results: [attempt] });
+    routes["/api/diagnostics/session/delivery"] = async () => {
+      deliveryCalls += 1;
+      return [pending.promise, failed.promise, retryPending.promise, sent.promise][deliveryCalls - 1] ?? { ok: true, status: "sent" };
+    };
+    routes["/api/diagnostics/session/delivery/retry"] = async () => ({ ok: true, status: "pending" });
+
+    try {
+      await mountHome();
+      const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+        .find((button) => button.textContent?.includes("17 из 18"));
+      expect(resultButton).not.toBeUndefined();
+      await act(async () => resultButton?.click());
+      expect(deliveryCalls).toBe(1);
+      pending.resolve({ ok: true, status: "pending" });
+      await settle();
+      await act(async () => { vi.advanceTimersByTime(5000); await Promise.resolve(); });
+      expect(deliveryCalls).toBe(2);
+      failed.resolve({ ok: true, status: "failed" });
+      await settle();
+      await clickAndSettle(".delivery-failed button");
+      expect(requestedPaths).toContain("/api/diagnostics/session/delivery/retry");
+      expect(deliveryCalls).toBe(3);
+      retryPending.resolve({ ok: true, status: "pending" });
+      await settle();
+      await act(async () => { vi.advanceTimersByTime(5000); await Promise.resolve(); });
+      expect(deliveryCalls).toBe(4);
+      sent.resolve({ ok: true, status: "sent" });
+      await settle();
+      await act(async () => { vi.advanceTimersByTime(5000); await Promise.resolve(); });
+      expect(deliveryCalls).toBe(4);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps polling a retryable delivery failure until Telegram accepts the result", async () => {
+    vi.useFakeTimers();
+    const attempt = { ...completedAttempt, result: resultWithGrid, pdf_status: null };
+    let deliveryCalls = 0;
+    routes["/api/diagnostics/bootstrap"] = async () => bootstrapPayload({ onboarding: { status: "completed" }, results: [attempt] });
+    routes["/api/diagnostics/session/delivery"] = async () => {
+      deliveryCalls += 1;
+      return { ok: true, status: deliveryCalls === 1 ? "failed" : "sent" };
+    };
+
+    try {
+      await mountHome();
+      const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+        .find((button) => button.textContent?.includes("17 из 18"));
+      expect(resultButton).not.toBeUndefined();
+      await act(async () => resultButton?.click());
+      await settle();
+      expect(deliveryCalls).toBe(1);
+      expect(container.textContent).toContain("Не удалось отправить результат");
+
+      await act(async () => {
+        vi.advanceTimersByTime(5000);
+        await Promise.resolve();
+      });
+      await settle();
+      expect(deliveryCalls).toBe(2);
+      expect(container.textContent).not.toContain("Не удалось отправить результат");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("ignores a late delivery response after leaving the result screen", async () => {
+    vi.useFakeTimers();
+    const attempt = { ...completedAttempt, result: resultWithGrid, pdf_status: null };
+    const response = deferred<unknown>();
+    routes["/api/diagnostics/bootstrap"] = async () => bootstrapPayload({ onboarding: { status: "completed" }, results: [attempt] });
+    routes["/api/diagnostics/session/delivery"] = async () => response.promise;
+    try {
+      await mountHome();
+      const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+        .find((button) => button.textContent?.includes("17 из 18"));
+      await act(async () => resultButton?.click());
+      expect(requestedPaths.filter((path) => path.endsWith("/session/delivery"))).toHaveLength(1);
+      await act(async () => root?.unmount());
+      root = null;
+      response.resolve({ ok: true, status: "sent" });
+      await act(async () => { await Promise.resolve(); vi.advanceTimersByTime(10_000); });
+      expect(requestedPaths.filter((path) => path.endsWith("/session/delivery"))).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it("persists first selection, runs quick diagnostic, then refreshes home and exposes the first route", async () => {
     route("/api/diagnostics/bootstrap", bootstrapPayload({ onboarding: { status: "welcome" } }));
     route("/api/diagnostics/onboarding", { status: "selection" });
@@ -518,7 +772,7 @@ describe("Home screen transitions", () => {
     await clickAndSettle(".result-actions .primary-button");
     await settle();
     expect(screenClasses()).toContain("review-screen");
-    expect(container.textContent).toContain("Повтори тему.");
+    expect(container.textContent).toContain("Тема 1");
   });
 
   it("submits the canonical empty marker when the last question is skipped", async () => {

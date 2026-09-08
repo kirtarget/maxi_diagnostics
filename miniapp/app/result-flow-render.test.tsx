@@ -1,9 +1,128 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { ForecastEmptyScreen, ForecastScreen, ResultScreen, ReviewScreen } from "./result-flow";
+import type { ReviewItem } from "./types";
+
+const physicsSchool = JSON.parse(
+  readFileSync(new URL("../../school/diagnostics/oge-physics-197.json", import.meta.url), "utf8"),
+) as { questions: Array<{ id: string; type: string; topic: string; title: string; prompt: string }> };
 
 describe("result flow screens", () => {
+  it("keeps quick results compact and renders the complete task grid", () => {
+    const html = renderToStaticMarkup(<ResultScreen
+      diagnostic={{ exam: "ОГЭ", subject: "Физика" } as never}
+      result={{ diagnostic_id: "physics", mode: "quick", question_count: 18, correct_count: 10, skipped_count: 1, score: 10, max_score: 18, score_unit: "балл", strong_topics: [], growth_topics: [], per_question: Array.from({ length: 18 }, (_, index) => ({ question_id: `q${index + 1}`, number: index + 1, topic: "Механика", status: index === 9 ? "incorrect" : "correct", is_correct: index !== 9 })) }}
+      onReview={() => undefined}
+      onForecast={() => undefined}
+    />);
+
+    expect(html).toContain("10 из 18");
+    expect(html).not.toContain("Точность ответов");
+    expect(html).toContain("Задание 10, Механика, ошибка");
+    expect(html).toContain("Посмотреть, где ошибся (1)");
+    expect((html.match(/result-question-cell/g) ?? []).length).toBe(18);
+  });
+
+  it("uses the frozen school question ids for every full-result cell", () => {
+    const questions = physicsSchool.questions.slice(0, 18);
+    const html = renderToStaticMarkup(<ResultScreen
+      diagnostic={{ exam: "ОГЭ", subject: "Физика" } as never}
+      result={{
+        diagnostic_id: "oge-physics-197", mode: "full", question_count: 18,
+        correct_count: 17, skipped_count: 0, score: 17, max_score: 18, score_unit: "балл",
+        strong_topics: [], growth_topics: [], per_question: questions.map((question, index) => ({
+          question_id: question.id, number: index + 1, topic: question.topic,
+          status: question.id.endsWith("q10") ? "incorrect" : "correct",
+          is_correct: !question.id.endsWith("q10"),
+        })),
+      }}
+      onReview={() => undefined}
+      onForecast={() => undefined}
+    />);
+
+    expect((html.match(/result-question-cell/g) ?? []).length).toBe(18);
+    expect(html).toContain("Задание 10");
+    expect(html).toContain("17 из 18 верно");
+  });
+
+  it("collapses the real q4 and q18 references with question-scoped anchors", () => {
+    const items: ReviewItem[] = [4, 18].map((number) => {
+      const question = physicsSchool.questions[number - 1];
+      return {
+        question_id: question.id,
+        number,
+        type: question.type as ReviewItem["type"],
+        topic: question.topic,
+        title: question.title,
+        prompt: question.prompt,
+        is_correct: false,
+        status: "incorrect" as const,
+        user_answer: "Не отвечено",
+        expected_answer: "Эталон",
+        guidance: "Проверьте решение.",
+        guidance_kind: "fallback" as const,
+      };
+    });
+    const html = renderToStaticMarkup(<ReviewScreen
+      items={[items[0]]}
+      index={0}
+      onBack={() => undefined}
+      onNext={() => undefined}
+      onForecast={() => undefined}
+    />) + renderToStaticMarkup(<ReviewScreen
+      items={[items[1]]}
+      index={0}
+      onBack={() => undefined}
+      onNext={() => undefined}
+      onForecast={() => undefined}
+    />);
+
+    expect(html).toContain("prompt-reference-toggle");
+    expect(html).toContain("review-reference-sp-physics-oge-2022-q4");
+    expect(html).toContain("review-reference-sp-physics-oge-2022-q18");
+    expect(html.match(/К тексту ↑/g)?.length).toBe(2);
+  });
+
+  it("renders review list as a separate navigable mode", () => {
+    const html = renderToStaticMarkup(<ReviewScreen mode="list" items={[{
+      question_id: "q10", number: 10, type: "single", topic: "Механика", title: "Задание 10", prompt: "Условие", is_correct: false, status: "incorrect", user_answer: "1", expected_answer: "2", guidance: "Повтори тему.", guidance_kind: "fallback",
+    }]} index={0} onBack={() => undefined} onNext={() => undefined} onForecast={() => undefined} onSelectQuestion={() => undefined} />);
+
+    expect(html).toContain("Где ошибся (1)");
+    expect(html).toContain("Открыть задание 10");
+    expect(html).not.toContain("Ваш ответ");
+  });
+
+  it("opens a selected correct q10 directly in detail mode", () => {
+    const html = renderToStaticMarkup(<ReviewScreen
+      items={[
+        { question_id: "q10", number: 10, type: "single", topic: "Механика", title: "Задание 10", prompt: "Условие", is_correct: true, status: "correct", user_answer: "2", expected_answer: "2", guidance: "Проверьте.", guidance_kind: "fallback" },
+        { question_id: "q11", number: 11, type: "single", topic: "Электричество", title: "Задание 11", prompt: "Условие", is_correct: false, status: "incorrect", user_answer: "1", expected_answer: "2", guidance: "Проверьте.", guidance_kind: "fallback" },
+      ]}
+      selectedQuestionId="q10"
+      mode="detail"
+      index={0}
+      onBack={() => undefined}
+      onNext={() => undefined}
+      onForecast={() => undefined}
+    />);
+
+    expect(html).toContain("<h1 id=\"review-title\" tabindex=\"-1\">Задание 10</h1>");
+    expect(html).toContain("Верно");
+  });
+
+  it("keeps structured review output static and label-decoded", () => {
+    const html = renderToStaticMarkup(<ReviewScreen items={[{
+      question_id: "matching-q1", number: 1, type: "matching", topic: "Вещества", title: "Задание 1", prompt: "Установите соответствие.", is_correct: false, status: "incorrect", user_answer: "А: 2", expected_answer: "А: 1", answer_preview: { kind: "matching", markers: ["А"], user: ["2"], expected: ["1"], option_labels: { "1": "Вода", "2": "Кислота" } }, guidance: "Проверьте.", guidance_kind: "fallback",
+    }]} index={0} onBack={() => undefined} onNext={() => undefined} onForecast={() => undefined} />);
+
+    expect(html).toContain("Позиция");
+    expect(html).toContain("Кислота");
+    expect(html).not.toContain('aria-live="polite"');
+  });
+
   it("separates skipped answers from incorrect answers", () => {
     const html = renderToStaticMarkup(
       <ResultScreen
@@ -27,6 +146,30 @@ describe("result flow screens", () => {
     );
 
     expect(html).toContain("1 верно · 14 неверно · 3 пропущено");
+  });
+
+  it("does not offer a chat link without a valid bot callback", () => {
+    const html = renderToStaticMarkup(
+      <ResultScreen
+        diagnostic={{ exam: "ОГЭ", subject: "Физика" } as never}
+        pdfStatus="sent"
+        result={{
+          diagnostic_id: "demo-physics",
+          mode: "full",
+          score: 1,
+          max_score: 1,
+          score_unit: "балл",
+          correct_count: 1,
+          skipped_count: 0,
+          question_count: 1,
+          strong_topics: [],
+          growth_topics: [],
+        }}
+        onReview={() => undefined}
+        onForecast={() => undefined}
+      />,
+    );
+    expect(html).not.toContain("Открыть чат");
   });
 
   it("renders the persisted answers and honest fallback label", () => {
@@ -130,9 +273,9 @@ describe("result flow screens", () => {
       />,
     );
     expect(html).toContain("Схема ответа");
-    expect(html).toContain("Ваш выбор");
-    expect(html).toContain("Правильная схема");
-    expect(html.match(/matching-answer-preview/g)?.length).toBe(2);
+    expect(html).not.toContain("Ваш выбор");
+    expect(html).not.toContain("Правильная схема");
+    expect(html.match(/review-answer-table/g)?.length).toBe(1);
   });
 
   it("uses the review subject for chemistry and language math rendering", () => {
@@ -150,6 +293,13 @@ describe("result flow screens", () => {
           status: "incorrect",
           user_answer: "Fe_(2)(SO_(4))_(3)",
           expected_answer: "Fe_(2)(SO_(4))_(3)",
+          answer_preview: {
+            kind: "matching",
+            markers: ["А"],
+            user: ["1"],
+            expected: ["2"],
+            option_labels: { "1": "H_(2)SO_(4)", "2": "Br_(2)" },
+          },
           guidance: "Проверьте индексы.",
           guidance_kind: "fallback",
         }]}
@@ -161,6 +311,8 @@ describe("result flow screens", () => {
     );
     expect(chemistryHtml).toContain("<sub>2</sub>");
     expect(chemistryHtml).toContain("<sub>4</sub>");
+    expect(chemistryHtml).not.toContain("H_(2)SO_(4)");
+    expect(chemistryHtml).not.toContain("Br_(2)");
 
     const languageHtml = renderToStaticMarkup(
       <ReviewScreen

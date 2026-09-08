@@ -43,6 +43,9 @@ _PUBLIC_REVIEW_FIELDS = frozenset(
         "answer_preview",
     }
 )
+_PREVIEW_KINDS = frozenset({"matching", "multiple", "sequence"})
+_PREVIEW_MAX_ENTRIES = 20
+_PREVIEW_MAX_TEXT = 500
 
 
 def format_answer(question: Question, answer: Any) -> str:
@@ -81,6 +84,25 @@ def _marker(label: str, fallback: str) -> str:
     return match.group(1) if match else fallback
 
 
+def _sequence_option_labels(prompt: str) -> dict[str, str]:
+    """Extract the display labels from the dedicated source word list."""
+    labels: dict[str, str] = {}
+    in_word_list = False
+    for line in prompt.splitlines():
+        normalized = line.strip()
+        if re.search(r"\bсписок\s+слов\b", normalized, re.IGNORECASE):
+            in_word_list = True
+            continue
+        if in_word_list and re.match(r"^(?:в\s+ответ|введите)\b", normalized, re.IGNORECASE):
+            break
+        if not in_word_list:
+            continue
+        match = re.match(r"^\s*(\d{1,2})[).]\s*(.+?)\s*$", normalized)
+        if match:
+            labels[match.group(1)] = match.group(2).rstrip(";,. ")
+    return labels
+
+
 def _structured_answer_preview(
     question: Question, user_value: Any, expected_value_: Any,
 ) -> dict[str, Any] | None:
@@ -90,10 +112,18 @@ def _structured_answer_preview(
     user selections, and the already-authorized expected selections.
     """
     if isinstance(question, MatchingQuestion):
-        option_markers = {
-            option.id: _marker(option.label, str(index + 1))
-            for index, option in enumerate(question.options)
-        }
+        option_markers: dict[str, str] = {}
+        option_labels: dict[str, str] = {}
+        used_markers: set[str] = set()
+        for index, option in enumerate(question.options):
+            marker = _marker(option.label, str(index + 1))
+            if marker in used_markers:
+                marker = str(index + 1)
+                while marker in used_markers:
+                    marker = str(int(marker) + 1)
+            used_markers.add(marker)
+            option_markers[option.id] = marker
+            option_labels[marker] = option.label
         row_markers = [
             _marker(item.label, str(index + 1))
             for index, item in enumerate(question.items)
@@ -105,6 +135,7 @@ def _structured_answer_preview(
             "markers": row_markers,
             "user": [option_markers.get(str(user_map.get(item.id, "")), "") for item in question.items],
             "expected": [option_markers.get(str(expected_map.get(item.id, "")), "") for item in question.items],
+            "option_labels": option_labels,
         }
     if isinstance(question, MultipleQuestion):
         markers = [
@@ -119,12 +150,24 @@ def _structured_answer_preview(
             "markers": markers,
             "user": [option_markers[str(value)] for value in user_values if str(value) in option_markers],
             "expected": [option_markers[str(value)] for value in expected_values if str(value) in option_markers],
+            "option_labels": {markers[index]: option.label for index, option in enumerate(question.options)},
         }
     if isinstance(question, InputQuestion) and question.answer_format == "sequence":
         markers = list(question.markers or ())
         user = list(user_value) if isinstance(user_value, str) else []
-        expected = list(expected_value_) if isinstance(expected_value_, (list, tuple, str)) else []
-        return {"kind": "sequence", "markers": markers, "user": user, "expected": expected}
+        if isinstance(expected_value_, str):
+            expected = list(expected_value_)
+        elif isinstance(expected_value_, (list, tuple)):
+            expected = list(expected_value_[0]) if len(expected_value_) == 1 and isinstance(expected_value_[0], str) else list(expected_value_)
+        else:
+            expected = []
+        return {
+            "kind": "sequence",
+            "markers": markers,
+            "user": user,
+            "expected": expected,
+            "option_labels": _sequence_option_labels(question.prompt),
+        }
     return None
 
 
@@ -209,6 +252,11 @@ def public_review_items(report_snapshot: Mapping[str, Any]) -> list[dict[str, An
         public_item = {
             key: value for key, value in item.items() if key in _PUBLIC_REVIEW_FIELDS
         }
+        preview = _sanitize_answer_preview(public_item.get("answer_preview"))
+        if preview is None:
+            public_item.pop("answer_preview", None)
+        else:
+            public_item["answer_preview"] = preview
         public_item.setdefault(
             "status", "correct" if public_item.get("is_correct") else "incorrect"
         )
@@ -219,3 +267,34 @@ def public_review_items(report_snapshot: Mapping[str, Any]) -> list[dict[str, An
             public_item["expected_answer"] = "Эталонный ответ не сохранён"
         public_items.append(public_item)
     return public_items
+
+
+def _sanitize_answer_preview(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, Mapping) or value.get("kind") not in _PREVIEW_KINDS:
+        return None
+
+    def strings(candidate: Any) -> list[str] | None:
+        if not isinstance(candidate, (list, tuple)) or len(candidate) > _PREVIEW_MAX_ENTRIES:
+            return None
+        if any(not isinstance(entry, str) or len(entry) > _PREVIEW_MAX_TEXT for entry in candidate):
+            return None
+        return list(candidate)
+
+    markers = strings(value.get("markers"))
+    user = strings(value.get("user"))
+    expected = strings(value.get("expected"))
+    if markers is None or user is None or expected is None:
+        return None
+    option_labels: dict[str, str] = {}
+    raw_labels = value.get("option_labels")
+    if isinstance(raw_labels, Mapping):
+        for key, label in list(raw_labels.items())[:_PREVIEW_MAX_ENTRIES]:
+            if isinstance(key, str) and isinstance(label, str) and len(key) <= _PREVIEW_MAX_TEXT and len(label) <= _PREVIEW_MAX_TEXT:
+                option_labels[key] = label
+    return {
+        "kind": value["kind"],
+        "markers": markers,
+        "user": user,
+        "expected": expected,
+        **({"option_labels": option_labels} if option_labels else {}),
+    }

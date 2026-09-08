@@ -122,6 +122,10 @@ def serialize_attempt(row: Mapping[str, Any] | None) -> dict[str, Any] | None:
     )
     available = set(row.keys())
     serialized = {key: row[key] for key in keys if key in available}
+    if row.get("status") == "completed":
+        serialized.pop("answers", None)
+        if "pdf_status" in available:
+            serialized["pdf_status"] = _normalize_delivery_status(row.get("pdf_status"))
     if row.get("question_count") and row.get("correct_count") is not None:
         serialized["accuracy_percent"] = round_half_up(
             row["correct_count"] / row["question_count"] * 100
@@ -141,6 +145,7 @@ def serialize_result(row: Mapping[str, Any], fallback: ScoreResult | None) -> di
     if snapshot:
         result = dict(snapshot)
         result.setdefault("skipped_count", 0)
+        result["per_question"] = _safe_per_question(result.get("per_question"))
         return result
     keys = (
         "diagnostic_id", "mode", "correct_count", "question_count", "score", "max_score",
@@ -149,7 +154,48 @@ def serialize_result(row: Mapping[str, Any], fallback: ScoreResult | None) -> di
     persisted = {key: row[key] for key in keys if key in available}
     result = persisted or (fallback.model_dump(mode="json") if fallback is not None else {})
     result.setdefault("skipped_count", 0)
+    result["per_question"] = _safe_per_question(result.get("per_question"))
     return result
+
+
+_DELIVERY_STATUSES = {"pending", "sending", "sent", "failed", "abandoned"}
+
+
+def _normalize_delivery_status(value: Any) -> str | None:
+    return value if isinstance(value, str) and value in _DELIVERY_STATUSES else None
+
+
+def _safe_per_question(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, (list, tuple)):
+        return []
+    safe: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, Mapping):
+            continue
+        question_id = item.get("question_id")
+        number = item.get("number")
+        topic = item.get("topic")
+        status = item.get("status")
+        is_correct = item.get("is_correct")
+        if (
+            not isinstance(question_id, str)
+            or not question_id
+            or isinstance(number, bool)
+            or not isinstance(number, int)
+            or number < 1
+            or not isinstance(topic, str)
+            or status not in {"correct", "incorrect", "skipped"}
+            or not isinstance(is_correct, bool)
+        ):
+            continue
+        safe.append({
+            "question_id": question_id,
+            "number": number,
+            "topic": topic,
+            "status": status,
+            "is_correct": is_correct,
+        })
+    return safe
 
 
 def serialize_progress_profile(row: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -596,10 +642,40 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
         if row["status"] != "completed":
             raise HTTPException(status_code=409, detail="review_not_ready")
         items = public_review_items(row["report_snapshot"] or {})
-        return {
+        response = {
             "ok": True,
             "available": items is not None,
             "items": items or [],
+            "pdf_status": _normalize_delivery_status(row.get("pdf_status")),
+        }
+        return response
+
+    @router.post("/session/delivery")
+    async def delivery_status(body: SessionRequest, request: Request) -> dict[str, Any]:
+        user = telegram_user(request, body.init_data)
+        await _require_current_session(request, user["id"], body.session_scope)
+        row = await attempts.get_delivery_status(body.attempt_id, user["id"])
+        if row is None:
+            raise HTTPException(status_code=404, detail="result_not_found")
+        if row["status"] != "completed":
+            raise HTTPException(status_code=409, detail="delivery_not_ready")
+        return {
+            "ok": True,
+            "status": _normalize_delivery_status(row.get("pdf_status")),
+        }
+
+    @router.post("/session/delivery/retry")
+    async def retry_delivery(body: SessionRequest, request: Request) -> dict[str, Any]:
+        user = telegram_user(request, body.init_data)
+        await _require_current_session(request, user["id"], body.session_scope)
+        row = await attempts.retry_delivery(body.attempt_id, user["id"])
+        if row is None:
+            raise HTTPException(status_code=404, detail="result_not_found")
+        if row["status"] != "completed":
+            raise HTTPException(status_code=409, detail="delivery_not_ready")
+        return {
+            "ok": True,
+            "status": _normalize_delivery_status(row.get("pdf_status")),
         }
 
     @router.post("/session/viewed")

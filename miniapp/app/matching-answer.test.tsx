@@ -143,6 +143,33 @@ describe("MatchingAnswer", () => {
     expect(onChange).toHaveBeenLastCalledWith("7");
   });
 
+  it("uses the accessible option sheet for the real chemistry q9 density", async () => {
+    const chemistryQuestion = catalogQuestion("sp-chemistry-oge-2022-q9");
+    const model = matchingModelFromQuestion(chemistryQuestion as unknown as MatchingQuestion);
+    const onChange = vi.fn();
+    await act(async () => {
+      root.render(<MatchingAnswer model={model} value={{}} subject="Химия" onChange={onChange} />);
+    });
+
+    expect(model.options).toHaveLength(5);
+    expect(container.querySelectorAll(".matching-answer-options")).toHaveLength(0);
+    const triggers = [...container.querySelectorAll<HTMLButtonElement>(".matching-answer-trigger")];
+    expect(triggers).toHaveLength(model.rows.length);
+    await act(async () => triggers[0].click());
+    const sheetOptions = [...container.querySelectorAll<HTMLButtonElement>('[role="dialog"] [role="radio"]')];
+    expect(sheetOptions).toHaveLength(model.options.length);
+    expect(sheetOptions.every((option) => option.textContent?.trim())).toBe(true);
+    await act(async () => sheetOptions[4].click());
+    expect(onChange).toHaveBeenLastCalledWith({ i1: "o5" });
+
+    await act(async () => {
+      root.render(<MatchingAnswer model={model} value={{ i1: "o5" }} subject="Химия" onChange={onChange} />);
+    });
+    const selectedTrigger = container.querySelector<HTMLButtonElement>('[data-state="filled"] .matching-answer-trigger');
+    expect(selectedTrigger?.textContent).toContain("5");
+    expect(selectedTrigger?.textContent).toContain(model.options[4].label);
+  });
+
   it("keeps sequence activation sequential and clears the whole sequence", async () => {
     const model: MatchingModel = {
       ...mapModel,
@@ -262,6 +289,7 @@ describe("MatchingAnswer", () => {
     expect(preview).toContain(">2<");
     expect(preview).toContain(">1<");
     expect(preview).toContain(">5<");
+    expect(preview).toContain('aria-live="polite"');
   });
 
   it("keeps real sequence option labels visible and tappable", async () => {

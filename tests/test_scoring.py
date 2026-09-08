@@ -47,6 +47,31 @@ def test_server_counts_canonical_skips_as_incorrect():
     assert result.score == 0
 
 
+def test_server_result_exposes_only_safe_per_question_outcomes():
+    result = score_answers(
+        sample_catalog(), "demo-math", "full",
+        {"q1": "2", "q2": [], "q3": {}, "q4": "", "q5": ""},
+    )
+
+    assert [item.model_dump() for item in result.per_question] == [
+        {"question_id": "q1", "number": 1, "topic": "Вычисления", "status": "correct", "is_correct": True},
+        {"question_id": "q2", "number": 2, "topic": "Дроби", "status": "skipped", "is_correct": False},
+        {"question_id": "q3", "number": 3, "topic": "Соответствия", "status": "skipped", "is_correct": False},
+        {"question_id": "q4", "number": 4, "topic": "Уравнения", "status": "skipped", "is_correct": False},
+        {"question_id": "q5", "number": 5, "topic": "Союзы", "status": "skipped", "is_correct": False},
+    ]
+
+
+def test_real_chemistry_catalog_freezes_official_semantic_topics():
+    catalog = load_catalog(load_school())
+    result = score_answers(catalog, "oge-chemistry-192", "full", {})
+    by_id = {item.question_id: item.topic for item in result.per_question}
+
+    assert by_id["sp-chemistry-oge-2022-q9"] == "Химические свойства неорганических веществ"
+    assert by_id["sp-chemistry-oge-2022-q15"] == "Окислительно-восстановительные реакции"
+    assert all(not topic.startswith("Задание ") for topic in by_id.values())
+
+
 def test_every_canonical_skip_is_an_incorrect_answer():
     questions = sample_catalog().get("demo-math").questions
     skipped_answers = ("", [], {}, "", "")

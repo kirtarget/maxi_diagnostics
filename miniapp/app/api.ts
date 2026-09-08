@@ -7,6 +7,7 @@ import type {
   PublicDiagnostic,
   PublicDiagnosticSummary,
   ReviewResponse,
+  DeliveryStatus,
   SavedSession,
   ServerAttempt,
 } from "./types";
@@ -685,6 +686,25 @@ export const loadReview = (initData: string, attemptId: string, sessionScope: st
     attempt_id: attemptId,
     session_scope: sessionScope,
   });
+
+export type DeliveryResponse = {
+  ok: true;
+  status: DeliveryStatus | null;
+};
+
+export const loadDeliveryStatus = (
+  initData: string, attemptId: string, sessionScope: string,
+) => postDiagnostic<DeliveryResponse>("/api/diagnostics/session/delivery", initData, {
+  attempt_id: attemptId,
+  session_scope: sessionScope,
+});
+
+export const retryDelivery = (
+  initData: string, attemptId: string, sessionScope: string,
+) => postDiagnostic<DeliveryResponse>("/api/diagnostics/session/delivery/retry", initData, {
+  attempt_id: attemptId,
+  session_scope: sessionScope,
+});
 
 export async function loadWeeklyLeague(
   initData: string,

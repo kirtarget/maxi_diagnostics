@@ -1,5 +1,6 @@
 import io
 import json
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -818,6 +819,98 @@ def test_score_policy_approves_only_pinned_q05_and_biology_q18():
     importer._repair_source_question(biology_source, biology_task, biology)
     assert biology["max_primary_score"] == 2
     assert biology["source"] == {"approval_status": "approved", "exam_position": "18"}
+
+
+def test_trusted_chemistry_sources_apply_the_official_position_topic_map():
+    for slug, exam, expected in (
+        ("chemistry-ege-2022", "ЕГЭ", "Окислительно-восстановительные реакции"),
+        ("chemistry-oge-2022", "ОГЭ", "Окислительно-восстановительные реакции"),
+    ):
+        source = importer.SourceFile(
+            Path(f"{slug}.docx"), exam, "chemistry", 2022, 1, (),
+            content_hash=importer.TRUSTED_SOURCE_HASHES[slug],
+        )
+        question = {"topic": "Задание 19" if exam == "ЕГЭ" else "Задание 15"}
+        importer._repair_source_question(source, importer.SourceTask(number=19 if exam == "ЕГЭ" else 15), question)
+        assert question["topic"] == expected
+
+        untrusted = importer.SourceFile(
+            source.path, source.exam, source.subject_code, source.year, source.declared_tasks,
+            (), content_hash="0" * 64,
+        )
+        question = {"topic": "Задание 15"}
+        importer._repair_source_question(untrusted, importer.SourceTask(number=15), question)
+        assert question["topic"] == "Задание 15"
+
+
+def test_checked_in_topic_maps_cover_every_live_question():
+    live_by_source: dict[str, set[int]] = {}
+    topic_by_source: dict[str, dict[int, str]] = {}
+    for catalog_path in (ROOT / "school" / "diagnostics").glob("*.json"):
+        payload = json.loads(catalog_path.read_text(encoding="utf-8"))
+        for question in payload["questions"]:
+            question_id = question["id"]
+            if not question_id.startswith(importer.ID_PREFIX):
+                continue
+            source_slug, number = question_id[3:].rsplit("-q", 1)
+            live_by_source.setdefault(source_slug, set()).add(int(number))
+            if source_slug in importer.CHECKED_IN_TOPIC_MAP:
+                topic_by_source.setdefault(source_slug, {})[int(number)] = question["topic"]
+
+    assert set(importer.CHECKED_IN_TOPIC_MAP) == set(topic_by_source)
+    for source_slug, checked_map in importer.CHECKED_IN_TOPIC_MAP.items():
+        assert set(live_by_source[source_slug]) == set(checked_map)
+        assert topic_by_source[source_slug] == checked_map
+        assert all(not topic.startswith("Задание ") for topic in checked_map.values())
+
+
+def test_topic_maps_have_matching_hash_and_evidence_guards():
+    assert set(importer.CHECKED_IN_TOPIC_MAP) == set(importer.TRUSTED_SOURCE_HASHES)
+    assert set(importer.CHECKED_IN_TOPIC_MAP) == set(importer.TOPIC_EVIDENCE_URLS)
+    assert all(
+        url.startswith(("https://doc.fipi.ru/", "https://koiro.edu.ru/", "https://co8a.ru/", "https://vpr-ege.ru/", "https://4ege.ru/"))
+        for url in importer.TOPIC_EVIDENCE_URLS.values()
+    )
+    assert set(importer.TOPIC_EVIDENCE_MIRROR_URLS) <= set(importer.CHECKED_IN_TOPIC_MAP)
+    assert importer.TOPIC_EVIDENCE_MIRROR_URLS["literature-ege-2022"] == (
+        "https://co8a.ru/wp-content/uploads/2021/08/lis.pdf"
+    )
+    assert importer.TOPIC_EVIDENCE_URLS["mathematics-ege-2022"].endswith("ma-11-ege-2022-spets_prof.pdf")
+
+
+def test_every_checked_in_topic_repair_is_hash_guarded_and_idempotent():
+    for slug, checked_map in importer.CHECKED_IN_TOPIC_MAP.items():
+        subject, exam_code, year = slug.rsplit("-", 2)
+        exam = importer.EXAM_NAMES[exam_code]
+        number = next(iter(checked_map))
+        source = importer.SourceFile(
+            Path(f"{slug}.docx"), exam, subject, int(year), len(checked_map), (),
+            content_hash=importer.TRUSTED_SOURCE_HASHES[slug],
+        )
+        question = {
+            "topic": f"Задание {number}",
+            "prompt": "",
+            "options": [],
+            "source": {"approval_status": "draft"},
+        }
+        importer._repair_source_question(source, importer.SourceTask(number=number), question)
+        first_repair = deepcopy(question)
+        importer._repair_source_question(source, importer.SourceTask(number=number), question)
+        assert question == first_repair
+        assert question["topic"] == checked_map[number]
+
+        untrusted = importer.SourceFile(
+            source.path, source.exam, source.subject_code, source.year,
+            source.declared_tasks, source.tasks, content_hash="0" * 64,
+        )
+        untouched = {
+            "topic": f"Задание {number}",
+            "prompt": "",
+            "options": [],
+            "source": {"approval_status": "draft"},
+        }
+        importer._repair_source_question(untrusted, importer.SourceTask(number=number), untouched)
+        assert untouched["topic"] == f"Задание {number}"
 
 
 def test_oge_math_target_repairs_punctuation_spacing_and_score():

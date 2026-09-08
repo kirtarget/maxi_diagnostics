@@ -38,12 +38,14 @@ def test_review_snapshot_formats_every_question_type():
         "markers": ["A", "B", "C"],
         "user": ["A", "B"],
         "expected": ["A", "C"],
+        "option_labels": {"A": "2/4", "B": "2/3", "C": "3/6"},
     }
     assert snapshot[2]["answer_preview"] == {
         "kind": "matching",
         "markers": ["1", "2"],
         "user": ["1", "2"],
         "expected": ["2", "1"],
+        "option_labels": {"1": "6", "2": "4"},
     }
 
 
@@ -241,3 +243,54 @@ def test_public_review_keeps_legacy_snapshots_without_optional_preview():
         "status": "incorrect",
     }]
     assert "answer_preview" not in public[0]
+
+
+def test_real_oge_physics_sequence_preview_decodes_source_word_list():
+    catalog = load_catalog(load_school(ROOT / "school"))
+    diagnostic = catalog.get("oge-physics-197")
+    question = diagnostic.questions[3]
+
+    snapshot = build_review_snapshot((question,), {question.id: "6714"})
+
+    preview = snapshot[0]["answer_preview"]
+    assert preview["kind"] == "sequence"
+    assert preview["markers"] == ["А", "Б", "В", "Г"]
+    assert preview["expected"] == ["6", "7", "1", "4"]
+    assert preview["option_labels"] == {
+        "1": "Сила Лоренца",
+        "2": "Сила Кулона",
+        "3": "Сила Ампера",
+        "4": "Перпендикулярно",
+        "5": "Параллельно",
+        "6": "Электрический",
+        "7": "Магнитный",
+    }
+
+
+def test_malformed_nested_preview_is_reduced_to_safe_display_fields():
+    public = public_review_items({
+        "review_snapshot": [{
+            "question_id": "q1",
+            "answer_preview": {
+                "kind": "multiple",
+                "markers": ["A"],
+                "user": ["A"],
+                "expected": ["B"],
+                "expected_value": {"secret": "no"},
+                "private_answer": "no",
+                "option_labels": {"A": "Option A", "secret": {"answer": "no"}},
+            },
+        }],
+    })
+
+    assert public == [{
+        "question_id": "q1",
+        "answer_preview": {
+            "kind": "multiple",
+            "markers": ["A"],
+            "user": ["A"],
+            "expected": ["B"],
+            "option_labels": {"A": "Option A"},
+        },
+        "status": "incorrect",
+    }]

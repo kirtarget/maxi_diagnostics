@@ -61,6 +61,8 @@ export type DiagnosticSessionState = {
   resultDiagnostic: Pick<PublicDiagnostic, "exam" | "subject"> | null;
   review: ReviewResponse | null;
   reviewIndex: number;
+  reviewMode: "list" | "detail";
+  reviewQuestionId: string | null;
   reviewError: string | null;
   syncWarning: string | null;
   progressSaveState: ProgressSaveState;
@@ -77,11 +79,12 @@ export type DiagnosticSessionActions = {
   previousQuestion(): void;
   nextQuestion(): void;
   flushProgressForExit(): Promise<boolean>;
-  openReview(): void;
+  openReview(questionId?: string): void;
   openSavedResult(attempt: ServerAttempt): void;
   refreshReview(): Promise<ReviewResponse | null>;
   reviewBack(): void;
   reviewNext(): void;
+  reviewList(): void;
   clearReviewError(): void;
   /** Attempt id the server has stored, used to replay that attempt's mistakes. */
   persistedAttemptId(): string | null;
@@ -128,6 +131,9 @@ export function useDiagnosticSession({
   const [savedResultDiagnostic, setSavedResultDiagnostic] = useState<Pick<PublicDiagnostic, "exam" | "subject"> | null>(null);
   const [review, setReview] = useState<ReviewResponse | null>(null);
   const [reviewIndex, setReviewIndex] = useState(0);
+  const [reviewMode, setReviewMode] = useState<"list" | "detail">("list");
+  const [reviewQuestionId, setReviewQuestionId] = useState<string | null>(null);
+  const reviewSelectionIdentity = useRef<{ attemptId: string; contentVersion: string } | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [progressSaveState, setProgressSaveState] = useState<ProgressSaveState>("idle");
   const [progressToast, setProgressToast] = useState<string | null>(null);
@@ -180,7 +186,7 @@ export function useDiagnosticSession({
         ) return;
         progressRevision.current = response.attempt.progress_revision;
         syncedQuestionIndex.current = response.attempt.question_index;
-        syncedAnswers.current = response.attempt.answers;
+        syncedAnswers.current = response.attempt.answers ?? {};
         persistedAttemptId.current = response.attempt.attempt_id;
         if (schoolIdRef.current && sessionScopeRef.current) {
           saveLocalSession(schoolIdRef.current, sessionScopeRef.current, {
@@ -248,6 +254,16 @@ export function useDiagnosticSession({
     );
     if (outcome.status === "current") {
       setReview(outcome.value);
+      const storedId = reviewSelectionIdentity.current && typeof window !== "undefined"
+        ? window.sessionStorage.getItem(`diagnostic-review:${reviewSelectionIdentity.current.attemptId}:${reviewSelectionIdentity.current.contentVersion}`)
+        : null;
+      if (!reviewQuestionId && storedId && outcome.value.items.some((item) => item.question_id === storedId)) {
+        setReviewQuestionId(storedId);
+        setReviewMode("detail");
+      } else if (reviewQuestionId && !outcome.value.items.some((item) => item.question_id === reviewQuestionId)) {
+        setReviewQuestionId(null);
+        setReviewMode("list");
+      }
       setReviewError(null);
       return outcome.value;
     }
@@ -255,7 +271,7 @@ export function useDiagnosticSession({
       setReviewError("Не удалось загрузить разбор. Повторите запрос.");
     }
     return null;
-  }, [attemptId, initData, sessionScope]);
+  }, [attemptId, initData, sessionScope, reviewQuestionId]);
 
   const hydrate = useCallback(async (preserveCurrentScreen = false, preserveProgressError = false) => {
     const generation = hydrateGeneration.current + 1;
@@ -551,12 +567,18 @@ export function useDiagnosticSession({
       ) return;
       persistedAttemptId.current = response.attempt.attempt_id;
       activeAttemptId.current = response.attempt.attempt_id;
+      reviewSelectionIdentity.current = {
+        attemptId: response.attempt.attempt_id,
+        contentVersion: response.attempt.content_version,
+      };
       progressRevision.current = response.attempt.progress_revision;
       supersedesAttemptId.current = undefined;
       setResult(response.result);
       setSavedResultDiagnostic(null);
       setReview(null);
       setReviewIndex(0);
+      setReviewMode("list");
+      setReviewQuestionId(null);
       setReviewError(null);
       clearLocalSession(brand.school_id, sessionScope);
       setScreen("result");
@@ -658,8 +680,19 @@ export function useDiagnosticSession({
     });
   };
 
-  const openReview = () => {
-    setReviewIndex(0);
+  const openReview = (questionId?: string) => {
+    setReviewQuestionId(questionId ?? null);
+    setReviewMode(questionId ? "detail" : "list");
+    const identity = reviewSelectionIdentity.current;
+    if (questionId && identity && typeof window !== "undefined") {
+      window.sessionStorage.setItem(`diagnostic-review:${identity.attemptId}:${identity.contentVersion}`, questionId);
+    }
+    if (questionId && review) {
+      const mistakeIndex = review.items
+        .filter((item) => !item.is_correct)
+        .findIndex((item) => item.question_id === questionId);
+      setReviewIndex(Math.max(0, mistakeIndex));
+    }
     setReviewError(null);
     setScreen("review");
     if (!review) void refreshReview();
@@ -668,15 +701,39 @@ export function useDiagnosticSession({
   const mistakeCount = review?.items.filter((item) => !item.is_correct).length ?? 0;
 
   const reviewBack = () => {
-    if (reviewIndex === 0) {
+    if (reviewMode === "list") {
       setScreen("result");
       return;
     }
-    setReviewIndex((current) => Math.max(0, current - 1));
+    setReviewMode("list");
+    setReviewQuestionId(null);
   };
 
   const reviewNext = () => {
-    setReviewIndex((current) => Math.min(current + 1, Math.max(0, mistakeCount - 1)));
+    if (!review || mistakeCount === 0) return;
+    const mistakes = review.items.filter((item) => !item.is_correct);
+    const currentIndex = reviewQuestionId
+      ? mistakes.findIndex((item) => item.question_id === reviewQuestionId)
+      : reviewIndex;
+    const nextIndex = Math.min(
+      (currentIndex < 0 ? -1 : currentIndex) + 1,
+      mistakes.length - 1,
+    );
+    const next = mistakes[nextIndex];
+    if (!next) return;
+    setReviewIndex(nextIndex);
+    setReviewQuestionId(next.question_id);
+    const identity = reviewSelectionIdentity.current;
+    if (identity && typeof window !== "undefined") {
+      window.sessionStorage.setItem(
+        `diagnostic-review:${identity.attemptId}:${identity.contentVersion}`,
+        next.question_id,
+      );
+    }
+  };
+  const reviewList = () => {
+    setReviewMode("list");
+    setReviewQuestionId(null);
   };
 
   return {
@@ -694,6 +751,8 @@ export function useDiagnosticSession({
       resultDiagnostic: savedResultDiagnostic ?? diagnostic,
       review,
       reviewIndex,
+      reviewMode,
+      reviewQuestionId,
       reviewError,
       syncWarning,
       progressSaveState,
@@ -703,6 +762,8 @@ export function useDiagnosticSession({
       hydrate,
       openSavedResult: (attempt) => {
         if (!attempt.result) return;
+        setMode(attempt.mode);
+        if (attempt.exam) setExam(attempt.exam);
         attemptGeneration.current += 1;
         progressQueue.current?.cancel();
         activeAttemptId.current = attempt.attempt_id;
@@ -714,6 +775,9 @@ export function useDiagnosticSession({
         setReview(null);
         setReviewError(null);
         setReviewIndex(0);
+        setReviewMode("list");
+        setReviewQuestionId(null);
+        reviewSelectionIdentity.current = { attemptId: attempt.attempt_id, contentVersion: attempt.content_version };
         setScreen("result");
       },
       setExam,
@@ -732,6 +796,7 @@ export function useDiagnosticSession({
       refreshReview,
       reviewBack,
       reviewNext,
+      reviewList,
       clearReviewError: () => setReviewError(null),
       persistedAttemptId: () => persistedAttemptId.current,
     },

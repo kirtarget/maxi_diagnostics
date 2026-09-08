@@ -11,7 +11,7 @@ import {
   RouteScreen,
 } from "./result-flow";
 import { personalRoute } from "./result-flow-model";
-import { requestedAttemptId } from "./api";
+import { loadDeliveryStatus, requestedAttemptId, retryDelivery } from "./api";
 import { gameplayProfileView } from "./gameplay-profile-model";
 import { TrainerScreen } from "./trainer-screen";
 import { trainerDiagnosticId, trainerHeaderView } from "./trainer-model";
@@ -21,7 +21,7 @@ import { useDiagnosticSession } from "./use-diagnostic-session";
 import { useTrainer } from "./use-trainer";
 import { isEmptyAnswer } from "./answer-values";
 import { ConfirmSheet } from "./confirm-sheet";
-import type { Brand, Screen } from "./types";
+import type { Brand, DeliveryStatus, Screen } from "./types";
 
 type DisplayBrand = Pick<Brand, "name" | "short_name" | "logo"> & {
   resultStatus: string;
@@ -70,6 +70,7 @@ export default function Home() {
   const [diagnosticExitOpen, setDiagnosticExitOpen] = useState(false);
   const [diagnosticExitSaving, setDiagnosticExitSaving] = useState(false);
   const [diagnosticExitError, setDiagnosticExitError] = useState<string | null>(null);
+  const [deliveryStatus, setDeliveryStatus] = useState<DeliveryStatus | null>(null);
   const bootstrapSession = useBootstrap(setScreen);
   const session = useDiagnosticSession({ bootstrap: bootstrapSession, screen, setScreen });
   const trainer = useTrainer({
@@ -138,7 +139,49 @@ export default function Home() {
     goHome();
   };
   const routeItems = result ? personalRoute(result.growth_topics) : [];
+  const repeatDiagnostic = () => {
+    if (!result || !bootstrap) return;
+    const summary = bootstrap.diagnostics.find((item) => item.id === result.diagnostic_id);
+    if (summary) void session.actions.beginDiagnostic(summary);
+  };
   const replayAttemptId = session.actions.persistedAttemptId();
+  const deliveryAttempt = bootstrap?.results.find((attempt) => attempt.attempt_id === replayAttemptId);
+  const deliveryStateAttemptId = useRef<string | null>(null);
+  const [deliveryPollNonce, restartDeliveryPolling] = useState(0);
+  useEffect(() => {
+    if (screen !== "result" || !replayAttemptId || !bootstrapSession.initData.current || !bootstrapSession.sessionScope) return;
+    const attemptChanged = deliveryStateAttemptId.current !== replayAttemptId;
+    if (attemptChanged) {
+      deliveryStateAttemptId.current = replayAttemptId;
+      setDeliveryStatus(deliveryAttempt?.pdf_status ?? null);
+    }
+    const currentStatus = attemptChanged ? deliveryAttempt?.pdf_status ?? null : deliveryStatus;
+    if (["sent", "abandoned"].includes(currentStatus ?? "")) {
+      return;
+    }
+    let active = true;
+    let timer: number | undefined;
+    const poll = async () => {
+      try {
+        const response = await loadDeliveryStatus(
+          bootstrapSession.initData.current,
+          replayAttemptId,
+          bootstrapSession.sessionScope!,
+        );
+        if (!active) return;
+        setDeliveryStatus(response.status);
+        if (response.status !== "pending" && response.status !== "sending" && response.status !== "failed") return;
+        timer = window.setTimeout(() => { void poll(); }, 5000);
+      } catch {
+        return;
+      }
+    };
+    void poll();
+    return () => {
+      active = false;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [screen, replayAttemptId, bootstrapSession.initData, bootstrapSession.sessionScope, deliveryAttempt?.pdf_status, deliveryPollNonce]);
   const selectedTrainerSubject = diagnostic?.subject
     ?? resultDiagnostic?.subject
     ?? (bootstrap?.diagnostics.length === 1 ? bootstrap.diagnostics.at(0)?.subject : null);
@@ -363,8 +406,22 @@ export default function Home() {
           <ResultScreen
             diagnostic={resultDiagnostic}
             result={result}
+            pdfStatus={deliveryStatus ?? deliveryAttempt?.pdf_status ?? null}
             onReview={session.actions.openReview}
             onForecast={() => setScreen("route")}
+            onHome={goHome}
+            onRetryDelivery={() => {
+              if (!replayAttemptId) return;
+              void retryDelivery(bootstrapSession.initData.current, replayAttemptId, bootstrapSession.sessionScope!)
+                .then((response) => setDeliveryStatus(response.status))
+                .then(() => restartDeliveryPolling((value) => value + 1))
+                .catch(() => setDeliveryStatus("failed"));
+            }}
+            onOpenChat={BUILD_BOT_URL ? () => {
+              const webApp = window.Telegram?.WebApp;
+              if (webApp?.openTelegramLink) webApp.openTelegramLink(BUILD_BOT_URL);
+              else window.open(BUILD_BOT_URL, "_blank", "noopener,noreferrer");
+            } : undefined}
             onReplayMistakes={replayAttemptId && bootstrap.diagnostics.some((item) => item.id === result.diagnostic_id)
               ? () => void trainer.actions.start(result.diagnostic_id, "mistakes", replayAttemptId)
               : undefined}
@@ -406,13 +463,18 @@ export default function Home() {
         <ReviewScreen
           error={reviewError}
           index={reviewIndex}
+          mode={session.state.reviewMode}
+          selectedQuestionId={session.state.reviewQuestionId}
           items={review?.items ?? []}
           subject={resultDiagnostic?.subject}
           legacy={review?.available === false}
           loading={!review && !reviewError}
+          onHome={goHome}
           onBack={session.actions.reviewBack}
           onForecast={() => setScreen("route")}
           onNext={session.actions.reviewNext}
+          onSelectQuestion={(questionId) => session.actions.openReview(questionId)}
+          onList={session.actions.reviewList}
           onRetry={() => {
             session.actions.clearReviewError();
             void session.actions.refreshReview();
@@ -424,6 +486,7 @@ export default function Home() {
         <RouteScreen
           items={routeItems}
           offers={bootstrap.school.links.offers}
+          onRepeat={bootstrap.diagnostics.some((item) => item.id === result.diagnostic_id) ? repeatDiagnostic : undefined}
           onSubjects={() => setScreen("subjects")}
         />
       )}
