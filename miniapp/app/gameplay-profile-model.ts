@@ -135,12 +135,12 @@ function progressFor(completionCount: number, level: number): number {
 
 function onboardingFor(completionCount: number): Pick<GameplayProfileView, "onboardingState" | "onboardingLabel"> {
   if (completionCount === 0) {
-    return { onboardingState: "new", onboardingLabel: "Начните с первой диагностики" };
+    return { onboardingState: "new", onboardingLabel: "Начни с первой диагностики" };
   }
   if (completionCount === 1) {
     return { onboardingState: "first_completion", onboardingLabel: "Первый результат уже готов" };
   }
-  return { onboardingState: "returning", onboardingLabel: "Продолжайте подготовку" };
+  return { onboardingState: "returning", onboardingLabel: "Продолжай подготовку" };
 }
 
 export function gameplayProfileView(payload: GameplayProfilePayload | null | undefined): GameplayProfileView {

@@ -9,7 +9,7 @@ describe("gameplayProfileView", () => {
       levelLabel: "Первый шаг",
       levelProgress: 0,
       onboardingState: "new",
-      onboardingLabel: "Начните с первой диагностики",
+      onboardingLabel: "Начни с первой диагностики",
       unlockedAchievements: [],
       serverBacked: false,
     });

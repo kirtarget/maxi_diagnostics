@@ -272,7 +272,7 @@ export function useDiagnosticSession({
       return outcome.value;
     }
     if (outcome.status === "error") {
-      setReviewError("Не удалось загрузить разбор. Повторите запрос.");
+      setReviewError("Не удалось загрузить разбор. Повтори запрос.");
     }
     return null;
   }, [attemptId, initData, sessionScope, reviewQuestionId]);
@@ -390,7 +390,7 @@ export function useDiagnosticSession({
       return true;
     } catch {
       if (generation !== hydrateGeneration.current) return false;
-      setError("Не удалось загрузить диагностику. Проверьте соединение и повторите попытку.");
+      setError("Не удалось загрузить диагностику. Проверь соединение и повтори попытку.");
       return false;
     }
   }, [loadBootstrapData, loadCachedDiagnostic, setError, setScreen]);
@@ -529,7 +529,7 @@ export function useDiagnosticSession({
       dispatchDiagnosticLoad({
         type: "failed",
         requestId,
-        message: "Не удалось загрузить задания. Проверьте соединение и повторите попытку.",
+        message: "Не удалось загрузить задания. Проверь соединение и повтори попытку.",
       });
     }
   };
@@ -619,7 +619,7 @@ export function useDiagnosticSession({
         latestQuestionIndex.current = refusedIndex;
         setError(`Ответ на задание ${refusedIndex + 1} не принят. Проверь его и отправь результат снова.`);
       } else {
-        setError("Не удалось получить результат. Ответы сохранены — повторите отправку.");
+        setError("Не удалось получить результат. Ответы сохранены — повтори отправку.");
       }
       setScreen("question");
     } finally {
@@ -667,7 +667,7 @@ export function useDiagnosticSession({
       return true;
     } catch {
       setProgressSaveState("error");
-      setSyncWarning("Не удалось сохранить прогресс на сервере. Проверьте связь и повторите выход.");
+      setSyncWarning("Не удалось сохранить прогресс на сервере. Проверь связь и повтори выход.");
       return false;
     }
   };

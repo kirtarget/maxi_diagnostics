@@ -1,4 +1,5 @@
 import type { DailyPlanSummary, DiagnosticMode, PublicDiagnosticSummary, Screen, ServerAttempt } from "./types";
+import { plural } from "./text-utils";
 
 /** Navigation is a small state machine. A format is meaningful only after a subject is selected. */
 export type NavigationSelection = {
@@ -55,15 +56,13 @@ export function formatDiagnosticCount(mode: DiagnosticMode, diagnostic: PublicDi
 
 export function formatDiagnosticDuration(mode: DiagnosticMode, diagnostic: PublicDiagnosticSummary): string {
   const count = mode === "quick" ? diagnostic.quick_count : diagnostic.full_count;
-  return `~${Math.max(5, Math.round((count * 5) / 3))} мин`;
+  const minutes = Math.max(5, Math.round((count * 5) / 3));
+  return `~${minutes} мин`;
 }
 
 export function formatDiagnosticMeta(mode: DiagnosticMode, diagnostic: PublicDiagnosticSummary): string {
   const count = mode === "quick" ? diagnostic.quick_count : diagnostic.full_count;
-  const lastHundred = count % 100;
-  const last = count % 10;
-  const word = lastHundred >= 11 && lastHundred <= 14 ? "заданий" : last === 1 ? "задание" : last >= 2 && last <= 4 ? "задания" : "заданий";
-  return `${count} ${word} · ${formatDiagnosticDuration(mode, diagnostic)}`;
+  return `${count} ${plural(count, ["задание", "задания", "заданий"])} · ${formatDiagnosticDuration(mode, diagnostic)}`;
 }
 
 export function homePrimaryAction({

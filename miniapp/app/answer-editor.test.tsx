@@ -59,7 +59,7 @@ describe("AnswerEditor", () => {
   it("renders multiple choice as an explicit checkbox group with a stable count description", () => {
     const html = renderToStaticMarkup(<AnswerEditor question={multiple} value={["a"]} onChange={noop} />);
     expect(html).toContain('role="group"');
-    expect(html).toContain('aria-label="Выберите 2 варианта"');
+    expect(html).toContain('aria-label="Выбери 2 варианта"');
     expect(html).toContain('role="checkbox"');
     expect(html).toContain('aria-checked="true"');
     expect(html).toContain('aria-describedby="multiple-selection-count-q-multiple"');
@@ -71,7 +71,7 @@ describe("AnswerEditor", () => {
 
   it("renders matching rows as shared radio chips", () => {
     const html = renderToStaticMarkup(
-      <AnswerEditor question={matching} value={{ i1: "o2" }} onChange={noop} labels={{ choose: "Выберите вариант" }} />,
+      <AnswerEditor question={matching} value={{ i1: "o2" }} onChange={noop} labels={{ choose: "Выбери вариант" }} />,
     );
     expect(html).toContain('class="matching-answer matching-answer-matching"');
     expect(html.match(/role="radiogroup"/g)).toHaveLength(2);
@@ -83,11 +83,11 @@ describe("AnswerEditor", () => {
 
   it("renders the short answer field with the brand labels and the prompt-derived hint", () => {
     const html = renderToStaticMarkup(
-      <AnswerEditor question={input} value="8,4" onChange={noop} labels={{ answer: "Ваш ответ", placeholder: "Введите ответ" }} />,
+      <AnswerEditor question={input} value="8,4" onChange={noop} labels={{ answer: "Твой ответ", placeholder: "Введи ответ" }} />,
     );
     expect(html).toContain('class="short-answer"');
-    expect(html).toContain("Ваш ответ");
-    expect(html).toContain('placeholder="Введите ответ"');
+    expect(html).toContain("Твой ответ");
+    expect(html).toContain('placeholder="Введи ответ"');
     expect(html).toContain('inputMode="decimal"');
     expect(html).toContain('class="answer-numeric"');
     expect(html).toContain("Очистить");

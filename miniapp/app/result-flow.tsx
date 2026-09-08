@@ -8,6 +8,7 @@ import { createPromptAnchorAllocator, focusPromptReference, promptLayout } from 
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import { ImageViewer } from "./image-viewer";
 import { forecastUnitLabel } from "./score-estimate";
+import { plural } from "./text-utils";
 import { topicRecommendation, type PersonalRouteAction } from "./result-flow-model";
 import type {
   ForecastKind,
@@ -145,7 +146,7 @@ export function ResultScreen({
         <span>Он останется в разделе «Мои результаты». Telegram присылает только короткое уведомление со ссылкой на этот экран.</span>
       </div>
       <div className="result-actions">
-        <button className="primary-button" onClick={() => onReview()} type="button">Посмотреть, где ошибся ({result.per_question?.filter((question) => question.status !== "correct").length ?? incorrectCount}) <span aria-hidden="true">→</span></button>
+        <button className="primary-button" onClick={() => onReview()} type="button">Посмотреть, где ошибся ({result.per_question?.filter((question) => question.status !== "correct").length ?? incorrectCount} {plural(result.per_question?.filter((question) => question.status !== "correct").length ?? incorrectCount, ["ошибка", "ошибки", "ошибок"])}) <span aria-hidden="true">→</span></button>
         {onReplayMistakes && <button className="secondary-button" onClick={onReplayMistakes} type="button">Прорешать ошибки заново · тренажёр</button>}
         {onHome && <button className="secondary-button" onClick={onHome} type="button">На главную</button>}
         <button className="secondary-button" onClick={onForecast} type="button">План</button>
@@ -255,7 +256,7 @@ export function ReviewScreen({
     return (
       <section className="screen review-screen" aria-labelledby="review-list-title">
         <div className="review-topline"><button className="text-back" onClick={onBack} type="button">Назад</button><span>Разбор ошибок</span></div>
-        <h1 id="review-list-title">Где ошибся ({mistakes.length})</h1>
+        <h1 id="review-list-title">Где ошибся ({mistakes.length} {plural(mistakes.length, ["ошибка", "ошибки", "ошибок"])})</h1>
         {mistakes.length === 0 ? <p>Ни одной ошибки. Так держать!</p> : (
           <div className="review-mistake-list-items">
             {mistakes.map((mistake) => <button key={mistake.question_id} type="button" onClick={() => onSelectQuestion?.(mistake.question_id)} aria-label={`Открыть задание ${mistake.number}: ${mistake.topic}`}><strong>{mistake.number}</strong><span>{mistake.topic}</span></button>)}
@@ -312,7 +313,7 @@ export function ReviewScreen({
       )}
       <dl className="answer-review">
         <div className="answer-review-user">
-          <dt>Ваш ответ</dt>
+          <dt>Твой ответ</dt>
           <dd><FormattedMathText text={item.user_answer} subject={subject} /></dd>
         </div>
         <div className="answer-review-expected">
@@ -334,7 +335,7 @@ export function ReviewScreen({
       )}
       <section className="guidance" aria-labelledby="guidance-title">
         <span>Как решать</span>
-        <h2 id="guidance-title">Разберите ход решения</h2>
+        <h2 id="guidance-title">Разбери ход решения</h2>
         <p><FormattedMathText text={item.learning_material_text || item.guidance} subject={subject} /></p>
       </section>
       <button className="primary-button" onClick={isLast ? onForecast : onNext} type="button">
@@ -423,7 +424,7 @@ export function ForecastScreen({
         )}
       </div>
       {next && <p className="forecast-explainer">Это ориентир на основе среднего прироста, а не личная гарантия. Он достижим при системной подготовке.</p>}
-      {points.length === 0 && <p className="forecast-empty">Пока нет числового ориентира. План уже собран по вашим темам.</p>}
+      {points.length === 0 && <p className="forecast-empty">Пока нет числового ориентира. План уже собран по твоим темам.</p>}
       {offer && !offerDismissed && (
         <OfferSurface
           offer={offer}

@@ -195,14 +195,14 @@ describe("answerInputConfig", () => {
   it("opens a numeric keyboard for digit sequences", () => {
     expect(answerInputConfig("Ответ запишите без пробелов.")).toEqual({
       inputMode: "decimal",
-      hint: "Введите ответ слитно, без пробелов и лишних знаков.",
+      hint: "Введи ответ слитно, без пробелов и лишних знаков.",
     });
   });
 
   it("explains the input format for a binary code", () => {
     expect(answerInputConfig("Укажите двоичное кодовое слово.")).toEqual({
       inputMode: "numeric",
-      hint: "Введите только цифры 0 и 1, без пробелов.",
+      hint: "Введи только цифры 0 и 1, без пробелов.",
     });
   });
 
