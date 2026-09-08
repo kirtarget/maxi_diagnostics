@@ -113,6 +113,60 @@ describe("AnswerEditor", () => {
     expect(html).not.toContain("цифры");
   });
 
+  it("uses the English word contract and keeps its hint concise", () => {
+    const html = renderToStaticMarkup(
+      <AnswerEditor
+        question={{ ...shortText, answer_format: "word", lang: "en" }}
+        value="greatest"
+        onChange={noop}
+      />,
+    );
+    expect(html).toContain('placeholder="Your answer"');
+    expect(html).toContain('lang="en"');
+    expect(html).toContain('autoCapitalize="none"');
+    expect(html).toContain("Enter one word");
+    expect((html.match(/<small>/g) ?? []).length).toBe(1);
+  });
+
+  it("renders a migrated stress display without adding answer semantics", () => {
+    const html = renderToStaticMarkup(
+      <AnswerEditor
+        question={{
+          ...single,
+          options: [{ id: "a", label: "электропровод", stress: "электропрово\u0301д" }],
+        }}
+        value=""
+        onChange={noop}
+      />,
+    );
+    expect(html).toContain("электропрово\u0301д");
+    expect(html).not.toContain("correct");
+  });
+
+  it("has a narrow fallback for unmigrated Russian stress labels", () => {
+    const html = renderToStaticMarkup(
+      <AnswerEditor
+        subject="Русский язык"
+        question={{
+          ...single,
+          prompt: "В одном из приведённых ниже слов допущена ошибка в постановке ударения: НЕВЕРНО\nвыделена буква, обозначающая ударный гласный звук. Выпишите это слово.",
+          options: [
+            { id: "a", label: "ПартЕр" },
+            { id: "b", label: "ПозвонИт" },
+            { id: "c", label: "ЭлектропровОд" },
+            { id: "d", label: "ВероисповЕдание" },
+            { id: "e", label: "ЖалюзИ" },
+          ],
+        }}
+        value=""
+        onChange={noop}
+      />,
+    );
+    for (const stress of ["парте\u0301р", "позвони\u0301т", "электропрово\u0301д", "вероиспове\u0301дание", "жалюзи\u0301"]) {
+      expect(html).toContain(stress);
+    }
+  });
+
   it("falls back to the default free-text length when the catalog omits it", () => {
     const html = renderToStaticMarkup(
       <AnswerEditor question={{ ...shortText, max_length: undefined }} value="" onChange={noop} />,

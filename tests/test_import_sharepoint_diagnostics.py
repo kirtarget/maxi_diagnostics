@@ -1198,6 +1198,75 @@ def test_a_regular_word_formation_key_still_ships(tmp_path):
         assert question["correct"] == [key]
 
 
+def test_text_metadata_and_stress_are_inferred_only_from_verified_shapes():
+    assert importer.load_answer_variants(ROOT / "authoring" / "answer-variants.json") == {
+        "sp-russian-language-ege-2022-q14": ["вскоре потому"]
+    }
+    english_source = _english_source()
+    english_task = _word_formation("greatest", "GREAT")
+    english_prompt = importer.build_prompt(english_task)
+    assert importer._text_metadata(english_source, english_prompt) == {
+        "answer_format": "word",
+        "lang": "en",
+    }
+
+    russian_source = importer.SourceFile(
+        Path("РЯ_ЕГЭ_Диагностика_21-22_Заданий 26.docx"),
+        "ЕГЭ", "russian-language", 2022, 26, (),
+    )
+    russian_task = importer.SourceTask(
+        number=14,
+        prompt_blocks=[
+            "Определите предложение, в котором оба выделенных слова пишутся СЛИТНО. "
+            "Раскройте скобки и выпишите эти два слова."
+        ],
+    )
+    assert importer._text_metadata(russian_source, importer.build_prompt(russian_task)) == {
+        "answer_format": "words",
+        "lang": "ru",
+    }
+
+    stress_task = importer.SourceTask(
+        number=4,
+        prompt_blocks=[
+            "В одном из приведённых ниже слов допущена ошибка в постановке ударения: "
+            "НЕВЕРНО выделена буква, обозначающая ударный гласный звук."
+        ],
+        options=["ПартЕр", "ПозвонИт", "ЭлектропровОд", "ВероисповЕдание", "ЖалюзИ"],
+    )
+    converted = importer._stress_options(russian_source, stress_task)
+    assert converted is not None
+    assert converted[2] == {"label": "электропровод", "stress": "электропрово\u0301д"}
+
+    negative = importer.SourceTask(
+        number=5,
+        prompt_blocks=["Выпишите слово, выделенное заглавными буквами."],
+        options=["ПАРТЕР", "ПОЗВОНИТ"],
+    )
+    assert importer._stress_options(russian_source, negative) is None
+
+
+def test_tracked_russian_q04_docx_rebuilds_all_stress_options():
+    source_path = ROOT / "authoring" / "sharepoint-authoring" / "РЯ_ЕГЭ_Диагностика_21-22_Заданий 26.docx"
+    source = importer.read_source_file(source_path)
+    task = next(task for task in importer.parse_document(source_path) if task.number == 4)
+
+    assert task.answer == ["3"]
+    kind, payload = importer.classify(task)
+    assert kind == "single"
+    question = importer.build_question(source, task, kind, payload, verified_at="2026-09-04")
+
+    assert isinstance(question, dict)
+    assert question["correct"] == "c"
+    assert [option["label"] for option in question["options"]] == [
+        "партер", "позвонит", "электропровод", "вероисповедание", "жалюзи",
+    ]
+    assert [option["stress"] for option in question["options"]] == [
+        "парте\u0301р", "позвони\u0301т", "электропрово\u0301д",
+        "вероиспове\u0301дание", "жалюзи\u0301",
+    ]
+
+
 def test_verified_at_can_be_pinned_to_a_given_day(tmp_path):
     source_directory = tmp_path / "docx"
     source_directory.mkdir()
@@ -1357,6 +1426,17 @@ def test_a_malformed_answer_variants_file_stops_the_import(tmp_path):
         importer.load_answer_variants(path)
 
     path.write_text(json.dumps({"variants": {"q": ["x" * 200]}}), encoding="utf-8")
+    with pytest.raises(importer.ImportError):
+        importer.load_answer_variants(path)
+
+    path.write_text(json.dumps({"variants": {"q": ["..."]}}), encoding="utf-8")
+    with pytest.raises(importer.ImportError):
+        importer.load_answer_variants(path)
+
+    path.write_text(
+        json.dumps({"variants": {"q": ["Ответ", " ОТВЕТ. "]}}),
+        encoding="utf-8",
+    )
     with pytest.raises(importer.ImportError):
         importer.load_answer_variants(path)
 

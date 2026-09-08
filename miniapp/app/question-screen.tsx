@@ -1,4 +1,4 @@
-import { AnswerEditor, type AnswerEditorLabels } from "./answer-editor";
+import { AnswerEditor, textAnswerGuidance, type AnswerEditorLabels } from "./answer-editor";
 import { AnswerPreview, MatchingAnswer, matchingModelFromSequence } from "./matching-answer";
 import { FormattedMathText, FormattedStem } from "./math-display";
 import { isValidNumericInput, isValidTextInput, updateCompactAnswer } from "./answer-values";
@@ -187,6 +187,10 @@ export function QuestionView({
   const imagePaths = questionAssetPaths(question);
   const promptBlocks = parseQuestionPrompt(question.prompt);
   const instructions = promptBlocks.flatMap((block) => block.kind === "instruction" ? [block.text] : []);
+  const textGuidance = question.type === "text" ? textAnswerGuidance(question) : null;
+  const renderedInstructions = textGuidance && instructions.length > 0
+    ? [`${instructions.join(" ")} ${textGuidance}`]
+    : instructions;
   const sequenceMatching = question.type === "input"
     ? parseSequenceMatchingPrompt(question.prompt, question)
     : null;
@@ -283,7 +287,7 @@ export function QuestionView({
         })}
       </div>
 
-      {instructions.length > 0 && instructions.map((instruction, instructionIndex) => (
+      {renderedInstructions.length > 0 && renderedInstructions.map((instruction, instructionIndex) => (
         <p className="question-instruction" key={`instruction-${instructionIndex}`}>
           <FormattedMathText text={instruction} subject={subject} />
         </p>
@@ -299,7 +303,7 @@ export function QuestionView({
           subject={subject}
           value={answer}
           onChange={onAnswer}
-          suppressAutoHint={instructions.length > 0}
+          suppressAutoHint={renderedInstructions.length > 0}
           labels={{
             answer: labels.answer_label,
             placeholder: labels.enter_answer,

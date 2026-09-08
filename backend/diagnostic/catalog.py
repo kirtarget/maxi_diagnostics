@@ -138,6 +138,7 @@ class QuestionOption(BaseModel):
 
     id: str = Field(min_length=1, max_length=64, pattern=_ID_PATTERN)
     label: str = Field(min_length=1, max_length=500)
+    stress: str | None = Field(default=None, max_length=500)
 
     @field_validator("id")
     @classmethod
@@ -150,6 +151,28 @@ class QuestionOption(BaseModel):
     @classmethod
     def validate_label(cls, value: str) -> str:
         return _validate_display_text(value)
+
+    @field_validator("stress")
+    @classmethod
+    def validate_stress(cls, value: str | None, info) -> str | None:
+        if value is None:
+            return None
+        if value.count("\u0301") != 1:
+            raise ValueError("stress_requires_one_acute")
+        acute_index = value.index("\u0301")
+        if acute_index == 0 or value[acute_index - 1] not in "АЕЁИОУЫЭЮЯаеёиоуыэюя":
+            raise ValueError("stress_must_follow_cyrillic_vowel")
+        if any(unicodedata.category(character).startswith("C") for character in value):
+            raise ValueError("unsafe_text")
+        if any(unicodedata.category(character) in {"Zl", "Zp"} for character in value):
+            raise ValueError("unsafe_text")
+        label = info.data.get("label")
+        unaccented = value.replace("\u0301", "")
+        if not isinstance(label, str) or unaccented.casefold() != label.casefold():
+            raise ValueError("stress_must_match_label")
+        # Combining acute is intentionally outside the report-font allowlist.
+        # The browser renders it over the already validated label glyphs.
+        return value
 
 
 class QuestionSource(BaseModel):
@@ -356,6 +379,7 @@ class SingleQuestion(QuestionBase):
     def validate_correct_option(self) -> "SingleQuestion":
         _validate_unique_option_ids(self.options)
         _validate_unique_option_labels(self.options)
+        _validate_stress_set(self.options)
         if self.correct not in {option.id for option in self.options}:
             raise ValueError("invalid_option_reference")
         return self
@@ -373,6 +397,7 @@ class MultipleQuestion(QuestionBase):
     def validate_multiple_options(self) -> "MultipleQuestion":
         _validate_unique_option_ids(self.options)
         _validate_unique_option_labels(self.options)
+        _validate_stress_set(self.options)
         option_ids = {option.id for option in self.options}
         if self.selection_limit > len(self.options) or len(self.correct) != self.selection_limit:
             raise ValueError("invalid_selection_limit")
@@ -393,6 +418,8 @@ class MatchingQuestion(QuestionBase):
 
     @model_validator(mode="after")
     def validate_matching_options(self) -> "MatchingQuestion":
+        _validate_stress_forbidden(self.items)
+        _validate_stress_forbidden(self.options)
         _validate_unique_option_ids(self.items)
         _validate_unique_option_ids(self.options)
         _validate_unique_option_labels(self.items)
@@ -508,7 +535,15 @@ class TextQuestion(QuestionBase):
         le=MAX_TEXT_ANSWER_LENGTH,
         strict=True,
     )
+    answer_format: Literal["word", "words"] | None = None
+    lang: Literal["ru", "en"] | None = None
     correct: tuple[str, ...] = Field(min_length=1, max_length=20, json_schema_extra=SERVER_ONLY)
+
+    @model_validator(mode="after")
+    def validate_text_metadata(self) -> "TextQuestion":
+        if (self.answer_format is None) != (self.lang is None):
+            raise ValueError("text_metadata_incomplete")
+        return self
 
     @model_validator(mode="after")
     def validate_text_variants(self) -> "TextQuestion":
@@ -702,6 +737,18 @@ def _validate_unique_option_labels(
     ]
     if len(set(labels)) != len(labels):
         raise ValueError("duplicate_option_label")
+
+
+def _validate_stress_set(options: tuple[QuestionOption, ...]) -> None:
+    """Stress is a display layer for a complete option set, never a hint on one choice."""
+    present = [option.stress is not None for option in options]
+    if any(present) and not all(present):
+        raise ValueError("partial_stress_metadata")
+
+
+def _validate_stress_forbidden(options: tuple[QuestionOption, ...]) -> None:
+    if any(option.stress is not None for option in options):
+        raise ValueError("unsupported_stress_metadata")
 
 
 def _validate_matching_marker_layout(

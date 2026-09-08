@@ -160,6 +160,12 @@ ANSWER_SHEET_SENTENCES = (
 )
 UI_COLLECTS_THE_ANSWER = {"single", "multiple", "matching"}
 WORD_FORMATION_HINT = re.compile(r"\|\s*(?P<hint>[A-Z]+(?:\s+[A-Z]+)*)\s*\Z")
+STRESS_PROMPT = re.compile(
+    r"ошибк\w*\s+в\s+постановк\w*\s+ударени\w*.*"
+    r"выделен\w*\s+букв\w*.*ударн\w*\s+гласн",
+    re.IGNORECASE | re.DOTALL,
+)
+CYRILLIC_STRESS_VOWEL = frozenset("АЕЁИОУЫЭЮЯ")
 AUXILIARY_WORDS = frozenset(
     {
         "am", "are", "is", "was", "were", "be", "been", "being", "do", "does",
@@ -464,6 +470,11 @@ def parse_document(path: Path) -> tuple[SourceTask, ...]:
             section = "prompt"
             continue
         if current is None:
+            continue
+        inline_answer = re.fullmatch(r"ответ\s*:\s*(\S.*)", text, re.IGNORECASE)
+        if inline_answer:
+            section = "answer"
+            current.answer.append(clean_line(inline_answer.group(1)))
             continue
         marker = text.rstrip(":").strip().casefold()
         if marker == "варианты":
@@ -1091,8 +1102,60 @@ def strip_answer_sheet_instructions(prompt: str) -> str:
 
 def _option_label(value: str) -> str | None:
     # List punctuation reads as a typo once every option is its own control.
-    cleaned = clean_line(value).rstrip(";,").rstrip()
+    cleaned = re.sub(r"^\s*\d{1,2}[.)]\s*", "", clean_line(value))
+    cleaned = cleaned.rstrip(";,").rstrip()
     return cleaned if 1 <= len(cleaned) <= MAX_OPTION_LABEL_CHARS else None
+
+
+def _stress_display(label: str) -> tuple[str, str] | None:
+    """Convert one source uppercase Cyrillic vowel into a combining acute."""
+    stress_positions = [
+        index for index, character in enumerate(label)
+        if character in CYRILLIC_STRESS_VOWEL
+        and not (index == 0 and character == label[0])
+    ]
+    if label and label[0] in CYRILLIC_STRESS_VOWEL:
+        stress_positions = [index for index in stress_positions if index != 0]
+    if len(stress_positions) != 1:
+        return None
+    lowered = label.lower()
+    position = stress_positions[0]
+    return lowered, lowered[:position + 1] + "\u0301" + lowered[position + 1:]
+
+
+def _stress_options(source: SourceFile, task: SourceTask) -> list[dict[str, str]] | None:
+    """Return display stress only for the verified Russian stress-task shape."""
+    if source.subject_code != "russian-language" or not STRESS_PROMPT.search(
+        build_prompt(task)
+    ):
+        return None
+    converted: list[dict[str, str]] = []
+    for option in task.options:
+        label = _option_label(option)
+        if label is None:
+            return None
+        display = _stress_display(label)
+        if display is None:
+            return None
+        plain, stressed = display
+        converted.append({"label": plain, "stress": stressed})
+    return converted if converted else None
+
+
+def _text_metadata(source: SourceFile, prompt: str) -> dict[str, str]:
+    if source.subject_code == "english-language" and re.search(
+        r"преобраз\w*.*слово",
+        prompt,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        return {"answer_format": "word", "lang": "en"}
+    if source.subject_code == "russian-language" and re.search(
+        r"выпиш\w*\s+эти\s+два\s+слова",
+        prompt,
+        re.IGNORECASE,
+    ):
+        return {"answer_format": "words", "lang": "ru"}
+    return {}
 
 
 def build_question(
@@ -1134,8 +1197,13 @@ def build_question(
         labels = [_option_label(option) for option in task.options]
         if any(label is None for label in labels) or not 1 <= len(labels) <= MAX_OPTIONS:
             return "invalid_options"
+        stress_options = _stress_options(source, task)
         question["options"] = [
-            {"id": chr(ord("a") + index), "label": label}
+            {
+                "id": chr(ord("a") + index),
+                "label": stress_options[index]["label"] if stress_options else label,
+                **({"stress": stress_options[index]["stress"]} if stress_options else {}),
+            }
             for index, label in enumerate(labels)
         ]
         correct = [chr(ord("a") + index - 1) for index in payload.indices]
@@ -1183,6 +1251,7 @@ def build_question(
             return "glued_answer"
         question["correct"] = list(payload.correct)
         question["max_length"] = MAX_TEXT_ANSWER_CHARS
+        question.update(_text_metadata(source, prompt))
     else:
         if not isinstance(payload, InputAnswerSpec):
             return "invalid_answer_spec"
@@ -1216,26 +1285,13 @@ def build_question(
 
 
 def validate_question(question: dict[str, Any]) -> str | None:
-    """Validate against the runtime models; `text` uses a probe of the shared base."""
+    """Validate the generated question against the real runtime model."""
     from pydantic import TypeAdapter, ValidationError
 
     from diagnostic.catalog import Question
 
-    candidate = question
-    if question["type"] == "text":
-        candidate = {
-            key: value for key, value in question.items()
-            if key not in {"type", "correct", "max_length"}
-        }
-        candidate["type"] = "input"
-        candidate["correct"] = ["1"]
-        for variant in question["correct"]:
-            if not 1 <= len(variant) <= MAX_TEXT_ANSWER_CHARS:
-                return "invalid_text_variant"
-        if not 1 <= len(question["correct"]) <= MAX_TEXT_VARIANTS:
-            return "invalid_text_variant"
     try:
-        TypeAdapter(Question).validate_python(candidate)
+        TypeAdapter(Question).validate_python(question)
     except ValidationError as exc:
         error = exc.errors(include_url=False)[0]
         location = ".".join(str(part) for part in error["loc"][1:]) or "question"
@@ -1297,17 +1353,24 @@ def load_answer_variants(path: Path) -> dict[str, list[str]]:
     variants = payload.get("variants", {})
     if not isinstance(variants, dict):
         raise ImportError(f"`variants` must be an object in {path.name}")
+    from diagnostic.text_answers import is_valid_text_answer, normalize_text_answer
+
     result: dict[str, list[str]] = {}
     for question_id, wordings in variants.items():
         if not isinstance(wordings, list) or not wordings:
             raise ImportError(f"Answer variants for {question_id} must be a non-empty list")
         cleaned = []
+        normalized_values: set[str] = set()
         for wording in wordings:
             if not isinstance(wording, str):
                 raise ImportError(f"Answer variant for {question_id} is not a string")
             text = clean_line(wording)
-            if not 1 <= len(text) <= MAX_TEXT_ANSWER_CHARS:
+            if not is_valid_text_answer(text, MAX_TEXT_ANSWER_CHARS):
                 raise ImportError(f"Answer variant for {question_id} is out of length range")
+            normalized = normalize_text_answer(text)
+            if normalized in normalized_values:
+                raise ImportError(f"Duplicate normalized answer variant for {question_id}")
+            normalized_values.add(normalized)
             cleaned.append(text)
         result[question_id] = cleaned
     return result

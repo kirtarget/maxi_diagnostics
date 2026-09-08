@@ -5,6 +5,7 @@ import {
   isEmptyAnswer,
   isValidNumericInput,
   isValidTextInput,
+  normalizeTextInput,
   updateCompactAnswer,
   updateAnswerFromEditor,
   updateMatchingAnswer,
@@ -82,6 +83,9 @@ describe("shared answer value helpers", () => {
     expect(isValidTextInput("с".repeat(80))).toBe(true);
     expect(isValidTextInput("с".repeat(81))).toBe(false);
     expect(isValidTextInput("с".repeat(41), 40)).toBe(false);
+    expect(isValidTextInput("\u0065\u0301" )).toBe(true);
+    expect(isValidTextInput("\u200b")).toBe(false);
+    expect(normalizeTextInput("  ВСЁ—ТАКИ!  ")).toBe("все-таки");
   });
 
   it("stores only usable free-text answers", () => {

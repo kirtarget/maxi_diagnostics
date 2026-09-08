@@ -316,7 +316,7 @@ describe("diagnostic API payloads", () => {
   it("validates restored sequence drafts against sequence metadata", () => {
     const sequenceDiagnostics = [{
       ...diagnostics[0],
-      questions: diagnostics[0].questions.map((question) => question.id === "q4"
+      questions: diagnostics[0].questions.map((question) => question.type === "input" && question.id === "q4"
         ? {
           ...question,
           answer_format: "sequence" as const,

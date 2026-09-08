@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type Dispatch, type ReactNode } from "react";
 import { StructuredAnswerEditor } from "./question-screen";
+import { textAnswerGuidance } from "./answer-editor";
 import { ConfirmSheet } from "./confirm-sheet";
 import { FormattedMathText, FormattedStem } from "./math-display";
 import { PromptTable } from "./prompt-table";
@@ -179,6 +180,10 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
   };
   const subject = header?.subject ?? state.session.diagnostic_id;
   const trainerInstructions = parseQuestionPrompt(question.prompt).flatMap((block) => block.kind === "instruction" ? [block.text] : []);
+  const textGuidance = question.type === "text" ? textAnswerGuidance(question) : null;
+  const renderedTrainerInstructions = textGuidance && trainerInstructions.length > 0
+    ? [`${trainerInstructions.join(" ")} ${textGuidance}`]
+    : trainerInstructions;
   const modeLabel = header?.modeLabel ?? trainerModeLabel(state.session.mode);
   return <section className="screen trainer-screen" aria-labelledby="trainer-title">
     <div className="trainer-header">
@@ -194,8 +199,8 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
     </div>
     <div className="question-progress-rail" role="progressbar" aria-valuemin={0} aria-valuemax={state.session.questions.length} aria-valuenow={Math.min(questionIndex + 1, state.session.questions.length)}><span className="question-progress-fill" style={{ width: `${(Math.min(questionIndex + 1, state.session.questions.length) / state.session.questions.length) * 100}%` }} /></div>
     <QuestionPrompt question={question} subject={subject} reason={planReasonLabel(state, question.id)} />
-    {trainerInstructions.map((instruction, instructionIndex) => <p className="question-instruction" key={`trainer-instruction-${instructionIndex}`}><FormattedMathText text={instruction} subject={subject} /></p>)}
-    <StructuredAnswerEditor question={question} subject={subject} value={state.draftAnswer} disabled={locked} suppressAutoHint={trainerInstructions.length > 0} onChange={(answer) => dispatch({ type: "set_answer", answer })} />
+    {renderedTrainerInstructions.map((instruction, instructionIndex) => <p className="question-instruction" key={`trainer-instruction-${instructionIndex}`}><FormattedMathText text={instruction} subject={subject} /></p>)}
+    <StructuredAnswerEditor question={question} subject={subject} value={state.draftAnswer} disabled={locked} suppressAutoHint={renderedTrainerInstructions.length > 0} onChange={(answer) => dispatch({ type: "set_answer", answer })} />
     {state.phase === "feedback" ? <><Feedback state={state} subject={subject} showPrimaryScore={hasApprovedPrimaryScore(question.source)} />{isLast ? <button className="primary-button question-next" type="button" onClick={() => { dispatch({ type: "finish_requested" }); onFinish?.(); }}>Завершить тренировку <span aria-hidden="true">→</span></button> : <button className="primary-button question-next" type="button" onClick={() => dispatch({ type: "next_question" })}>Следующий вопрос <span aria-hidden="true">→</span></button>}</> : <button className="primary-button question-next" type="button" disabled={!canSubmit || state.phase === "awaiting_result"} onClick={submit}>{state.phase === "awaiting_result" ? "Проверяем…" : "Проверить ответ"}<span aria-hidden="true">→</span></button>}
     <ConfirmSheet open={confirmOpen} onCancel={() => setConfirmOpen(false)} onConfirm={() => { setConfirmOpen(false); onHome?.(); }} />
   </section>;

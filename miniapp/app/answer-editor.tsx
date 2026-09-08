@@ -34,6 +34,32 @@ const DEFAULT_LABELS: AnswerEditorLabels = {
   choose: "Выберите",
 };
 
+const STRESS_CONTEXT = /ошибк\p{L}*\s+в\s+постановк\p{L}*\s+ударени\p{L}*.*выделен\p{L}*\s+букв\p{L}*.*ударн\p{L}*\s+гласн/isu;
+const CYRILLIC_STRESS_VOWELS = new Set("АЕЁИОУЫЭЮЯ");
+
+function legacyStressDisplay(question: SingleQuestion | MultipleQuestion, label: string, subject?: string): string | undefined {
+  if (!subject || !(/русский язык|russian-language/i.test(subject) && STRESS_CONTEXT.test(question.prompt))) return undefined;
+  const characters = [...label];
+  const positions = characters.flatMap((character, index) => (
+    CYRILLIC_STRESS_VOWELS.has(character) && index > 0 ? [index] : []
+  ));
+  if (positions.length !== 1) return undefined;
+  const lowered = label.toLocaleLowerCase("ru-RU");
+  const position = positions[0];
+  return lowered.slice(0, position + 1) + "\u0301" + lowered.slice(position + 1);
+}
+
+function optionDisplay(question: SingleQuestion | MultipleQuestion, option: { label: string; stress?: string }, subject?: string): string {
+  return option.stress ?? legacyStressDisplay(question, option.label, subject) ?? option.label;
+}
+
+export function textAnswerGuidance(question: TextQuestion): string | null {
+  if (question.answer_format === "words") return "Введи два слова. Регистр не важен, ё = е.";
+  if (question.answer_format === "word" && question.lang === "en") return "Enter one word. Case does not matter.";
+  if (question.answer_format === "word") return "Введи одно слово. Регистр не важен, ё = е.";
+  return null;
+}
+
 export function AnswerEditor({ question, subject, value, onChange, disabled = false, suppressAutoHint = false, labels }: AnswerEditorProps) {
   const text = { ...DEFAULT_LABELS, ...labels };
   const asText = typeof value === "string" ? value : "";
@@ -53,8 +79,9 @@ export function AnswerEditor({ question, subject, value, onChange, disabled = fa
   return <InputEditor question={question} value={asText} disabled={disabled} suppressAutoHint={suppressAutoHint} label={text.answer} placeholder={text.placeholder} onChange={onChange} />;
 }
 
-function OptionButton({ label, marker, selected, disabled, square, subject, onClick }: {
+function OptionButton({ label, stress, marker, selected, disabled, square, subject, onClick }: {
   label: string;
+  stress?: string;
   marker: string;
   selected: boolean;
   disabled: boolean;
@@ -71,7 +98,7 @@ function OptionButton({ label, marker, selected, disabled, square, subject, onCl
       onClick={onClick}
     >
       <span className="option-letter">{marker}</span>
-      <span><FormattedMathText text={cleanAnswerLabel(label)} subject={subject} /></span>
+      <span><FormattedMathText text={cleanAnswerLabel(stress ?? label)} subject={subject} /></span>
       <span className={square ? "selection-mark square" : "selection-mark"} aria-hidden="true" />
     </button>
   );
@@ -90,6 +117,7 @@ function SingleEditor({ question, subject, value, disabled, onChange }: {
         <OptionButton
           key={option.id}
           label={option.label}
+          stress={optionDisplay(question, option, subject)}
           marker={String.fromCharCode(65 + index)}
           selected={value === option.id}
           disabled={disabled}
@@ -121,6 +149,7 @@ function MultipleEditor({ question, subject, value, disabled, onChange }: {
           <OptionButton
             key={option.id}
             label={option.label}
+            stress={optionDisplay(question, option, subject)}
             marker={markers[index]}
             selected={value.includes(option.id)}
             disabled={disabled}
@@ -189,12 +218,15 @@ function ShortTextEditor({ question, value, disabled, suppressAutoHint, label, p
   placeholder: string;
   onChange: (value: AnswerValue) => void;
 }) {
+  const textPlaceholder = question.lang === "en" ? "Your answer" : placeholder;
+  const hint = textAnswerGuidance(question) ?? "Введите только ответ — без пояснений и лишних слов.";
   return (
     <label className="short-answer">
       <span>{label}</span>
       <span className="short-answer-control">
         <input
-          autoCapitalize="off"
+          lang={question.lang}
+          autoCapitalize={question.lang === "en" ? "none" : "off"}
           autoComplete="off"
           enterKeyHint="done"
           inputMode="text"
@@ -203,11 +235,11 @@ function ShortTextEditor({ question, value, disabled, suppressAutoHint, label, p
           spellCheck={false}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
+          placeholder={textPlaceholder}
         />
         {value && <button type="button" disabled={disabled} onClick={() => onChange("")}>Очистить</button>}
       </span>
-      {!suppressAutoHint && <small>Введите только ответ — без пояснений и лишних слов.</small>}
+      {!suppressAutoHint && <small>{hint}</small>}
     </label>
   );
 }

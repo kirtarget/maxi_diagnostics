@@ -172,8 +172,8 @@ export function splitPromptSentences(text: string): string[] {
     let next = index + 1;
     while (/\s/u.test(text[next] ?? "")) next += 1;
     if (!/[A-ZА-ЯЁ]/u.test(text[next] ?? "")) continue;
-    const prefix = text.slice(Math.max(start, index - 4), index + 1);
-    if (/[A-ZА-ЯЁ]\.$/u.test(prefix) || /(?:т\. д\.|н\.у\.)$/iu.test(text.slice(Math.max(start, index - 5), index + 1))) continue;
+    const prefix = text.slice(start, index + 1);
+    if (/(?:^|[\s(])[A-ZА-ЯЁ]\.$/u.test(prefix) || /(?:^|\s)(?:т\. д\.|н\.у\.)$/iu.test(prefix)) continue;
     sentences.push(text.slice(start, index + 1).trim());
     start = next;
     index = next - 1;

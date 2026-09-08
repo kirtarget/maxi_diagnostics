@@ -174,6 +174,22 @@ def test_review_snapshot_keeps_a_verified_learning_material_text():
     )
 
 
+def test_review_formats_migrated_stress_option_without_exposing_the_key():
+    catalog = load_catalog(load_school(ROOT / "school"))
+    question = next(
+        question for diagnostic in catalog.diagnostics
+        for question in diagnostic.questions
+        if question.id == "sp-russian-language-ege-2022-q4"
+    )
+
+    snapshot = build_review_snapshot((question,), {question.id: "c"})
+
+    assert snapshot[0]["expected_answer"] == (
+        "электропровод · ударение: электропрово\u0301д"
+    )
+    assert '"correct":' not in json.dumps(public_review_items({"review_snapshot": snapshot}), ensure_ascii=False)
+
+
 def test_review_snapshot_does_not_invent_guidance_without_a_source():
     catalog = load_catalog(load_school(SAMPLE_SCHOOL))
 
