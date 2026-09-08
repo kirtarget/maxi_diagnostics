@@ -200,9 +200,9 @@ export function mathDisplayParts(text: string): MathDisplayPart[] {
       parts.push({ text: text.slice(0, cursor), isSuperscript: false, isSubscript: false });
     }
     const content = text.slice(cursor + 2, end - 1).trim();
-    const state = marker === "_" ? /^(\d[0-9₀-₉⁰-⁹]*)\s*(\([^()]*\))$/u.exec(content) : null;
+    const state = marker === "_" ? /^(\d[0-9₀-₉⁰-⁹]*)?\s*(\([^()]*\))$/u.exec(content) : null;
     if (state) {
-      parts.push({ text: state[1], isSuperscript: false, isSubscript: true });
+      if (state[1]) parts.push({ text: state[1], isSuperscript: false, isSubscript: true });
       parts.push({ text: state[2], isSuperscript: false, isSubscript: false });
     } else {
       parts.push({

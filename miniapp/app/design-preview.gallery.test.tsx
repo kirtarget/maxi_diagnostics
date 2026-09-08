@@ -66,6 +66,22 @@ const russianQ22 = russianCatalog.questions.find(
 );
 if (!russianQ22) throw new Error("Tracked Russian EGE 2022 q22 is missing from the catalog fixture.");
 
+const chemistryEgeCatalog = JSON.parse(readFileSync(
+  new URL("../../school/diagnostics/ege-chemistry-1208.json", import.meta.url),
+  "utf8",
+)) as PublicDiagnostic;
+const chemistryOgeCatalog = JSON.parse(readFileSync(
+  new URL("../../school/diagnostics/oge-chemistry-192.json", import.meta.url),
+  "utf8",
+)) as PublicDiagnostic;
+const chemistryEgeQ8 = chemistryEgeCatalog.questions.find(
+  (question) => question.id === "sp-chemistry-ege-2022-q8",
+);
+const chemistryOgeQ9 = chemistryOgeCatalog.questions.find(
+  (question) => question.id === "sp-chemistry-oge-2022-q9",
+);
+if (!chemistryEgeQ8 || !chemistryOgeQ9) throw new Error("Tracked chemistry q8/q9 are missing from the catalog fixtures.");
+
 const profile = gameplayProfileView({
   completion_count: 8,
   achievement_keys: ["first_diagnostic_completed"],
@@ -133,6 +149,8 @@ const screens: Array<[string, string]> = [
   ["question-tablegap", renderToStaticMarkup(<QuestionView question={q("9", { type: "input", options: undefined, prompt: tableGapPrompt, topic: "Химия" } as never)} index={8} total={10} answer="1" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
   ["question-text", renderToStaticMarkup(<QuestionView question={q("7", { type: "text", options: undefined, max_length: 40, topic: "Союзы", prompt: "Выпишите подчинительный союз из предложения." } as never)} index={6} total={10} answer="однако" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
   ["question-russian-q22", renderToStaticMarkup(<QuestionView question={russianQ22} index={21} total={26} answer={["c", "d"]} labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
+  ["question-chemistry-ege-q8", renderToStaticMarkup(<QuestionView question={chemistryEgeQ8} index={7} total={22} answer="" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
+  ["question-chemistry-oge-q9", renderToStaticMarkup(<QuestionView question={chemistryOgeQ9} index={8} total={15} answer={{}} labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
   ["question-table", renderToStaticMarkup(<QuestionView question={q("1", { type: "text", options: undefined, max_length: 40, topic: "Биология", prompt: tablePrompt } as never)} index={0} total={8} answer="" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
   ["result", renderToStaticMarkup(<ResultScreen diagnostic={diagnostics[0]} pdfStatus="pending" result={result} onReview={noop} onForecast={noop} onReplayMistakes={noop} />)],
   ["review", renderToStaticMarkup(<ReviewScreen items={[{ question_id: "q8", number: 8, type: "single", topic: "Квадратные уравнения", title: "Задание 8", prompt: "Решите уравнение x² + 4x − 5 = 0. Укажите больший корень.", is_correct: false, status: "incorrect", user_answer: "−5", expected_answer: "1", guidance: "По теореме Виета: x₁ · x₂ = −5, x₁ + x₂ = −4. Корни: 1 и −5. Больший из них — 1.", guidance_kind: "fallback", max_primary_score: 2, earned_primary_score: 0, source: approvedSource }]} index={0} onBack={noop} onNext={noop} onForecast={noop} />)],
@@ -152,7 +170,7 @@ const screens: Array<[string, string]> = [
     error: null,
     retryPhase: null,
   } as never} dispatch={noop} livesReminder={{ status: "idle" }} onRemindLives={noop} offers={links.offers} />)],
-  ["route", renderToStaticMarkup(<RouteScreen items={[{ id: "close-topic", title: "Квадратные уравнения", description: "Зона роста: начни с тренажёра по этой теме." }, { id: "strengthen-topic", title: "Геометрия · площади", description: "Повтори формулы площадей и реши подборку." }]} offers={links.offers} onSubjects={noop} />)],
+  ["route", renderToStaticMarkup(<RouteScreen items={[{ id: "close-topic", title: "Квадратные уравнения", description: "Зона роста: начни с тренажёра по этой теме." }, { id: "strengthen-topic", title: "Геометрия · площади", description: "Повтори формулы площадей и реши подборку." }]} offers={links.offers} onRepeat={noop} onSubjects={noop} />)],
   ["trainer-feedback", renderToStaticMarkup(<TrainerScreen header={{ diagnosticId: "phys", exam: "ОГЭ", subject: "Физика", mode: "normal", modeLabel: "Тренировка" }} state={{
     phase: "feedback",
     session: { trainer_session_id: "t", revision: 2, mode: "normal", lives_remaining: 4, question_ids: ["a", "b", "c", "d", "e"], questions: [q("a", { prompt: "Чему равно значение выражения 3 · (4 + 2)?", options: [{ id: "a", label: "14" }, { id: "b", label: "18" }, { id: "c", label: "20" }] } as never), q("b"), q("c"), q("d"), q("e")] },

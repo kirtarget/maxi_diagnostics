@@ -43,6 +43,14 @@ const LOOKALIKE_CYRILLIC: Record<string, string> = {
 };
 const SHEET_OPTION_LIMIT = 6;
 const LONG_OPTION_LENGTH = 42;
+const INLINE_OPTION_DENSITY_LIMIT = 90;
+
+function shouldUseMatchingSheet(options: MatchingOption[]): boolean {
+  const optionDensity = options.reduce((total, option) => total + option.marker.length + option.label.length, 0);
+  return options.length > SHEET_OPTION_LIMIT
+    || options.some((option) => option.label.length > LONG_OPTION_LENGTH)
+    || (options.length >= 5 && optionDensity > INLINE_OPTION_DENSITY_LIMIT);
+}
 
 function displayParts(label: string, fallback: string): { marker: string; text: string } {
   const match = MARKER.exec(label);
@@ -361,8 +369,7 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
   selectedKeys.forEach((key, index) => {
     if (key && !usedBy.has(key)) usedBy.set(key, index);
   });
-  const useSheet = model.options.length > SHEET_OPTION_LIMIT
-    || model.options.some((option) => option.label.length > LONG_OPTION_LENGTH);
+  const useSheet = shouldUseMatchingSheet(model.options);
   const choose = (rowIndex: number, option: MatchingOption) => {
     const usedAt = usedBy.get(option.key);
     if (disabled || (usedAt !== undefined && usedAt !== rowIndex && !model.allowReuse)) return;

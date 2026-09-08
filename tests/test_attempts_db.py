@@ -111,8 +111,12 @@ def completion(
 @pytest.mark.asyncio
 async def test_completion_is_idempotent_and_notification_dedupe_is_unique():
     attempt_id = f"attempt-{uuid4()}"
+    frozen_result = {"score": 50, "per_question": [{
+        "question_id": "q1", "number": 1, "topic": "algebra",
+        "status": "correct", "is_correct": True,
+    }]}
     first = await attempts.complete_attempt(
-        completion(attempt_id, answers={"q1": "A"}, result_snapshot={"score": 50})
+        completion(attempt_id, answers={"q1": "A"}, result_snapshot=frozen_result)
     )
     second = await attempts.complete_attempt(
         completion(attempt_id, answers={"q1": "B"}, result_snapshot={"score": 0})
@@ -120,7 +124,7 @@ async def test_completion_is_idempotent_and_notification_dedupe_is_unique():
 
     assert first["answers"] == {"q1": "A"}
     assert second["answers"] == {"q1": "A"}
-    assert second["result_snapshot"] == {"score": 50}
+    assert second["result_snapshot"] == frozen_result
 
     notifications = await attempts.list_notifications(attempt_id)
     assert {row["kind"] for row in notifications} == {
@@ -731,6 +735,34 @@ async def test_pdf_retry_windows_and_eighth_failure_abandons_with_bounded_error(
             "SELECT pdf_document IS NULL FROM diagnostic_attempts WHERE attempt_id=$1",
             attempt_id,
         ) is True
+
+
+@pytest.mark.asyncio
+async def test_retry_delivery_only_moves_failed_attempts_below_cap():
+    pool = await get_pool()
+    retryable = f"attempt-{uuid4()}"
+    await attempts.complete_attempt(completion(retryable, answers={"q1": "A"}))
+    terminal_ids = []
+    for status, count in (("sent", 1), ("sending", 2), ("abandoned", 8), ("failed", 8)):
+        attempt_id = f"attempt-{uuid4()}"
+        await attempts.complete_attempt(completion(attempt_id, answers={"q1": "A"}))
+        terminal_ids.append((attempt_id, status, count))
+    async with pool.acquire() as connection:
+        await connection.execute(
+            "UPDATE diagnostic_attempts SET pdf_status='failed', pdf_attempts=3 WHERE attempt_id=$1",
+            retryable,
+        )
+        for attempt_id, status, count in terminal_ids:
+            await connection.execute(
+                "UPDATE diagnostic_attempts SET pdf_status=$2, pdf_attempts=$3 WHERE attempt_id=$1",
+                attempt_id, status, count,
+            )
+
+    retried = await attempts.retry_delivery(retryable, 101)
+    assert retried["pdf_status"] == "pending"
+    for attempt_id, status, _ in terminal_ids:
+        unchanged = await attempts.retry_delivery(attempt_id, 101)
+        assert unchanged["pdf_status"] == status
 
 
 @pytest.mark.asyncio

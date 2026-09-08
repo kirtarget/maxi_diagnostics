@@ -12,6 +12,7 @@ import { GameplayHomeScreen } from "./navigation-screens";
 import { ResultScreen } from "./result-flow";
 import { ConfirmSheet } from "./confirm-sheet";
 import { TrainerScreen } from "./trainer-screen";
+import { trainerErrorMessage } from "./use-trainer";
 import { trainerInitialState, trainerReducer, type TrainerState } from "./trainer-model";
 import type { Question } from "./types";
 
@@ -42,6 +43,15 @@ function fetcherWith(body: unknown, status = 200) {
 }
 
 describe("trainer integration contracts", () => {
+  it.each([
+    ["trainer_no_mistakes", "В этой диагностике нет ошибок для тренировки."],
+    ["trainer_mistakes_source_not_found", "Результат диагностики больше недоступен для тренировки."],
+    ["trainer_mistakes_source_conflict", "Результат уже используется в другой тренировке. Открой его снова и повтори попытку."],
+  ])("maps %s from the real mistakes replay endpoint to an actionable message", (detail, message) => {
+    const error = Object.assign(new Error("diagnostic_api_409"), { detail });
+    expect(trainerErrorMessage(error)).toBe(message);
+  });
+
   it("sends init data, bootstrap scope, bounded count, and normal mode on start", async () => {
     const fetcher = fetcherWith({
       trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
@@ -130,7 +140,7 @@ describe("trainer integration contracts", () => {
       onForecast={() => undefined}
       onReplayMistakes={() => undefined}
     />);
-    expect(html).toContain("Отработать ошибки");
+    expect(html).toContain("Прорешать ошибки заново · тренажёр");
   });
 
   it("exposes safe server conflict details for visible recovery", async () => {

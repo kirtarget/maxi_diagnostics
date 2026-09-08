@@ -169,6 +169,7 @@ select:focus-visible,
   gap: 14px;
   animation: screen-in 260ms ease both;
 }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 .screen > h1 {
   margin: 0;
@@ -1368,7 +1369,7 @@ select:focus-visible,
 
   .question-table-scroll[data-columns="2"] .question-table-card {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     padding: 8px;
     border: 1px solid color-mix(in srgb, var(--brand-ink) 10%, transparent);
@@ -1382,6 +1383,23 @@ select:focus-visible,
     flex-direction: column;
     gap: 3px;
     padding: 2px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    hyphens: auto;
+  }
+
+  .matching-answer-option-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .matching-answer-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .matching-answer-option {
+    justify-content: flex-start;
   }
 }
 
@@ -1718,10 +1736,14 @@ select:focus-visible,
   display: inline-flex;
   align-items: baseline;
   gap: 5px;
+  min-width: 0;
   max-width: 100%;
   color: var(--ink);
   font-size: 13px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
 }
 
 .matching-answer-option-reference > strong {
@@ -1806,6 +1828,9 @@ select:focus-visible,
 
 .matching-answer-option > span {
   min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
 }
 
 .matching-answer-option.selected {
@@ -2314,6 +2339,17 @@ select:focus-visible,
   padding: 0 18px;
 }
 
+.result-question-grid { margin-top: 18px; }
+.result-question-grid h2 { margin: 0 0 10px; font-size: 17px; }
+.result-question-grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 8px; }
+.result-question-cell { min-width: 44px; min-height: 44px; border: 1px solid var(--brand-ink); border-radius: 12px; font-weight: 800; background: var(--brand-paper); color: var(--brand-ink); }
+.result-question-correct { border-color: var(--success); color: var(--success); }
+.result-question-incorrect { border-color: var(--brand-signal); color: var(--brand-signal); }
+.result-question-skipped { border-color: color-mix(in srgb, var(--brand-ink) 45%, transparent); color: color-mix(in srgb, var(--brand-ink) 65%, transparent); }
+.result-mistakes-link { margin-top: 12px; min-height: 44px; }
+.delivery-status { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; }
+.delivery-status button { min-height: 44px; }
+
 .result-game-card {
   display: flex;
   flex-direction: column;
@@ -2497,6 +2533,12 @@ select:focus-visible,
 /* ============ Review ============ */
 
 .review-screen { gap: 12px; }
+.review-mistake-list { margin-bottom: 4px; }
+.review-mistake-list h2 { margin: 0 0 8px; font-size: 18px; }
+.review-mistake-list-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 8px; }
+.review-mistake-list-items button { min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid color-mix(in srgb, var(--brand-ink) 25%, transparent); border-radius: 10px; background: var(--brand-paper); color: var(--brand-ink); text-align: left; }
+.review-mistake-list-items button.is-active { border-color: var(--brand-signal); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-signal) 18%, transparent); }
+.review-mistake-list-items span { overflow-wrap: anywhere; font-size: 12px; }
 
 .review-topline {
   display: flex;
@@ -2611,6 +2653,9 @@ select:focus-visible,
   font-weight: 800;
   overflow-wrap: anywhere;
 }
+.review-answer-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.review-answer-table th, .review-answer-table td { padding: 8px; border-bottom: 1px solid color-mix(in srgb, var(--brand-ink) 16%, transparent); text-align: left; overflow-wrap: anywhere; }
+.review-answer-table th { font-weight: 750; }
 
 .guidance {
   display: flex;
@@ -3467,6 +3512,13 @@ select:focus-visible,
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 480px) {
+  .review-screen { min-width: 0; overflow-wrap: anywhere; word-break: break-word; hyphens: auto; }
+  .review-mistake-list-items { grid-template-columns: 1fr; }
+  .review-answer-table { table-layout: fixed; }
+  .review-answer-table th, .review-answer-table td { overflow-wrap: anywhere; word-break: break-word; hyphens: auto; }
 }
 
 @media (max-width: 370px) {

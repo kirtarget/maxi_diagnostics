@@ -60,6 +60,18 @@ class ScoreEstimate(BaseModel):
     min_pass: int | None = None
 
 
+class PublicQuestionOutcome(BaseModel):
+    """Safe per-question result summary without answer values."""
+
+    model_config = ConfigDict(frozen=True)
+
+    question_id: str
+    number: int = Field(gt=0)
+    topic: str
+    status: Literal["correct", "incorrect", "skipped"]
+    is_correct: bool
+
+
 def estimate_for_primary(
     scale: ScoreScale,
     primary_score: int,
@@ -103,6 +115,7 @@ class ScoreResult(BaseModel):
     recoverable_primary_score: int = Field(default=0, ge=0)
     estimate: ScoreEstimate | None = None
     accuracy_percent: int = Field(default=0, ge=0, le=100)
+    per_question: tuple[PublicQuestionOutcome, ...] = ()
 
 
 def score_answers(
@@ -121,6 +134,22 @@ def score_answers(
         question.id: is_answer_correct(question, answers.get(question.id))
         for question in questions
     }
+    per_question = tuple(
+        PublicQuestionOutcome(
+            question_id=question.id,
+            number=index,
+            topic=question.topic,
+            status=(
+                "skipped"
+                if is_skipped_answer(question, answers.get(question.id))
+                else "correct"
+                if correct_by_question[question.id]
+                else "incorrect"
+            ),
+            is_correct=correct_by_question[question.id],
+        )
+        for index, question in enumerate(questions, start=1)
+    )
     correct_count = sum(correct_by_question.values())
     skipped_count = sum(
         is_skipped_answer(question, answers.get(question.id))
@@ -161,6 +190,7 @@ def score_answers(
             item.max_primary_score - item.primary_score for item in growth_topics
         ),
         accuracy_percent=round_half_up(correct_count / len(questions) * 100),
+        per_question=per_question,
     )
 
 
@@ -196,11 +226,12 @@ def _topic_scores(
 ) -> list[TopicScore]:
     totals: dict[str, list[int]] = {}
     for question in questions:
+        topic = question.topic
         correct, total, earned, maximum = totals.setdefault(
-            question.topic, [0, 0, 0, 0]
+            topic, [0, 0, 0, 0]
         )
         is_correct = correct_by_question[question.id]
-        totals[question.topic] = [
+        totals[topic] = [
             correct + int(is_correct),
             total + 1,
             earned + (question.max_primary_score if is_correct else 0),

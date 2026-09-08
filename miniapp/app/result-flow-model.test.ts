@@ -70,6 +70,14 @@ describe("result flow model", () => {
     ]);
   });
 
+  it("never turns an ordinal or question title into a route step", () => {
+    expect(personalRoute(["Задание 1", { topic: "Неорганическая химия", question_count: 2 }, { topic: "Окислительно-восстановительные реакции", question_count: 2 }]).map((item) => item.title)).toEqual([
+      "Разобрать «Неорганическая химия»",
+      "Повторить «Окислительно-восстановительные реакции»",
+      "Проверить рост",
+    ]);
+  });
+
   it("calls one wrong answer a recommendation rather than a diagnosed gap", () => {
     expect(topicRecommendation([{ topic: "Орфоэпия", question_count: 1, correct_count: 0 }])).toEqual({
       heading: "Стоит повторить",

@@ -412,6 +412,30 @@ def test_legacy_result_defaults_skipped_count_to_zero():
     )
 
     assert result["skipped_count"] == 0
+    assert result["per_question"] == []
+
+
+def test_completed_attempt_exposes_delivery_state_without_answers():
+    from diagnostic.api.sessions import serialize_attempt
+
+    serialized = serialize_attempt({
+        "attempt_id": "attempt_123",
+        "diagnostic_id": "demo-math",
+        "status": "completed",
+        "answers": {"q1": "secret"},
+        "pdf_status": "failed",
+        "result_snapshot": {"per_question": [{
+            "question_id": "q1", "number": 1, "topic": "Тема",
+            "status": "incorrect", "is_correct": False, "correct": "secret",
+        }]},
+    })
+
+    assert "answers" not in serialized
+    assert serialized["pdf_status"] == "failed"
+    assert serialized["result"]["per_question"] == [{
+        "question_id": "q1", "number": 1, "topic": "Тема",
+        "status": "incorrect", "is_correct": False,
+    }]
 
 
 def test_progress_maps_per_user_limit_to_429(monkeypatch):
@@ -549,6 +573,13 @@ def test_completion_freezes_review_snapshot(monkeypatch):
     display_review = stored["snapshot"]["public_review_snapshot"]
     assert display_review[0]["expected_answer"] == "4"
     assert "expected_value" not in display_review[0]
+    assert response.json()["result"]["per_question"][0] == {
+        "question_id": "q1",
+        "number": 1,
+        "topic": "Вычисления",
+        "status": "correct",
+        "is_correct": True,
+    }
 
 
 def test_completion_freezes_report_provenance_for_premium_footer(monkeypatch):
@@ -649,7 +680,103 @@ def test_review_endpoint_marks_legacy_snapshot_unavailable(monkeypatch):
     })
 
     assert response.status_code == 200
-    assert response.json() == {"ok": True, "available": False, "items": []}
+    assert response.json() == {"ok": True, "available": False, "items": [], "pdf_status": "sent"}
+
+
+@pytest.mark.parametrize("delivery_status", [None, "pending", "sending", "sent", "failed", "abandoned", "unknown"])
+def test_delivery_endpoint_returns_only_normalized_owner_status(monkeypatch, delivery_status):
+    from diagnostic.api import sessions
+
+    monkeypatch.setattr(sessions.attempts, "get_delivery_status", AsyncMock(return_value={
+        "status": "completed", "pdf_status": delivery_status,
+    }))
+    client = make_client(monkeypatch)
+    response = client.post("/api/diagnostics/session/delivery", json={
+        "init_data": signed_init_data(), "attempt_id": "attempt_123", "session_scope": SESSION_SCOPE,
+    })
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "status": delivery_status if delivery_status in {"pending", "sending", "sent", "failed", "abandoned"} else None}
+
+
+@pytest.mark.parametrize("path", [
+    "/api/diagnostics/session/delivery",
+    "/api/diagnostics/session/delivery/retry",
+])
+def test_delivery_endpoints_share_current_session_enforcement(monkeypatch, path):
+    from diagnostic.api import sessions
+
+    monkeypatch.setattr(sessions.attempts, "get_delivery_status", AsyncMock(return_value={
+        "status": "completed", "pdf_status": "failed",
+    }))
+    monkeypatch.setattr(sessions.attempts, "retry_delivery", AsyncMock(return_value={
+        "status": "completed", "pdf_status": "pending",
+    }))
+    client = make_client(monkeypatch)
+    response = client.post(path, json={
+        "init_data": signed_init_data(), "attempt_id": "attempt_123", "session_scope": "0" * 24,
+    })
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": "session_expired"}
+
+
+def test_delivery_retry_rejects_non_owner_and_in_progress_attempt(monkeypatch):
+    from diagnostic.api import sessions
+
+    monkeypatch.setattr(sessions.attempts, "retry_delivery", AsyncMock(return_value=None))
+    client = make_client(monkeypatch)
+    body = {"init_data": signed_init_data(), "attempt_id": "attempt_123", "session_scope": SESSION_SCOPE}
+    assert client.post("/api/diagnostics/session/delivery/retry", json=body).status_code == 404
+
+    monkeypatch.setattr(sessions.attempts, "retry_delivery", AsyncMock(return_value={
+        "status": "in_progress", "pdf_status": "pending",
+    }))
+    response = client.post("/api/diagnostics/session/delivery/retry", json=body)
+    assert response.status_code == 409
+    assert response.json() == {"detail": "delivery_not_ready"}
+
+
+def test_delivery_endpoint_rejects_in_progress_attempt(monkeypatch):
+    from diagnostic.api import sessions
+
+    monkeypatch.setattr(sessions.attempts, "get_delivery_status", AsyncMock(return_value={
+        "status": "in_progress", "pdf_status": "pending",
+    }))
+    client = make_client(monkeypatch)
+    response = client.post("/api/diagnostics/session/delivery", json={
+        "init_data": signed_init_data(), "attempt_id": "attempt_123", "session_scope": SESSION_SCOPE,
+    })
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "delivery_not_ready"
+
+
+def test_delivery_endpoint_returns_404_for_non_owner(monkeypatch):
+    from diagnostic.api import sessions
+
+    monkeypatch.setattr(sessions.attempts, "get_delivery_status", AsyncMock(return_value=None))
+    client = make_client(monkeypatch)
+    response = client.post("/api/diagnostics/session/delivery", json={
+        "init_data": signed_init_data(), "attempt_id": "attempt_123", "session_scope": SESSION_SCOPE,
+    })
+
+    assert response.status_code == 404
+
+
+def test_delivery_retry_only_transitions_failed_attempt(monkeypatch):
+    from diagnostic.api import sessions
+
+    retry = AsyncMock(return_value={"status": "completed", "pdf_status": "pending"})
+    monkeypatch.setattr(sessions.attempts, "retry_delivery", retry)
+    client = make_client(monkeypatch)
+    response = client.post("/api/diagnostics/session/delivery/retry", json={
+        "init_data": signed_init_data(), "attempt_id": "attempt_123", "session_scope": SESSION_SCOPE,
+    })
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "status": "pending"}
+    retry.assert_awaited_once_with("attempt_123", 42)
 
 
 def test_completion_only_enqueues_delivery_for_the_single_worker(monkeypatch):

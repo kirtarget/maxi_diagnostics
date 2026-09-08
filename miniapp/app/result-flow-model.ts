@@ -162,6 +162,7 @@ export function personalRoute(growthTopics: GrowthTopic[]): PersonalRouteAction[
   const topicActions = growthTopics
     .map(topicName)
     .filter((topic): topic is string => topic !== null)
+    .filter((topic) => !/^Задание\s+\d+$/iu.test(topic))
     .filter((topic, index, topics) => topics.indexOf(topic) === index)
     .slice(0, 2)
     .map((topic, index) => index === 0
@@ -187,4 +188,3 @@ export function personalRoute(growthTopics: GrowthTopic[]): PersonalRouteAction[
     recheck,
   ].slice(0, 3);
 }
-

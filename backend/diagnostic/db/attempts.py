@@ -671,13 +671,55 @@ async def get_review_attempt(attempt_id: str, user_id: int):
     async with pool.acquire() as connection:
         return await connection.fetchrow(
             """
-            SELECT attempt_id, status, report_snapshot
+            SELECT status, report_snapshot, pdf_status
               FROM diagnostic_attempts
              WHERE attempt_id=$1 AND user_id=$2
             """,
             attempt_id,
             user_id,
         )
+
+
+async def get_delivery_status(attempt_id: str, user_id: int):
+    """Return only owner-scoped delivery fields for a completed attempt."""
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        return await connection.fetchrow(
+            """
+            SELECT status, pdf_status
+              FROM diagnostic_attempts
+             WHERE attempt_id=$1 AND user_id=$2
+            """,
+            attempt_id,
+            user_id,
+        )
+
+
+async def retry_delivery(attempt_id: str, user_id: int):
+    """Make one retryable failed delivery pending, preserving the attempt cap."""
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        async with connection.transaction():
+            await connection.execute(
+                """
+                UPDATE diagnostic_attempts
+                   SET pdf_status='pending', pdf_locked_at=NULL,
+                       pdf_last_error=NULL, updated_at=now()
+                 WHERE attempt_id=$1 AND user_id=$2 AND status='completed'
+                   AND pdf_status='failed' AND pdf_attempts < 8
+                """,
+                attempt_id,
+                user_id,
+            )
+            return await connection.fetchrow(
+                """
+                SELECT status, pdf_status
+                  FROM diagnostic_attempts
+                 WHERE attempt_id=$1 AND user_id=$2
+                """,
+                attempt_id,
+                user_id,
+            )
 
 
 async def get_resumable_attempt(user_id: int):

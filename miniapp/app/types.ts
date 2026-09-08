@@ -222,8 +222,19 @@ export type ServerResult = {
   growth_topics: Array<ServerTopic | string>;
   recoverable_primary_score?: number;
   estimate?: ScoreEstimate | null;
+  per_question?: PublicQuestionOutcome[];
   forecast?: { kind?: ForecastKind; points: ForecastPoint[] } | Record<string, number>;
 };
+
+export type PublicQuestionOutcome = {
+  question_id: string;
+  number: number;
+  topic: string;
+  status: "correct" | "incorrect" | "skipped";
+  is_correct: boolean;
+};
+
+export type DeliveryStatus = "pending" | "sending" | "sent" | "failed" | "abandoned";
 
 export type ServerAttempt = {
   result?: ServerResult;
@@ -238,8 +249,9 @@ export type ServerAttempt = {
   question_index: number;
   question_count: number;
   progress_revision: number;
-  answers: AnswerMap;
+  answers?: AnswerMap;
   estimate?: ScoreEstimate | null;
+  pdf_status?: DeliveryStatus | null;
 };
 
 export type ProgressProfile = {
@@ -339,12 +351,14 @@ export type ReviewAnswerPreview = {
   markers: string[];
   user: string[];
   expected: string[];
+  option_labels?: Record<string, string>;
 };
 
 export type ReviewResponse = {
   ok: true;
   available: boolean;
   items: ReviewItem[];
+  pdf_status: DeliveryStatus | null;
 };
 
 export type SavedSession = {

@@ -59,6 +59,9 @@ export function trainerErrorMessage(error: unknown): string {
     case "trainer_session_incomplete": return "Сначала ответь на все вопросы.";
     case "session_expired": return "Сессия Telegram устарела. Перезагрузи приложение.";
     case "trainer_not_enough_questions": return "Для тренировки пока недостаточно заданий.";
+    case "trainer_no_mistakes": return "В этой диагностике нет ошибок для тренировки.";
+    case "trainer_mistakes_source_not_found": return "Результат диагностики больше недоступен для тренировки.";
+    case "trainer_mistakes_source_conflict": return "Результат уже используется в другой тренировке. Открой его снова и повтори попытку.";
     case "trainer_plan_unavailable":
     case "trainer_plan_conflict": return "План на сегодня пока не готов. Пройди диагностику.";
     default: return "Не удалось связаться с сервером. Повтори попытку.";
