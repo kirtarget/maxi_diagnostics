@@ -292,6 +292,33 @@ def test_sequence_hint_alone_keeps_a_numeric_task_numeric():
     assert is_valid_answer_shape(question, "200,0", complete=True)
 
 
+def test_kir254_catalog_targets_expose_sequence_contracts():
+    expected = {
+        "sp-physics-ege-2022-q13": (2, True, ("А", "Б")),
+        "sp-chemistry-ege-2022-q6": (2, False, ("А", "Б")),
+        "sp-chemistry-ege-2022-q9": (2, False, ("А", "Б")),
+        "sp-chemistry-ege-2022-q21": (4, False, ("1", "2", "3", "4")),
+        "sp-chemistry-ege-2022-q23": (2, False, ("А", "Б")),
+        "sp-biology-ege-2022-q8": (5, False, ("1", "2", "3", "4", "5")),
+    }
+    catalog = load_catalog(load_school())
+    questions = {
+        question.id: question
+        for diagnostic in catalog.diagnostics
+        for question in diagnostic.questions
+        if question.id in expected
+    }
+
+    assert set(questions) == set(expected)
+    for question_id, (answer_length, allow_reuse, markers) in expected.items():
+        question = questions[question_id]
+        assert isinstance(question, InputQuestion)
+        assert question.answer_format == "sequence"
+        assert question.answer_length == answer_length
+        assert question.allow_reuse is allow_reuse
+        assert question.markers == markers
+
+
 def test_numeric_input_accepts_optional_display_unit():
     data = sample_diagnostic_data()["questions"][3] | {
         "answer_unit": "м",

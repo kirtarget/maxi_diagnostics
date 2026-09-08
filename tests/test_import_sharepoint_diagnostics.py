@@ -1,6 +1,7 @@
 import io
 import json
 from copy import deepcopy
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -578,6 +579,118 @@ def test_ordering_prompt_gets_sequence_metadata_without_catalog_override():
     assert payload.allow_reuse is False
 
 
+def test_ordering_prompt_reads_numbered_task_options():
+    task = importer.SourceTask(
+        number=8,
+        prompt_blocks=[
+            "Установите последовательность этапов процесса.",
+            "Запишите последовательность цифр.",
+        ],
+        options=[
+            "1) Первый этап.",
+            "2) Второй этап.",
+            "3) Третий этап.",
+        ],
+        answer=["312"],
+    )
+
+    kind, payload = importer.classify(task)
+
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "sequence"
+    assert payload.answer_length == 3
+    assert payload.allow_reuse is False
+    assert payload.markers == ("1", "2", "3")
+
+
+@pytest.mark.parametrize(
+    ("answer", "expected_kind"),
+    [("2", "single"), ("1#2", "multiple")],
+)
+def test_non_input_controls_do_not_duplicate_ordering_worded_options(
+    answer: str, expected_kind: str
+):
+    task = importer.SourceTask(
+        number=1,
+        prompt_blocks=[
+            "Выберите подходящие варианты.",
+            "В ответ запишите последовательность цифр.",
+        ],
+        options=["1) Первый вариант", "2) Второй вариант"],
+        answer=[answer],
+    )
+    source = importer.SourceFile(
+        Path("non-input.docx"), "ЕГЭ", "chemistry", 2022, 2, (task,)
+    )
+    kind, payload = importer.classify(task)
+    question = importer.build_question(
+        source, task, kind, payload, verified_at="2026-09-04"
+    )
+
+    assert kind == expected_kind
+    assert isinstance(question, dict)
+    assert "1) Первый вариант" not in question["prompt"]
+    assert "2) Второй вариант" not in question["prompt"]
+
+
+@pytest.mark.parametrize(
+    ("source_name", "targets"),
+    [
+        (
+            "ФИЗ_ЕГЭ_Диагностика_21-22_Заданий 23.docx",
+            {13: (2, True, ("А", "Б"))},
+        ),
+        (
+            "ХИМ_ЕГЭ_Диагностика_21-22_Заданий 28.docx",
+            {
+                6: (2, False, ("А", "Б")),
+                9: (2, False, ("А", "Б")),
+                21: (4, False, ("1", "2", "3", "4")),
+                23: (2, False, ("А", "Б")),
+            },
+        ),
+        (
+            "БИО_ЕГЭ_Диагностика_21-22_Заданий 21.docx",
+            {8: (5, False, ("1", "2", "3", "4", "5"))},
+        ),
+    ],
+)
+def test_kir254_trusted_source_targets_build_explicit_sequence_contract(
+    source_name: str, targets: dict[int, tuple[int, bool, tuple[str, ...]]]
+):
+    source = importer.read_source_file(
+        ROOT / "authoring" / "sharepoint-authoring" / source_name
+    )
+    candidates, _ = importer.convert_file(source, "2026-09-04")
+    questions = {candidate.task.number: candidate.question for candidate in candidates}
+
+    for number, (answer_length, allow_reuse, markers) in targets.items():
+        question = questions[number]
+        task = next(task for task in source.tasks if task.number == number)
+        assert all(option in question["prompt"] for option in task.options)
+        assert question["answer_format"] == "sequence"
+        assert question["answer_length"] == answer_length
+        assert question["allow_reuse"] is allow_reuse
+        assert question["markers"] == list(markers)
+        trusted = replace(
+            source, content_hash=importer.TRUSTED_SOURCE_HASHES[source.slug]
+        )
+        importer._repair_source_question(
+            trusted, importer.SourceTask(number=number), question
+        )
+        assert question["topic"] == (
+            importer.CHECKED_IN_TOPIC_MAP[source.slug][number]
+        )
+
+        untrusted = replace(trusted, content_hash="0" * 64)
+        untouched = {"topic": f"Задание {number}"}
+        importer._repair_source_question(
+            untrusted, importer.SourceTask(number=number), untouched
+        )
+        assert untouched["topic"] == f"Задание {number}"
+
+
 def test_ordering_prompt_can_read_a_numbered_choice_table():
     table = importer.SourceTable(rows=(
         (("1) Калий",), ("2) Алюминий",)),
@@ -657,6 +770,25 @@ def test_numeric_prompt_with_sequence_footer_stays_number():
     assert kind == "input"
     assert isinstance(payload, importer.InputAnswerSpec)
     assert payload.answer_format == "number"
+
+
+def test_multi_digit_numeric_prompt_with_sequence_footer_stays_number():
+    task = importer.SourceTask(
+        number=13,
+        prompt_blocks=[
+            "Вычислите значение физической величины.",
+            "Введите последовательность цифр без пробелов.",
+        ],
+        answer=["200"],
+    )
+
+    kind, payload = importer.classify(task)
+
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "number"
+    assert payload.answer_length is None
+    assert payload.allow_reuse is None
 
 
 @pytest.mark.parametrize(

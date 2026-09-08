@@ -1026,11 +1026,31 @@ def _numbered_table_choices(task: SourceTask) -> list[tuple[str, str]]:
     return []
 
 
+def _numbered_task_options(task: SourceTask) -> list[tuple[str, str]]:
+    """Read a numbered ordering list stored as ordinary task options."""
+    choices: list[tuple[str, str]] = []
+    for option in task.options:
+        match = TABLE_NUMBERED_CHOICE.fullmatch(clean_line(option))
+        if match is None or len(match.group("number")) != 1:
+            return []
+        choices.append((match.group("number"), clean_line(match.group("label"))))
+    numbers = [int(marker) for marker, _ in choices]
+    if numbers != list(range(1, len(numbers) + 1)) or any(
+        not label for _, label in choices
+    ):
+        return []
+    return choices
+
+
 def _ordering_sequence(task: SourceTask, key: str) -> InputAnswerSpec | None:
     """Recognize an ordinary ordering key only with source structure to prove it."""
     if not ORDERING_LANGUAGE.search("\n".join(task.prompt_blocks)) or len(key) < 2:
         return None
-    choices = _numbered_prompt_choices(task) or _numbered_table_choices(task)
+    choices = (
+        _numbered_prompt_choices(task)
+        or _numbered_table_choices(task)
+        or _numbered_task_options(task)
+    )
     if len(choices) < 2:
         return None
     option_markers = {marker for marker, _ in choices}
@@ -1268,7 +1288,20 @@ def _render_table(table: SourceTable) -> str:
     return "\n".join(lines)
 
 
-def build_prompt(task: SourceTask, *, skip_table: SourceTable | None = None) -> str:
+def _ordering_option_lines(
+    task: SourceTask, *, include_sequence_options: bool
+) -> list[str]:
+    if not include_sequence_options or not task.options:
+        return []
+    return list(task.options) if _numbered_task_options(task) else []
+
+
+def build_prompt(
+    task: SourceTask,
+    *,
+    skip_table: SourceTable | None = None,
+    include_sequence_options: bool = False,
+) -> str:
     # A matching task shows its pairs as controls, so only that one table is
     # dropped. A data table the question reasons about has to stay.
     if task.prompt_nodes:
@@ -1281,6 +1314,11 @@ def build_prompt(task: SourceTask, *, skip_table: SourceTable | None = None) -> 
                 rendered = _render_table(node.table)
                 if rendered:
                     parts.append(rendered)
+        parts.extend(
+            _ordering_option_lines(
+                task, include_sequence_options=include_sequence_options
+            )
+        )
         return clean_block(parts)
     parts = list(task.prompt_blocks)
     parts.extend(
@@ -1291,6 +1329,11 @@ def build_prompt(task: SourceTask, *, skip_table: SourceTable | None = None) -> 
             if table is not skip_table
         )
         if rendered
+    )
+    parts.extend(
+        _ordering_option_lines(
+            task, include_sequence_options=include_sequence_options
+        )
     )
     return clean_block(parts)
 
@@ -1540,7 +1583,16 @@ def build_question(
     verified_at: str,
 ) -> dict[str, Any] | str:
     table = payload.table if isinstance(payload, MatchingAnswerSpec) else None
-    prompt = build_prompt(task, skip_table=table if kind == "matching" else None)
+    include_sequence_options = (
+        kind == "input"
+        and isinstance(payload, InputAnswerSpec)
+        and payload.answer_format == "sequence"
+    )
+    prompt = build_prompt(
+        task,
+        skip_table=table if kind == "matching" else None,
+        include_sequence_options=include_sequence_options,
+    )
     if kind in UI_COLLECTS_THE_ANSWER:
         prompt = strip_answer_sheet_instructions(prompt)
     if not prompt:
