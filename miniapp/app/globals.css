@@ -1786,6 +1786,17 @@ select:disabled {
   hyphens: auto;
 }
 
+/* A matching cell the editor drew. It scales down with its column and never
+   pushes the row wider than the screen. */
+.matching-answer-cell-figure {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-top: 2px;
+  border-radius: 6px;
+  background: var(--surface-raised, #fff);
+}
+
 .matching-answer-option-reference > strong {
   flex: 0 0 auto;
   color: var(--brand-primary);

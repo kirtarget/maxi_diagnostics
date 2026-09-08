@@ -24,6 +24,8 @@ export type QuestionOption = {
   label: string;
   /** Optional display-only stress form. It never carries answer correctness. */
   stress?: string;
+  /** A matching cell the editor drew. Present only where the label is empty. */
+  asset?: string;
 };
 
 export type QuestionSourceAttribution = {
