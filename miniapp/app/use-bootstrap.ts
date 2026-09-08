@@ -5,7 +5,7 @@ import { useCallback, useRef, useState, type RefObject } from "react";
 import { loadBootstrap, loadWeeklyLeague, recordOfferEvent, startOnboarding } from "./api";
 import type { LeagueScreenState } from "./league-model";
 import { dismissOffer, type OfferDismissalState, type OfferPlacement, type OfferTelemetryEvent } from "./offer-ux";
-import { initializeTelegram } from "./telegram-webapp";
+import { initializeTelegram, loadTelegramBridge } from "./telegram-webapp";
 import type { BootstrapResponse, Screen } from "./types";
 
 export type BootstrapState = {
@@ -57,6 +57,7 @@ export function useBootstrap(setScreen: (screen: Screen) => void): BootstrapSess
   const sessionScope = bootstrap?.session_scope;
 
   const load = useCallback(async (): Promise<BootstrapLoad> => {
+    await loadTelegramBridge();
     const webApp = initializeTelegram();
     initData.current = webApp?.initData ?? "";
     if (!initData.current) {

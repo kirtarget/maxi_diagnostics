@@ -102,10 +102,46 @@ describe("QuestionView", () => {
     const completeHtml = renderQuestion(complete);
 
     expect(incompleteHtml).toMatch(/class="primary-button question-next" disabled=""/);
-    expect(incompleteHtml).toContain('role="status"');
+    expect(incompleteHtml).toContain('class="question-announcement"');
+    expect(incompleteHtml).toContain('aria-live="polite"');
+    expect((incompleteHtml.match(/aria-live=/g) ?? [])).toHaveLength(1);
     expect(incompleteHtml).toContain(reason);
     expect(completeHtml).not.toMatch(/class="primary-button question-next" disabled=""/);
-    expect(completeHtml).not.toContain('class="question-next-status"');
+    expect(completeHtml).toContain('class="question-announcement"');
+    expect(completeHtml).toContain('aria-live="polite"');
+    expect((completeHtml.match(/aria-live=/g) ?? [])).toHaveLength(1);
+  });
+
+  it("keeps sync warnings in the same question announcement node", () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        question={question}
+        index={0}
+        total={1}
+        answer="12"
+        progressAnnouncement="Прогресс сохранён с предупреждением"
+        progressAnnouncementRole="alert"
+        labels={{
+          back: "Назад",
+          task_label: "Задание",
+          of_label: "из",
+          illustration_alt: "Иллюстрация к заданию",
+          next_question: "Следующее задание",
+          get_result: "Получить результат",
+          answer_label: "Ваш ответ",
+          enter_answer: "Введите ответ",
+          choose_option: "Выберите вариант",
+        } as unknown as Brand["interface"]}
+        onAnswer={() => undefined}
+        onBack={() => undefined}
+        onNext={() => undefined}
+      />,
+    );
+    expect(html.match(/class="question-announcement"/g)).toHaveLength(1);
+    expect(html).toContain('role="alert"');
+    expect(html).toContain('aria-live="assertive"');
+    expect(html).toContain("Прогресс сохранён с предупреждением");
+    expect((html.match(/aria-live=/g) ?? [])).toHaveLength(1);
   });
 
   it("keeps the next action in a dedicated sticky bar", () => {

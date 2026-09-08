@@ -29,10 +29,12 @@
   --paper: var(--brand-paper);
   --surface: var(--brand-paper);
   --muted: color-mix(in srgb, var(--brand-ink) 62%, white);
-  --faint: color-mix(in srgb, var(--brand-ink) 42%, white);
+  --faint: color-mix(in srgb, var(--brand-ink) 62%, white);
   --line: color-mix(in srgb, var(--brand-ink) 10%, transparent);
   --line-strong: color-mix(in srgb, var(--brand-ink) 16%, transparent);
+  --decor-line: color-mix(in srgb, var(--brand-ink) 12%, transparent);
   --control-line: color-mix(in srgb, var(--brand-ink) 38%, white);
+  --interactive-line: color-mix(in srgb, var(--brand-ink) 55%, white);
 
   --primary-deep: color-mix(in srgb, var(--brand-primary) 68%, #150a38);
   --primary-tint: color-mix(in srgb, var(--brand-primary) 9%, var(--brand-paper));
@@ -84,8 +86,17 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 [role="tab"]:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--brand-primary) 55%, transparent);
+  outline-width: 3px;
+  outline-style: solid;
+  outline-color: var(--brand-primary);
   outline-offset: 2px;
+}
+
+button:disabled,
+input:disabled,
+select:disabled {
+  color: var(--muted);
+  border-style: dashed;
 }
 
 /* ============ Shell ============ */
@@ -145,7 +156,7 @@ select:focus-visible,
 .brand-logo {
   object-fit: contain;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--decor-line);
 }
 
 .status-pill {
@@ -251,7 +262,7 @@ select:focus-visible,
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1.5px solid var(--line-strong);
+  border: 1.5px solid var(--interactive-line);
   padding: 13px 20px;
   border-radius: var(--r-md);
   color: var(--ink);
@@ -1543,7 +1554,7 @@ select:focus-visible,
   display: flex;
   align-items: center;
   gap: 13px;
-  border: 1.5px solid var(--line-strong);
+  border: 1.5px solid var(--interactive-line);
   padding: 13px 14px;
   border-radius: var(--r-md);
   color: var(--ink);
@@ -1591,7 +1602,7 @@ select:focus-visible,
   width: 22px;
   height: 22px;
   flex: 0 0 auto;
-  border: 2px solid var(--line-strong);
+  border: 2px solid var(--interactive-line);
   border-radius: 50%;
 }
 
@@ -1636,10 +1647,9 @@ select:focus-visible,
 .short-answer > input {
   min-height: 62px;
   width: 100%;
-  border: 2px solid var(--line-strong);
+  border: 2px solid var(--interactive-line);
   border-radius: 18px;
   padding: 0 96px 0 17px;
-  outline: none;
   color: var(--ink);
   background: color-mix(in srgb, var(--brand-primary) 3%, var(--surface));
   font-family: "Golos Text", sans-serif;
@@ -1810,7 +1820,7 @@ select:focus-visible,
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border: 1.5px solid color-mix(in srgb, var(--brand-primary) 45%, var(--line));
+  border: 1.5px solid var(--interactive-line);
   border-radius: 11px;
   padding: 7px 10px;
   color: var(--brand-primary);
@@ -1850,7 +1860,7 @@ select:focus-visible,
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1.5px solid color-mix(in srgb, var(--brand-primary) 45%, var(--line));
+  border: 1.5px solid var(--interactive-line);
   border-radius: 11px;
   padding: 8px 12px;
   color: var(--brand-primary);
@@ -1964,7 +1974,7 @@ select:focus-visible,
   grid-template-rows: auto 1fr;
   align-items: center;
   gap: 2px 8px;
-  border: 1.5px solid var(--line-strong);
+  border: 1.5px solid var(--interactive-line);
   border-radius: 12px;
   padding: 8px;
   color: var(--ink);
@@ -2074,7 +2084,7 @@ select:focus-visible,
   left: 0;
   right: 0;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   text-align: center;
 }
@@ -2152,17 +2162,26 @@ select:focus-visible,
   width: 100%;
   min-height: 44px;
   padding: 0 26px 0 10px;
-  border: 1.5px solid color-mix(in srgb, var(--brand-primary) 45%, var(--line));
+  border: 1.5px solid var(--interactive-line);
   border-radius: 9px;
-  outline: none;
   color: var(--brand-primary);
   background: var(--surface);
   font-family: "Golos Text", sans-serif;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
 }
 
 .table-gap-select.locked { opacity: 0.55; }
+
+.answer-option:disabled,
+.matching-answer-option:disabled,
+.matching-answer-trigger:disabled,
+.table-gap-select select:disabled,
+.short-answer-control input:disabled,
+.short-answer > input:disabled {
+  color: var(--muted);
+  border-style: dashed;
+}
 
 /* Next action */
 
@@ -2207,7 +2226,7 @@ select:focus-visible,
 
 .question-skip:hover { color: var(--ink); }
 
-.question-next-status {
+.question-announcement {
   min-height: 20px;
   margin: 0;
   color: var(--muted);
@@ -2806,7 +2825,7 @@ select:focus-visible,
   top: 34px;
   bottom: 0;
   width: 2px;
-  background: var(--line-strong);
+  background: var(--decor-line);
 }
 
 .route-list li > span {
@@ -3310,7 +3329,7 @@ select:focus-visible,
   padding: 11px 12px;
 }
 
-.league-row + .league-row { border-top: 1px solid var(--line); }
+.league-row + .league-row { border-top: 1px solid var(--decor-line); }
 
 .league-rank {
   width: 28px;
