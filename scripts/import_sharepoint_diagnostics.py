@@ -1288,6 +1288,16 @@ def _render_table(table: SourceTable) -> str:
     return "\n".join(lines)
 
 
+def _ordering_option_lines(task: SourceTask) -> list[str]:
+    prompt = "\n".join(task.prompt_blocks)
+    if not task.options or not (
+        ORDERING_LANGUAGE.search(prompt)
+        or re.search(r"тип\s*:\s*последовательност\w*", prompt, re.IGNORECASE)
+    ):
+        return []
+    return list(task.options) if _numbered_task_options(task) else []
+
+
 def build_prompt(task: SourceTask, *, skip_table: SourceTable | None = None) -> str:
     # A matching task shows its pairs as controls, so only that one table is
     # dropped. A data table the question reasons about has to stay.
@@ -1301,6 +1311,7 @@ def build_prompt(task: SourceTask, *, skip_table: SourceTable | None = None) -> 
                 rendered = _render_table(node.table)
                 if rendered:
                     parts.append(rendered)
+        parts.extend(_ordering_option_lines(task))
         return clean_block(parts)
     parts = list(task.prompt_blocks)
     parts.extend(
@@ -1312,6 +1323,7 @@ def build_prompt(task: SourceTask, *, skip_table: SourceTable | None = None) -> 
         )
         if rendered
     )
+    parts.extend(_ordering_option_lines(task))
     return clean_block(parts)
 
 

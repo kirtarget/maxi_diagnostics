@@ -637,6 +637,8 @@ def test_kir254_trusted_source_targets_build_explicit_sequence_contract(
 
     for number, (answer_length, allow_reuse, markers) in targets.items():
         question = questions[number]
+        task = next(task for task in source.tasks if task.number == number)
+        assert all(option in question["prompt"] for option in task.options)
         assert question["answer_format"] == "sequence"
         assert question["answer_length"] == answer_length
         assert question["allow_reuse"] is allow_reuse
