@@ -319,6 +319,34 @@ def test_kir254_catalog_targets_expose_sequence_contracts():
         assert question.markers == markers
 
 
+def test_kir254_chemistry_q16_is_served_by_the_full_diagnostic():
+    """The textual reaction scheme is a real task, not a missing figure."""
+    catalog = load_catalog(load_school())
+    diagnostic = next(
+        item for item in catalog.diagnostics if item.id == "ege-chemistry-1208"
+    )
+    question = next(
+        item
+        for item in diagnostic.questions
+        if item.id == "sp-chemistry-ege-2022-q16"
+    )
+
+    assert isinstance(question, InputQuestion)
+    assert question.answer_format == "sequence"
+    assert question.answer_length == 2
+    assert question.markers == ("А", "Б")
+    assert question.allow_reuse is False
+    assert question.topic == (
+        "Взаимосвязь углеводородов, кислородсодержащих и азотсодержащих "
+        "органических соединений"
+    )
+    # Restoring a question inside the served prefix must not push the last one
+    # out of the full diagnostic.
+    served = diagnostic.questions[: diagnostic.full_question_count]
+    assert question in served
+    assert served[-1].id == "sp-chemistry-ege-2022-q28"
+
+
 def test_numeric_input_accepts_optional_display_unit():
     data = sample_diagnostic_data()["questions"][3] | {
         "answer_unit": "м",
