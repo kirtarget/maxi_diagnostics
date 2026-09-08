@@ -35,7 +35,7 @@ export type TrainerSessionState = {
 
 export type TrainerActions = {
   dispatch: Dispatch<TrainerAction>;
-  start(diagnosticId: string, mode?: TrainerMode, sourceAttemptId?: string): Promise<void>;
+  start(diagnosticId: string, mode?: TrainerMode, sourceAttemptId?: string, topic?: string): Promise<void>;
   answer(questionId: string, answer: AnswerValue): Promise<void>;
   finish(): Promise<void>;
   remindLives(): Promise<void>;
@@ -86,12 +86,15 @@ export function useTrainer({
   const diagnosticId = useRef<string | null>(null);
   const mode = useRef<TrainerMode>("normal");
   const sourceAttemptId = useRef<string | null>(null);
+  const topic = useRef<string | null>(null);
+  const requestGeneration = useRef(0);
   const recoveryMode = useRef<"retry" | "restart">("retry");
 
   const start = useCallback(async (
     selectedId: string,
     requestedMode: TrainerMode = "normal",
     requestedSourceAttemptId?: string,
+    requestedTopic?: string,
   ) => {
     if (!sessionScope || !initData.current) return;
     const selected = bootstrap?.diagnostics.find((item) => item.id === selectedId);
@@ -99,9 +102,12 @@ export function useTrainer({
       dispatch({ type: "error", message: "Диагностика для тренировки не найдена." });
       return;
     }
+    const generation = requestGeneration.current + 1;
+    requestGeneration.current = generation;
     diagnosticId.current = selected.id;
     mode.current = requestedMode;
     sourceAttemptId.current = requestedMode === "mistakes" ? (requestedSourceAttemptId ?? null) : null;
+    topic.current = requestedMode === "mistakes" ? (requestedTopic ?? null) : null;
     recoveryMode.current = "retry";
     dispatch({ type: "reset" });
     setLivesReminder({ status: "idle" });
@@ -113,13 +119,15 @@ export function useTrainer({
         count: Math.min(5, selected.question_count),
       };
       const payload = requestedMode === "mistakes" && requestedSourceAttemptId
-        ? { ...scope, mode: "mistakes" as const, source_attempt_id: requestedSourceAttemptId }
+        ? { ...scope, mode: "mistakes" as const, source_attempt_id: requestedSourceAttemptId, ...(requestedTopic ? { topic: requestedTopic } : {}) }
         : requestedMode === "plan"
           ? { ...scope, mode: "plan" as const }
           : { ...scope, mode: "normal" as const };
       const response = await startTrainer(initData.current, payload);
+      if (generation !== requestGeneration.current) return;
       dispatch({ type: "start", response });
     } catch (startError) {
+      if (generation !== requestGeneration.current) return;
       dispatch({ type: "error", message: trainerErrorMessage(startError) });
     }
   }, [bootstrap, initData, sessionScope, setScreen]);
@@ -179,7 +187,7 @@ export function useTrainer({
   const retry = useCallback(() => {
     const restart = () => {
       if (diagnosticId.current) {
-        void start(diagnosticId.current, mode.current, sourceAttemptId.current ?? undefined);
+        void start(diagnosticId.current, mode.current, sourceAttemptId.current ?? undefined, topic.current ?? undefined);
       }
     };
     if (recoveryMode.current === "restart" && diagnosticId.current) {

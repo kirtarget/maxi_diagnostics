@@ -109,6 +109,128 @@ def completion(
 
 
 @pytest.mark.asyncio
+async def test_schedule_retest_reminder_is_idempotent_and_keeps_attempt_payload():
+    attempt_id = f"attempt-{uuid4()}"
+    await attempts.complete_attempt(
+        completion(attempt_id, answers={"q1": "A"}, mode="full", subject="physics")
+    )
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute(
+            "DELETE FROM diagnostic_notifications WHERE attempt_id=$1 AND kind='month_retest'",
+            attempt_id,
+        )
+
+    first = await attempts.schedule_retest_reminder(user_id=101, attempt_id=attempt_id)
+    second = await attempts.schedule_retest_reminder(user_id=101, attempt_id=attempt_id)
+
+    assert first["status"] == second["status"] == "scheduled"
+    async with pool.acquire() as connection:
+        row = await connection.fetchrow(
+            "SELECT status, payload FROM diagnostic_notifications WHERE attempt_id=$1 AND kind='month_retest'",
+            attempt_id,
+        )
+    assert row["status"] == "pending"
+    assert row["payload"] == {"mode": "full", "subject": "physics"}
+
+
+@pytest.mark.asyncio
+async def test_schedule_retest_reminder_distinguishes_active_and_stale_exhausted_sending():
+    attempt_id = f"attempt-{uuid4()}"
+    await attempts.complete_attempt(completion(attempt_id, answers={"q1": "A"}))
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute(
+            "UPDATE diagnostic_notifications SET status='sending', attempts=8, locked_at=now() "
+            "WHERE attempt_id=$1 AND kind='month_retest'",
+            attempt_id,
+        )
+    active = await attempts.schedule_retest_reminder(user_id=101, attempt_id=attempt_id)
+    assert active["status"] == "scheduled"
+
+    async with pool.acquire() as connection:
+        await connection.execute(
+            "UPDATE diagnostic_notifications SET locked_at=now() - interval '11 minutes' "
+            "WHERE attempt_id=$1 AND kind='month_retest'",
+            attempt_id,
+        )
+    stale = await attempts.schedule_retest_reminder(user_id=101, attempt_id=attempt_id)
+    assert stale == {"status": "unavailable", "reason": "delivery_failed"}
+
+
+@pytest.mark.asyncio
+async def test_schedule_retest_reminder_enforces_owner_opt_out_and_preserves_lease():
+    attempt_id = f"attempt-{uuid4()}"
+    await attempts.complete_attempt(completion(attempt_id, answers={"q1": "A"}))
+
+    assert await attempts.schedule_retest_reminder(user_id=202, attempt_id=attempt_id) == {
+        "status": "unavailable", "reason": "elapsed",
+    }
+    await attempts.set_notification_preference(101, False)
+    assert await attempts.schedule_retest_reminder(user_id=101, attempt_id=attempt_id) == {
+        "status": "unavailable", "reason": "notifications_disabled",
+    }
+    await attempts.set_notification_preference(101, True)
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute(
+            "UPDATE diagnostic_notifications SET status='sending', attempts=1, locked_at=now() "
+            "WHERE attempt_id=$1 AND kind='month_retest'",
+            attempt_id,
+        )
+        before = await connection.fetchval(
+            "SELECT locked_at FROM diagnostic_notifications WHERE attempt_id=$1 AND kind='month_retest'",
+            attempt_id,
+        )
+    assert (await attempts.schedule_retest_reminder(user_id=101, attempt_id=attempt_id))["status"] == "scheduled"
+    async with pool.acquire() as connection:
+        after = await connection.fetchval(
+            "SELECT locked_at FROM diagnostic_notifications WHERE attempt_id=$1 AND kind='month_retest'",
+            attempt_id,
+        )
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_schedule_retest_reminder_terminal_states_preserve_delivery_fields():
+    attempt_id = f"attempt-{uuid4()}"
+    await attempts.complete_attempt(completion(attempt_id, answers={"q1": "A"}))
+    pool = await get_pool()
+    cases = [
+        ("sent", 3, None, None),
+        ("cancelled", 3, None, {"status": "unavailable", "reason": "cancelled"}),
+        ("abandoned", 8, None, {"status": "unavailable", "reason": "delivery_failed"}),
+        ("failed", 8, None, {"status": "unavailable", "reason": "delivery_failed"}),
+    ]
+    for status, count, locked_at, expected in cases:
+        async with pool.acquire() as connection:
+            await connection.execute(
+                "UPDATE diagnostic_notifications SET status=$2, attempts=$3, locked_at=$4, "
+                "due_at=now() + interval '1 day', sent_at=CASE WHEN $2='sent' THEN now() ELSE NULL END "
+                "WHERE attempt_id=$1 AND kind='month_retest'",
+                attempt_id, status, count, locked_at,
+            )
+            before = await connection.fetchrow(
+                "SELECT status, due_at, sent_at, attempts, locked_at "
+                "FROM diagnostic_notifications WHERE attempt_id=$1 AND kind='month_retest'",
+                attempt_id,
+            )
+        result = await attempts.schedule_retest_reminder(user_id=101, attempt_id=attempt_id)
+        if status == "sent":
+            assert result["status"] == "sent"
+            assert result["sent_at"] is not None
+        else:
+            assert result == expected
+        async with pool.acquire() as connection:
+            after = await connection.fetchrow(
+                "SELECT status, due_at, sent_at, attempts, locked_at "
+                "FROM diagnostic_notifications WHERE attempt_id=$1 AND kind='month_retest'",
+                attempt_id,
+            )
+        assert dict(after) == dict(before)
+
+
+@pytest.mark.asyncio
 async def test_completion_is_idempotent_and_notification_dedupe_is_unique():
     attempt_id = f"attempt-{uuid4()}"
     frozen_result = {"score": 50, "per_question": [{

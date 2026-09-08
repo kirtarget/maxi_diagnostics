@@ -137,8 +137,12 @@ function jsonResponse(body: unknown): Response {
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((resolvePromise) => { resolve = resolvePromise; });
-  return { promise, resolve };
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
 }
 
 /** Per-path stubs for the JSON API. Unrouted paths answer with a bare `ok`. */
@@ -296,7 +300,7 @@ describe("Home screen transitions", () => {
   });
 
   it("repeats the saved diagnostic from the route with its original mode", async () => {
-    const attempt = { ...completedAttempt, result: serverResult, mode: "full" as const };
+    const attempt = { ...completedAttempt, result: { ...serverResult, xp_earned: 37 }, mode: "full" as const };
     route("/api/diagnostics/bootstrap", bootstrapPayload({
       onboarding: { status: "completed" },
       results: [attempt],
@@ -309,7 +313,10 @@ describe("Home screen transitions", () => {
     expect(resultButton).not.toBeUndefined();
     await act(async () => resultButton?.click());
     await clickAndSettle(".result-actions .secondary-button:last-child");
+    expect(screenClasses()).toContain("forecast-empty-screen");
+    await clickAndSettle(".forecast-empty-screen .primary-button");
     expect(screenClasses()).toContain("route-screen");
+    expect(container.querySelector(".plan-home-action")?.textContent).toContain("+37 XP");
 
     await clickAndSettle(".route-repeat");
     await settle();
@@ -324,6 +331,98 @@ describe("Home screen transitions", () => {
     await clickAndSettle(".question-skip");
     await settle();
     expect(requestedBodies.find(({ path }) => path === "/api/diagnostics/session/complete")?.body).toMatchObject({ mode: "full" });
+  });
+
+  it("continues from an empty forecast to the plan when the current result has no estimate", async () => {
+    const attempt = { ...completedAttempt, result: { ...serverResult, estimate: null } };
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      onboarding: { status: "completed" },
+      results: [attempt],
+    }));
+
+    await mountHome();
+    const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+      .find((button) => button.textContent?.includes("0 из 1"));
+    expect(resultButton).not.toBeUndefined();
+    await act(async () => resultButton?.click());
+    await clickAndSettle(".result-actions .secondary-button:last-child");
+
+    expect(screenClasses()).toContain("forecast-empty-screen");
+    expect(container.textContent).not.toContain("появится после 10");
+    expect(container.textContent).not.toContain("0 ответов");
+    await clickAndSettle(".forecast-empty-screen .primary-button");
+    expect(screenClasses()).toContain("route-screen");
+  });
+
+  it("offers the full diagnostic from an empty quick forecast", async () => {
+    const attempt = { ...completedAttempt, mode: "quick" as const, result: { ...serverResult, mode: "quick" as const, estimate: null } };
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      onboarding: { status: "completed" },
+      results: [attempt],
+    }));
+    route("/api/diagnostics/catalog", { diagnostic });
+
+    await mountHome();
+    const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+      .find((button) => button.textContent?.includes("0 из 1"));
+    expect(resultButton).not.toBeUndefined();
+    await act(async () => resultButton?.click());
+    await clickAndSettle(".result-actions .secondary-button:last-child");
+    await clickAndSettle(".forecast-empty-screen .secondary-button");
+    await settle();
+
+    expect(screenClasses()).toContain("question-screen");
+    route("/api/diagnostics/session/complete", {
+      ok: true,
+      attempt: { ...attempt, attempt_id: "attempt-full", mode: "full", status: "completed" },
+      result: { ...serverResult, mode: "full" },
+    });
+    vi.useFakeTimers();
+    try {
+      await clickAndSettle(".question-skip");
+      await act(async () => { vi.advanceTimersByTime(300); await Promise.resolve(); });
+      await settle();
+      expect(requestedBodies.find(({ path }) => path.endsWith("/api/diagnostics/session/complete"))?.body)
+        .toMatchObject({ diagnostic_id: diagnostic.id, mode: "full" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    ["success", { status: "scheduled", due_at: "2026-10-08T00:00:00+00:00" }, "Повтор запланирован"],
+    ["error", new Error("network"), "Не удалось запланировать"],
+  ])("ignores a deferred reminder %s from attempt A after switching to attempt B", async (_name, outcome, staleMessage) => {
+    const attemptA = { ...completedAttempt, attempt_id: "attempt-a", result: { ...serverResult, xp_earned: 20 } };
+    const attemptB = { ...completedAttempt, attempt_id: "attempt-b", result: { ...serverResult, xp_earned: 40 } };
+    const reminder = deferred<unknown>();
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      onboarding: { status: "completed" },
+      results: [attemptA, attemptB],
+    }));
+    routes["/api/diagnostics/session/retest-reminder"] = async () => reminder.promise;
+
+    await mountHome();
+    const cards = container.querySelectorAll<HTMLButtonElement>(".gameplay-result-card");
+    await act(async () => cards[0]?.click());
+    await clickAndSettle(".result-actions .secondary-button:last-child");
+    await clickAndSettle(".forecast-empty-screen .primary-button");
+    await clickAndSettle(".route-action");
+    expect(requestedPaths).toContain("/api/diagnostics/session/retest-reminder");
+
+    await clickAndSettle(".plan-home-action");
+    await settle();
+    const refreshedCards = container.querySelectorAll<HTMLButtonElement>(".gameplay-result-card");
+    await act(async () => refreshedCards[1]?.click());
+    await clickAndSettle(".result-actions .secondary-button:last-child");
+    await clickAndSettle(".forecast-empty-screen .primary-button");
+    expect(screenClasses()).toContain("route-screen");
+    expect(container.textContent).not.toContain("Повтор запланирован");
+
+    if (outcome instanceof Error) reminder.reject(outcome);
+    else reminder.resolve(outcome);
+    await settle();
+    expect(container.textContent).not.toContain(staleMessage);
   });
 
   it("shows an actionable trainer message when mistake replay has no source mistakes", async () => {
@@ -484,7 +583,7 @@ describe("Home screen transitions", () => {
     await clickAndSettle(".bottom-nav button:first-child");
     expect(screenClasses()).toContain("gameplay-home");
     expect(container.textContent).toContain("1 диагностика завершена");
-    expect(container.textContent).toContain("План на сегодня");
+    expect(container.textContent).toContain("Задания на сегодня");
   });
 
   it("resumes persisted selection without showing the dashboard", async () => {
@@ -1011,7 +1110,7 @@ describe("Home screen transitions", () => {
     }));
 
     await mountHome();
-    expect(container.querySelector(".gameplay-plan-cta")?.textContent).toContain("План на сегодня: 2 из 5");
+    expect(container.querySelector(".gameplay-plan-cta")?.textContent).toContain("Задания на сегодня: 2 из 5");
 
     await clickAndSettle(".gameplay-plan-cta");
     await settle();

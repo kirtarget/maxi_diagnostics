@@ -195,6 +195,7 @@ CREATE TABLE IF NOT EXISTS diagnostic_trainer_sessions (
     content_version TEXT NOT NULL,
     mode TEXT NOT NULL DEFAULT 'normal',
     source_attempt_id TEXT REFERENCES diagnostic_attempts(attempt_id) ON DELETE CASCADE,
+    topic TEXT,
     selected_question_ids JSONB NOT NULL,
     current_index INTEGER NOT NULL DEFAULT 0 CHECK (current_index >= 0),
     revision BIGINT NOT NULL DEFAULT 1 CHECK (revision >= 1),
@@ -206,6 +207,8 @@ CREATE TABLE IF NOT EXISTS diagnostic_trainer_sessions (
     CHECK (content_version ~ '^[0-9a-f]{64}$'),
     CHECK (mode IN ('normal', 'mistakes', 'plan')),
     CHECK ((mode = 'mistakes') = (source_attempt_id IS NOT NULL)),
+    CHECK (topic IS NULL OR length(topic) BETWEEN 1 AND 128),
+    CHECK (mode = 'mistakes' OR topic IS NULL),
     CHECK (status IN ('active', 'completed', 'exhausted')),
     CHECK (jsonb_typeof(selected_question_ids) = 'array'),
     CHECK (jsonb_array_length(selected_question_ids) BETWEEN 1 AND 200),
@@ -213,6 +216,8 @@ CREATE TABLE IF NOT EXISTS diagnostic_trainer_sessions (
 );
 ALTER TABLE diagnostic_trainer_sessions
     ADD COLUMN IF NOT EXISTS source_attempt_id TEXT REFERENCES diagnostic_attempts(attempt_id) ON DELETE CASCADE;
+ALTER TABLE diagnostic_trainer_sessions
+    ADD COLUMN IF NOT EXISTS topic TEXT;
 CREATE INDEX IF NOT EXISTS idx_diagnostic_trainer_sessions_user_updated
     ON diagnostic_trainer_sessions(user_id, updated_at DESC);
 
@@ -415,6 +420,20 @@ BEGIN
            );
         INSERT INTO diagnostic_schema_migrations(version)
         VALUES ('2026-08-11-retire-unversioned-attempts');
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='diagnostic_trainer_sessions_topic_check') THEN
+        ALTER TABLE diagnostic_trainer_sessions
+            ADD CONSTRAINT diagnostic_trainer_sessions_topic_check
+            CHECK (topic IS NULL OR length(topic) BETWEEN 1 AND 128);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='diagnostic_trainer_sessions_topic_mode_check') THEN
+        ALTER TABLE diagnostic_trainer_sessions
+            ADD CONSTRAINT diagnostic_trainer_sessions_topic_mode_check
+            CHECK (mode='mistakes' OR topic IS NULL);
     END IF;
 END $$;
 

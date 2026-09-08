@@ -19,7 +19,7 @@ from diagnostic.catalog import (
 from diagnostic.analytics import emit_event
 from diagnostic.notification_attribution import record_open as record_notification_open
 from diagnostic.daily_plan import ensure_today_plan, plan_summary
-from diagnostic.db import attempts, funnel, onboarding
+from diagnostic.db import attempts, funnel, gameplay, onboarding
 from diagnostic.db.attempts import AttemptCompletion, AttemptProgress
 from diagnostic.db.gameplay import serialize_gameplay_profile
 from diagnostic.review import build_review_snapshot, public_review_items
@@ -36,6 +36,7 @@ from diagnostic.session_identity import (
 from .dependencies import telegram_user
 from .models import (
     ApiRequest, CatalogRequest, CompletionRequest, ProgressRequest, SessionRequest, OnboardingRequest,
+    RetestReminderRequest,
 )
 
 
@@ -55,6 +56,7 @@ def build_completion(
     result_snapshot = result.model_dump(mode="json") | {
         "unassessed_part": COVERAGE_LIMITATION,
         "forecast": forecast,
+        "xp_earned": gameplay.diagnostic_completion_xp(body.mode),
     }
     selected_questions = diagnostic.questions_for_mode(body.mode)
     review_snapshot = build_review_snapshot(selected_questions, body.answers)
@@ -145,6 +147,11 @@ def serialize_result(row: Mapping[str, Any], fallback: ScoreResult | None) -> di
     if snapshot:
         result = dict(snapshot)
         result.setdefault("skipped_count", 0)
+        xp_earned = _safe_xp_earned(result.get("xp_earned"))
+        if xp_earned is None:
+            result.pop("xp_earned", None)
+        else:
+            result["xp_earned"] = xp_earned
         result["per_question"] = _safe_per_question(result.get("per_question"))
         return result
     keys = (
@@ -154,6 +161,11 @@ def serialize_result(row: Mapping[str, Any], fallback: ScoreResult | None) -> di
     persisted = {key: row[key] for key in keys if key in available}
     result = persisted or (fallback.model_dump(mode="json") if fallback is not None else {})
     result.setdefault("skipped_count", 0)
+    xp_earned = _safe_xp_earned(result.get("xp_earned"))
+    if xp_earned is not None:
+        result["xp_earned"] = xp_earned
+    else:
+        result.pop("xp_earned", None)
     result["per_question"] = _safe_per_question(result.get("per_question"))
     return result
 
@@ -196,6 +208,10 @@ def _safe_per_question(value: Any) -> list[dict[str, Any]]:
             "is_correct": is_correct,
         })
     return safe
+
+
+def _safe_xp_earned(value: Any) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
 
 
 def serialize_progress_profile(row: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -663,6 +679,15 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
             "ok": True,
             "status": _normalize_delivery_status(row.get("pdf_status")),
         }
+
+    @router.post("/session/retest-reminder")
+    async def retest_reminder(body: RetestReminderRequest, request: Request) -> dict[str, Any]:
+        user = telegram_user(request, body.init_data)
+        await _require_current_session(request, user["id"], body.session_scope)
+        result = await attempts.schedule_retest_reminder(
+            user_id=user["id"], attempt_id=body.attempt_id,
+        )
+        return {"ok": True, **result}
 
     @router.post("/session/delivery/retry")
     async def retry_delivery(body: SessionRequest, request: Request) -> dict[str, Any]:

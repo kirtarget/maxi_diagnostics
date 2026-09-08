@@ -349,24 +349,28 @@ export function ReviewScreen({
   );
 }
 
-export function ForecastEmptyScreen({ completedCount, onBack, onStart }: {
-  completedCount: number;
+export function ForecastEmptyScreen({ completedCount, onBack, onStart, onPlan, minimumSampleSize = 2 }: {
+  completedCount?: number | null;
   onBack: () => void;
   onStart: () => void;
+  onPlan?: () => void;
+  minimumSampleSize?: number;
 }): ReactNode {
-  const done = Math.min(Math.max(completedCount, 0), 2);
+  const target = Math.max(1, Math.trunc(minimumSampleSize));
+  const hasProgress = typeof completedCount === "number" && Number.isFinite(completedCount);
+  const done = hasProgress ? Math.min(Math.max(Math.trunc(completedCount), 0), target) : null;
   return (
-    <section className="screen centered-state forecast-empty-screen" aria-labelledby="forecast-empty-title">
+    <section className="screen centered-state forecast-empty-screen route-screen" aria-labelledby="forecast-empty-title">
       <button className="text-back" onClick={onBack} type="button">Назад</button>
       <span className="state-icon" aria-hidden="true">📈</span>
       <h1 id="forecast-empty-title">Пока мало данных</h1>
-      <p>Прогноз появится после 2 диагностик. Сейчас у тебя {done === 1 ? "одна" : String(done)} — пройди ещё, и посчитаем траекторию.</p>
-      <div className="forecast-empty-progress" aria-label={`Диагностик пройдено: ${done} из 2`}>
-        <span className={`forecast-empty-dot${done >= 1 ? " is-done" : ""}`} aria-hidden="true" />
-        <span className={`forecast-empty-dot${done >= 2 ? " is-done" : ""}`} aria-hidden="true" />
-        <small>{done} из 2</small>
-      </div>
-      <button className="primary-button" onClick={onStart} type="button">Пройти диагностику <span aria-hidden="true">→</span></button>
+      <p>Пока недостаточно данных для числового ориентира.</p>
+      {done !== null && <div className="forecast-empty-progress" aria-label={`Ответов учтено: ${done} из ${target}`}>
+        {Array.from({ length: Math.min(target, 10) }, (_, index) => <span key={index} className={`forecast-empty-dot${done > index ? " is-done" : ""}`} aria-hidden="true" />)}
+        <small>{done} из {target}</small>
+      </div>}
+      {onPlan && <button className="primary-button" onClick={onPlan} type="button">Открыть план <span aria-hidden="true">→</span></button>}
+      <button className={onPlan ? "secondary-button route-repeat" : "primary-button route-repeat"} onClick={onStart} type="button">Пройти полную диагностику <span aria-hidden="true">→</span></button>
     </section>
   );
 }
@@ -400,7 +404,7 @@ export function ForecastScreen({
     <section className="screen forecast-screen radar-screen" aria-labelledby="forecast-title">
       <button className="text-back" onClick={onBack} type="button">Назад</button>
       <h1 id="forecast-title">Рост — это <em>система</em></h1>
-      <p className="lead">Занимайся по маршруту регулярно — и вот куда придёшь к экзамену.</p>
+      <p className="lead">Занимайся регулярно, и вот куда можно прийти к экзамену.</p>
       <div className="forecast-path" role="img" aria-label={ariaLabel}>
         {current && (
           <div className="forecast-step forecast-step-current">
@@ -418,8 +422,8 @@ export function ForecastScreen({
           </>
         )}
       </div>
-      {next && <p className="forecast-explainer">Это ориентир на основе среднего прироста, а не личная гарантия. Он достижим при системной подготовке по вашему маршруту.</p>}
-      {points.length === 0 && <p className="forecast-empty">Пока нет числового ориентира. Откройте маршрут: он уже собран по вашим темам.</p>}
+      {next && <p className="forecast-explainer">Это ориентир на основе среднего прироста, а не личная гарантия. Он достижим при системной подготовке.</p>}
+      {points.length === 0 && <p className="forecast-empty">Пока нет числового ориентира. План уже собран по вашим темам.</p>}
       {offer && !offerDismissed && (
         <OfferSurface
           offer={offer}
@@ -428,7 +432,7 @@ export function ForecastScreen({
           onEvent={onOfferEvent}
         />
       )}
-      <button className="primary-button" onClick={onRoute} type="button">Открыть маршрут <span aria-hidden="true">→</span></button>
+      <button className="primary-button" onClick={onRoute} type="button">Открыть план <span aria-hidden="true">→</span></button>
     </section>
   );
 }
@@ -438,25 +442,40 @@ export function RouteScreen({
   offers,
   onSubjects,
   onRepeat,
+  onAction,
+  reminderMessage,
+  onHome,
+  xpReward,
 }: {
   items: RouteItem[];
   offers: SchoolLinks["offers"];
   onSubjects: () => void;
   onRepeat?: () => void;
+  onAction?: (action: PersonalRouteAction) => void;
+  reminderMessage?: string | null;
+  onHome?: () => void;
+  xpReward?: number | null;
 }): ReactNode {
   return (
     <section className="screen route-screen" aria-labelledby="route-title">
-      <span className="state-code">Персональный маршрут</span>
-      <h1 id="route-title">Твой маршрут</h1>
+      <span className="state-code">План подготовки</span>
+      <h1 id="route-title">Твой план</h1>
       <p className="lead">Начни с заданий, в которых были ошибки. Этот план относится к пройденной диагностике.</p>
       <ol className="route-list">
         {items.map((item, index) => (
           <li key={`${item.id}-${index}`}>
             <span>{String(index + 1).padStart(2, "0")}</span>
-            <div><strong>{item.title}</strong><p>{item.description}</p></div>
+            <div><strong>{item.title}</strong><p>{item.description}</p>{onAction && item.kind !== "retest-reminder" && (
+              <button className="text-back route-action" type="button" onClick={() => onAction(item)}>
+                {item.kind === "review" ? "Открыть разбор" : "Тренировать тему"} <span aria-hidden="true">→</span>
+              </button>
+            )}{onAction && item.kind === "retest-reminder" && (
+              <button className="text-back route-action" type="button" onClick={() => onAction(item)}>Запланировать повтор</button>
+            )}</div>
           </li>
         ))}
       </ol>
+      {reminderMessage && <p className="inline-success" role="status">{reminderMessage}</p>}
       <div className="scope-note">
         <strong>Где найти этот план</strong>
         <span>План и разбор ошибок открываются здесь в любой момент. Все пройденные диагностики лежат в разделе «Мои результаты».</span>
@@ -475,8 +494,9 @@ export function RouteScreen({
           </div>
         </section>
       )}
-      {onRepeat && <button className="primary-button route-repeat" onClick={onRepeat} type="button">Пройти диагностику ещё раз <span aria-hidden="true">→</span></button>}
+      {onHome && <button className="primary-button plan-home-action" onClick={onHome} type="button">На главную{typeof xpReward === "number" && Number.isFinite(xpReward) ? ` · +${Math.max(0, Math.trunc(xpReward))} XP` : ""}</button>}
       <button className="secondary-button" onClick={onSubjects} type="button">Выбрать другой предмет</button>
+      {onRepeat && <button className="text-back route-repeat" onClick={onRepeat} type="button">Пройти диагностику ещё раз <span aria-hidden="true">→</span></button>}
     </section>
   );
 }

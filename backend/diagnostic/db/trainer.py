@@ -43,6 +43,7 @@ def _session_payload(row: Mapping[str, Any]) -> dict[str, Any]:
         "content_version": row["content_version"],
         "mode": row["mode"],
         "source_attempt_id": row["source_attempt_id"],
+        "topic": row.get("topic"),
         "question_ids": list(selected),
         "current_index": int(row["current_index"]),
         "revision": int(row["revision"]),
@@ -77,7 +78,7 @@ async def _locked_session(connection, session_id: str, user_id: int):
     return await connection.fetchrow(
         """
         SELECT session_id, user_id, diagnostic_id, content_version, mode,
-               source_attempt_id,
+               source_attempt_id, topic,
                selected_question_ids, current_index, revision, status,
                started_at, updated_at, completed_at
           FROM diagnostic_trainer_sessions
@@ -95,7 +96,7 @@ async def get_session(session_id: str, user_id: int):
         return await connection.fetchrow(
             """
             SELECT session_id, user_id, diagnostic_id, content_version, mode,
-                   source_attempt_id,
+                   source_attempt_id, topic,
                    selected_question_ids, current_index, revision, status,
                    started_at, updated_at, completed_at
               FROM diagnostic_trainer_sessions
@@ -108,7 +109,7 @@ async def get_session(session_id: str, user_id: int):
 
 async def seed_and_list_mistakes(
     *, user_id: int, diagnostic_id: str, source_attempt_id: str,
-    content_version: str,
+    content_version: str, topic: str | None = None,
 ) -> list[str]:
     """Materialize unresolved questions from the owner's immutable private snapshot."""
     pool = await get_pool()
@@ -211,18 +212,19 @@ async def validate_mistakes_source(
 
 async def _find_resumable_session(
     connection, *, user_id: int, diagnostic_id: str, content_version: str,
-    mode: str, source_attempt_id: str | None,
+    mode: str, source_attempt_id: str | None, topic: str | None = None,
 ):
     return await connection.fetchrow(
         """
         SELECT session_id, diagnostic_id, content_version, mode,
-               source_attempt_id,
+               source_attempt_id, topic,
                selected_question_ids, current_index, revision, status,
                started_at, updated_at, completed_at
           FROM diagnostic_trainer_sessions
          WHERE user_id=$1 AND diagnostic_id=$2 AND content_version=$3
            AND mode=$4
            AND source_attempt_id IS NOT DISTINCT FROM $5
+           AND topic IS NOT DISTINCT FROM $6
            AND status IN ('active', 'exhausted')
          ORDER BY updated_at DESC, started_at DESC
          LIMIT 1
@@ -233,12 +235,13 @@ async def _find_resumable_session(
         content_version,
         mode,
         source_attempt_id,
+        topic,
     )
 
 
 async def get_resumable_session(
     *, user_id: int, diagnostic_id: str, content_version: str,
-    mode: str, source_attempt_id: str | None = None,
+    mode: str, source_attempt_id: str | None = None, topic: str | None = None,
 ) -> tuple[dict[str, Any], Mapping[str, Any]] | None:
     """Return the owner's active or exhausted session for this stable scope."""
     pool = await get_pool()
@@ -254,6 +257,7 @@ async def get_resumable_session(
                 content_version=content_version,
                 mode=mode,
                 source_attempt_id=source_attempt_id,
+                topic=topic,
             )
     if row is None:
         return None
@@ -263,6 +267,7 @@ async def get_resumable_session(
 async def start_session(
     *, session_id: str, user_id: int, diagnostic_id: str, content_version: str,
     mode: str, selected_question_ids: list[str], source_attempt_id: str | None = None,
+    topic: str | None = None,
 ) -> tuple[dict[str, Any], Mapping[str, Any]]:
     pool = await get_pool()
     async with pool.acquire() as connection:
@@ -277,6 +282,7 @@ async def start_session(
                 content_version=content_version,
                 mode=mode,
                 source_attempt_id=source_attempt_id,
+                topic=topic,
             )
             if existing is not None:
                 return _session_payload(existing), profile
@@ -284,11 +290,11 @@ async def start_session(
                 """
                 INSERT INTO diagnostic_trainer_sessions (
                     session_id, user_id, diagnostic_id, content_version, mode,
-                    source_attempt_id,
+                    source_attempt_id, topic,
                     selected_question_ids
-                ) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb)
+                ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb)
                 RETURNING session_id, diagnostic_id, content_version, mode,
-                          source_attempt_id,
+                          source_attempt_id, topic,
                           selected_question_ids, current_index, revision, status,
                           started_at, updated_at, completed_at
                 """,
@@ -298,6 +304,7 @@ async def start_session(
                 content_version,
                 mode,
                 source_attempt_id,
+                topic,
                 selected_question_ids,
             )
     return _session_payload(row), profile
@@ -440,7 +447,7 @@ async def answer_question(
                    SET current_index=$2, revision=$3, status=$4, updated_at=now()
                  WHERE session_id=$1
                  RETURNING session_id, diagnostic_id, content_version, mode,
-                           source_attempt_id,
+                           source_attempt_id, topic,
                            selected_question_ids, current_index, revision, status,
                            started_at, updated_at, completed_at
                 """,
@@ -474,7 +481,7 @@ async def finish_session(*, session_id: str, user_id: int, revision: int) -> dic
                        SET status='completed', completed_at=now(), updated_at=now()
                      WHERE session_id=$1
                      RETURNING session_id, diagnostic_id, content_version, mode,
-                               source_attempt_id,
+                               source_attempt_id, topic,
                                selected_question_ids, current_index, revision, status,
                                started_at, updated_at, completed_at
                     """,

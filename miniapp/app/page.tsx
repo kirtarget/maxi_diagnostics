@@ -9,9 +9,11 @@ import {
   ResultScreen,
   ReviewScreen,
   RouteScreen,
+  ForecastEmptyScreen,
+  ForecastScreen,
 } from "./result-flow";
-import { personalRoute } from "./result-flow-model";
-import { loadDeliveryStatus, requestedAttemptId, retryDelivery } from "./api";
+import { forecastKind, forecastTrajectory, personalRoute } from "./result-flow-model";
+import { loadDeliveryStatus, requestedAttemptId, retryDelivery, scheduleRetestReminder } from "./api";
 import { gameplayProfileView } from "./gameplay-profile-model";
 import { TrainerScreen } from "./trainer-screen";
 import { trainerDiagnosticId, trainerHeaderView } from "./trainer-model";
@@ -71,6 +73,7 @@ export default function Home() {
   const [deliveryStatus, setDeliveryStatus] = useState<DeliveryStatus | null>(null);
   const [navigationSelection, setNavigationSelection] = useState<NavigationSelection>({ exam: "", diagnosticId: null, mode: null });
   const [navigationIntent, setNavigationIntent] = useState<NavigationIntent>(null);
+  const [forecastOrigin, setForecastOrigin] = useState<"result" | "review">("result");
   const bootstrapSession = useBootstrap(setScreen);
   const session = useDiagnosticSession({ bootstrap: bootstrapSession, screen, setScreen });
   const trainer = useTrainer({
@@ -158,14 +161,57 @@ export default function Home() {
     setDiagnosticExitOpen(false);
     goHome();
   };
-  const routeItems = result ? personalRoute(result.growth_topics) : [];
+  const routeItems = result ? personalRoute(result) : [];
+  const [reminderMessage, setReminderMessage] = useState<string | null>(null);
+  const reminderGeneration = useRef(0);
   const repeatDiagnostic = () => {
     if (!result || !bootstrap) return;
     const summary = bootstrap.diagnostics.find((item) => item.id === result.diagnostic_id);
     if (summary) void session.actions.beginDiagnostic(summary);
   };
+  const startFullDiagnostic = () => {
+    if (!result || !bootstrap) return;
+    const summary = bootstrap.diagnostics.find((item) => item.id === result.diagnostic_id);
+    if (summary) void session.actions.beginDiagnostic(summary, "full");
+  };
+  const handleRouteAction = (action: import("./result-flow-model").PersonalRouteAction) => {
+    if (!result || !bootstrap) return;
+    if (action.kind === "review") {
+      if (action.questionId) session.actions.openReview(action.questionId);
+      return;
+    }
+    if (action.kind === "mistakes") {
+      const attemptId = session.actions.persistedAttemptId();
+      if (attemptId) void trainer.actions.start(result.diagnostic_id, "mistakes", attemptId, action.topic);
+      return;
+    }
+    const attemptId = session.actions.persistedAttemptId();
+    if (!attemptId || !bootstrapSession.initData.current || !bootstrapSession.sessionScope) return;
+    const generation = reminderGeneration.current + 1;
+    reminderGeneration.current = generation;
+    setReminderMessage(null);
+    void scheduleRetestReminder(
+      bootstrapSession.initData.current, attemptId, bootstrapSession.sessionScope,
+    ).then((response) => {
+      if (generation !== reminderGeneration.current || attemptId !== session.actions.persistedAttemptId()) return;
+      if (response.status === "scheduled") setReminderMessage("Повтор запланирован на месяц после этой диагностики.");
+      else if (response.status === "sent") setReminderMessage("Напоминание уже отправлено.");
+      else setReminderMessage("Напоминание недоступно для этой попытки.");
+    }).catch(() => {
+      if (generation === reminderGeneration.current && attemptId === session.actions.persistedAttemptId()) {
+        setReminderMessage("Не удалось запланировать напоминание.");
+      }
+    });
+  };
   const replayAttemptId = session.actions.persistedAttemptId();
   const deliveryAttempt = bootstrap?.results.find((attempt) => attempt.attempt_id === replayAttemptId);
+  const reminderAttemptId = useRef<string | null>(null);
+  useEffect(() => {
+    if (reminderAttemptId.current === replayAttemptId) return;
+    reminderAttemptId.current = replayAttemptId;
+    reminderGeneration.current += 1;
+    setReminderMessage(null);
+  }, [replayAttemptId]);
   const deliveryStateAttemptId = useRef<string | null>(null);
   const [deliveryPollNonce, restartDeliveryPolling] = useState(0);
   useEffect(() => {
@@ -440,7 +486,7 @@ export default function Home() {
             result={result}
             pdfStatus={deliveryStatus ?? deliveryAttempt?.pdf_status ?? null}
             onReview={session.actions.openReview}
-            onForecast={() => setScreen("route")}
+            onForecast={() => { setForecastOrigin("result"); setScreen("forecast"); }}
             onHome={goHome}
             onRetryDelivery={() => {
               if (!replayAttemptId) return;
@@ -491,6 +537,24 @@ export default function Home() {
         onConfirm={confirmDiagnosticExit}
       />
 
+      {screen === "forecast" && result && bootstrap && (
+        result.estimate && result.estimate.sample_size >= 10
+          ? <ForecastScreen
+              points={forecastTrajectory(result)}
+              kind={forecastKind(result)}
+              offers={bootstrap.school.links.offers}
+              onBack={() => setScreen(forecastOrigin)}
+              onRoute={() => setScreen("plan")}
+            />
+          : <ForecastEmptyScreen
+              completedCount={result.estimate?.sample_size}
+              minimumSampleSize={10}
+              onBack={() => setScreen(forecastOrigin)}
+              onStart={startFullDiagnostic}
+              onPlan={() => setScreen("plan")}
+            />
+      )}
+
       {screen === "review" && result && (
         <ReviewScreen
           error={reviewError}
@@ -503,7 +567,7 @@ export default function Home() {
           loading={!review && !reviewError}
           onHome={goHome}
           onBack={session.actions.reviewBack}
-          onForecast={() => setScreen("route")}
+          onForecast={() => { setForecastOrigin("review"); setScreen("forecast"); }}
           onNext={session.actions.reviewNext}
           onSelectQuestion={(questionId) => session.actions.openReview(questionId)}
           onList={session.actions.reviewList}
@@ -514,12 +578,16 @@ export default function Home() {
         />
       )}
 
-      {screen === "route" && result && bootstrap && (
+      {screen === "plan" && result && bootstrap && (
         <RouteScreen
           items={routeItems}
           offers={bootstrap.school.links.offers}
           onRepeat={bootstrap.diagnostics.some((item) => item.id === result.diagnostic_id) ? repeatDiagnostic : undefined}
           onSubjects={() => setScreen("subjects")}
+          onAction={handleRouteAction}
+          reminderMessage={reminderMessage}
+          onHome={goHome}
+          xpReward={result.xp_earned}
         />
       )}
       {shouldShowBottomNav(screen) && (

@@ -13,7 +13,7 @@ export type Screen =
   | "result"
   | "review"
   | "forecast"
-  | "route"
+  | "plan"
   | "trainer";
 
 export type DiagnosticMode = "quick" | "full";
@@ -218,6 +218,8 @@ export type ServerResult = {
   max_score: number;
   score_unit: string;
   unassessed_part?: string | null;
+  /** Server-owned completion reward. Legacy snapshots may omit it. */
+  xp_earned?: number;
   strong_topics: Array<ServerTopic | string>;
   growth_topics: Array<ServerTopic | string>;
   recoverable_primary_score?: number;

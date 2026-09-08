@@ -11,11 +11,10 @@ export type TopicRecommendation = {
   topics: string[];
 };
 
-export type PersonalRouteAction = {
-  id: "close-topic" | "strengthen-topic" | "recheck";
-  title: string;
-  description: string;
-};
+export type PersonalRouteAction =
+  | { id: string; kind: "review"; topic: string; questionId: string; title: string; description: string }
+  | { id: string; kind: "mistakes"; topic: string; title: string; description: string }
+  | { id: "recheck"; kind: "retest-reminder"; title: string; description: string };
 
 export type ResultGameAchievement = {
   id: "first_step" | "steady_base" | "topic_scout";
@@ -158,27 +157,51 @@ export function topicRecommendation(growthTopics: GrowthTopic[]): TopicRecommend
   return { heading: supported ? "Тема для повторения" : "Стоит повторить", topics };
 }
 
-export function personalRoute(growthTopics: GrowthTopic[]): PersonalRouteAction[] {
-  const topicActions = growthTopics
+export function personalRoute(result: Pick<ServerResult, "growth_topics" | "per_question"> | GrowthTopic[]): PersonalRouteAction[] {
+  const growthTopics = Array.isArray(result) ? result : result.growth_topics;
+  const nonCorrect = Array.isArray(result)
+    ? []
+    : (result.per_question ?? []).filter((item) => !item.is_correct && item.status === "incorrect");
+  const topics = growthTopics
     .map(topicName)
     .filter((topic): topic is string => topic !== null)
     .filter((topic) => !/^Задание\s+\d+$/iu.test(topic))
     .filter((topic, index, topics) => topics.indexOf(topic) === index)
-    .slice(0, 2)
-    .map((topic, index) => index === 0
-      ? {
-        id: "close-topic" as const,
-        title: `Разобрать «${topic}»`,
+    .slice(0, 2);
+  if (!Array.isArray(result)) {
+    for (const item of nonCorrect) {
+      if (!/^Задание\s+\d+$/iu.test(item.topic) && !topics.includes(item.topic)) topics.push(item.topic);
+    }
+  }
+  const topicActions: PersonalRouteAction[] = [];
+  if (!Array.isArray(result)) {
+    const question = nonCorrect.find((item) => topics.includes(item.topic));
+    if (question) {
+      topicActions.push({
+        id: `review-${question.question_id}`,
+        kind: "review",
+        topic: question.topic,
+        questionId: question.question_id,
+        title: `Разобрать «${question.topic}»`,
         description: "Посмотри разбор ответа и повтори это задание.",
-      }
-      : {
-        id: "strengthen-topic" as const,
-        title: `Повторить «${topic}»`,
-        description: "Проверь решение и попробуй ответить самостоятельно.",
       });
+    }
+  }
+  topics.forEach((topic) => {
+    if (topicActions.length >= 2) return;
+    if (!Array.isArray(result) && !nonCorrect.some((item) => item.topic === topic)) return;
+    topicActions.push({
+      id: `mistakes-${topic}`,
+      kind: "mistakes",
+      topic,
+      title: topicActions.length === 0 ? `Разобрать «${topic}»` : `Повторить «${topic}»`,
+      description: "Проверь решение и попробуй ответить самостоятельно.",
+    });
+  });
 
   const recheck: PersonalRouteAction = {
     id: "recheck",
+    kind: "retest-reminder",
     title: "Проверить рост",
     description: "Повтори диагностику через месяц и сравни результат.",
   };
