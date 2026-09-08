@@ -412,11 +412,35 @@ under plain numeric tasks, and a numeric key must never be validated by length.
 ## Short free text
 
 The `text` type accepts a short written answer such as a conjunction or a single
-term. `correct` holds 1–20 accepted variants and `max_length` (a strict integer from
-1 through 200, default `80`) is the only public field of the type: it tells the Mini
-App how long the answer field may be. Every variant is 1–`max_length` characters,
+term. `correct` holds 1–20 accepted variants and remains server-only. `max_length`
+(a strict integer from 1 through 200, default `80`) tells the Mini App how long the
+answer field may be. Every variant is 1–`max_length` characters,
 must not be blank or control-bearing, and must render with the bundled fonts.
 Two variants that normalize to the same string are a duplicate and rejected.
+
+Short word-answer tasks, including word-formation and fixed multi-word tasks, may add
+the optional public metadata fields below:
+
+```json
+{
+  "answer_format": "word",
+  "lang": "en"
+}
+```
+
+`answer_format` is `word` for one word or `words` for a fixed multi-word answer.
+`lang` is `ru` or `en` and only changes answer-field guidance and input behavior.
+These fields do not alter exact normalized equality. Internal spaces and combining
+acute accents remain significant. Editor-approved extra spellings are stored in
+`authoring/answer-variants.json` and are applied to the server-only `correct` tuple.
+
+Stress display is optional metadata on an option. Its `stress` value must be the
+same word as `label` with exactly one U+0301 combining acute. It is display-only and
+must never encode correctness.
+
+The migrated Russian EGE stress task keeps this metadata in the catalog artifact.
+The importer also accepts an inline `Ответ: 3` marker in the options section of the
+tracked authoring DOCX and regenerates the five display-only stress options from it.
 
 Both sides of the comparison pass through the same normalization before they are
 compared:
@@ -426,8 +450,8 @@ compared:
 3. Lowercased.
 4. `ё` folded to `е`.
 5. Runs of internal whitespace collapsed to a single space.
-6. Trailing `.`, `,`, `;`, `!`, and `?` dropped.
-7. `–` and `—` unified to `-`.
+6. Leading and trailing sentence punctuation and quotation marks are dropped.
+7. `–` and `—` unified to `-`; apostrophe variants are unified as well.
 
 So `"  ОДНАКО.  "`, `"Однако"`, and `"однако"` all match a stored `"однако"`, and
 `"всё-таки"`, `"ВСЁ–ТАКИ!"`, and `"все—таки"` all match one another. Word order and

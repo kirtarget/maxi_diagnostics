@@ -22,6 +22,8 @@ export type QuestionType = "single" | "multiple" | "matching" | "input" | "text"
 export type QuestionOption = {
   id: string;
   label: string;
+  /** Optional display-only stress form. It never carries answer correctness. */
+  stress?: string;
 };
 
 export type QuestionSourceAttribution = {
@@ -82,6 +84,8 @@ export type InputQuestion = BaseQuestion & {
 export type TextQuestion = BaseQuestion & {
   type: "text";
   max_length?: number;
+  answer_format?: "word" | "words";
+  lang?: "ru" | "en";
 };
 
 export type Question =

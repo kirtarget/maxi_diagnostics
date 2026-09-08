@@ -50,6 +50,9 @@ def format_answer(question: Question, answer: Any) -> str:
         return "Не отвечено"
     options = {option.id: option.label for option in getattr(question, "options", ())}
     if isinstance(question, SingleQuestion):
+        option = next((option for option in question.options if option.id == answer), None)
+        if option is not None and option.stress:
+            return f"{option.label} · ударение: {option.stress}"
         return options.get(str(answer), str(answer))
     if isinstance(question, MultipleQuestion):
         values = answer if isinstance(answer, (list, tuple, set, frozenset)) else []
@@ -158,11 +161,11 @@ def build_review_snapshot(
                 "assets": list(assets) if assets else None,
                 "asset_alt": getattr(question, "asset_alt", None),
                 "options": [
-                    option.model_dump(mode="json")
+                    option.model_dump(mode="json", exclude_none=True)
                     for option in getattr(question, "options", ())
                 ],
                 "items": [
-                    item.model_dump(mode="json")
+                    item.model_dump(mode="json", exclude_none=True)
                     for item in getattr(question, "items", ())
                 ],
                 "is_correct": is_correct,

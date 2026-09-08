@@ -61,13 +61,19 @@ export function normalizeNumericInput(value: string): string {
   return value.replace(/−/gu, "-");
 }
 
-const CONTROL_MAX = 0x1f;
-const DELETE_CODE = 0x7f;
-const CONTROL_HIGH_MAX = 0x9f;
+const CONTROL_CHARACTER = /\p{Cc}|\p{Cf}|\p{Cs}|\p{Co}|\p{Cn}/u;
+const EDGE_PUNCTUATION = /^[.,;!?:«»"“”„‘’'`]+|[.,;!?:«»"“”„‘’'`]+$/gu;
 
-function isControlCharacter(character: string): boolean {
-  const code = character.codePointAt(0) ?? 0;
-  return code <= CONTROL_MAX || (code >= DELETE_CODE && code <= CONTROL_HIGH_MAX);
+export function normalizeTextInput(value: string): string {
+  return value.normalize("NFC")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/gu, " ")
+    .replace(EDGE_PUNCTUATION, "")
+    .trim()
+    .replace(/[ё]/gu, "е")
+    .replace(/[–—]/gu, "-")
+    .replace(/[’ʼ`]/gu, "'");
 }
 
 export const DEFAULT_TEXT_ANSWER_LENGTH = 80;
@@ -76,9 +82,9 @@ export const DEFAULT_TEXT_ANSWER_LENGTH = 80;
 export function isValidTextInput(
   value: unknown, maxLength: number = DEFAULT_TEXT_ANSWER_LENGTH,
 ): value is string {
-  if (typeof value !== "string" || value.length < 1 || value.length > maxLength) return false;
-  if ([...value].some(isControlCharacter)) return false;
-  return value.trim().replace(/[.,;!?]+$/u, "").trim().length > 0;
+  if (typeof value !== "string" || [...value].length < 1 || [...value].length > maxLength) return false;
+  if ([...value].some((character) => CONTROL_CHARACTER.test(character))) return false;
+  return normalizeTextInput(value).length > 0;
 }
 
 export function updateMatchingAnswer(

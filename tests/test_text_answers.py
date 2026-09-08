@@ -3,7 +3,7 @@ import unicodedata
 import pytest
 from pydantic import ValidationError
 
-from diagnostic.catalog import TextQuestion, is_valid_answer_shape
+from diagnostic.catalog import MatchingQuestion, SingleQuestion, TextQuestion, is_valid_answer_shape
 from diagnostic.scoring import is_answer_correct
 from diagnostic.text_answers import is_valid_text_answer, normalize_text_answer
 
@@ -102,6 +102,73 @@ def test_yo_and_dash_variants_score_as_the_stored_answer():
 
     assert is_answer_correct(question, "все—таки") is True
     assert is_answer_correct(question, "ВСЁ–ТАКИ!") is True
+
+    assert is_answer_correct(
+        text_question(correct=["давным-давно"]), "ДАВНЫМ—ДАВНО"
+    ) is True
+
+
+def test_explicit_word_metadata_keeps_q14_spaced_variant_and_acute_significant():
+    question = text_question(
+        answer_format="words",
+        lang="ru",
+        correct=["вскорепотому", "вскоре потому"],
+    )
+
+    assert is_answer_correct(question, "ВСКОРЕ ПОТОМУ") is True
+    assert is_answer_correct(question, "электропрово\u0301д") is False
+
+
+def test_word_metadata_requires_format_and_language_together():
+    with pytest.raises(ValidationError):
+        text_question(answer_format="word")
+    with pytest.raises(ValidationError):
+        text_question(lang="ru")
+
+
+def test_stress_display_matches_label_and_has_one_combining_acute():
+    from diagnostic.catalog import QuestionOption
+
+    option = QuestionOption(
+        id="a", label="электропровод", stress="электропрово\u0301д"
+    )
+    assert option.stress.count("\u0301") == 1
+    with pytest.raises(ValidationError):
+        QuestionOption(id="a", label="электропровод", stress="другое\u0301")
+    with pytest.raises(ValidationError):
+        QuestionOption(id="a", label="электропровод", stress="электропрово\u0301\u0301д")
+    with pytest.raises(ValidationError, match="stress_must_follow_cyrillic_vowel"):
+        QuestionOption(id="a", label="электропровод", stress="электропровд\u0301")
+
+
+def test_public_single_question_rejects_partial_stress_that_could_reveal_the_key():
+    with pytest.raises(ValidationError, match="partial_stress_metadata"):
+        SingleQuestion.model_validate({
+            "id": "q-stress",
+            "type": "single",
+            "topic": "Ударение",
+            "title": "Задание 4",
+            "prompt": "Выпишите слово.",
+            "options": [
+                {"id": "a", "label": "партер", "stress": "парте\u0301р"},
+                {"id": "b", "label": "позвонит"},
+            ],
+            "correct": "a",
+        })
+
+
+def test_matching_questions_forbid_unsupported_stress_metadata():
+    with pytest.raises(ValidationError, match="unsupported_stress_metadata"):
+        MatchingQuestion.model_validate({
+            "id": "q-matching-stress",
+            "type": "matching",
+            "topic": "Ударение",
+            "title": "Задание 4",
+            "prompt": "Установите соответствие.",
+            "items": [{"id": "i1", "label": "А"}],
+            "options": [{"id": "o1", "label": "партер", "stress": "парте\u0301р"}],
+            "correct": {"i1": "o1"},
+        })
 
 
 @pytest.mark.parametrize(

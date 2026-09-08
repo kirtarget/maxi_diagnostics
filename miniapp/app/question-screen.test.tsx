@@ -379,6 +379,37 @@ describe("QuestionView", () => {
     expect(instructionIndex).toBeLessThan(answerIndex);
   });
 
+  it("keeps the real Russian EGE q14 instruction and word guidance in one hint", () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        question={{
+          id: "sp-russian-language-ege-2022-q14",
+          type: "text",
+          topic: "Задание 14",
+          title: "Задание 14",
+          prompt: "Определите предложение, в котором оба выделенных слова пишутся СЛИТНО. Раскройте скобки и выпишите эти два слова.\n1) Бабушка уже (ДАВНЫМ)ДАВНО привыкла вставать рано.",
+          answer_format: "words",
+          lang: "ru",
+          max_length: 80,
+        }}
+        subject="Русский язык"
+        index={0}
+        total={1}
+        answer=""
+        labels={{ answer_label: "Ваш ответ", enter_answer: "Введите ответ" } as unknown as Brand["interface"]}
+        onAnswer={() => undefined}
+        onBack={() => undefined}
+        onNext={() => undefined}
+      />,
+    );
+    expect((html.match(/class="question-instruction"/g) ?? []).length).toBe(1);
+    expect(html).toContain("выпишите эти два слова");
+    expect(html).toContain("Введи два слова");
+    expect(html).toContain("Регистр не важен");
+    expect(html).toContain("ё = е");
+    expect(html).not.toContain("Введите только ответ");
+  });
+
   it("places an illustration directly after the task stem", () => {
     const html = renderToStaticMarkup(
       <QuestionView

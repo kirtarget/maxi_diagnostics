@@ -15,13 +15,14 @@ const INSTRUCTION_PATTERN = /^(?:ответ(?:ы|ом)?(?:\s+(?:запишите
 const LETTER_PATTERN = /\p{Lu}/gu;
 const HEADING_OPERATOR_PATTERN = /[\p{Ll}\p{Nd}+\-−×÷*/=≤≥<>⇄→√^·∙:≠_]/u;
 const STEM_PATTERN = /^(?:какой|какая|какие|каково|каким|какую|сколько|чему|что|почему|зачем|где|когда|как|установите|определите|выберите|найдите|решите|сопоставьте|назовите|укажите|расставьте|отредактируйте|выпишите|запишите|среди|в\s+тексте|из\s+предложенного)(?:\s|$)/iu;
+const WORDS_INSTRUCTION_PATTERN = /^раскройте\s+скобки\s+и\s+выпишите\s+(?:это\s+слово|эти\s+два\s+слова)(?:\.|$)/iu;
 
 type StemMatch = { lineIndex: number; start: number; text: string };
 
 function splitTrailingInstruction(line: string): string[] {
   const sentences = splitPromptSentences(line);
   const instruction = sentences.at(-1);
-  if (!instruction || !INSTRUCTION_PATTERN.test(instruction)) return [line];
+  if (!instruction || (!INSTRUCTION_PATTERN.test(instruction) && !WORDS_INSTRUCTION_PATTERN.test(instruction))) return [line];
   const instructionStart = line.lastIndexOf(instruction);
   if (instructionStart <= 0) return [line];
   return [line.slice(0, instructionStart).trim(), instruction].filter(Boolean);
@@ -32,9 +33,10 @@ function findStem(lines: string[]): StemMatch | null {
   const actions: StemMatch[] = [];
   lines.forEach((line, lineIndex) => {
     if (/^(?:[А-ЯЁA-Z]|\d{1,2})[.)]\s/u.test(line)) return;
+    if (/^[—–-]\s*/u.test(line)) return;
     for (const sentence of splitPromptSentences(line)) {
       const start = line.indexOf(sentence);
-      if (start < 0 || INSTRUCTION_PATTERN.test(sentence)) continue;
+      if (start < 0 || /^[—–-]\s*/u.test(sentence) || INSTRUCTION_PATTERN.test(sentence) || WORDS_INSTRUCTION_PATTERN.test(sentence)) continue;
       const citation = /^\([^)]{1,200}\)\s*/u.exec(sentence)?.[0] ?? "";
       const candidateStart = start + citation.length;
       const candidateText = sentence.slice(citation.length);
@@ -170,7 +172,7 @@ export function parseQuestionPrompt(prompt: string): PromptBlock[] {
       blocks.push({ kind: "item", marker: item[1], text: item[2] });
       continue;
     }
-    if (INSTRUCTION_PATTERN.test(line)) {
+    if (INSTRUCTION_PATTERN.test(line) || WORDS_INSTRUCTION_PATTERN.test(line)) {
       blocks.push({ kind: "instruction", text: line });
       continue;
     }
@@ -188,7 +190,11 @@ export function answerTypeLabel(question: Question): string {
   if (question.type === "single") return "один ответ";
   if (question.type === "multiple") return "несколько ответов";
   if (question.type === "matching") return "сопоставление";
-  if (question.type === "text") return "короткий ответ словом";
+  if (question.type === "text") {
+    return question.answer_format === "words"
+      ? "короткий ответ двумя словами"
+      : "короткий ответ словом";
+  }
   if (question.type === "input" && parseTableGapPrompt(question.prompt, question)) return "таблица с пропусками";
   if (question.type === "input" && parseSequenceMatchingPrompt(question.prompt, question)) return "сопоставление";
   return "короткий ответ";

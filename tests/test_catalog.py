@@ -10,14 +10,50 @@ from diagnostic.catalog import (
     DiagnosticCatalog,
     InputQuestion,
     MatchingQuestion,
+    public_question,
+    SingleQuestion,
+    TextQuestion,
     is_skipped_answer,
     is_valid_answer_shape,
     load_catalog,
 )
 from diagnostic.school import load_school
+from diagnostic.scoring import is_answer_correct
 
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_SCHOOL = ROOT / "tests/fixtures/sample-school"
+SCHOOL_ROOT = ROOT / "school"
+
+
+def test_real_word_metadata_and_stress_are_public_without_correct_answers():
+    catalog = load_catalog(load_school(SCHOOL_ROOT))
+    russian = next(
+        question for diagnostic in catalog.diagnostics
+        for question in diagnostic.questions
+        if question.id == "sp-russian-language-ege-2022-q14"
+    )
+    english = next(
+        question for diagnostic in catalog.diagnostics
+        for question in diagnostic.questions
+        if question.id == "sp-english-language-ege-2022-q10"
+    )
+    stress = next(
+        question for diagnostic in catalog.diagnostics
+        for question in diagnostic.questions
+        if question.id == "sp-russian-language-ege-2022-q4"
+    )
+
+    assert isinstance(russian, TextQuestion)
+    assert (russian.answer_format, russian.lang) == ("words", "ru")
+    assert is_answer_correct(russian, "ВСКОРЕ ПОТОМУ") is True
+    assert isinstance(english, TextQuestion)
+    assert (english.answer_format, english.lang) == ("word", "en")
+    assert isinstance(stress, SingleQuestion)
+    assert stress.options[2].label == "электропровод"
+    assert stress.options[2].stress == "электропрово\u0301д"
+    public = public_question(stress)
+    assert "correct" not in public
+    assert public["options"][2]["stress"] == "электропрово\u0301д"
 
 
 def test_canonical_skipped_answers_are_recognized_for_every_question_type():
