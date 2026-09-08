@@ -143,7 +143,7 @@ describe("MatchingAnswer", () => {
     expect(onChange).toHaveBeenLastCalledWith("7");
   });
 
-  it("keeps local holes until the prefix is valid and clear preserves later choices visually", async () => {
+  it("keeps sequence activation sequential and clears the whole sequence", async () => {
     const model: MatchingModel = {
       ...mapModel,
       source: "sequence",
@@ -159,28 +159,61 @@ describe("MatchingAnswer", () => {
     };
     const onChange = vi.fn();
     await act(async () => root.render(<MatchingAnswer model={model} value="" onChange={onChange} />));
-    const rows = [...container.querySelectorAll<HTMLElement>(".matching-answer-row")];
-    const option = (row: HTMLElement, key: string) => row.querySelector<HTMLButtonElement>(`button[data-option-key="${key}"]`)!;
-    await act(async () => option(rows[1], "2").click());
-    expect(onChange).toHaveBeenLastCalledWith("");
-    await act(async () => option(rows[0], "1").click());
+    const cells = [...container.querySelectorAll<HTMLButtonElement>(".sequence-answer-cell")];
+    const option = (key: string) => container.querySelector<HTMLButtonElement>(`button[data-option-key="${key}"]`)!;
+    expect(cells[0].getAttribute("aria-label")).toContain("Первый пункт");
+    expect(cells[1].disabled).toBe(true);
+    expect(cells[2].disabled).toBe(true);
+    await act(async () => cells[0].click());
+    await act(async () => option("1").click());
+    expect(onChange).toHaveBeenLastCalledWith("1");
+    const updatedCells = [...container.querySelectorAll<HTMLButtonElement>(".sequence-answer-cell")];
+    expect(updatedCells[2].disabled).toBe(true);
+    await act(async () => updatedCells[1].click());
+    await act(async () => option("2").click());
     expect(onChange).toHaveBeenLastCalledWith("12");
-    await act(async () => rows[0].querySelector<HTMLButtonElement>(".matching-answer-clear")?.click());
+    expect(updatedCells[1].textContent).toContain("2");
+    await act(async () => container.querySelector<HTMLButtonElement>(".sequence-answer-clear")?.click());
     expect(onChange).toHaveBeenLastCalledWith("");
-    expect(option(rows[1], "2").classList.contains("selected")).toBe(true);
-    expect(option(rows[0], "1").classList.contains("selected")).toBe(false);
+    expect(cells[1].textContent).toContain("—");
+    expect(cells[0].textContent).toContain("—");
   });
 
   it("closes the sheet with Escape and restores focus to its trigger", async () => {
     const onChange = vi.fn();
     await act(async () => root.render(<MatchingAnswer model={longSequenceModel} value="" onChange={onChange} />));
-    const trigger = container.querySelector<HTMLButtonElement>(".matching-answer-trigger")!;
+    const trigger = container.querySelector<HTMLButtonElement>(".sequence-answer-sheet-trigger")!;
     trigger.focus();
+    expect(trigger.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
     await act(async () => trigger.click());
     expect(container.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    const dialog = container.querySelector<HTMLElement>('[role="dialog"]')!;
+    const dialogControls = [...dialog.querySelectorAll<HTMLButtonElement>("button")];
+    dialogControls.at(-1)?.focus();
+    await act(async () => dialogControls.at(-1)?.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true })));
+    expect(document.activeElement).toBe(dialogControls[0]);
+    dialogControls[0].focus();
+    await act(async () => dialogControls[0].dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true })));
+    expect(document.activeElement).toBe(dialogControls.at(-1));
     await act(async () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
     expect(container.querySelector('[role="dialog"]')).toBeNull();
     expect(document.activeElement).toBe(trigger);
+  });
+
+  it("switches between sequence and map renderers without changing hook order", async () => {
+    const sequenceModel: MatchingModel = {
+      ...mapModel,
+      source: "sequence",
+      options: mapModel.options.map((option) => ({ ...option, key: option.marker })),
+    };
+    await act(async () => root.render(<MatchingAnswer model={sequenceModel} value="" onChange={vi.fn()} />));
+    expect(container.querySelector(".matching-answer-sequence")).not.toBeNull();
+    await act(async () => root.render(<MatchingAnswer model={mapModel} value={{}} onChange={vi.fn()} />));
+    expect(container.querySelector(".matching-answer-matching")).not.toBeNull();
+    await act(async () => root.render(<MatchingAnswer model={sequenceModel} value="" onChange={vi.fn()} />));
+    expect(container.querySelector(".matching-answer-sequence")).not.toBeNull();
   });
 
   it("disables chips and sheet triggers in feedback mode", async () => {
@@ -229,6 +262,30 @@ describe("MatchingAnswer", () => {
     expect(preview).toContain(">2<");
     expect(preview).toContain(">1<");
     expect(preview).toContain(">5<");
+  });
+
+  it("keeps real sequence option labels visible and tappable", async () => {
+    const chemistry = catalogQuestion("sp-chemistry-oge-2022-q3");
+    const sequence = parseSequenceMatchingPrompt(chemistry.prompt as string, chemistry as never)!;
+    const onChange = vi.fn();
+    await act(async () => root.render(
+      <MatchingAnswer model={matchingModelFromSequence(sequence)} value="" onChange={onChange} />,
+    ));
+    expect(container.textContent).toContain("Калий");
+    const potassium = container.querySelector<HTMLButtonElement>('button[data-option-key="1"]');
+    expect(potassium?.textContent).toContain("Калий");
+    expect(container.querySelector<HTMLButtonElement>('[data-sequence-cell="1"]')?.getAttribute("aria-label")).toContain("Позиция 1");
+    await act(async () => potassium?.click());
+    expect(onChange).toHaveBeenLastCalledWith("1");
+
+    const physics = catalogQuestion("sp-physics-oge-2022-q4");
+    const physicsSequence = parseSequenceMatchingPrompt(physics.prompt as string, physics as never)!;
+    await act(async () => root.render(
+      <MatchingAnswer model={matchingModelFromSequence(physicsSequence)} value="" onChange={vi.fn()} />,
+    ));
+    const electric = container.querySelector<HTMLButtonElement>('button[data-option-key="6"]');
+    expect(electric?.textContent).toContain("Электрический");
+    expect(electric?.getAttribute("aria-label")).toContain("Электрический");
   });
 
   it("keeps Cyrillic markers for Russian matching content", () => {

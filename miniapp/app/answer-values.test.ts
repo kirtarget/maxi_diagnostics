@@ -32,6 +32,9 @@ describe("shared answer value helpers", () => {
 
   it("validates bounded numeric drafts consistently", () => {
     expect(isValidNumericInput("-1.5")).toBe(true);
+    expect(isValidNumericInput("−3")).toBe(true);
+    expect(isValidNumericInput("7,5")).toBe(true);
+    expect(isValidNumericInput("7.5")).toBe(true);
     expect(isValidNumericInput("1e999")).toBe(true);
     expect(isValidNumericInput("1e1000")).toBe(false);
     expect(isValidNumericInput(" 42")).toBe(false);
@@ -60,6 +63,7 @@ describe("shared answer value helpers", () => {
 
   it("stores only complete valid numeric answers", () => {
     expect(updateNumericInputAnswer({ q1: "7" }, "q2", "-2,5")).toEqual({ q1: "7", q2: "-2,5" });
+    expect(updateNumericInputAnswer({ q1: "7" }, "q2", "−3")).toEqual({ q1: "7", q2: "-3" });
     expect(updateNumericInputAnswer({ q1: "7", q2: "4" }, "q2", "-")).toEqual({ q1: "7" });
   });
 

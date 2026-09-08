@@ -1,7 +1,7 @@
 import { FormattedMathText } from "./math-display";
 import { answerInputConfig } from "./math-text";
 import { cleanAnswerLabel } from "./question-prompt";
-import { DEFAULT_TEXT_ANSWER_LENGTH } from "./answer-values";
+import { DEFAULT_TEXT_ANSWER_LENGTH, normalizeNumericInput } from "./answer-values";
 import { AnswerPreview, MatchingAnswer, matchingModelFromQuestion } from "./matching-answer";
 import type {
   AnswerValue,
@@ -147,11 +147,11 @@ function InputEditor({ question, value, disabled, suppressAutoHint, label, place
   placeholder: string;
   onChange: (value: AnswerValue) => void;
 }) {
-  const config = question.answer_format === "number"
+  const config = question.answer_format !== "sequence"
     ? {
       ...answerInputConfig(question.prompt),
       inputMode: "decimal" as const,
-      hint: "Используйте цифры и знак минус, если он нужен.",
+      hint: "Введи число. Можно использовать знак «−», запятую или точку.",
     }
     : answerInputConfig(question.prompt);
   return (
@@ -168,9 +168,10 @@ function InputEditor({ question, value, disabled, suppressAutoHint, label, place
           maxLength={64}
           spellCheck={false}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => onChange(normalizeNumericInput(event.target.value))}
           placeholder={placeholder}
         />
+        {question.answer_unit && <span className="answer-unit">{question.answer_unit}</span>}
         {value && <button type="button" disabled={disabled} onClick={() => onChange("")}>Очистить</button>}
       </span>
       {!suppressAutoHint && <small>{config.hint}</small>}

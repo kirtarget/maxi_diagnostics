@@ -88,7 +88,14 @@
       "correct": [
         "132"
       ],
-      "answer_format": "number",
+      "answer_format": "sequence",
+      "answer_length": 3,
+      "allow_reuse": false,
+      "markers": [
+        "1",
+        "2",
+        "3"
+      ],
       "explanation": "Металлические свойства ослабевают в периоде слева направо, в группе снизу вверх.\nВ данном случае: калий, литий, алюминий.",
       "source": {
         "provider": "maximum_editorial",

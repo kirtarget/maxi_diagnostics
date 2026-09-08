@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from diagnostic.catalog import load_catalog
+from diagnostic.catalog import InputQuestion, load_catalog
 from diagnostic.school import SCORE_SCALES_ADAPTER, load_school
 from diagnostic.scoring import is_answer_correct, score_answers
 
@@ -116,6 +116,26 @@ def test_server_treats_unsubmitable_numeric_grammar_as_incorrect(answer: str):
     result = score_answers(sample_catalog(), "demo-math", "full", {"q4": answer})
 
     assert result.correct_count == 0
+
+
+@pytest.mark.parametrize("answer", ["42,0", "42.0"])
+def test_server_normalizes_decimal_separators(answer: str):
+    result = score_answers(sample_catalog(), "demo-math", "full", {"q4": answer})
+
+    assert result.correct_count == 1
+
+
+def test_server_normalizes_unicode_minus_for_negative_answers():
+    question = InputQuestion.model_validate({
+        "id": "negative-input",
+        "type": "input",
+        "topic": "Числа",
+        "title": "Задание 1",
+        "prompt": "Введите число.",
+        "correct": ["-3"],
+    })
+
+    assert is_answer_correct(question, "−3")
 
 
 def test_score_result_is_immutable_and_exposes_ranked_topics():
