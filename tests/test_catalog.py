@@ -546,6 +546,63 @@ def test_approved_sequence_rejects_mixed_marker_scripts():
         InputQuestion.model_validate(data)
 
 
+def _matching_with_drawn_items() -> dict:
+    """A matching task whose two positions are drawn, not written."""
+    return sample_diagnostic_data()["questions"][2] | {
+        "items": [
+            {"id": "a", "label": "", "asset": "assets/questions/demo-1.png"},
+            {"id": "b", "label": "", "asset": "assets/questions/demo-2.png"},
+        ],
+        "correct": {"a": "2", "b": "1"},
+    }
+
+
+def test_a_matching_position_may_be_a_figure_instead_of_a_label():
+    question = MatchingQuestion.model_validate(_matching_with_drawn_items())
+
+    assert [item.asset for item in question.items] == [
+        "assets/questions/demo-1.png",
+        "assets/questions/demo-2.png",
+    ]
+    assert [item.label for item in question.items] == ["", ""]
+
+
+def test_two_drawn_positions_may_share_neither_figure():
+    data = _matching_with_drawn_items()
+    data["items"][1]["asset"] = data["items"][0]["asset"]
+
+    with pytest.raises(ValueError, match="duplicate_option_asset"):
+        MatchingQuestion.model_validate(data)
+
+
+def test_a_position_without_a_label_needs_a_figure():
+    data = _matching_with_drawn_items()
+    del data["items"][0]["asset"]
+
+    with pytest.raises(ValueError, match="blank_option_label"):
+        MatchingQuestion.model_validate(data)
+
+
+def test_a_drawn_position_keeps_its_figure_for_the_mini_app():
+    question = MatchingQuestion.model_validate(_matching_with_drawn_items())
+
+    payload = public_question(question)
+
+    assert [item["asset"] for item in payload["items"]] == [
+        "assets/questions/demo-1.png",
+        "assets/questions/demo-2.png",
+    ]
+
+
+def test_a_drawn_position_counts_as_a_question_asset():
+    question = MatchingQuestion.model_validate(_matching_with_drawn_items())
+
+    assert set(question.asset_paths) >= {
+        "assets/questions/demo-1.png",
+        "assets/questions/demo-2.png",
+    }
+
+
 def test_approved_matching_rejects_placeholder_marker():
     data = sample_diagnostic_data()["questions"][2] | {
         "source": _approved_source(),
