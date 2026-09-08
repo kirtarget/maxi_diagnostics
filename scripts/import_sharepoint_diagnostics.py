@@ -1026,11 +1026,31 @@ def _numbered_table_choices(task: SourceTask) -> list[tuple[str, str]]:
     return []
 
 
+def _numbered_task_options(task: SourceTask) -> list[tuple[str, str]]:
+    """Read a numbered ordering list stored as ordinary task options."""
+    choices: list[tuple[str, str]] = []
+    for option in task.options:
+        match = TABLE_NUMBERED_CHOICE.fullmatch(clean_line(option))
+        if match is None or len(match.group("number")) != 1:
+            return []
+        choices.append((match.group("number"), clean_line(match.group("label"))))
+    numbers = [int(marker) for marker, _ in choices]
+    if numbers != list(range(1, len(numbers) + 1)) or any(
+        not label for _, label in choices
+    ):
+        return []
+    return choices
+
+
 def _ordering_sequence(task: SourceTask, key: str) -> InputAnswerSpec | None:
     """Recognize an ordinary ordering key only with source structure to prove it."""
     if not ORDERING_LANGUAGE.search("\n".join(task.prompt_blocks)) or len(key) < 2:
         return None
-    choices = _numbered_prompt_choices(task) or _numbered_table_choices(task)
+    choices = (
+        _numbered_prompt_choices(task)
+        or _numbered_table_choices(task)
+        or _numbered_task_options(task)
+    )
     if len(choices) < 2:
         return None
     option_markers = {marker for marker, _ in choices}
