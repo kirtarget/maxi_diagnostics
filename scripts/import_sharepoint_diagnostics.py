@@ -490,6 +490,14 @@ FILENAME = re.compile(
     r"_.*Заданий\s*(?P<tasks>\d+)$"
 )
 TASK_HEADING = re.compile(r"^Задание\s*(\d+)\.?$")
+# The header of the authoring format described in docs/AUTHORING_TEMPLATE.md.
+# This converter reads the editorial documents that format replaces, so the
+# fields are named here only to refuse such a document. authoring_document.py
+# reads them back as its own vocabulary, which keeps the list in one place.
+AUTHORING_HEADER_FIELDS = ("Предмет", "Экзамен", "Класс", "Сезон", "Тема")
+AUTHORING_HEADER_LINE = re.compile(
+    rf"^({'|'.join(AUTHORING_HEADER_FIELDS)}):(?:\s+(.*))?$"
+)
 SEASON = re.compile(r"^(?P<start>\d{2})-(?P<end>\d{2})$")
 TOPIC_SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 OPEN_ANSWER = re.compile(r"максимальный балл", re.IGNORECASE)
@@ -828,8 +836,37 @@ def _read_table(table: Table, relationships=None) -> SourceTable:
     return SourceTable(rows=tuple(rows), cells=tuple(cell_rows))
 
 
+def _reject_authoring_template(path: Path, document: Document) -> None:
+    """Refuse a document written in the authoring format instead of misreading it.
+
+    Both formats open their tasks with `Задание N`, so this converter reads an
+    authoring document far enough to reject most of it as `irregular_key` and
+    then replaces the source group with what little survived. The header is the
+    one part the editorial documents never carry, so it is read before anything
+    else and the whole run stops on it.
+    """
+    fields: set[str] = set()
+    for block in _iter_blocks(document):
+        if isinstance(block, Table):
+            continue
+        text = clean_line(_paragraph_text(block))
+        if TASK_HEADING.match(text):
+            break
+        header = AUTHORING_HEADER_LINE.match(text)
+        if header:
+            fields.add(header.group(1))
+    if len(fields) < 2:
+        return
+    raise ImportError(
+        f"{path.name} написан в авторском формате (docs/AUTHORING_TEMPLATE.md), "
+        f"а не в редакционном: шапка объявляет {', '.join(sorted(fields))}. "
+        "Этот конвертер читает исходные документы MAXIMUM."
+    )
+
+
 def parse_document(path: Path) -> tuple[SourceTask, ...]:
     document = Document(str(path))
+    _reject_authoring_template(path, document)
     relationships = document.part.rels
     tasks: list[SourceTask] = []
     current: SourceTask | None = None

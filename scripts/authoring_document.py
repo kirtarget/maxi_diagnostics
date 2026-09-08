@@ -29,6 +29,7 @@ for entry in (REPOSITORY_ROOT, BACKEND_ROOT):
 
 from diagnostic.numeric import is_valid_numeric_answer  # noqa: E402
 from scripts.import_sharepoint_diagnostics import (  # noqa: E402
+    AUTHORING_HEADER_FIELDS,
     EXAM_CODES,
     MAX_TEXT_ANSWER_CHARS,
     SEASON,
@@ -50,7 +51,9 @@ NUMBER = "число"
 SHORT = "короткий ответ"
 KINDS = (SINGLE, MULTIPLE, MATCHING, SEQUENCE, NUMBER, SHORT)
 
-HEADER_FIELDS = ("Предмет", "Экзамен", "Класс", "Сезон", "Тема")
+# The converter names these too, so that it can refuse a document written in
+# this format. One list, read from there.
+HEADER_FIELDS = AUTHORING_HEADER_FIELDS
 TASK_FIELDS = ("Тип", "Тема", "Условие", "Пункты", "Варианты", "Ответ", "Решение")
 SINGLE_LINE_FIELDS = frozenset({"Тип", "Тема"})
 
