@@ -16,7 +16,6 @@ import { LeagueScreen } from "./league-screen";
 import { gameplayProfileView } from "./gameplay-profile-model";
 import brand from "../../school/brand.json";
 import schoolLinks from "../../school/links.json";
-import russianEge2022 from "../../school/diagnostics/ege-russian-language-1213.json";
 import type { Brand, PublicDiagnostic, Question, QuestionSourceAttribution, ServerResult } from "./types";
 
 const OUT_DIR = process.env.DESIGN_PREVIEW_DIR ?? "";
@@ -58,7 +57,11 @@ const diagnostics: PublicDiagnostic[] = [
   { id: "chem", content_version: "v1", exam: "ЕГЭ", subject: "Химия", mark: "Х", quick_count: 10, full_count: 22, question_count: 22, questions: Array.from({ length: 22 }, (_, i) => q(`c${i + 1}`)) },
 ];
 
-const russianQ22 = (russianEge2022 as unknown as PublicDiagnostic).questions.find(
+const russianCatalog = JSON.parse(readFileSync(
+  new URL("../../school/diagnostics/ege-russian-language-1213.json", import.meta.url),
+  "utf8",
+)) as PublicDiagnostic;
+const russianQ22 = russianCatalog.questions.find(
   (question) => question.id === "sp-russian-language-ege-2022-q22",
 );
 if (!russianQ22) throw new Error("Tracked Russian EGE 2022 q22 is missing from the catalog fixture.");
