@@ -510,8 +510,7 @@ FIGURE_WORDS = re.compile(
     re.IGNORECASE,
 )
 TEXTUAL_REACTION_SCHEME = re.compile(
-    r"(?im)^(?![^|\r\n]*(?:рисунк|установк|прибор|показани|используй)\w*)"
-    r"[^|\r\n.!?]*(?:→|↔|⇄)[^|\r\n.!?]*\.?$"
+    r"(?m)^[^|\r\n.!?]*(?:→|↔|⇄)[^|\r\n.!?]*\.?$"
 )
 TEXTUAL_REACTION_INTRO = re.compile(
     r"(?i)^\s*(?:задана|приведена|представлена)\s+следующая\s+"
@@ -1897,7 +1896,11 @@ def _figure_reference_prompt(prompt: str) -> str:
     """Exclude only a self-contained reaction line from figure-word checks."""
     lines = prompt.splitlines()
     for index, line in enumerate(lines):
-        if not TEXTUAL_REACTION_SCHEME.fullmatch(line.strip()):
+        stripped = line.strip()
+        if (
+            not TEXTUAL_REACTION_SCHEME.fullmatch(stripped)
+            or FIGURE_WORDS.search(stripped)
+        ):
             continue
         lines[index] = ""
         if index and TEXTUAL_REACTION_INTRO.fullmatch(lines[index - 1].strip()):

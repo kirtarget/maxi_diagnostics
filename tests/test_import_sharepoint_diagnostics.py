@@ -773,6 +773,31 @@ def test_visual_schema_intro_is_not_erased_by_a_following_arrow_line():
     ]
 
 
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "На графике показан переход A → B.",
+        "На диаграмме отмечен переход A → B.",
+    ],
+)
+def test_visual_graph_or_diagram_with_an_arrow_stays_rejected(prompt: str):
+    task = importer.SourceTask(
+        number=31,
+        prompt_blocks=[prompt, "Ответ дайте с точностью до целых."],
+        answer=["1"],
+    )
+    source = importer.SourceFile(
+        Path("visual-plot.docx"), "ЕГЭ", "chemistry", 2022, 1, (task,)
+    )
+
+    candidates, outcomes = importer.convert_file(source, "2026-09-04")
+
+    assert not candidates
+    assert outcomes == [
+        importer.Outcome(31, "skipped", "input", "missing_figure")
+    ]
+
+
 def test_ordering_prompt_can_read_a_numbered_choice_table():
     table = importer.SourceTable(rows=(
         (("1) Калий",), ("2) Алюминий",)),
