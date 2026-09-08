@@ -29,6 +29,7 @@ _PUBLIC_REVIEW_FIELDS = frozenset(
         "prompt",
         "asset",
         "assets",
+        "asset_alt",
         "is_correct",
         "status",
         "max_primary_score",
@@ -155,6 +156,7 @@ def build_review_snapshot(
                 "prompt": question.prompt,
                 "asset": question.asset,
                 "assets": list(assets) if assets else None,
+                "asset_alt": getattr(question, "asset_alt", None),
                 "options": [
                     option.model_dump(mode="json")
                     for option in getattr(question, "options", ())

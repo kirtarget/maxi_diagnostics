@@ -147,6 +147,18 @@ def test_review_snapshot_freezes_question_options_and_matching_items():
     assert questions[2].items[0].label == "2 + 2"
 
 
+def test_review_snapshot_and_public_review_preserve_optional_asset_alt():
+    catalog = load_catalog(load_school(SAMPLE_SCHOOL))
+    question = catalog.get("demo-math").questions[0].model_copy(
+        update={"asset_alt": "A number line"}
+    )
+    snapshot = build_review_snapshot((question,), {"q1": "2"})
+    assert snapshot[0]["asset_alt"] == "A number line"
+    public = public_review_items({"review_snapshot": snapshot})
+    assert public is not None
+    assert public[0]["asset_alt"] == "A number line"
+
+
 def test_review_snapshot_keeps_a_verified_learning_material_text():
     catalog = load_catalog(load_school(SAMPLE_SCHOOL))
     question = catalog.get("demo-math").questions[0].model_copy(

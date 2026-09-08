@@ -240,6 +240,21 @@ describe("trainer integration contracts", () => {
     expect(html).not.toContain("Задание 1");
   });
 
+  it("uses the shared image viewer for trainer questions", () => {
+    const state = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "biology", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [{ ...question, asset: "assets/questions/q9.png", asset_alt: "Схема растения" }], lives_remaining: 5,
+      },
+    });
+    const html = renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />);
+    expect(html).toContain('class="image-viewer trainer-media"');
+    expect(html).toContain('alt="Схема растения"');
+    expect(html).toContain("Нажми, чтобы увеличить");
+  });
+
   it("renders the school offer only on the completed trainer screen", () => {
     const state: TrainerState = {
       ...trainerInitialState,

@@ -8,6 +8,7 @@ import { PromptTable } from "./prompt-table";
 import { normalizeOffer, OfferSurface, type OfferPlacement, type OfferTelemetryEvent } from "./offer-ux";
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import { parseQuestionPrompt } from "./question-prompt";
+import { ImageViewer } from "./image-viewer";
 import { parseSequenceMatchingPrompt } from "./sequence-matching";
 import { parseTableGapPrompt } from "./table-gap-matching";
 import type { AnswerValue, Question, SchoolLinks } from "./types";
@@ -57,7 +58,10 @@ function QuestionPrompt({ question, subject, reason }: { question: Question; sub
     .filter((block) => block.kind !== "table")
     .map((block) => block.kind === "item" ? `${block.marker}) ${block.text}` : block.text)
     .join("\n");
-  return <div className="trainer-prompt"><div className="trainer-prompt-meta">{reason && <span className="trainer-plan-reason">{reason}</span>}{hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}</div><h1><FormattedStem text={text || "Задание"} subject={subject} /></h1>{blocks.filter((block) => block.kind === "table").map((block, index) => block.kind === "table" ? <PromptTable key={index} headerRows={block.headerRows} rows={block.rows} columns={block.columns} subject={subject} /> : null)}<small>{question.topic}</small></div>;
+  const imageAssets = [question.asset, ...(question.assets ?? [])]
+    .filter((asset): asset is string => Boolean(asset))
+    .map((path) => ({ path, alt: question.asset_alt }));
+  return <div className="trainer-prompt"><div className="trainer-prompt-meta">{reason && <span className="trainer-plan-reason">{reason}</span>}{hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}</div><h1><FormattedStem text={text || "Задание"} subject={subject} /></h1>{imageAssets.length > 0 && <ImageViewer className="trainer-media" assets={imageAssets} fallbackAlt="Иллюстрация к заданию" />}{blocks.filter((block) => block.kind === "table").map((block, index) => block.kind === "table" ? <PromptTable key={index} headerRows={block.headerRows} rows={block.rows} columns={block.columns} subject={subject} /> : null)}<small>{question.topic}</small></div>;
 }
 
 const LIFE_REFILL_INTERVAL_MS = 4 * 60 * 60 * 1000;

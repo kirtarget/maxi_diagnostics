@@ -694,6 +694,7 @@ def test_catalog_loads_and_publishes_multiple_question_assets(tmp_path: Path):
         "assets/question-1.svg",
         "assets/question-2.svg",
     ]
+    data["questions"][0]["asset_alt"] = "A pair of diagnostic diagrams"
     diagnostic_path.write_text(json.dumps(data), encoding="utf-8")
 
     catalog = load_catalog(load_school(school_root))
@@ -710,3 +711,25 @@ def test_catalog_loads_and_publishes_multiple_question_assets(tmp_path: Path):
         "assets/question-1.svg",
         "assets/question-2.svg",
     ]
+    assert public_question["asset_alt"] == "A pair of diagnostic diagrams"
+
+
+@pytest.mark.parametrize("asset_alt", ["", "   "])
+def test_catalog_rejects_blank_asset_alt(asset_alt: str):
+    data = sample_diagnostic_data()
+    data["questions"][0]["asset_alt"] = asset_alt
+    with pytest.raises(ValueError, match="blank_text"):
+        Diagnostic.model_validate(data)
+
+
+def test_catalog_allows_null_asset_alt():
+    data = sample_diagnostic_data()
+    data["questions"][0]["asset_alt"] = None
+    assert Diagnostic.model_validate(data).questions[0].asset_alt is None
+
+
+def test_catalog_rejects_unsafe_asset_alt():
+    data = sample_diagnostic_data()
+    data["questions"][0]["asset_alt"] = "Схема\u202e"
+    with pytest.raises(ValueError, match="unsafe_text"):
+        Diagnostic.model_validate(data)

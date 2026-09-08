@@ -33,7 +33,7 @@ CASE
                        FROM jsonb_object_keys(review.item) AS field(key)
                       WHERE field.key NOT IN (
                           'question_id', 'number', 'type', 'topic', 'title', 'prompt',
-                          'asset', 'assets', 'is_correct', 'user_answer',
+                          'asset', 'assets', 'asset_alt', 'is_correct', 'user_answer',
                           'expected_answer', 'guidance', 'guidance_kind',
                           'answer_preview'
                       )

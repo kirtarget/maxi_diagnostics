@@ -6,7 +6,7 @@ import { normalizeOffer, OfferSurface, type OfferTelemetryEvent } from "./offer-
 import { PromptTable } from "./prompt-table";
 import { parseQuestionPrompt } from "./question-prompt";
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
-import { safeAssetPath } from "./question-assets";
+import { ImageViewer } from "./image-viewer";
 import { forecastUnitLabel } from "./score-estimate";
 import { topicRecommendation, type PersonalRouteAction } from "./result-flow-model";
 import type {
@@ -207,7 +207,6 @@ export function ReviewScreen({
   }
 
   const imagePaths = [item.asset, ...(item.assets ?? [])]
-    .flatMap((asset) => asset ? [safeAssetPath(asset)] : [])
     .filter((asset): asset is string => Boolean(asset));
   const isLast = activeIndex === mistakes.length - 1;
   const structuredPreview = item.answer_preview;
@@ -232,13 +231,11 @@ export function ReviewScreen({
       <h1 id="review-title">{item.title}</h1>
       <ReviewPrompt prompt={item.prompt} subject={subject} />
       {imagePaths.length > 0 && (
-        <div className="review-media">
-          {imagePaths.map((path, imageIndex) => (
-            // Review paths come from the immutable, authenticated result snapshot.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img alt={`Иллюстрация к заданию ${imageIndex + 1}`} key={path} src={path} />
-          ))}
-        </div>
+        <ImageViewer
+          className="review-media"
+          assets={imagePaths.map((path) => ({ path, alt: item.asset_alt }))}
+          fallbackAlt="Иллюстрация к заданию"
+        />
       )}
       <dl className="answer-review">
         <div className="answer-review-user">
