@@ -16,6 +16,7 @@ import { LeagueScreen } from "./league-screen";
 import { gameplayProfileView } from "./gameplay-profile-model";
 import brand from "../../school/brand.json";
 import schoolLinks from "../../school/links.json";
+import russianEge2022 from "../../school/diagnostics/ege-russian-language-1213.json";
 import type { Brand, PublicDiagnostic, Question, QuestionSourceAttribution, ServerResult } from "./types";
 
 const OUT_DIR = process.env.DESIGN_PREVIEW_DIR ?? "";
@@ -56,6 +57,11 @@ const diagnostics: PublicDiagnostic[] = [
   { id: "phys", content_version: "v1", exam: "ОГЭ", subject: "Физика", mark: "Ф", quick_count: 10, full_count: 24, question_count: 24, questions: Array.from({ length: 24 }, (_, i) => q(`p${i + 1}`)) },
   { id: "chem", content_version: "v1", exam: "ЕГЭ", subject: "Химия", mark: "Х", quick_count: 10, full_count: 22, question_count: 22, questions: Array.from({ length: 22 }, (_, i) => q(`c${i + 1}`)) },
 ];
+
+const russianQ22 = (russianEge2022 as unknown as PublicDiagnostic).questions.find(
+  (question) => question.id === "sp-russian-language-ege-2022-q22",
+);
+if (!russianQ22) throw new Error("Tracked Russian EGE 2022 q22 is missing from the catalog fixture.");
 
 const profile = gameplayProfileView({
   completion_count: 8,
@@ -123,6 +129,7 @@ const screens: Array<[string, string]> = [
   ["question-input", renderToStaticMarkup(<QuestionView question={q("5", { type: "input", options: undefined, prompt: "Найди значение выражения 2,4 · 5 − 3,6. Запиши ответ числом." } as never)} index={4} total={10} answer="8,4" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
   ["question-tablegap", renderToStaticMarkup(<QuestionView question={q("9", { type: "input", options: undefined, prompt: tableGapPrompt, topic: "Химия" } as never)} index={8} total={10} answer="1" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
   ["question-text", renderToStaticMarkup(<QuestionView question={q("7", { type: "text", options: undefined, max_length: 40, topic: "Союзы", prompt: "Выпишите подчинительный союз из предложения." } as never)} index={6} total={10} answer="однако" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
+  ["question-russian-q22", renderToStaticMarkup(<QuestionView question={russianQ22} index={21} total={26} answer={["c", "d"]} labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
   ["question-table", renderToStaticMarkup(<QuestionView question={q("1", { type: "text", options: undefined, max_length: 40, topic: "Биология", prompt: tablePrompt } as never)} index={0} total={8} answer="" labels={labels} onAnswer={noop} onBack={noop} onNext={noop} />)],
   ["result", renderToStaticMarkup(<ResultScreen diagnostic={diagnostics[0]} pdfStatus="pending" result={result} onReview={noop} onForecast={noop} onReplayMistakes={noop} />)],
   ["review", renderToStaticMarkup(<ReviewScreen items={[{ question_id: "q8", number: 8, type: "single", topic: "Квадратные уравнения", title: "Задание 8", prompt: "Решите уравнение x² + 4x − 5 = 0. Укажите больший корень.", is_correct: false, status: "incorrect", user_answer: "−5", expected_answer: "1", guidance: "По теореме Виета: x₁ · x₂ = −5, x₁ + x₂ = −4. Корни: 1 и −5. Больший из них — 1.", guidance_kind: "fallback", max_primary_score: 2, earned_primary_score: 0, source: approvedSource }]} index={0} onBack={noop} onNext={noop} onForecast={noop} />)],
@@ -187,7 +194,7 @@ describe("design preview gallery", () => {
     const style = brand.colors;
     const vars = `--brand-primary:${style.primary};--brand-accent:${style.accent};--brand-signal:${style.signal};--brand-ink:${style.ink};--brand-paper:${style.paper};--brand-background:${style.background}`;
     for (const [name, html] of screens) {
-      writeFileSync(`${OUT_DIR}/${name}.html`, `<!doctype html><html lang="ru" style="${vars}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="globals.css"></head><body><main class="app-shell">${name === "question-single" || name === "question-input" || name === "question-tablegap" || name === "question-text" ? "" : `<header class="brand-bar"><button class="brand" type="button"><span class="brand-mark">MA</span><span>MAXIMUM Education</span></button><span class="status-pill">${labels.result_in_app}</span></header>`}${html}</main></body></html>`);
+      writeFileSync(`${OUT_DIR}/${name}.html`, `<!doctype html><html lang="ru" style="${vars}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="globals.css"></head><body><main class="app-shell">${name.startsWith("question-") ? "" : `<header class="brand-bar"><button class="brand" type="button"><span class="brand-mark">MA</span><span>MAXIMUM Education</span></button><span class="status-pill">${labels.result_in_app}</span></header>`}${html}</main></body></html>`);
     }
     writeFileSync(`${OUT_DIR}/index.html`, `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;grid-template-columns:repeat(auto-fill,400px);gap:20px;background:#ddd;padding:20px">${screens.map(([name]) => `<div><p style="font:700 13px sans-serif;margin:0 0 6px">${name}</p><iframe src="${name}.html" style="width:390px;height:844px;border:1px solid #999;border-radius:20px;background:#fff"></iframe></div>`).join("")}</body>`);
     expect(screens.length).toBeGreaterThan(0);

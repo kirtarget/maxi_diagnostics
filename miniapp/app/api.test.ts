@@ -578,7 +578,7 @@ describe("diagnostic API payloads", () => {
     await queue.flush();
 
     expect(sent).toEqual([0]);
-    expect(states.at(-1)).toBe("saving");
+    expect(states.at(-1)).toBe("idle");
   });
 
   it("surfaces a conflict cancellation to a submit waiter", async () => {

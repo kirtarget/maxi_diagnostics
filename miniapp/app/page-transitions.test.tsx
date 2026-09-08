@@ -113,7 +113,7 @@ function deferred<T>() {
 }
 
 /** Per-path stubs for the JSON API. Unrouted paths answer with a bare `ok`. */
-type Routes = Record<string, () => Promise<unknown>>;
+type Routes = Record<string, () => Promise<unknown | Response>>;
 
 let routes: Routes;
 let requestedPaths: string[];
@@ -175,7 +175,8 @@ beforeEach(() => {
       requestedBodies.push({ path, body: JSON.parse(init.body) });
     }
     const handler = routes[path];
-    return jsonResponse(handler ? await handler() : { ok: true });
+    const response = handler ? await handler() : { ok: true };
+    return response instanceof Response ? response : jsonResponse(response);
   }));
 });
 
@@ -321,6 +322,149 @@ describe("Home screen transitions", () => {
     await act(async () => { catalog.resolve({ diagnostic }); });
     expect(screenClasses()).toContain("question-screen");
     expect(container.textContent).toContain("Выберите ответ");
+    expect(container.querySelector(".brand-bar")).toBeNull();
+    expect(container.querySelector(".status-pill")).toBeNull();
+    expect(container.querySelector(".assessment-header-title")?.textContent).toContain("Задание 1 из 1 · Тема 1");
+  });
+
+  it("confirms diagnostic exit and restores focus to the header trigger", async () => {
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      progress_profile: { completion_count: 1, achievement_keys: [] },
+    }));
+    route("/api/diagnostics/catalog", { diagnostic });
+
+    await mountHome();
+    await clickAndSettle(".gameplay-home-cta");
+    await clickAndSettle(".mode-card.featured");
+    await clickAndSettle(".subject-card");
+    await settle();
+
+    const trigger = container.querySelector<HTMLButtonElement>(".assessment-header-exit");
+    expect(trigger).not.toBeNull();
+    trigger!.focus();
+    await act(async () => { trigger!.click(); });
+    expect(container.querySelector('[role="dialog"]')?.textContent).toContain("Выйти из диагностики?");
+    await clickAndSettle(".confirm-sheet .secondary-button");
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("flushes an immediate answer before confirming diagnostic exit", async () => {
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      progress_profile: { completion_count: 1, achievement_keys: [] },
+    }));
+    route("/api/diagnostics/catalog", { diagnostic });
+    routes["/api/diagnostics/session/progress"] = async () => {
+      const payload = requestedBodies.filter(({ path }) => path.endsWith("/api/diagnostics/session/progress")).at(-1)?.body as { attempt_id: string; answers: Record<string, unknown> };
+      return {
+        ok: true,
+        attempt: {
+          attempt_id: payload.attempt_id,
+          diagnostic_id: diagnostic.id,
+          content_version: CONTENT_VERSION,
+          mode: "quick",
+          status: "in_progress",
+          question_index: 0,
+          question_count: 1,
+          progress_revision: 1,
+          answers: payload.answers,
+        },
+      };
+    };
+
+    await mountHome();
+    await clickAndSettle(".gameplay-home-cta");
+    await clickAndSettle(".mode-card.featured");
+    await clickAndSettle(".subject-card");
+    await settle();
+    await clickAndSettle(".answer-option");
+    await clickAndSettle(".assessment-header-exit");
+    await clickAndSettle(".confirm-sheet .primary-button");
+
+    expect(requestedPaths.filter((path) => path.endsWith("/api/diagnostics/session/progress")).length).toBeGreaterThan(0);
+    expect(screenClasses()).toContain("gameplay-home");
+  });
+
+  it("keeps exit open after a progress conflict and retries with the recovered snapshot", async () => {
+    let bootstrapCalls = 0;
+    let progressCalls = 0;
+    const recoveredAttempt: ServerAttempt = {
+      ...completedAttempt,
+      attempt_id: "attempt-recovered",
+      status: "in_progress",
+      question_index: 0,
+      progress_revision: 4,
+      answers: { q1: "a" },
+    };
+    routes["/api/diagnostics/bootstrap"] = async () => {
+      bootstrapCalls += 1;
+      return bootstrapPayload(bootstrapCalls > 1 ? {
+        onboarding: { status: "completed" },
+        progress_profile: { completion_count: 1, achievement_keys: [] },
+        attempt: recoveredAttempt,
+      } : {
+        onboarding: { status: "completed" },
+        progress_profile: { completion_count: 1, achievement_keys: [] },
+      });
+    };
+    route("/api/diagnostics/catalog", { diagnostic });
+    routes["/api/diagnostics/session/progress"] = async () => {
+      progressCalls += 1;
+      if (progressCalls === 1) return new Response(JSON.stringify({ detail: "progress_conflict" }), { status: 409 });
+      const payload = requestedBodies.filter(({ path }) => path.endsWith("/api/diagnostics/session/progress")).at(-1)?.body as { attempt_id: string; answers: Record<string, unknown> };
+      return {
+        ok: true,
+        attempt: { ...recoveredAttempt, attempt_id: payload.attempt_id, answers: payload.answers, progress_revision: 5 },
+      };
+    };
+
+    await mountHome();
+    await clickAndSettle(".gameplay-home-cta");
+    await clickAndSettle(".mode-card.featured");
+    await clickAndSettle(".subject-card");
+    await settle();
+    await clickAndSettle(".answer-option");
+    await clickAndSettle(".assessment-header-exit");
+    await clickAndSettle(".confirm-sheet .primary-button");
+
+    expect(container.querySelector('[role="dialog"]')?.getAttribute("role")).toBe("dialog");
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain("Не удалось сохранить прогресс");
+    expect(screenClasses()).toContain("question-screen");
+    expect(progressCalls).toBe(1);
+
+    await clickAndSettle(".confirm-sheet .primary-button");
+    expect(progressCalls).toBe(2);
+    expect(screenClasses()).toContain("gameplay-home");
+  });
+
+  it("resumes autosave after a failed conflict recovery", async () => {
+    let bootstrapCalls = 0;
+    let progressCalls = 0;
+    routes["/api/diagnostics/bootstrap"] = async () => {
+      bootstrapCalls += 1;
+      if (bootstrapCalls > 1) return new Response(JSON.stringify({ detail: "temporary_unavailable" }), { status: 503 });
+      return bootstrapPayload({ onboarding: { status: "completed" }, progress_profile: { completion_count: 1, achievement_keys: [] } });
+    };
+    route("/api/diagnostics/catalog", { diagnostic });
+    routes["/api/diagnostics/session/progress"] = async () => {
+      progressCalls += 1;
+      if (progressCalls === 1) return new Response(JSON.stringify({ detail: "progress_conflict" }), { status: 409 });
+      const payload = requestedBodies.filter(({ path }) => path.endsWith("/api/diagnostics/session/progress")).at(-1)?.body as { attempt_id: string; answers: Record<string, unknown> };
+      return { ok: true, attempt: { ...completedAttempt, attempt_id: payload.attempt_id, status: "in_progress", answers: payload.answers } };
+    };
+
+    await mountHome();
+    await clickAndSettle(".gameplay-home-cta");
+    await clickAndSettle(".mode-card.featured");
+    await clickAndSettle(".subject-card");
+    await settle();
+    await clickAndSettle(".answer-option");
+    await clickAndSettle(".assessment-header-exit");
+    await clickAndSettle(".confirm-sheet .primary-button");
+    expect(progressCalls).toBe(1);
+    await clickAndSettle(".confirm-sheet .secondary-button");
+    await clickAndSettle(".answer-option:nth-child(2)");
+    await act(async () => { await new Promise((resolve) => window.setTimeout(resolve, 350)); });
+    expect(progressCalls).toBe(2);
   });
 
   it("moves from the last question through submitting to the result, then to review", async () => {
@@ -574,7 +718,7 @@ describe("Home screen transitions", () => {
 
     expect(screenClasses()).toContain("trainer-screen");
     expect(startPayload).toMatchObject({ mode: "plan", diagnostic_id: secondDiagnostic.id });
-    expect(container.querySelector(".trainer-progress")?.textContent).toContain(secondDiagnostic.subject);
+    expect(container.querySelector(".trainer-progress")?.textContent).toContain("Тема 1");
     expect(container.textContent).toContain("План: 2 из 5");
     expect(container.textContent).toContain("повтор ошибки");
   });

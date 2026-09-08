@@ -31,6 +31,12 @@ async function renderSheet(props: Partial<React.ComponentProps<typeof ConfirmShe
   });
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => { resolve = resolvePromise; });
+  return { promise, resolve };
+}
+
 function pressTab(shiftKey = false): KeyboardEvent {
   const event = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Tab", shiftKey });
   document.dispatchEvent(event);
@@ -76,18 +82,54 @@ describe("ConfirmSheet focus management", () => {
     await act(async () => {
       (container.querySelector(".secondary-button") as HTMLButtonElement).click();
     });
-    expect(document.activeElement).toBe(trigger);
-    expect(onCancel).toHaveBeenCalledOnce();
-
     await act(async () => {
       root.render(<ConfirmSheet open={false} onCancel={onCancel} onConfirm={() => undefined} />);
     });
+    expect(document.activeElement).toBe(trigger);
+    expect(onCancel).toHaveBeenCalledOnce();
+
     trigger.focus();
     await renderSheet({ onConfirm: vi.fn() });
     await act(async () => {
       (container.querySelector(".primary-button") as HTMLButtonElement).click();
     });
+    await act(async () => {
+      root.render(<ConfirmSheet open={false} onCancel={onCancel} onConfirm={() => undefined} />);
+    });
     expect(document.activeElement).toBe(trigger);
+    trigger.remove();
+  });
+
+  it("keeps focus in the open dialog while async confirmation is pending", async () => {
+    const trigger = document.createElement("button");
+    document.body.appendChild(trigger);
+    trigger.focus();
+    const pending = deferred<void>();
+    await renderSheet({ onConfirm: () => pending.promise });
+    const confirm = container.querySelector<HTMLButtonElement>(".primary-button")!;
+    confirm.focus();
+    await act(async () => { confirm.click(); });
+    expect(document.activeElement).toBe(confirm);
+    pending.resolve();
+    await act(async () => { await pending.promise; });
+    expect(document.activeElement).toBe(confirm);
+    await act(async () => {
+      root.render(<ConfirmSheet open={false} onCancel={() => undefined} onConfirm={() => undefined} />);
+    });
+    expect(document.activeElement).toBe(trigger);
+    trigger.remove();
+  });
+
+  it("keeps focus in the dialog when async confirmation fails and parent leaves it open", async () => {
+    const trigger = document.createElement("button");
+    document.body.appendChild(trigger);
+    trigger.focus();
+    await renderSheet({ onConfirm: async () => undefined });
+    const confirm = container.querySelector<HTMLButtonElement>(".primary-button")!;
+    confirm.focus();
+    await act(async () => { confirm.click(); });
+    expect(document.activeElement).toBe(confirm);
+    expect(container.querySelector('[role="dialog"]')).not.toBeNull();
     trigger.remove();
   });
 

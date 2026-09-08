@@ -39,7 +39,7 @@ const REQUEST_TIMEOUT_MS = 12_000;
 const REQUEST_ATTEMPTS = 3;
 
 type FetchLike = typeof fetch;
-type ProgressSaveState = "saving" | "saved" | "error";
+type ProgressSaveState = "idle" | "saving" | "saved" | "error";
 
 export function isConflictError(error: unknown): boolean {
   return error instanceof Error && error.message === "diagnostic_api_409";
@@ -457,7 +457,7 @@ export function createProgressSaveQueue<T>(
       if (current.generation === generation) {
         terminalError = failed;
       }
-      if (current.revision === latestRevision && pending === null) {
+      if (current.generation === generation && current.revision === latestRevision && pending === null) {
         onState(failed ? "error" : "saved");
       }
     }
@@ -484,6 +484,7 @@ export function createProgressSaveQueue<T>(
       latestRevision += 1;
       pending = null;
       terminalError = reason ?? null;
+      onState("idle");
       if (!active) finishFlushes();
     },
   };

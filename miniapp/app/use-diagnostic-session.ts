@@ -30,6 +30,8 @@ import {
   type DiagnosticLoadState,
 } from "./diagnostic-loader-model";
 import { createReviewRequestGate } from "./review-request-gate";
+import type { ProgressSaveState } from "./assessment-header";
+export type { ProgressSaveState } from "./assessment-header";
 import type { BootstrapSession } from "./use-bootstrap";
 import type {
   AnswerMap,
@@ -61,6 +63,8 @@ export type DiagnosticSessionState = {
   reviewIndex: number;
   reviewError: string | null;
   syncWarning: string | null;
+  progressSaveState: ProgressSaveState;
+  progressToast: string | null;
 };
 
 export type DiagnosticSessionActions = {
@@ -72,6 +76,7 @@ export type DiagnosticSessionActions = {
   skipQuestion(): void;
   previousQuestion(): void;
   nextQuestion(): void;
+  flushProgressForExit(): Promise<boolean>;
   openReview(): void;
   openSavedResult(attempt: ServerAttempt): void;
   refreshReview(): Promise<ReviewResponse | null>;
@@ -124,6 +129,8 @@ export function useDiagnosticSession({
   const [review, setReview] = useState<ReviewResponse | null>(null);
   const [reviewIndex, setReviewIndex] = useState(0);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [progressSaveState, setProgressSaveState] = useState<ProgressSaveState>("idle");
+  const [progressToast, setProgressToast] = useState<string | null>(null);
 
   const progressRevision = useRef(0);
   const syncedQuestionIndex = useRef(0);
@@ -143,6 +150,10 @@ export function useDiagnosticSession({
   const diagnosticLoadRequestId = useRef(0);
   const diagnosticCache = useRef(new Map<string, Promise<PublicDiagnostic>>());
   const recoveryPromise = useRef<Promise<void> | null>(null);
+  const saveToastAttempt = useRef<string | null>(null);
+  const pendingProgressTimer = useRef<number | null>(null);
+  const pendingProgressPayload = useRef<ProgressPayload | null>(null);
+  const skipAutoSaveAfterRecovery = useRef(false);
   const recoverConflict = useRef<() => Promise<void>>(async () => undefined);
   const progressQueue = useRef<ProgressSaveQueue<ProgressPayload> | null>(null);
   if (!progressQueue.current) {
@@ -189,6 +200,11 @@ export function useDiagnosticSession({
         }
       },
       (state) => {
+        setProgressSaveState(state);
+        if (state === "saved" && saveToastAttempt.current !== activeAttemptId.current) {
+          saveToastAttempt.current = activeAttemptId.current;
+          setProgressToast("Прогресс сохраняется");
+        }
         setSyncWarning(state === "error"
           ? "Ответ сохранён на устройстве. Отправим его на сервер, когда связь восстановится."
           : null);
@@ -241,7 +257,7 @@ export function useDiagnosticSession({
     return null;
   }, [attemptId, initData, sessionScope]);
 
-  const hydrate = useCallback(async (preserveCurrentScreen = false) => {
+  const hydrate = useCallback(async (preserveCurrentScreen = false, preserveProgressError = false) => {
     const generation = hydrateGeneration.current + 1;
     hydrateGeneration.current = generation;
     setError(null);
@@ -253,7 +269,7 @@ export function useDiagnosticSession({
       const data = loaded.data;
       if (generation !== hydrateGeneration.current) return false;
       attemptGeneration.current += 1;
-      progressQueue.current?.cancel();
+      if (!preserveProgressError) progressQueue.current?.cancel();
       loaded.apply();
       setLoadedDiagnostic(null);
       setExam((current) => current || data.diagnostics[0]?.exam || "");
@@ -353,15 +369,28 @@ export function useDiagnosticSession({
 
   recoverConflict.current = () => {
     setSyncWarning("Прогресс изменился на другом устройстве. Загружаем актуальную версию.");
+    skipAutoSaveAfterRecovery.current = true;
     if (!recoveryPromise.current) {
-      recoveryPromise.current = hydrate(true)
-        .then(() => undefined)
+      recoveryPromise.current = hydrate(true, true)
+        .then((recovered) => {
+          if (!recovered) skipAutoSaveAfterRecovery.current = false;
+        })
+        .catch((error) => {
+          skipAutoSaveAfterRecovery.current = false;
+          throw error;
+        })
         .finally(() => { recoveryPromise.current = null; });
     }
     return recoveryPromise.current;
   };
 
   useEffect(() => { void hydrate(); }, [hydrate]);
+
+  useEffect(() => {
+    if (!progressToast) return;
+    const timer = window.setTimeout(() => setProgressToast(null), 3500);
+    return () => window.clearTimeout(timer);
+  }, [progressToast]);
 
   useEffect(() => {
     latestQuestionIndex.current = questionIndex;
@@ -381,24 +410,39 @@ export function useDiagnosticSession({
       syncedQuestionIndex: syncedQuestionIndex.current,
       syncedAnswers: syncedAnswers.current,
     });
+    if (skipAutoSaveAfterRecovery.current) {
+      skipAutoSaveAfterRecovery.current = false;
+      return;
+    }
     if (!initData.current || Object.keys(answers).length === 0) return;
+    const payload: ProgressPayload = {
+      attempt_id: attemptId,
+      session_scope: sessionScope,
+      ...(supersedesAttemptId.current
+        ? { supersedes_attempt_id: supersedesAttemptId.current }
+        : {}),
+      diagnostic_id: diagnostic.id,
+      content_version: diagnostic.content_version,
+      mode,
+      question_index: questionIndex,
+      question_count: questions.length,
+      progress_revision: progressRevision.current + 1,
+      answers,
+    };
+    pendingProgressPayload.current = payload;
     const timer = window.setTimeout(() => {
-      progressQueue.current?.enqueue({
-        attempt_id: attemptId,
-        session_scope: sessionScope,
-        ...(supersedesAttemptId.current
-          ? { supersedes_attempt_id: supersedesAttemptId.current }
-          : {}),
-        diagnostic_id: diagnostic.id,
-        content_version: diagnostic.content_version,
-        mode,
-        question_index: questionIndex,
-        question_count: questions.length,
-        progress_revision: progressRevision.current + 1,
-        answers,
-      });
+      pendingProgressTimer.current = null;
+      pendingProgressPayload.current = null;
+      progressQueue.current?.enqueue(payload);
     }, 300);
-    return () => window.clearTimeout(timer);
+    pendingProgressTimer.current = timer;
+    return () => {
+      window.clearTimeout(timer);
+      if (pendingProgressTimer.current === timer) {
+        pendingProgressTimer.current = null;
+        pendingProgressPayload.current = null;
+      }
+    };
   }, [answers, attemptId, brand, diagnostic, initData, mode, questionIndex, questions.length, screen, sessionScope]);
 
   useEffect(() => {
@@ -408,6 +452,7 @@ export function useDiagnosticSession({
   }, [attemptId, initData, screen, sessionScope]);
 
   const beginLoadedDiagnostic = (selected: PublicDiagnostic) => {
+    skipAutoSaveAfterRecovery.current = false;
     progressQueue.current?.cancel();
     attemptGeneration.current += 1;
     const nextAttemptId = createAttemptId();
@@ -423,6 +468,9 @@ export function useDiagnosticSession({
     setQuestionIndex(0);
     latestQuestionIndex.current = 0;
     progressRevision.current = 0;
+    saveToastAttempt.current = null;
+    setProgressSaveState("idle");
+    setProgressToast(null);
     syncedQuestionIndex.current = 0;
     syncedAnswers.current = {};
     setAnswers({});
@@ -539,7 +587,6 @@ export function useDiagnosticSession({
 
   const previousQuestion = () => {
     if (questionIndex === 0) {
-      setScreen("subjects");
       return;
     }
     setQuestionIndex((current) => {
@@ -547,6 +594,39 @@ export function useDiagnosticSession({
       latestQuestionIndex.current = next;
       return next;
     });
+  };
+
+  const flushProgressForExit = async (): Promise<boolean> => {
+    if (screen !== "question" || !diagnostic || !sessionScope || !initData.current) return true;
+    if (pendingProgressTimer.current !== null) {
+      window.clearTimeout(pendingProgressTimer.current);
+      pendingProgressTimer.current = null;
+    }
+    pendingProgressPayload.current = null;
+    if (Object.keys(latestAnswers.current).length > 0) {
+      progressQueue.current?.enqueue({
+        attempt_id: activeAttemptId.current,
+        session_scope: sessionScope,
+        ...(supersedesAttemptId.current
+          ? { supersedes_attempt_id: supersedesAttemptId.current }
+          : {}),
+        diagnostic_id: diagnostic.id,
+        content_version: diagnostic.content_version,
+        mode,
+        question_index: latestQuestionIndex.current,
+        question_count: questions.length,
+        progress_revision: progressRevision.current + 1,
+        answers: latestAnswers.current,
+      });
+    }
+    try {
+      await progressQueue.current?.flush();
+      return true;
+    } catch {
+      setProgressSaveState("error");
+      setSyncWarning("Не удалось сохранить прогресс на сервере. Проверьте связь и повторите выход.");
+      return false;
+    }
   };
 
   const nextQuestion = () => {
@@ -616,6 +696,8 @@ export function useDiagnosticSession({
       reviewIndex,
       reviewError,
       syncWarning,
+      progressSaveState,
+      progressToast,
     },
     actions: {
       hydrate,
@@ -645,6 +727,7 @@ export function useDiagnosticSession({
       skipQuestion,
       previousQuestion,
       nextQuestion,
+      flushProgressForExit,
       openReview,
       refreshReview,
       reviewBack,
