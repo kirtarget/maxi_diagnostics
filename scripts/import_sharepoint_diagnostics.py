@@ -510,7 +510,12 @@ FIGURE_WORDS = re.compile(
     re.IGNORECASE,
 )
 TEXTUAL_REACTION_SCHEME = re.compile(
-    r"(?m)^[^|\r\n]*(?:→|↔|⇄)[^|\r\n]*$"
+    r"(?im)^(?![^|\r\n]*(?:рисунк|установк|прибор|показани|используй)\w*)"
+    r"[^|\r\n.!?]*(?:→|↔|⇄)[^|\r\n.!?]*\.?$"
+)
+TEXTUAL_REACTION_INTRO = re.compile(
+    r"(?i)^\s*(?:задана|приведена|представлена)\s+следующая\s+"
+    r"схем\w*(?:\s+превращени\w*)?(?:\s+веществ)?\s*:\s*$"
 )
 EXTERNAL_RESOURCE = re.compile(r"https?://|воспользуйтесь файлом|аудиозапис|прослушайте", re.IGNORECASE)
 SEQUENCE_MARKERS = re.compile(r"^[А-ЯЁ]\)", re.MULTILINE)
@@ -1878,8 +1883,7 @@ def _rejection(
         return "too_many_figures"
     if (
         not images
-        and FIGURE_WORDS.search(question["prompt"])
-        and not TEXTUAL_REACTION_SCHEME.search(question["prompt"])
+        and FIGURE_WORDS.search(_figure_reference_prompt(question["prompt"]))
     ):
         return "missing_figure"
     if len(FLATTENED_MATCHING.findall(question["prompt"])) >= 2:
@@ -1887,6 +1891,18 @@ def _rejection(
     if EXTERNAL_RESOURCE.search(question["prompt"]):
         return "external_resource"
     return validate_question(question)
+
+
+def _figure_reference_prompt(prompt: str) -> str:
+    """Exclude only a self-contained reaction line from figure-word checks."""
+    lines = prompt.splitlines()
+    for index, line in enumerate(lines):
+        if not TEXTUAL_REACTION_SCHEME.fullmatch(line.strip()):
+            continue
+        lines[index] = ""
+        if index and TEXTUAL_REACTION_INTRO.fullmatch(lines[index - 1].strip()):
+            lines[index - 1] = ""
+    return "\n".join(lines)
 
 
 def _has_table_cell_figure(task: SourceTask) -> bool:

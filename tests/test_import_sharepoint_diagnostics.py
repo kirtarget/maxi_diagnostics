@@ -730,6 +730,49 @@ def test_trusted_chemistry_q15_missing_scheme_stays_rejected():
     assert outcome.reason == "missing_figure"
 
 
+def test_visual_reference_with_an_arrow_stays_rejected_without_an_asset():
+    task = importer.SourceTask(
+        number=29,
+        prompt_blocks=[
+            "На рисунке показана установка. Используйте схему A → B и определите показание прибора.",
+            "Ответ дайте с точностью до целых.",
+        ],
+        answer=["1"],
+    )
+    source = importer.SourceFile(
+        Path("visual-reference.docx"), "ЕГЭ", "chemistry", 2022, 1, (task,)
+    )
+
+    candidates, outcomes = importer.convert_file(source, "2026-09-04")
+
+    assert not candidates
+    assert outcomes == [
+        importer.Outcome(29, "skipped", "input", "missing_figure")
+    ]
+
+
+def test_visual_schema_intro_is_not_erased_by_a_following_arrow_line():
+    task = importer.SourceTask(
+        number=30,
+        prompt_blocks=[
+            "На рисунке показана схема установки:",
+            "A → B",
+            "Ответ дайте с точностью до целых.",
+        ],
+        answer=["1"],
+    )
+    source = importer.SourceFile(
+        Path("visual-schema.docx"), "ЕГЭ", "chemistry", 2022, 1, (task,)
+    )
+
+    candidates, outcomes = importer.convert_file(source, "2026-09-04")
+
+    assert not candidates
+    assert outcomes == [
+        importer.Outcome(30, "skipped", "input", "missing_figure")
+    ]
+
+
 def test_ordering_prompt_can_read_a_numbered_choice_table():
     table = importer.SourceTable(rows=(
         (("1) Калий",), ("2) Алюминий",)),
