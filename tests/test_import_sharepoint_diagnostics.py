@@ -691,6 +691,45 @@ def test_kir254_trusted_source_targets_build_explicit_sequence_contract(
         assert untouched["topic"] == f"Задание {number}"
 
 
+def test_trusted_chemistry_q16_text_scheme_is_imported():
+    source_path = (
+        ROOT
+        / "authoring"
+        / "sharepoint-authoring"
+        / "ХИМ_ЕГЭ_Диагностика_21-22_Заданий 28.docx"
+    )
+    source = importer.read_source_file(source_path)
+    source = replace(
+        source, content_hash=importer.TRUSTED_SOURCE_HASHES[source.slug]
+    )
+    candidates, outcomes = importer.convert_file(source, "2026-09-04")
+
+    question = next(
+        candidate.question for candidate in candidates if candidate.task.number == 16
+    )
+    assert "глицерин → Х → Y → стеариновая кислота." in question["prompt"]
+    assert "1) Пальмитиновая кислота;" in question["prompt"]
+    assert not any(outcome.number == 16 for outcome in outcomes)
+
+
+def test_trusted_chemistry_q15_missing_scheme_stays_rejected():
+    source_path = (
+        ROOT
+        / "authoring"
+        / "sharepoint-authoring"
+        / "ХИМ_ЕГЭ_Диагностика_21-22_Заданий 28.docx"
+    )
+    source = importer.read_source_file(source_path)
+    source = replace(
+        source, content_hash=importer.TRUSTED_SOURCE_HASHES[source.slug]
+    )
+    _, outcomes = importer.convert_file(source, "2026-09-04")
+
+    outcome = next(outcome for outcome in outcomes if outcome.number == 15)
+    assert outcome.status == "skipped"
+    assert outcome.reason == "missing_figure"
+
+
 def test_ordering_prompt_can_read_a_numbered_choice_table():
     table = importer.SourceTable(rows=(
         (("1) Калий",), ("2) Алюминий",)),

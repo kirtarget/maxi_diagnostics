@@ -509,6 +509,9 @@ FIGURE_WORDS = re.compile(
     r"диаграмм|таблиц[аеуы] на",
     re.IGNORECASE,
 )
+TEXTUAL_REACTION_SCHEME = re.compile(
+    r"(?m)^[^|\r\n]*(?:→|↔|⇄)[^|\r\n]*$"
+)
 EXTERNAL_RESOURCE = re.compile(r"https?://|воспользуйтесь файлом|аудиозапис|прослушайте", re.IGNORECASE)
 SEQUENCE_MARKERS = re.compile(r"^[А-ЯЁ]\)", re.MULTILINE)
 SEQUENCE_HINT = "Введите последовательность цифр без пробелов."
@@ -1873,7 +1876,11 @@ def _rejection(
         return "unreadable_figure"
     if len(images) > MAX_QUESTION_ASSETS:
         return "too_many_figures"
-    if not images and FIGURE_WORDS.search(question["prompt"]):
+    if (
+        not images
+        and FIGURE_WORDS.search(question["prompt"])
+        and not TEXTUAL_REACTION_SCHEME.search(question["prompt"])
+    ):
         return "missing_figure"
     if len(FLATTENED_MATCHING.findall(question["prompt"])) >= 2:
         return "unreadable_matching"
