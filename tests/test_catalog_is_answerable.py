@@ -124,11 +124,24 @@ def test_no_option_label_keeps_the_punctuation_of_its_source_list(catalog):
     assert offenders == []
 
 
-def test_every_prompt_and_label_carries_text(catalog):
+def test_no_cell_reaches_the_student_empty(catalog):
+    """A matching cell may be drawn instead of written, but never blank."""
     for name, _, question in catalog:
         assert question["prompt"].strip(), (name, question["id"])
         for option in question.get("options", []) + question.get("items", []):
-            assert option["label"].strip(), (name, question["id"])
+            assert option["label"].strip() or option.get("asset"), (
+                name,
+                question["id"],
+                option["id"],
+            )
+
+
+def test_only_a_matching_cell_may_stand_on_a_figure(catalog):
+    for name, _, question in catalog:
+        if question["type"] == "matching":
+            continue
+        for option in question.get("options", []):
+            assert option["label"].strip(), (name, question["id"], option["id"])
 
 
 def test_the_quick_diagnostic_asks_eight_questions_or_the_whole_file(catalog):
