@@ -4,7 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { QuestionView, SequenceMatchingAnswer } from "./question-screen";
+import { QuestionView } from "./question-screen";
+import { MatchingAnswer, matchingModelFromSequence } from "./matching-answer";
 import { parseSequenceMatchingPrompt } from "./sequence-matching";
 import type { Brand, InputQuestion } from "./types";
 
@@ -82,22 +83,21 @@ describe("contract-4 sequence question", () => {
       root.render(<Harness />);
     });
 
-    const rows = [...container.querySelectorAll<HTMLElement>(".sequence-matching-row")];
+    const rows = [...container.querySelectorAll<HTMLElement>(".matching-answer-row")];
     expect(rows).toHaveLength(3);
-    expect(container.querySelectorAll(".sequence-matching-row select")).toHaveLength(0);
-    const chip = (row: HTMLElement, marker: string) => row.querySelector<HTMLButtonElement>(`button[data-option-marker="${marker}"]`)!;
-    expect(chip(rows[1], "2").disabled).toBe(true);
-    await act(async () => {
-      chip(rows[0], "2").click();
-    });
-    expect(chip(rows[0], "2").getAttribute("aria-pressed")).toBe("true");
-    expect(chip(rows[1], "2").disabled).toBe(false);
-    await act(async () => {
-      chip(rows[1], "7").click();
-    });
-    await act(async () => {
-      chip(rows[2], "7").click();
-    });
+    expect(container.querySelectorAll(".matching-answer-row select")).toHaveLength(0);
+    const choose = async (row: HTMLElement, marker: string) => {
+      await act(async () => {
+        row.querySelector<HTMLButtonElement>(".matching-answer-trigger")?.click();
+      });
+      const dialog = row.querySelector<HTMLElement>("[role=dialog]")!;
+      const option = dialog.querySelector<HTMLButtonElement>(`button[data-option-key="${marker}"]`)!;
+      await act(async () => option.click());
+    };
+    expect(rows[1].querySelector<HTMLButtonElement>(".matching-answer-trigger")?.disabled).toBe(false);
+    await choose(rows[0], "2");
+    await choose(rows[1], "7");
+    await choose(rows[2], "7");
 
     expect(onAnswer).toHaveBeenLastCalledWith("277");
     expect(container.querySelector<HTMLButtonElement>(".question-next")?.disabled).toBe(false);
@@ -107,26 +107,27 @@ describe("contract-4 sequence question", () => {
     const matching = { ...parseSequenceMatchingPrompt(chemistryQuestion.prompt, { ...chemistryQuestion, allow_reuse: false })!, allowReuse: false };
     const onChange = vi.fn();
     await act(async () => {
-      root.render(<SequenceMatchingAnswer matching={matching} value="2" onChange={onChange} />);
+      root.render(<MatchingAnswer model={matchingModelFromSequence(matching)} value="2" onChange={onChange} />);
     });
 
-    const rows = [...container.querySelectorAll<HTMLElement>(".sequence-matching-row")];
-    expect(rows[1].querySelector<HTMLButtonElement>('button[data-option-marker="2"]')?.disabled).toBe(true);
-    expect(rows[1].querySelector<HTMLButtonElement>('button[data-option-marker="7"]')?.disabled).toBe(false);
+    const row = container.querySelectorAll<HTMLElement>(".matching-answer-row")[1];
+    await act(async () => row.querySelector<HTMLButtonElement>(".matching-answer-trigger")?.click());
+    expect(row.querySelector<HTMLButtonElement>('button[data-option-key="2"]')?.disabled).toBe(true);
+    expect(row.querySelector<HTMLButtonElement>('button[data-option-key="7"]')?.disabled).toBe(false);
   });
 
   it("keeps every chip disabled in feedback mode and exposes the 44px target", async () => {
     const matching = parseSequenceMatchingPrompt(chemistryQuestion.prompt, chemistryQuestion)!;
     const onChange = vi.fn();
     await act(async () => {
-      root.render(<SequenceMatchingAnswer matching={matching} value="" onChange={onChange} disabled />);
+      root.render(<MatchingAnswer model={matchingModelFromSequence(matching)} value="" onChange={onChange} disabled />);
     });
 
-    const chips = [...container.querySelectorAll<HTMLButtonElement>(".sequence-matching-chip")];
-    expect(chips.length).toBeGreaterThan(0);
-    expect(chips.every((button) => button.disabled)).toBe(true);
+    const triggers = [...container.querySelectorAll<HTMLButtonElement>(".matching-answer-trigger")];
+    expect(triggers).toHaveLength(3);
+    expect(triggers.every((button) => button.disabled)).toBe(true);
     expect(onChange).not.toHaveBeenCalled();
     const css = readFileSync("app/globals.css", "utf8");
-    expect(css).toMatch(/\.sequence-matching-chip\s*\{[\s\S]*min-width:\s*44px;[\s\S]*min-height:\s*44px;/u);
+    expect(css).toMatch(/\.matching-answer-option\s*\{[\s\S]*min-width:\s*44px;[\s\S]*min-height:\s*44px;/u);
   });
 });

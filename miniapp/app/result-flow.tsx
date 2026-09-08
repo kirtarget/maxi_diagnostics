@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { FormattedMathText, FormattedStem } from "./math-display";
+import { AnswerPreview } from "./matching-answer";
 import { normalizeOffer, OfferSurface, type OfferTelemetryEvent } from "./offer-ux";
 import { PromptTable } from "./prompt-table";
 import { parseQuestionPrompt } from "./question-prompt";
@@ -209,6 +210,10 @@ export function ReviewScreen({
     .flatMap((asset) => asset ? [safeAssetPath(asset)] : [])
     .filter((asset): asset is string => Boolean(asset));
   const isLast = activeIndex === mistakes.length - 1;
+  const structuredPreview = item.answer_preview;
+  const previewValues = (values: string[]) => structuredPreview?.kind === "multiple"
+    ? structuredPreview.markers.map((marker) => values.includes(marker) ? marker : "")
+    : values;
 
   return (
     <section className="screen review-screen" aria-labelledby="review-title">
@@ -245,6 +250,13 @@ export function ReviewScreen({
           <dd><FormattedMathText text={item.expected_answer} subject={subject} /></dd>
         </div>
       </dl>
+      {structuredPreview && (
+        <section className="review-answer-preview" aria-labelledby="review-answer-preview-title">
+          <h2 id="review-answer-preview-title">Схема ответа</h2>
+          <AnswerPreview markers={structuredPreview.markers} selected={previewValues(structuredPreview.user)} label="Ваш выбор" />
+          <AnswerPreview markers={structuredPreview.markers} selected={previewValues(structuredPreview.expected)} label="Правильная схема" />
+        </section>
+      )}
       <section className="guidance" aria-labelledby="guidance-title">
         <span>Как решать</span>
         <h2 id="guidance-title">Разберите ход решения</h2>

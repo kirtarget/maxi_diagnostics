@@ -65,14 +65,16 @@ describe("AnswerEditor", () => {
     expect(html).not.toContain('role="radio"');
   });
 
-  it("renders matching rows with a select per item and the supplied choose label", () => {
+  it("renders matching rows as shared radio chips", () => {
     const html = renderToStaticMarkup(
       <AnswerEditor question={matching} value={{ i1: "o2" }} onChange={noop} labels={{ choose: "Выберите вариант" }} />,
     );
-    expect(html).toContain('class="matching-list"');
-    expect(html.match(/<select/g)).toHaveLength(2);
-    expect(html).toContain("Выберите вариант");
-    expect(html).toContain('aria-label="Соответствие для Первый"');
+    expect(html).toContain('class="matching-answer matching-answer-matching"');
+    expect(html.match(/role="radiogroup"/g)).toHaveLength(2);
+    expect(html.match(/role="radio"/g)).toHaveLength(4);
+    expect(html).not.toContain("<select");
+    expect(html).toContain('data-option-key="o2"');
+    expect(html).toContain("Очистить");
   });
 
   it("renders the short answer field with the brand labels and the prompt-derived hint", () => {

@@ -34,7 +34,8 @@ CASE
                       WHERE field.key NOT IN (
                           'question_id', 'number', 'type', 'topic', 'title', 'prompt',
                           'asset', 'assets', 'is_correct', 'user_answer',
-                          'expected_answer', 'guidance', 'guidance_kind'
+                          'expected_answer', 'guidance', 'guidance_kind',
+                          'answer_preview'
                       )
                  )
          )
