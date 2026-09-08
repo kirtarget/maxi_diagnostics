@@ -605,6 +605,36 @@ def test_ordering_prompt_reads_numbered_task_options():
 
 
 @pytest.mark.parametrize(
+    ("answer", "expected_kind"),
+    [("2", "single"), ("1#2", "multiple")],
+)
+def test_non_input_controls_do_not_duplicate_ordering_worded_options(
+    answer: str, expected_kind: str
+):
+    task = importer.SourceTask(
+        number=1,
+        prompt_blocks=[
+            "Выберите подходящие варианты.",
+            "В ответ запишите последовательность цифр.",
+        ],
+        options=["1) Первый вариант", "2) Второй вариант"],
+        answer=[answer],
+    )
+    source = importer.SourceFile(
+        Path("non-input.docx"), "ЕГЭ", "chemistry", 2022, 2, (task,)
+    )
+    kind, payload = importer.classify(task)
+    question = importer.build_question(
+        source, task, kind, payload, verified_at="2026-09-04"
+    )
+
+    assert kind == expected_kind
+    assert isinstance(question, dict)
+    assert "1) Первый вариант" not in question["prompt"]
+    assert "2) Второй вариант" not in question["prompt"]
+
+
+@pytest.mark.parametrize(
     ("source_name", "targets"),
     [
         (
