@@ -509,6 +509,13 @@ FIGURE_WORDS = re.compile(
     r"диаграмм|таблиц[аеуы] на",
     re.IGNORECASE,
 )
+TEXTUAL_REACTION_SCHEME = re.compile(
+    r"(?m)^[^|\r\n.!?]*(?:→|↔|⇄)[^|\r\n.!?]*\.?$"
+)
+TEXTUAL_REACTION_INTRO = re.compile(
+    r"(?i)^\s*(?:задана|приведена|представлена)\s+следующая\s+"
+    r"схем\w*(?:\s+превращени\w*)?(?:\s+веществ)?\s*:\s*$"
+)
 EXTERNAL_RESOURCE = re.compile(r"https?://|воспользуйтесь файлом|аудиозапис|прослушайте", re.IGNORECASE)
 SEQUENCE_MARKERS = re.compile(r"^[А-ЯЁ]\)", re.MULTILINE)
 SEQUENCE_HINT = "Введите последовательность цифр без пробелов."
@@ -1873,13 +1880,32 @@ def _rejection(
         return "unreadable_figure"
     if len(images) > MAX_QUESTION_ASSETS:
         return "too_many_figures"
-    if not images and FIGURE_WORDS.search(question["prompt"]):
+    if (
+        not images
+        and FIGURE_WORDS.search(_figure_reference_prompt(question["prompt"]))
+    ):
         return "missing_figure"
     if len(FLATTENED_MATCHING.findall(question["prompt"])) >= 2:
         return "unreadable_matching"
     if EXTERNAL_RESOURCE.search(question["prompt"]):
         return "external_resource"
     return validate_question(question)
+
+
+def _figure_reference_prompt(prompt: str) -> str:
+    """Exclude only a self-contained reaction line from figure-word checks."""
+    lines = prompt.splitlines()
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if (
+            not TEXTUAL_REACTION_SCHEME.fullmatch(stripped)
+            or FIGURE_WORDS.search(stripped)
+        ):
+            continue
+        lines[index] = ""
+        if index and TEXTUAL_REACTION_INTRO.fullmatch(lines[index - 1].strip()):
+            lines[index - 1] = ""
+    return "\n".join(lines)
 
 
 def _has_table_cell_figure(task: SourceTask) -> bool:
