@@ -206,6 +206,98 @@ describe("MatchingAnswer", () => {
     expect(cells[0].textContent).toContain("—");
   });
 
+  it("keeps Arrow selection on the active row after a controlled rerender", async () => {
+    const model: MatchingModel = {
+      ...mapModel,
+      source: "sequence",
+      rows: [
+        { key: "А", marker: "А", label: "Первый пункт" },
+        { key: "Б", marker: "Б", label: "Второй пункт" },
+        { key: "В", marker: "В", label: "Третий пункт" },
+      ],
+      markers: ["А", "Б", "В"],
+      answerLength: 3,
+      allowReuse: false,
+      options: mapModel.options.slice(0, 3).map((option) => ({ ...option, key: option.marker })),
+    };
+    let value = "";
+    const onChange = vi.fn((next: unknown) => { value = String(next); });
+    await act(async () => root.render(<MatchingAnswer model={model} value={value} onChange={onChange} />));
+    let options = [...container.querySelectorAll<HTMLButtonElement>('.sequence-answer-palette [role="radio"]')];
+    options[0].focus();
+    await act(async () => options[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    expect(onChange).toHaveBeenLastCalledWith("2");
+    await act(async () => root.render(<MatchingAnswer model={model} value={value} onChange={onChange} />));
+    options = [...container.querySelectorAll<HTMLButtonElement>('.sequence-answer-palette [role="radio"]')];
+    expect(options[1].disabled).toBe(false);
+    expect(options[1].getAttribute("aria-checked")).toBe("true");
+    options[1].focus();
+    await act(async () => options[1].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    expect(onChange).toHaveBeenLastCalledWith("3");
+    expect(document.activeElement).toBe(options[2]);
+  });
+
+  it("keeps a long-option sheet open while Arrow selects the next radio", async () => {
+    const onChange = vi.fn();
+    await act(async () => root.render(<MatchingAnswer model={longSequenceModel} value="" onChange={onChange} />));
+    const trigger = container.querySelector<HTMLButtonElement>(".sequence-answer-sheet-trigger")!;
+    await act(async () => trigger.click());
+    const options = [...container.querySelectorAll<HTMLButtonElement>('[role="dialog"] [role="radio"]')];
+    options[0].focus();
+    await act(async () => options[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    expect(onChange).toHaveBeenLastCalledWith("2");
+    expect(container.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(document.activeElement).toBe(options[1]);
+  });
+
+  it("wraps Shift+Tab from the controlled Arrow-selected radio in a 9-option sheet", async () => {
+    const model: MatchingModel = {
+      ...longSequenceModel,
+      options: Array.from({ length: 9 }, (_, index) => ({
+        key: String(index + 1),
+        marker: String(index + 1),
+        label: `Вариант ${index + 1}`,
+      })),
+    };
+    let value = "";
+    const onChange = vi.fn((next: unknown) => { value = String(next); });
+    await act(async () => root.render(<MatchingAnswer model={model} value={value} onChange={onChange} />));
+    const trigger = container.querySelector<HTMLButtonElement>(".sequence-answer-sheet-trigger")!;
+    await act(async () => trigger.click());
+    let options = [...container.querySelectorAll<HTMLButtonElement>('[role="dialog"] [role="radio"]')];
+    options[0].focus();
+    await act(async () => options[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    expect(onChange).toHaveBeenLastCalledWith("2");
+    await act(async () => root.render(<MatchingAnswer model={model} value={value} onChange={onChange} />));
+    options = [...container.querySelectorAll<HTMLButtonElement>('[role="dialog"] [role="radio"]')];
+    expect(options[0].tabIndex).toBe(-1);
+    expect(options[1].tabIndex).toBe(0);
+    options[1].focus();
+    const event = new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true });
+    await act(async () => options[1].dispatchEvent(event));
+    expect(event.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(container.querySelector<HTMLButtonElement>('[role="dialog"] .secondary-button'));
+  });
+
+  it("uses the same actual radio tab stop when wrapping a matching sheet", async () => {
+    const model: MatchingModel = {
+      ...mapModel,
+      options: Array.from({ length: 8 }, (_, index) => ({
+        key: `o${index + 1}`,
+        marker: String(index + 1),
+        label: `Вариант ${index + 1}`,
+      })),
+    };
+    await act(async () => root.render(<MatchingAnswer model={model} value={{}} onChange={vi.fn()} />));
+    await act(async () => container.querySelector<HTMLButtonElement>(".matching-answer-trigger")?.click());
+    const options = [...container.querySelectorAll<HTMLButtonElement>('[role="dialog"] [role="radio"]')];
+    options[0].focus();
+    const event = new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true });
+    await act(async () => document.dispatchEvent(event));
+    expect(event.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(container.querySelector<HTMLButtonElement>('[role="dialog"] .secondary-button'));
+  });
+
   it("closes the sheet with Escape and restores focus to its trigger", async () => {
     const onChange = vi.fn();
     await act(async () => root.render(<MatchingAnswer model={longSequenceModel} value="" onChange={onChange} />));
@@ -289,7 +381,7 @@ describe("MatchingAnswer", () => {
     expect(preview).toContain(">2<");
     expect(preview).toContain(">1<");
     expect(preview).toContain(">5<");
-    expect(preview).toContain('aria-live="polite"');
+    expect(preview).not.toContain('aria-live');
   });
 
   it("keeps real sequence option labels visible and tappable", async () => {

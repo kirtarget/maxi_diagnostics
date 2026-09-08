@@ -56,13 +56,17 @@ describe("AnswerEditor", () => {
     expect(html).not.toContain("selection-mark square");
   });
 
-  it("renders multiple choice as a toggle group with square selection marks", () => {
+  it("renders multiple choice as an explicit checkbox group with a stable count description", () => {
     const html = renderToStaticMarkup(<AnswerEditor question={multiple} value={["a"]} onChange={noop} />);
     expect(html).toContain('role="group"');
     expect(html).toContain('aria-label="Выберите 2 варианта"');
-    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('role="checkbox"');
+    expect(html).toContain('aria-checked="true"');
+    expect(html).toContain('aria-describedby="multiple-selection-count-q-multiple"');
+    expect(html).toContain('id="multiple-selection-count-q-multiple"');
+    expect(html).toContain("Выбрано 1 из 2");
     expect(html).toContain("selection-mark square");
-    expect(html).not.toContain('role="radio"');
+    expect(html).not.toContain('aria-pressed');
   });
 
   it("renders matching rows as shared radio chips", () => {

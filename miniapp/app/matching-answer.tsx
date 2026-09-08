@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 
 import { FormattedMathText } from "./math-display";
 import { updateCompactAnswer, updateMatchingAnswer } from "./answer-values";
@@ -150,6 +150,35 @@ function compactPrefix(selections: string[]): string {
   return selections.slice(0, firstHole < 0 ? selections.length : firstHole).join("");
 }
 
+function radioTabIndex(selected: boolean, index: number, available: boolean[], selectedIndex: number): number {
+  if (!available[index]) return -1;
+  if (selected) return 0;
+  if (selectedIndex >= 0) return -1;
+  return index === available.findIndex(Boolean) ? 0 : -1;
+}
+
+function moveRadioFocus(
+  event: ReactKeyboardEvent<HTMLButtonElement>,
+  options: MatchingOption[],
+  select: (option: MatchingOption) => void,
+) {
+  const delta = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1
+    : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1
+    : 0;
+  if (!delta) return;
+  const group = event.currentTarget.closest('[role="radiogroup"]');
+  if (!group) return;
+  const controls = [...group.querySelectorAll<HTMLButtonElement>('[role="radio"]:not(:disabled)')];
+  const current = controls.indexOf(event.currentTarget);
+  if (current < 0 || controls.length === 0) return;
+  event.preventDefault();
+  const next = (current + delta + controls.length) % controls.length;
+  const option = options.find((candidate) => candidate.key === controls[next].dataset.optionKey);
+  if (!option) return;
+  select(option);
+  controls[next].focus();
+}
+
 function SequenceAnswer({ model, value, subject, disabled = false, onChange }: {
   model: MatchingModel;
   value: AnswerValue | undefined;
@@ -181,13 +210,13 @@ function SequenceAnswer({ model, value, subject, disabled = false, onChange }: {
   useEffect(() => {
     if (!sheetOpen) return;
     const sheet = sheetRef.current;
-    const firstEnabled = sheet?.querySelector<HTMLButtonElement>('button[role="radio"]:not([disabled])');
+    const firstEnabled = sheet?.querySelector<HTMLButtonElement>('button[role="radio"][tabindex="0"]:not([disabled])');
     firstEnabled?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setSheetOpen(false);
       if (event.key !== "Tab") return;
       const focusable = sheet
-        ? [...sheet.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled])')]
+        ? [...sheet.querySelectorAll<HTMLElement>('button:not([disabled]):not([tabindex="-1"]), [href], input:not([disabled])')]
         : [];
       if (focusable.length < 2) return;
       const first = focusable[0];
@@ -219,7 +248,7 @@ function SequenceAnswer({ model, value, subject, disabled = false, onChange }: {
     || model.options.some((option) => option.label.length > LONG_OPTION_LENGTH / 2);
   const firstEmpty = selectedKeys.findIndex((selection) => !selection);
   const filled = compactPrefix(selectedKeys).length;
-  const choose = (option: MatchingOption) => {
+  const selectOption = (option: MatchingOption) => {
     const targetRow = firstEmpty < 0
       ? Math.min(activeRow, Math.max(model.answerLength - 1, 0))
       : Math.min(activeRow, firstEmpty);
@@ -231,7 +260,12 @@ function SequenceAnswer({ model, value, subject, disabled = false, onChange }: {
     const prefix = compactPrefix(next);
     lastEmitted.current = prefix;
     onChange(prefix);
-    const nextEmpty = next.findIndex((selection) => !selection);
+    return { targetRow, nextEmpty: next.findIndex((selection) => !selection) };
+  };
+  const choose = (option: MatchingOption) => {
+    const result = selectOption(option);
+    if (!result) return;
+    const { targetRow, nextEmpty } = result;
     setActiveRow(nextEmpty >= 0 ? nextEmpty : Math.min(targetRow + 1, model.answerLength - 1));
     setSheetOpen(false);
   };
@@ -246,13 +280,18 @@ function SequenceAnswer({ model, value, subject, disabled = false, onChange }: {
     sheetOpener.current = opener;
     setSheetOpen(true);
   };
-  const renderOption = (option: MatchingOption) => {
+  const renderOption = (option: MatchingOption, index: number) => {
     const targetRow = firstEmpty < 0
       ? Math.min(activeRow, Math.max(model.answerLength - 1, 0))
       : Math.min(activeRow, firstEmpty);
     const selected = selectedKeys[targetRow] === option.key;
     const usedAt = usedBy.get(option.key);
     const blocked = usedAt !== undefined && usedAt !== targetRow && !model.allowReuse;
+    const available = model.options.map((candidate) => {
+      const used = usedBy.get(candidate.key);
+      return !disabled && !(used !== undefined && used !== targetRow && !model.allowReuse);
+    });
+    const selectedIndex = model.options.findIndex((candidate) => candidate.key === selectedKeys[targetRow]);
     return (
       <button
         aria-checked={selected}
@@ -262,7 +301,9 @@ function SequenceAnswer({ model, value, subject, disabled = false, onChange }: {
         disabled={disabled || blocked}
         key={option.key}
         onClick={() => choose(option)}
+        onKeyDown={(event) => moveRadioFocus(event, model.options, selectOption)}
         role="radio"
+        tabIndex={radioTabIndex(selected, index, available, selectedIndex)}
         type="button"
       >
         <strong>{option.marker}</strong>
@@ -306,7 +347,7 @@ function SequenceAnswer({ model, value, subject, disabled = false, onChange }: {
           );
         })}
       </div>
-      <p className="sequence-answer-progress" aria-live="polite">Заполнено {filled} из {model.answerLength}</p>
+      <p className="sequence-answer-progress">Заполнено {filled} из {model.answerLength}</p>
       {!useSheet && (
         <div className="sequence-answer-palette" aria-label="Цифры для выбора" role="radiogroup">
           {model.options.map(renderOption)}
@@ -353,9 +394,23 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
     if (openRow === null) return;
     const trigger = sheetWasOpenedBy;
     const sheet = sheetRefs.current[openRow];
-    sheet?.querySelector<HTMLButtonElement>('button[role="radio"]:not([disabled])')?.focus();
+    sheet?.querySelector<HTMLButtonElement>('button[role="radio"][tabindex="0"]:not([disabled])')?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpenRow(null);
+      if (event.key !== "Tab") return;
+      const focusable = sheet
+        ? [...sheet.querySelectorAll<HTMLElement>('button:not([disabled]):not([tabindex="-1"]), [href], input:not([disabled])')]
+        : [];
+      if (focusable.length < 2) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", closeOnEscape);
     return () => {
@@ -370,20 +425,29 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
     if (key && !usedBy.has(key)) usedBy.set(key, index);
   });
   const useSheet = shouldUseMatchingSheet(model.options);
-  const choose = (rowIndex: number, option: MatchingOption) => {
+  const selectOption = (rowIndex: number, option: MatchingOption) => {
     const usedAt = usedBy.get(option.key);
     if (disabled || (usedAt !== undefined && usedAt !== rowIndex && !model.allowReuse)) return;
     onChange(encodeSelection(model, value, [], rowIndex, option));
+    return true;
+  };
+  const choose = (rowIndex: number, option: MatchingOption) => {
+    if (!selectOption(rowIndex, option)) return;
     setOpenRow(null);
   };
   const clear = (rowIndex: number) => {
     if (disabled) return;
     onChange(clearSelection(model, value, [], rowIndex));
   };
-  const renderOption = (rowIndex: number, option: MatchingOption, inSheet = false) => {
+  const renderOption = (rowIndex: number, option: MatchingOption, index: number, inSheet = false) => {
     const selected = selectedKeys[rowIndex] === option.key;
     const usedAt = usedBy.get(option.key);
     const blocked = usedAt !== undefined && usedAt !== rowIndex && !model.allowReuse;
+    const available = model.options.map((candidate) => {
+      const used = usedBy.get(candidate.key);
+      return !disabled && !(used !== undefined && used !== rowIndex && !model.allowReuse);
+    });
+    const selectedIndex = model.options.findIndex((candidate) => candidate.key === selectedKeys[rowIndex]);
     return (
       <button
         aria-checked={selected}
@@ -393,7 +457,9 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
         disabled={disabled || blocked}
         key={option.key}
         onClick={() => choose(rowIndex, option)}
+        onKeyDown={(event) => moveRadioFocus(event, model.options, (selectedOption) => selectOption(rowIndex, selectedOption))}
         role="radio"
+        tabIndex={radioTabIndex(selected, index, available, selectedIndex)}
         type="button"
       >
         <strong>{option.marker}</strong>
@@ -444,7 +510,7 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
                 </button>
               ) : (
                 <div className="matching-answer-options" aria-label={`Варианты для пункта ${row.marker}`} role="radiogroup">
-                  {model.options.map((option) => renderOption(rowIndex, option))}
+                  {model.options.map((option, index) => renderOption(rowIndex, option, index))}
                 </div>
               )}
               {selectedMarker && <button className="matching-answer-clear" disabled={disabled} onClick={() => clear(rowIndex)} type="button">Очистить</button>}
@@ -454,7 +520,7 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
                   <section ref={(element) => { sheetRefs.current[rowIndex] = element; }} className="matching-answer-sheet" data-matching-sheet-row={rowIndex} role="dialog" aria-modal="true" aria-labelledby={`matching-answer-sheet-title-${rowIndex}`} onClick={(event) => event.stopPropagation()}>
                     <h3 id={`matching-answer-sheet-title-${rowIndex}`}>Варианты для {row.marker}</h3>
                     <div className="matching-answer-sheet-options" aria-label={`Варианты для пункта ${row.marker}`} role="radiogroup">
-                      {model.options.map((option) => renderOption(rowIndex, option, true))}
+                      {model.options.map((option, index) => renderOption(rowIndex, option, index, true))}
                     </div>
                     <button className="secondary-button" onClick={() => setOpenRow(null)} type="button">Закрыть</button>
                   </section>
@@ -482,7 +548,7 @@ export function AnswerPreview({ markers, selected, label = "Твой ответ"
 }) {
   const values = markers.map((_, index) => selected[index] ?? "");
   return (
-    <div className={`matching-answer-preview${values.length > 0 && values.every(Boolean) ? " complete" : ""}`} aria-live="polite">
+    <div className={`matching-answer-preview${values.length > 0 && values.every(Boolean) ? " complete" : ""}`}>
       <span>{label}</span>
       <strong>
         {markers.map((marker, index) => (

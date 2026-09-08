@@ -23,11 +23,6 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   } as CSSProperties;
   return (
     <html lang="ru" style={schoolStyle}>
-      <head>
-        {/* Telegram requires its bridge before the Mini App initializes. */}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src="https://telegram.org/js/telegram-web-app.js?63" />
-      </head>
       <body>{children}</body>
     </html>
   );

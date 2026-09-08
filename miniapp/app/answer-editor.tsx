@@ -1,3 +1,5 @@
+import { useRef, type KeyboardEvent as ReactKeyboardEvent } from "react";
+
 import { FormattedMathText } from "./math-display";
 import { answerInputConfig } from "./math-text";
 import { cleanAnswerLabel } from "./question-prompt";
@@ -79,27 +81,38 @@ export function AnswerEditor({ question, subject, value, onChange, disabled = fa
   return <InputEditor question={question} value={asText} disabled={disabled} suppressAutoHint={suppressAutoHint} label={text.answer} placeholder={text.placeholder} onChange={onChange} />;
 }
 
-function OptionButton({ label, stress, marker, selected, disabled, square, subject, onClick }: {
+type SelectionMode = "radio" | "checkbox";
+
+function OptionButton({ label, stress, marker, selected, disabled, selectionMode, subject, tabIndex, describedBy, buttonRef, onClick, onKeyDown }: {
   label: string;
   stress?: string;
   marker: string;
   selected: boolean;
   disabled: boolean;
-  square?: boolean;
+  selectionMode: SelectionMode;
   subject?: string;
+  tabIndex?: number;
+  describedBy?: string;
+  buttonRef?: (element: HTMLButtonElement | null) => void;
   onClick: () => void;
+  onKeyDown?: (event: ReactKeyboardEvent<HTMLButtonElement>) => void;
 }) {
   return (
     <button
       type="button"
-      {...(square ? { "aria-pressed": selected } : { role: "radio", "aria-checked": selected })}
+      role={selectionMode}
+      aria-checked={selected}
+      aria-describedby={describedBy}
+      tabIndex={tabIndex}
+      ref={buttonRef}
       disabled={disabled}
       className={`answer-option${selected ? " selected" : ""}`}
       onClick={onClick}
+      onKeyDown={onKeyDown}
     >
       <span className="option-letter">{marker}</span>
       <span><FormattedMathText text={cleanAnswerLabel(stress ?? label)} subject={subject} /></span>
-      <span className={square ? "selection-mark square" : "selection-mark"} aria-hidden="true" />
+      <span className={selectionMode === "checkbox" ? "selection-mark square" : "selection-mark"} aria-hidden="true" />
     </button>
   );
 }
@@ -111,6 +124,18 @@ function SingleEditor({ question, subject, value, disabled, onChange }: {
   disabled: boolean;
   onChange: (value: AnswerValue) => void;
 }) {
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const selectedIndex = question.options.findIndex((option) => option.id === value);
+  const move = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
+    const delta = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1
+      : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1
+      : 0;
+    if (!delta) return;
+    event.preventDefault();
+    const nextIndex = (index + delta + question.options.length) % question.options.length;
+    onChange(question.options[nextIndex].id);
+    optionRefs.current[nextIndex]?.focus();
+  };
   return (
     <div className="answer-list" role="radiogroup" aria-label="Выберите один вариант">
       {question.options.map((option, index) => (
@@ -121,8 +146,12 @@ function SingleEditor({ question, subject, value, disabled, onChange }: {
           marker={String.fromCharCode(65 + index)}
           selected={value === option.id}
           disabled={disabled}
+          selectionMode="radio"
+          tabIndex={selectedIndex >= 0 ? (selectedIndex === index ? 0 : -1) : (index === 0 ? 0 : -1)}
           subject={subject}
           onClick={() => onChange(option.id)}
+          onKeyDown={(event) => move(event, index)}
+          buttonRef={(element) => { optionRefs.current[index] = element; }}
         />
       ))}
     </div>
@@ -136,6 +165,7 @@ function MultipleEditor({ question, subject, value, disabled, onChange }: {
   disabled: boolean;
   onChange: (value: AnswerValue) => void;
 }) {
+  const selectionCountId = `multiple-selection-count-${question.id}`;
   const toggle = (id: string) => {
     if (value.includes(id)) onChange(value.filter((item) => item !== id));
     else if (value.length < question.selection_limit) onChange([...value, id]);
@@ -144,7 +174,7 @@ function MultipleEditor({ question, subject, value, disabled, onChange }: {
   const markers = question.options.map((_, index) => String.fromCharCode(65 + index));
   return (
     <>
-      <div className="answer-list" role="group" aria-label={`Выберите ${question.selection_limit} варианта`}>
+      <div className="answer-list" role="group" aria-label={`Выберите ${question.selection_limit} варианта`} aria-describedby={selectionCountId}>
         {question.options.map((option, index) => (
           <OptionButton
             key={option.id}
@@ -154,11 +184,13 @@ function MultipleEditor({ question, subject, value, disabled, onChange }: {
             selected={value.includes(option.id)}
             disabled={disabled}
             subject={subject}
-            square
+            selectionMode="checkbox"
+            describedBy={selectionCountId}
             onClick={() => toggle(option.id)}
           />
         ))}
       </div>
+      <p className="answer-selection-count" id={selectionCountId}>Выбрано {value.length} из {question.selection_limit}</p>
       <AnswerPreview
         markers={markers}
         selected={question.options.map((option, index) => value.includes(option.id) ? markers[index] : "")}

@@ -194,6 +194,11 @@ export function QuestionView({
 }: QuestionScreenProps) {
   const progress = questionProgress(index, total);
   const readiness = answerReadiness(question, answer);
+  const questionAnnouncement = progressAnnouncement || (
+    skipped
+      ? "Задание пропущено. Можно вернуться и ответить позже."
+      : !readiness.isAnswered ? readiness.reason : ""
+  );
   const imagePaths = questionAssetPaths(question);
   const promptBlocks = parseQuestionPrompt(question.prompt);
   const layout = promptLayout(promptBlocks);
@@ -242,8 +247,6 @@ export function QuestionView({
           showCount: false,
           backLabel: labels.back,
           saveState: progressSaveState,
-          announcement: progressAnnouncement,
-          announcementRole: progressAnnouncementRole,
           progressMessage: `${labels.task_label} ${progress.current} ${labels.of_label} ${progress.total}. ${progress.message}`,
           skippedIndexes,
           onBack,
@@ -341,9 +344,14 @@ export function QuestionView({
             {index === total - 1 ? "Не знаю, получить результат" : "Не знаю, дальше"}
           </button>
         )}
-        {skipped
-          ? <p className="question-next-status" role="status">Задание пропущено. Можно вернуться и ответить позже.</p>
-          : !readiness.isAnswered && <p className="question-next-status" role="status">{readiness.reason}</p>}
+        <p
+          className="question-announcement"
+          role={progressAnnouncementRole}
+          aria-live={progressAnnouncementRole === "alert" ? "assertive" : "polite"}
+          aria-atomic="true"
+        >
+          {questionAnnouncement}
+        </p>
       </div>
       </div>
     </section>
