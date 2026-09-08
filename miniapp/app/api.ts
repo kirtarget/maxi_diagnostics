@@ -692,6 +692,18 @@ export type DeliveryResponse = {
   status: DeliveryStatus | null;
 };
 
+export type RetestReminderResponse =
+  | { ok: true; status: "scheduled"; due_at: string }
+  | { ok: true; status: "sent"; sent_at: string }
+  | { ok: true; status: "unavailable"; reason: "notifications_disabled" | "cancelled" | "delivery_failed" | "elapsed" };
+
+export const scheduleRetestReminder = (
+  initData: string, attemptId: string, sessionScope: string,
+) => postDiagnostic<RetestReminderResponse>("/api/diagnostics/session/retest-reminder", initData, {
+  attempt_id: attemptId,
+  session_scope: sessionScope,
+});
+
 export const loadDeliveryStatus = (
   initData: string, attemptId: string, sessionScope: string,
 ) => postDiagnostic<DeliveryResponse>("/api/diagnostics/session/delivery", initData, {
@@ -720,7 +732,7 @@ export async function loadWeeklyLeague(
 export type TrainerStartPayload =
   | { session_scope: string; diagnostic_id: string; count: number; mode: "normal" }
   | { session_scope: string; diagnostic_id: string; count: number; mode: "plan" }
-  | { session_scope: string; diagnostic_id: string; count: number; mode: "mistakes"; source_attempt_id: string };
+  | { session_scope: string; diagnostic_id: string; count: number; mode: "mistakes"; source_attempt_id: string; topic?: string };
 
 export const startTrainer = (
   initData: string,

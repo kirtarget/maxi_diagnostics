@@ -95,6 +95,22 @@ def test_answer_payload_carries_next_life_at_for_countdown():
     assert payload["next_life_at"] == "2026-08-25T12:00:00+00:00"
 
 
+def test_session_payload_preserves_topic_scope():
+    payload = trainer._session_payload({
+        "session_id": "trainer_123",
+        "diagnostic_id": "math-10",
+        "content_version": "a" * 64,
+        "mode": "mistakes",
+        "source_attempt_id": "attempt-12345678",
+        "topic": "Алгоритмы",
+        "selected_question_ids": ["q1"],
+        "current_index": 0,
+        "revision": 1,
+        "status": "active",
+    })
+    assert payload["topic"] == "Алгоритмы"
+
+
 def test_trainer_schema_has_separate_session_and_answer_ownership():
     assert "CREATE TABLE IF NOT EXISTS diagnostic_trainer_sessions" in DDL
     assert "CREATE TABLE IF NOT EXISTS diagnostic_trainer_answers" in DDL
@@ -142,6 +158,78 @@ async def _source_attempt(user_id: int, attempt_id: str, *, snapshot: dict):
             """,
             attempt_id, user_id, "a" * 64, json.dumps(snapshot, ensure_ascii=False),
         )
+
+
+@pytest.mark.asyncio
+async def test_schema_reapply_preserves_topic_column_and_separates_topic_sessions(database):
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        try:
+            await connection.execute(
+                "ALTER TABLE diagnostic_trainer_sessions "
+                "DROP CONSTRAINT IF EXISTS diagnostic_trainer_sessions_topic_mode_check"
+            )
+            await connection.execute(
+                "ALTER TABLE diagnostic_trainer_sessions "
+                "DROP CONSTRAINT IF EXISTS diagnostic_trainer_sessions_topic_check"
+            )
+            await connection.execute("ALTER TABLE diagnostic_trainer_sessions DROP COLUMN IF EXISTS topic")
+            await connection.execute(DDL)
+            await connection.execute(DDL)
+            assert await connection.fetchval(
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name='diagnostic_trainer_sessions' AND column_name='topic'"
+            ) == 1
+        finally:
+            await connection.execute(DDL)
+
+    user_id = 9_710_000_000 + uuid4().int % 100_000_000
+    normal_id = f"trainer_{uuid4().hex}"
+    normal, _ = await trainer.start_session(
+        session_id=normal_id, user_id=user_id, diagnostic_id="math-10",
+        content_version="a" * 64, mode="normal", selected_question_ids=["q1"],
+    )
+    normal_resumed, _ = await trainer.start_session(
+        session_id=f"trainer_{uuid4().hex}", user_id=user_id, diagnostic_id="math-10",
+        content_version="a" * 64, mode="normal", selected_question_ids=["different"],
+    )
+    assert normal["topic"] is None
+    assert normal_resumed["trainer_session_id"] == normal["trainer_session_id"]
+
+    attempt_id = f"attempt-{uuid4()}"
+    await _source_attempt(user_id, attempt_id, snapshot={"review_snapshot": []})
+    first_id, second_id = f"trainer_{uuid4().hex}", f"trainer_{uuid4().hex}"
+    same_topic_first, same_topic_second = await asyncio.gather(
+        trainer.start_session(
+            session_id=first_id, user_id=user_id, diagnostic_id="math-10",
+            content_version="a" * 64, mode="mistakes", source_attempt_id=attempt_id,
+            topic="Алгоритмы", selected_question_ids=["q1"],
+        ),
+        trainer.start_session(
+            session_id=second_id, user_id=user_id, diagnostic_id="math-10",
+            content_version="a" * 64, mode="mistakes", source_attempt_id=attempt_id,
+            topic="Алгоритмы", selected_question_ids=["q1"],
+        ),
+    )
+    same_topic_first, _ = same_topic_first
+    same_topic_second, _ = same_topic_second
+    assert same_topic_second["trainer_session_id"] == same_topic_first["trainer_session_id"]
+
+    geometry_session, _ = await trainer.start_session(
+        session_id=f"trainer_{uuid4().hex}", user_id=user_id, diagnostic_id="math-10",
+        content_version="a" * 64, mode="mistakes", source_attempt_id=attempt_id,
+        topic="Геометрия", selected_question_ids=["q2"],
+    )
+    resumed, _ = await trainer.start_session(
+        session_id=f"trainer_{uuid4().hex}", user_id=user_id, diagnostic_id="math-10",
+        content_version="a" * 64, mode="mistakes", source_attempt_id=attempt_id,
+        topic="Алгоритмы", selected_question_ids=["different"],
+    )
+
+    assert same_topic_first["topic"] == "Алгоритмы"
+    assert geometry_session["topic"] == "Геометрия"
+    assert resumed["trainer_session_id"] == same_topic_first["trainer_session_id"]
+    assert geometry_session["trainer_session_id"] != same_topic_first["trainer_session_id"]
 
 
 @pytest.mark.asyncio

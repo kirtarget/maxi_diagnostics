@@ -109,6 +109,11 @@ class TrainerLivesReminderRequest(ApiRequest):
     session_scope: str = Field(pattern=r"^[0-9a-f]{24}$")
 
 
+class RetestReminderRequest(ApiRequest):
+    session_scope: str = Field(pattern=r"^[0-9a-f]{24}$")
+    attempt_id: str = Field(pattern=r"^[A-Za-z0-9_-]{8,48}$")
+
+
 class TrainerFinishRequest(ApiRequest):
     session_scope: str = Field(pattern=r"^[0-9a-f]{24}$")
     trainer_session_id: str = Field(pattern=r"^[A-Za-z0-9_-]{32,64}$")

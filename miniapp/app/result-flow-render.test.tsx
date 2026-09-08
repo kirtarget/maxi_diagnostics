@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { ForecastEmptyScreen, ForecastScreen, ResultScreen, ReviewScreen } from "./result-flow";
+import { ForecastEmptyScreen, ForecastScreen, ResultScreen, ReviewScreen, RouteScreen } from "./result-flow";
 import type { ReviewItem } from "./types";
 
 const physicsSchool = JSON.parse(
@@ -398,7 +398,7 @@ describe("result flow screens", () => {
     expect(html).toContain("offer-surface-forecast");
     expect(html).toContain("Подготовка к экзамену");
     expect(html.indexOf("forecast-explainer")).toBeLessThan(html.indexOf("offer-surface-forecast"));
-    expect(html.indexOf("offer-surface-forecast")).toBeLessThan(html.indexOf("Открыть маршрут"));
+    expect(html.indexOf("offer-surface-forecast")).toBeLessThan(html.indexOf("Открыть план"));
   });
 
   it("shows the not-enough-data state with progress toward two diagnostics", () => {
@@ -411,7 +411,26 @@ describe("result flow screens", () => {
     );
     expect(html).toContain("Пока мало данных");
     expect(html).toContain("1 из 2");
-    expect(html).toContain("Пройти диагностику");
+    expect(html).toContain("Пройти полную диагностику");
+  });
+
+  it("does not invent an answer count when the estimate has no sample size", () => {
+    const html = renderToStaticMarkup(
+      <ForecastEmptyScreen onBack={() => undefined} onStart={() => undefined} />,
+    );
+
+    expect(html).toContain("Пока недостаточно данных для числового ориентира.");
+    expect(html).not.toContain("0 из");
+    expect(html).not.toContain("forecast-empty-progress");
+  });
+
+  it("does not invent an XP suffix for a legacy plan without a reward", () => {
+    const html = renderToStaticMarkup(
+      <RouteScreen items={[]} offers={[]} onSubjects={() => undefined} onHome={() => undefined} />,
+    );
+
+    expect(html).toContain("На главную");
+    expect(html).not.toContain("XP");
   });
 
   it("renders zero metrics so a truthy score gate cannot hide a valid server result", () => {

@@ -78,6 +78,24 @@ describe("result flow model", () => {
     ]);
   });
 
+  it("keeps the exact first non-correct question for review actions", () => {
+    const actions = personalRoute({
+      growth_topics: [{ topic: "Алгоритмы", question_count: 2 }],
+      per_question: [
+        { question_id: "q1", number: 1, topic: "Алгоритмы", status: "correct", is_correct: true },
+        { question_id: "q2", number: 2, topic: "Алгоритмы", status: "incorrect", is_correct: false },
+      ],
+    });
+    expect(actions[0]).toMatchObject({ kind: "review", topic: "Алгоритмы", questionId: "q2" });
+  });
+
+  it("does not offer a topic trainer for an all-skipped topic", () => {
+    expect(personalRoute({
+      growth_topics: [{ topic: "Алгоритмы", question_count: 2 }],
+      per_question: [{ question_id: "q1", number: 1, topic: "Алгоритмы", status: "skipped", is_correct: false }],
+    }).map((action) => action.kind)).toEqual(["retest-reminder"]);
+  });
+
   it("calls one wrong answer a recommendation rather than a diagnosed gap", () => {
     expect(topicRecommendation([{ topic: "Орфоэпия", question_count: 1, correct_count: 0 }])).toEqual({
       heading: "Стоит повторить",

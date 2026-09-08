@@ -83,7 +83,7 @@ export function homePrimaryAction({
     };
   }
   if (dailyPlan?.status === "ready" && dailyPlan.diagnostic_id) {
-    return { kind: "daily-plan", label: `План на сегодня: ${dailyPlan.completed} из ${dailyPlan.total}`, plan: dailyPlan };
+    return { kind: "daily-plan", label: `Задания на сегодня: ${dailyPlan.completed} из ${dailyPlan.total}`, plan: dailyPlan };
   }
   return { kind: "new-diagnostic", label: "Начать диагностику" };
 }

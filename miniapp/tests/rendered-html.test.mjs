@@ -42,7 +42,7 @@ test("renders the configured school identity", async () => {
   assert.match(output, /Подготовка/);
   assert.match(output, /Мой план подготовки/);
   assert.doesNotMatch(output, /Ожидаемый результат|Прогноз баллов/);
-  assert.match(output, /Персональный маршрут/);
+  assert.match(output, /План подготовки/);
 });
 
 test("production output contains no answer or private-link leaks", async () => {

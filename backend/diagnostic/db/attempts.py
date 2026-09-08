@@ -830,6 +830,73 @@ async def list_notifications(attempt_id: str) -> list:
         )
 
 
+async def schedule_retest_reminder(*, user_id: int, attempt_id: str) -> dict[str, Any]:
+    """Return the current retest notification without changing an existing delivery lease."""
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        async with connection.transaction():
+            await connection.execute("SELECT pg_advisory_xact_lock($1)", user_id)
+            await _raise_if_erased(connection, user_id)
+            attempt = await connection.fetchrow(
+                """
+                SELECT attempt_id, completed_at, mode, subject
+                  FROM diagnostic_attempts
+                 WHERE attempt_id=$1 AND user_id=$2 AND status='completed'
+                 FOR UPDATE
+                """,
+                attempt_id, user_id,
+            )
+            if attempt is None or attempt["completed_at"] is None:
+                return {"status": "unavailable", "reason": "elapsed"}
+            enabled = await connection.fetchval(
+                """
+                SELECT COALESCE(notifications_enabled, true)
+                  FROM diagnostic_engagements
+                 WHERE user_id=$1
+                """,
+                user_id,
+            )
+            if enabled is False:
+                return {"status": "unavailable", "reason": "notifications_disabled"}
+            due_at = attempt["completed_at"] + timedelta(days=30)
+            existing = await connection.fetchrow(
+                """
+                SELECT status, due_at, sent_at, attempts, locked_at,
+                       locked_at > now() - interval '10 minutes' AS lease_active
+                  FROM diagnostic_notifications
+                 WHERE dedupe_key=$1 AND user_id=$2 AND attempt_id=$3 AND kind='month_retest'
+                 FOR UPDATE
+                """,
+                f"month_retest:{attempt_id}", user_id, attempt_id,
+            )
+            if existing is None:
+                if due_at <= datetime.now(due_at.tzinfo):
+                    return {"status": "unavailable", "reason": "elapsed"}
+                row = await connection.fetchrow(
+                    """
+                    INSERT INTO diagnostic_notifications
+                        (dedupe_key, user_id, attempt_id, kind, due_at, payload)
+                    VALUES ($1,$2,$3,'month_retest',$4,$5)
+                    RETURNING status, due_at, sent_at
+                    """,
+                    f"month_retest:{attempt_id}", user_id, attempt_id,
+                    due_at, {"mode": attempt["mode"], "subject": attempt["subject"]},
+                )
+                return {"status": "scheduled", "due_at": row["due_at"]}
+            status = existing["status"]
+            if status == "sent":
+                return {"status": "sent", "sent_at": existing["sent_at"]}
+            if status == "cancelled":
+                return {"status": "unavailable", "reason": "cancelled"}
+            if status == "sending" and existing["lease_active"]:
+                return {"status": "scheduled", "due_at": existing["due_at"]}
+            if status == "abandoned" or int(existing["attempts"] or 0) >= 8:
+                return {"status": "unavailable", "reason": "delivery_failed"}
+            if status in {"pending", "sending", "failed"}:
+                return {"status": "scheduled", "due_at": existing["due_at"]}
+            return {"status": "unavailable", "reason": "delivery_failed"}
+
+
 async def claim_pending_delivery(attempt_id: str | None = None):
     pool = await get_pool()
     async with pool.acquire() as connection:

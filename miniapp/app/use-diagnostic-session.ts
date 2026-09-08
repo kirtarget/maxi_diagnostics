@@ -76,7 +76,7 @@ export type DiagnosticSessionActions = {
   setExam(exam: string): void;
   chooseMode(mode: DiagnosticMode, exam: string): void;
   chooseFormat(mode: DiagnosticMode, diagnostic: PublicDiagnosticSummary): Promise<void>;
-  beginDiagnostic(selected: PublicDiagnosticSummary): Promise<void>;
+  beginDiagnostic(selected: PublicDiagnosticSummary, mode?: DiagnosticMode): Promise<void>;
   answerQuestion(value: AnswerValue): void;
   skipQuestion(): void;
   previousQuestion(): void;

@@ -40,7 +40,7 @@ const LEVELS = [
   { minimum: 0, label: "Первый шаг" },
   { minimum: 1, label: "Исследователь" },
   { minimum: 3, label: "Практик" },
-  { minimum: 5, label: "Уверенный маршрут" },
+  { minimum: 5, label: "Уверенная подготовка" },
   { minimum: 10, label: "Мастер диагностики" },
 ] as const;
 
@@ -53,7 +53,7 @@ const ACHIEVEMENTS: Record<UnlockedAchievement["key"], UnlockedAchievement> = {
   three_diagnostics_completed: {
     key: "three_diagnostics_completed",
     title: "Три шага подряд",
-    description: "Три диагностики завершены, маршрут набирает темп.",
+    description: "Три диагностики завершены, подготовка набирает темп.",
   },
 };
 
@@ -140,7 +140,7 @@ function onboardingFor(completionCount: number): Pick<GameplayProfileView, "onbo
   if (completionCount === 1) {
     return { onboardingState: "first_completion", onboardingLabel: "Первый результат уже готов" };
   }
-  return { onboardingState: "returning", onboardingLabel: "Продолжайте свой маршрут" };
+  return { onboardingState: "returning", onboardingLabel: "Продолжайте подготовку" };
 }
 
 export function gameplayProfileView(payload: GameplayProfilePayload | null | undefined): GameplayProfileView {

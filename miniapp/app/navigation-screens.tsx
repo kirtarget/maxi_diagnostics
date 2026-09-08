@@ -282,7 +282,7 @@ export function ModeScreen({ diagnostic, labels, onBack, onSelect }: ModeScreenP
           <span className="mode-badge">Рекомендуем</span>
           <div className="mode-card-head">
             <span className="mode-card-icon" aria-hidden="true">🗺️</span>
-            <div><strong>Полный маршрут</strong><div className="mode-card-meta">{formatDiagnosticMeta("full", diagnostic)} <small>{formatDiagnosticCount("full", diagnostic)}</small></div></div>
+            <div><strong>Полный формат</strong><div className="mode-card-meta">{formatDiagnosticMeta("full", diagnostic)} <small>{formatDiagnosticCount("full", diagnostic)}</small></div></div>
           </div>
           <span>Все задания этой диагностики, разбор ответов и план повторения.</span>
           <em>{labels.choose_label}</em>

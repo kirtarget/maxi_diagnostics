@@ -121,6 +121,13 @@ def test_public_school_payload_includes_resolved_visual_roles():
     }
 
 
+@pytest.mark.parametrize(("mode", "expected"), [("quick", 20), ("full", 40)])
+def test_completion_reward_policy_is_server_owned(mode, expected):
+    from diagnostic.db.gameplay import diagnostic_completion_xp
+
+    assert diagnostic_completion_xp(mode) == expected
+
+
 def catalog_request() -> dict:
     catalog = load_catalog(load_school(SAMPLE_SCHOOL))
     return {
@@ -1094,6 +1101,8 @@ def test_forecast_does_not_invent_recovery_of_missed_points(monkeypatch):
     completion, payload = capture_completion(monkeypatch, school_with())
 
     assert payload["result"]["score"] == 50
+    assert payload["result"]["xp_earned"] == 20
+    assert completion.result_snapshot["xp_earned"] == 20
     assert payload["result"]["recoverable_primary_score"] == 1
     assert completion.forecast == {
         "kind": "accuracy_percent",
@@ -1151,6 +1160,37 @@ def test_bootstrap_results_omit_the_estimate_for_older_attempts():
     }
 
     assert "estimate" not in serialize_attempt(row)
+
+
+def test_bootstrap_results_carry_the_persisted_completion_reward():
+    from diagnostic.api.sessions import serialize_attempt
+
+    serialized = serialize_attempt({
+        "attempt_id": "attempt_saved",
+        "diagnostic_id": "demo-math",
+        "mode": "full",
+        "status": "completed",
+        "result_snapshot": {"score": 50, "xp_earned": 40},
+    })
+
+    assert serialized["result"]["xp_earned"] == 40
+
+
+def test_legacy_saved_result_defaults_reward_to_zero_without_private_ledger_fields():
+    from diagnostic.api.sessions import serialize_attempt
+
+    serialized = serialize_attempt({
+        "attempt_id": "attempt_legacy",
+        "diagnostic_id": "demo-math",
+        "mode": "quick",
+        "status": "completed",
+        "result_snapshot": {"score": 50},
+    })
+
+    assert "xp_earned" not in serialized["result"]
+    encoded = json.dumps(serialized)
+    assert "diagnostic_progress_events" not in encoded
+    assert "xp_delta" not in encoded
 
 
 def shortened_full_school(tmp_path: Path, full_count: int = 4):
@@ -1230,3 +1270,69 @@ def test_full_mode_rejects_an_answer_beyond_full_count(monkeypatch, tmp_path):
 
     assert response.status_code == 422
     assert response.json()["detail"] == "invalid_question_count"
+
+
+def test_retest_reminder_endpoint_is_authenticated_and_returns_typed_state(monkeypatch):
+    from diagnostic.api import sessions
+
+    schedule = AsyncMock(return_value={"status": "scheduled", "due_at": "2026-10-01T00:00:00+00:00"})
+    monkeypatch.setattr(sessions.attempts, "schedule_retest_reminder", schedule)
+    client = make_client(monkeypatch)
+    body = {
+        "init_data": signed_init_data(),
+        "session_scope": SESSION_SCOPE,
+        "attempt_id": "attempt_123",
+    }
+
+    response = client.post("/api/diagnostics/session/retest-reminder", json=body)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": True,
+        "status": "scheduled",
+        "due_at": "2026-10-01T00:00:00+00:00",
+    }
+    schedule.assert_awaited_once_with(user_id=42, attempt_id="attempt_123")
+
+
+def test_retest_reminder_endpoint_rejects_wrong_current_scope(monkeypatch):
+    from diagnostic.api import sessions
+
+    schedule = AsyncMock()
+    monkeypatch.setattr(sessions.attempts, "schedule_retest_reminder", schedule)
+    client = make_client(monkeypatch)
+    body = {
+        "init_data": signed_init_data(),
+        "session_scope": "2" * 24,
+        "attempt_id": "attempt_123",
+    }
+
+    response = client.post("/api/diagnostics/session/retest-reminder", json=body)
+
+    assert response.status_code == 409
+    schedule.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    ("state", "expected"),
+    [
+        ({"status": "sent", "sent_at": "2026-09-08T12:00:00+00:00"}, {"status": "sent", "sent_at": "2026-09-08T12:00:00+00:00"}),
+        ({"status": "unavailable", "reason": "notifications_disabled"}, {"status": "unavailable", "reason": "notifications_disabled"}),
+    ],
+)
+def test_retest_reminder_endpoint_preserves_terminal_typed_state(monkeypatch, state, expected):
+    from diagnostic.api import sessions
+
+    monkeypatch.setattr(sessions.attempts, "schedule_retest_reminder", AsyncMock(return_value=state))
+    client = make_client(monkeypatch)
+    response = client.post(
+        "/api/diagnostics/session/retest-reminder",
+        json={
+            "init_data": signed_init_data(),
+            "session_scope": SESSION_SCOPE,
+            "attempt_id": "attempt_123",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, **expected}

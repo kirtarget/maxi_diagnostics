@@ -30,6 +30,13 @@ class GameplayEvent:
     xp_delta: int
 
 
+def diagnostic_completion_xp(mode: str) -> int:
+    try:
+        return _REWARD_XP[mode]
+    except KeyError as exc:
+        raise ValueError("diagnostic_mode_invalid") from exc
+
+
 def _event_fingerprint(
     *, event_type: str, source_type: str, source_id: str, activity_date: date,
     xp_delta: int, policy: str = "diagnostic-completion-v1"
@@ -55,10 +62,7 @@ def build_diagnostic_completion_event(
     now: datetime | None = None,
 ) -> GameplayEvent:
     """Resolve reward and local date without reading client-authored data."""
-    try:
-        xp_delta = _REWARD_XP[mode]
-    except KeyError as exc:
-        raise ValueError("diagnostic_mode_invalid") from exc
+    xp_delta = diagnostic_completion_xp(mode)
     instant = now or datetime.now(timezone.utc)
     if instant.tzinfo is None:
         instant = instant.replace(tzinfo=timezone.utc)

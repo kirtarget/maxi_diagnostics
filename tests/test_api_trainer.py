@@ -222,6 +222,39 @@ def test_mistakes_start_uses_only_seeded_private_snapshot_and_public_questions(m
     assert start_session.await_args.kwargs["source_attempt_id"] == "attempt-1"
 
 
+def test_mistakes_topic_is_forwarded_to_seed_and_resume_identity(monkeypatch):
+    from diagnostic.api import trainer
+
+    seed = AsyncMock(return_value=["q1"])
+    start_session = AsyncMock(return_value=(
+        {
+            "trainer_session_id": "A" * 32,
+            "diagnostic_id": "demo-math",
+            "content_version": "a" * 64,
+            "mode": "mistakes",
+            "source_attempt_id": "attempt-1",
+            "topic": "Вычисления",
+            "question_ids": ["q1"],
+            "current_index": 0,
+            "revision": 1,
+            "status": "active",
+        },
+        {"lives_remaining": 5},
+    ))
+    monkeypatch.setattr(trainer.trainer, "seed_and_list_mistakes", seed)
+    monkeypatch.setattr(trainer.trainer, "start_session", start_session)
+    client = make_client(monkeypatch)
+
+    response = client.post(
+        "/api/diagnostics/trainer/start",
+        json=start_body(mode="mistakes", source_attempt_id="attempt-1", topic="Вычисления"),
+    )
+
+    assert response.status_code == 200
+    assert seed.await_args.kwargs["topic"] == "Вычисления"
+    assert start_session.await_args.kwargs["topic"] == "Вычисления"
+
+
 def test_mistakes_resume_validates_source_without_reseeding(monkeypatch):
     from diagnostic.api import trainer
 

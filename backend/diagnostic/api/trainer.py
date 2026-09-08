@@ -130,6 +130,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
                     user_id=user["id"], diagnostic_id=diagnostic.id,
                     content_version=content_version, mode=body.mode,
                     source_attempt_id=source_attempt_id,
+                    topic=body.topic if body.mode == "mistakes" else None,
                 )
             except ValueError as exc:
                 raise _error(exc) from exc
@@ -139,11 +140,13 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
                         user_id=user["id"], diagnostic_id=diagnostic.id,
                         source_attempt_id=source_attempt_id,
                         content_version=content_version,
+                        topic=body.topic,
                     )
                 except ValueError as exc:
                     raise _error(exc) from exc
                 questions = tuple(
-                    question for question in diagnostic.questions if question.id in question_ids
+                    question for question in diagnostic.questions
+                    if question.id in question_ids and (body.topic is None or question.topic == body.topic)
                 )
                 if not questions:
                     raise HTTPException(status_code=409, detail="trainer_no_mistakes")
@@ -188,6 +191,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
                     mode=body.mode,
                     selected_question_ids=[question.id for question in selected],
                     source_attempt_id=source_attempt_id,
+                    topic=body.topic if body.mode == "mistakes" else None,
                 )
             except ValueError as exc:
                 raise _error(exc) from exc

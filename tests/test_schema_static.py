@@ -78,6 +78,28 @@ def test_mistake_review_columns_are_added_idempotently_with_a_migration():
         "    ADD COLUMN IF NOT EXISTS review_count SMALLINT NOT NULL DEFAULT 0;" in DDL
     )
     assert "ADD COLUMN IF NOT EXISTS next_review_on DATE" in DDL
+
+
+def test_topic_scoped_trainer_sessions_are_backward_compatible_and_bounded():
+    start = DDL.index("CREATE TABLE IF NOT EXISTS diagnostic_trainer_sessions")
+    end = DDL.index("CREATE INDEX IF NOT EXISTS idx_diagnostic_trainer_sessions_user_updated")
+    fresh = DDL[start:end]
+    assert "topic TEXT" in fresh
+    assert "CHECK (topic IS NULL OR length(topic) BETWEEN 1 AND 128)" in fresh
+    assert "CHECK (mode = 'mistakes' OR topic IS NULL)" in fresh
+    assert "ADD COLUMN IF NOT EXISTS topic TEXT" in fresh
+    assert "topic_check" in DDL
+    assert "topic_mode_check" in DDL
+
+
+def test_trainer_resume_identity_includes_nullable_topic():
+    from diagnostic.db import trainer
+
+    sql = " ".join(
+        constant for constant in trainer._find_resumable_session.__code__.co_consts
+        if isinstance(constant, str)
+    )
+    assert "topic IS NOT DISTINCT FROM $6" in " ".join(sql.split())
     assert "2026-09-02-kir-173-daily-plan" in DDL
     assert "CHECK (mode IN ('normal', 'mistakes', 'plan'))" in DDL
 

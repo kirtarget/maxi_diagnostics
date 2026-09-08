@@ -17,6 +17,7 @@ export type TrainerStartResponse = {
   content_version: string;
   mode: TrainerMode;
   source_attempt_id?: string | null;
+  topic?: string | null;
   question_ids: string[];
   current_index: number;
   revision: number;
@@ -37,7 +38,7 @@ export type TrainerHeaderView = {
   modeLabel: string;
 };
 
-export type TrainerSessionIdentity = Pick<TrainerStartResponse, "diagnostic_id" | "mode">;
+export type TrainerSessionIdentity = Pick<TrainerStartResponse, "diagnostic_id" | "mode" | "topic">;
 
 export type TrainerFeedbackKind = "correct" | "partial" | "incorrect";
 
