@@ -166,7 +166,15 @@
       "correct": [
         "6714"
       ],
-      "answer_format": "number",
+      "answer_format": "sequence",
+      "answer_length": 4,
+      "allow_reuse": false,
+      "markers": [
+        "А",
+        "Б",
+        "В",
+        "Г"
+      ],
       "explanation": "Согласно тексту, подходит сочетание цифр 6714",
       "source": {
         "provider": "maximum_editorial",

@@ -34,3 +34,16 @@ def test_public_question_never_contains_a_server_only_field():
             assert payload["id"] == question.id and payload["type"] == question.type
             if question.type == "text":
                 assert payload["max_length"] == question.max_length
+
+
+def test_public_numeric_question_exposes_optional_unit_without_answer_key():
+    catalog = load_catalog(load_school(SAMPLE_SCHOOL))
+    question = next(
+        question for question in catalog.diagnostics[0].questions
+        if isinstance(question, InputQuestion) and question.answer_format == "number"
+    ).model_copy(update={"answer_unit": "м"})
+
+    payload = public_question(question)
+
+    assert payload["answer_unit"] == "м"
+    assert "correct" not in payload

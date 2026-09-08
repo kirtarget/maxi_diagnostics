@@ -142,6 +142,11 @@ FIGURE_WORDS = re.compile(
 EXTERNAL_RESOURCE = re.compile(r"https?://|воспользуйтесь файлом|аудиозапис|прослушайте", re.IGNORECASE)
 SEQUENCE_MARKERS = re.compile(r"^[А-ЯЁ]\)", re.MULTILINE)
 SEQUENCE_HINT = "Введите последовательность цифр без пробелов."
+ORDERING_LANGUAGE = re.compile(
+    r"располож\w*|в\s+порядк\w*|последовательност\w*\s+цифр|"
+    r"соответствующ\w*\s+букв",
+    re.IGNORECASE,
+)
 # A two-column matching table the converter could not read stays in the prompt as
 # `left | right` lines. That is unreadable, so the task is dropped instead.
 FLATTENED_MATCHING = re.compile(r"^\s*(?:[А-ЯЁA-Z][.)]|_{3,})\s.*\|\s*\d[.)]\s", re.MULTILINE)
@@ -565,18 +570,114 @@ def _table_gap_markers(task: SourceTask) -> tuple[str, ...]:
 
 
 def _numbered_prompt_choices(task: SourceTask) -> list[tuple[str, str]]:
-    """Read a contiguous 1..N choice list kept as prompt paragraphs."""
-    choices: list[tuple[str, str]] = []
-    for line in task.prompt_blocks:
-        match = re.fullmatch(r"(\d)[.)]\s*(.+?)[;.]?", line.strip())
-        if match is None:
-            if choices:
-                break
+    """Read the last contiguous 1..N choice list kept in prompt text.
+
+    SharePoint exports may put each choice in its own paragraph or preserve a
+    multi-line list inside one paragraph. The last run matters for text tasks
+    such as physics q04, which also contains a numbered figure legend.
+    """
+    runs: list[list[tuple[str, str]]] = []
+    current: list[tuple[str, str]] = []
+    for block in task.prompt_blocks:
+        for line in block.splitlines():
+            match = re.fullmatch(r"(\d)[.)]\s*(.+?)[;.]?", line.strip())
+            if match is None:
+                if len(current) >= 2:
+                    runs.append(current)
+                current = []
+                continue
+            marker = match.group(1)
+            if marker == "1" and current:
+                if len(current) >= 2:
+                    runs.append(current)
+                current = []
+            current.append((marker, clean_line(match.group(2))))
+        if current and len(block.splitlines()) > 1:
+            if len(current) >= 2:
+                runs.append(current)
+            current = []
+    if len(current) >= 2:
+        runs.append(current)
+
+    for block in task.prompt_blocks:
+        found = list(FLATTENED_NUMBERED_CHOICE.finditer(block))
+        if not found:
             continue
-        choices.append((match.group(1), clean_line(match.group(2))))
-    if len(choices) < 2 or [int(marker) for marker, _ in choices] != list(range(1, len(choices) + 1)):
-        return []
-    return choices
+        inline_run: list[tuple[str, str]] = []
+        for match in found:
+            marker = match.group("number")
+            if marker == "1" and inline_run:
+                if len(inline_run) >= 2:
+                    runs.append(inline_run)
+                inline_run = []
+            inline_run.append((marker, clean_line(match.group("label"))))
+        if len(inline_run) >= 2:
+            runs.append(inline_run)
+
+    for choices in reversed(runs):
+        numbers = [int(marker) for marker, _ in choices]
+        if numbers == list(range(1, len(numbers) + 1)) and all(label for _, label in choices):
+            return choices
+    return []
+
+
+def _numbered_table_choices(task: SourceTask) -> list[tuple[str, str]]:
+    """Read a contiguous numbered option run from a prompt table."""
+    for table in task.prompt_tables:
+        choices: list[tuple[str, str]] = []
+        has_lettered_item = False
+        for row in table.rows:
+            for cell in row:
+                for line in cell:
+                    text = clean_line(line)
+                    if MATCHING_ITEM.fullmatch(text):
+                        has_lettered_item = True
+                    match = TABLE_NUMBERED_CHOICE.fullmatch(text)
+                    if match:
+                        if len(match.group("number")) != 1:
+                            return []
+                        choices.append((match.group("number"), clean_line(match.group("label"))))
+        if has_lettered_item or len(choices) < 2:
+            continue
+        numbers = [int(marker) for marker, _ in choices]
+        if numbers == list(range(1, len(numbers) + 1)) and all(label for _, label in choices):
+            return choices
+    return []
+
+
+def _ordering_sequence(task: SourceTask, key: str) -> InputAnswerSpec | None:
+    """Recognize an ordinary ordering key only with source structure to prove it."""
+    if not ORDERING_LANGUAGE.search("\n".join(task.prompt_blocks)) or len(key) < 2:
+        return None
+    choices = _numbered_prompt_choices(task) or _numbered_table_choices(task)
+    if len(choices) < 2:
+        return None
+    option_markers = {marker for marker, _ in choices}
+    if not DIGITS.fullmatch(key) or len(key) != len(choices) and not re.search(r"соответствующ\w*\s+букв", "\n".join(task.prompt_blocks), re.IGNORECASE):
+        return None
+    letter_markers: list[str] = []
+    for marker in re.findall(r"\(([А-ЯЁ])\)", "\n".join(task.prompt_blocks)):
+        if marker not in letter_markers:
+            letter_markers.append(marker)
+    if letter_markers:
+        if len(letter_markers) != len(key) or not set(key) <= option_markers:
+            return None
+        markers = tuple(letter_markers)
+    else:
+        if len(key) != len(choices) or set(key) != option_markers:
+            return None
+        markers = tuple(marker for marker, _ in choices)
+    if len(set(key)) != len(key):
+        return None
+    return InputAnswerSpec(
+        (key,),
+        sequence=True,
+        answer_format="sequence",
+        answer_length=len(markers),
+        allow_reuse=False,
+        markers=markers,
+        options=tuple(choices),
+    )
 
 
 def _numbered_choice_table(table: SourceTable) -> list[tuple[str, str]]:
@@ -858,6 +959,11 @@ def classify(task: SourceTask) -> tuple[str, AnswerSpec | str]:
                 markers=gap_markers,
                 options=tuple(numbered),
             )
+
+    if len(parts) == 1 and DIGITS.fullmatch(key):
+        ordering = _ordering_sequence(task, key)
+        if ordering is not None:
+            return "input", ordering
 
     if task.options:
         if len(digit_parts) != len(parts) or any(len(part) != 1 for part in parts):

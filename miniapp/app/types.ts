@@ -72,6 +72,7 @@ export type InputQuestion = BaseQuestion & {
   type: "input";
   /** Contract-4 answer metadata. Older catalogs omit these fields. */
   answer_format?: "number" | "sequence";
+  answer_unit?: string;
   answer_length?: number;
   allow_reuse?: boolean;
   markers?: string[];

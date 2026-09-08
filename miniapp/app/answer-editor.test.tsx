@@ -89,6 +89,19 @@ describe("AnswerEditor", () => {
     expect(html).toContain("Очистить");
   });
 
+  it("renders a numeric unit without changing the decimal input contract", () => {
+    const html = renderToStaticMarkup(
+      <AnswerEditor
+        question={{ ...input, answer_unit: "м" }}
+        value="0,25"
+        onChange={noop}
+      />,
+    );
+    expect(html).toContain('inputMode="decimal"');
+    expect(html).toContain('class="answer-unit">м</span>');
+    expect(html).toContain("запятую или точку");
+  });
+
   it("renders free text as a plain field bounded by max_length", () => {
     const html = renderToStaticMarkup(
       <AnswerEditor question={shortText} value="однако" onChange={noop} />,

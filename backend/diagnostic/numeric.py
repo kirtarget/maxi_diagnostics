@@ -15,6 +15,7 @@ NUMERIC_ANSWER_PATTERN = re.compile(
 def normalize_numeric_answer(value: object) -> Decimal | None:
     if not isinstance(value, str) or not 1 <= len(value) <= MAX_NUMERIC_ANSWER_LENGTH:
         return None
+    value = value.replace("−", "-")
     if value != value.strip() or not NUMERIC_ANSWER_PATTERN.fullmatch(value):
         return None
     try:

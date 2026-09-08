@@ -53,7 +53,12 @@ export function isValidNumericInput(value: unknown): value is string {
   if (typeof value !== "string" || value.length < 1 || value.length > 64 || value !== value.trim()) {
     return false;
   }
-  return /^[+-]?(?:[0-9]+(?:[.,][0-9]*)?|[.,][0-9]+)(?:[eE][+-]?[0-9]{1,3})?$/.test(value);
+  const normalized = normalizeNumericInput(value);
+  return /^[+-]?(?:[0-9]+(?:[.,][0-9]*)?|[.,][0-9]+)(?:[eE][+-]?[0-9]{1,3})?$/.test(normalized);
+}
+
+export function normalizeNumericInput(value: string): string {
+  return value.replace(/−/gu, "-");
 }
 
 const CONTROL_MAX = 0x1f;
@@ -98,7 +103,8 @@ export function updateCompactAnswer(
 export function updateNumericInputAnswer(
   current: AnswerMap, questionId: string, draft: string,
 ): AnswerMap {
-  if (isValidNumericInput(draft)) return { ...current, [questionId]: draft };
+  const normalized = normalizeNumericInput(draft);
+  if (isValidNumericInput(normalized)) return { ...current, [questionId]: normalized };
   if (Object.hasOwn(current, questionId) && current[questionId] === "") return current;
   const next = { ...current };
   delete next[questionId];

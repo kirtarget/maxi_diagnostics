@@ -392,7 +392,8 @@ allowed.
 ```
 
 An `input` question has the public `answer_format` field. It is `number` for a
-numeric value and `sequence` for a fixed sequence of markers. Number questions
+numeric value and `sequence` for a fixed sequence of markers. Numeric questions
+may provide an optional display-only `answer_unit`, such as `м`. Number questions
 must not include `answer_length`, `allow_reuse`, or `markers`. Sequence questions
 must include all three fields. `answer_length` equals the number of unique,
 nonblank `markers`; every accepted key has exactly that length. Repeated characters

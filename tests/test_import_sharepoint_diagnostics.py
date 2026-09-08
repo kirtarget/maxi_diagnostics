@@ -556,6 +556,152 @@ def test_table_gap_key_gets_sequence_metadata_from_source_shape():
     assert payload.answer_format == "number"
 
 
+def test_ordering_prompt_gets_sequence_metadata_without_catalog_override():
+    task = importer.SourceTask(
+        number=3,
+        prompt_blocks=[
+            "Расположите химические элементы в порядке ослабления металлических свойств.",
+            "1) Калий;",
+            "2) Алюминий;",
+            "3) Литий.",
+            "Запишите номера выбранных элементов в соответствующем порядке.",
+        ],
+        answer=["132"],
+    )
+    kind, payload = importer.classify(task)
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "sequence"
+    assert payload.answer_length == 3
+    assert payload.markers == ("1", "2", "3")
+    assert payload.allow_reuse is False
+
+
+def test_ordering_prompt_can_read_a_numbered_choice_table():
+    table = importer.SourceTable(rows=(
+        (("1) Калий",), ("2) Алюминий",)),
+        (("3) Литий",), ("4) Натрий",)),
+    ))
+    task = importer.SourceTask(
+        number=3,
+        prompt_blocks=[
+            "Расположите элементы в порядке усиления металлических свойств.",
+            "Запишите последовательность цифр.",
+        ],
+        prompt_tables=[table],
+        answer=["2413"],
+    )
+
+    kind, payload = importer.classify(task)
+
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "sequence"
+    assert payload.options == (("1", "Калий"), ("2", "Алюминий"), ("3", "Литий"), ("4", "Натрий"))
+
+
+def test_numbered_table_without_ordering_prompt_stays_numeric():
+    table = importer.SourceTable(rows=(
+        (("1) Да",), ("2) Нет",)),
+        (("3) Не указано",),),
+    ))
+    task = importer.SourceTask(
+        number=3,
+        prompt_blocks=["Выберите правильный вариант."],
+        prompt_tables=[table],
+        answer=["2"],
+    )
+
+    kind, payload = importer.classify(task)
+
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "number"
+
+
+def test_lettered_ordering_prompt_gets_sequence_metadata_and_options():
+    task = importer.SourceTask(
+        number=4,
+        prompt_blocks=[
+            "В ответ запишите последовательность цифр, соответствующую буквам АБВГ.",
+            "________ (А) ________ (Б) ________ (В) ________ (Г)",
+            "Список слов:",
+            "1) Сила Лоренца;",
+            "2) Сила Кулона;",
+            "3) Сила Ампера;",
+            "4) Перпендикулярно;",
+            "5) Параллельно;",
+            "6) Электрический;",
+            "7) Магнитный.",
+        ],
+        answer=["6714"],
+    )
+    kind, payload = importer.classify(task)
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "sequence"
+    assert payload.answer_length == 4
+    assert payload.markers == ("А", "Б", "В", "Г")
+    assert [marker for marker, _ in payload.options] == [str(index) for index in range(1, 8)]
+    assert payload.allow_reuse is False
+
+
+def test_numeric_prompt_with_sequence_footer_stays_number():
+    task = importer.SourceTask(
+        number=9,
+        prompt_blocks=["Решите уравнение:", "Введите последовательность цифр без пробелов."],
+        answer=["8"],
+    )
+    kind, payload = importer.classify(task)
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "number"
+
+
+@pytest.mark.parametrize(
+    ("catalog_file", "question_id", "answer_length", "markers", "key"),
+    [
+        ("oge-chemistry-192.json", "sp-chemistry-oge-2022-q3", 3, ("1", "2", "3"), "132"),
+        ("oge-physics-197.json", "sp-physics-oge-2022-q4", 4, ("А", "Б", "В", "Г"), "6714"),
+    ],
+)
+def test_real_catalog_ordering_prompts_regenerate_sequence_metadata(
+    catalog_file: str,
+    question_id: str,
+    answer_length: int,
+    markers: tuple[str, ...],
+    key: str,
+):
+    document = json.loads(
+        (ROOT / "school" / "diagnostics" / catalog_file).read_text(encoding="utf-8")
+    )
+    question = next(item for item in document["questions"] if item["id"] == question_id)
+    task = importer.SourceTask(
+        number=int(question["title"].split()[-1]),
+        prompt_blocks=question["prompt"].splitlines(),
+        answer=[key],
+    )
+
+    kind, payload = importer.classify(task)
+
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "sequence"
+    assert payload.answer_length == answer_length
+    assert payload.markers == markers
+    assert payload.allow_reuse is False
+
+    source = importer.SourceFile(
+        Path(catalog_file), "ОГЭ", "subject", 2022, 1, (task,), topic="Тест",
+    )
+    rendered = importer.build_question(source, task, kind, payload, verified_at="2026-09-08")
+    assert isinstance(rendered, dict)
+    assert rendered["answer_format"] == "sequence"
+    assert rendered["answer_length"] == answer_length
+    assert rendered["markers"] == list(markers)
+    assert rendered["allow_reuse"] is False
+
+
 def test_numbered_choice_grid_renders_one_choice_per_line():
     """A 3×3 grid of numbered choices is a list, not a data table: the app must not
     draw a header row over "1) Основный оксид | 2) Кислая соль | 3) Амфотерный оксид"."""

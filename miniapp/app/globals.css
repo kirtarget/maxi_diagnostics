@@ -1632,6 +1632,21 @@ select:focus-visible,
 
 .short-answer-control input::placeholder { color: var(--faint); font-weight: 600; font-size: 17px; }
 
+.answer-unit {
+  position: absolute;
+  top: 50%;
+  right: 92px;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 700;
+  max-width: min(38%, 120px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .short-answer-control button {
   position: absolute;
   top: 50%;
@@ -1901,6 +1916,90 @@ select:focus-visible,
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.sequence-answer-cells {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+  gap: 8px;
+}
+
+.sequence-answer-cell {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto 1fr;
+  align-items: center;
+  gap: 2px 8px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 8px;
+  color: var(--ink);
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+}
+
+.sequence-answer-cell.is-active {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 12%, transparent);
+}
+
+.sequence-answer-cell.is-empty > span { color: var(--faint); }
+
+.sequence-answer-cell > strong {
+  color: var(--brand-primary);
+  font-size: 13px;
+}
+
+.sequence-answer-cell > span {
+  justify-self: end;
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.sequence-answer-cell > small {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sequence-answer-cell:disabled,
+.sequence-answer-clear:disabled,
+.sequence-answer-sheet-trigger:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.sequence-answer-progress {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sequence-answer-palette {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.sequence-answer-palette .matching-answer-option {
+  min-height: 52px;
+  justify-content: center;
+}
+
+.sequence-answer-palette .matching-answer-option > span {
+  min-width: 0;
+  white-space: normal;
+}
+
+.sequence-answer-clear {
+  align-self: flex-start;
 }
 
 .matching-answer-preview {

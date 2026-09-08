@@ -256,6 +256,38 @@ def test_sequence_hint_alone_keeps_a_numeric_task_numeric():
     assert is_valid_answer_shape(question, "200,0", complete=True)
 
 
+def test_numeric_input_accepts_optional_display_unit():
+    data = sample_diagnostic_data()["questions"][3] | {
+        "answer_unit": "м",
+        "correct": ["0,25", "0.25"],
+    }
+    question = InputQuestion.model_validate(data)
+    assert question.answer_unit == "м"
+
+
+@pytest.mark.parametrize("answer_unit", ["", "   ", "м\u0000", "м" * 33])
+def test_numeric_input_rejects_invalid_display_unit(answer_unit: str):
+    data = sample_diagnostic_data()["questions"][3] | {
+        "answer_unit": answer_unit,
+        "correct": ["0,25", "0.25"],
+    }
+    with pytest.raises(ValueError):
+        InputQuestion.model_validate(data)
+
+
+def test_sequence_input_rejects_numeric_display_unit():
+    data = sample_diagnostic_data()["questions"][3] | {
+        "answer_format": "sequence",
+        "answer_length": 3,
+        "allow_reuse": False,
+        "markers": ["А", "Б", "В"],
+        "answer_unit": "м",
+        "correct": ["132"],
+    }
+    with pytest.raises(ValueError, match="sequence_answer_unit"):
+        InputQuestion.model_validate(data)
+
+
 def test_legacy_sequence_input_infers_contract_four_metadata():
     data = sample_diagnostic_data()["questions"][3] | {
         "prompt": (

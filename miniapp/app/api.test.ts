@@ -313,6 +313,34 @@ describe("diagnostic API payloads", () => {
     });
   });
 
+  it("validates restored sequence drafts against sequence metadata", () => {
+    const sequenceDiagnostics = [{
+      ...diagnostics[0],
+      questions: diagnostics[0].questions.map((question) => question.id === "q4"
+        ? {
+          ...question,
+          answer_format: "sequence" as const,
+          answer_length: 3,
+          allow_reuse: false,
+          markers: ["А", "Б", "В"],
+        }
+        : question),
+    }];
+
+    expect(validateSavedSession({
+      ...validSession,
+      answers: { ...validSession.answers, q4: "12" },
+    }, sequenceDiagnostics)).not.toBeNull();
+    expect(validateSavedSession({
+      ...validSession,
+      answers: { ...validSession.answers, q4: "112" },
+    }, sequenceDiagnostics)).toBeNull();
+    expect(validateSavedSession({
+      ...validSession,
+      answers: { ...validSession.answers, q4: "1a" },
+    }, sequenceDiagnostics)).toBeNull();
+  });
+
   it("posts Telegram authentication and retries a transient failure up to three attempts", async () => {
     const fetcher = vi.fn()
       .mockRejectedValueOnce(new TypeError("offline"))

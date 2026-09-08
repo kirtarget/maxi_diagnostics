@@ -522,6 +522,13 @@ function isValidAnswer(
     return typeof answer === "string" && question.options.some((option) => option.id === answer);
   }
   if (question.type === "input") {
+    if (question.answer_format === "sequence") {
+      if (typeof answer !== "string") return false;
+      const values = [...answer];
+      const length = question.answer_length ?? 0;
+      if (!length || values.length > length || !values.every((value) => /^\d$/u.test(value))) return false;
+      return question.allow_reuse !== false || new Set(values).size === values.length;
+    }
     return isValidNumericInput(answer);
   }
   if (question.type === "text") {

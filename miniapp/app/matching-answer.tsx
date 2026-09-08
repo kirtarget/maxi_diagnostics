@@ -29,6 +29,14 @@ export type MatchingModel = {
   allowReuse: boolean;
 };
 
+type MatchingAnswerProps = {
+  model: MatchingModel;
+  value: AnswerValue | undefined;
+  subject?: string;
+  disabled?: boolean;
+  onChange: (value: AnswerValue) => void;
+};
+
 const MARKER = /^\s*([А-ЯЁA-Z0-9]+)(?:[).]|\s|$)/u;
 const LOOKALIKE_CYRILLIC: Record<string, string> = {
   A: "А", B: "Б", C: "С", E: "Е", K: "К", M: "М", H: "Н", O: "О", P: "Р", T: "Т", X: "Х", Y: "У",
@@ -134,7 +142,7 @@ function compactPrefix(selections: string[]): string {
   return selections.slice(0, firstHole < 0 ? selections.length : firstHole).join("");
 }
 
-export function MatchingAnswer({ model, value, subject, disabled = false, onChange }: {
+function SequenceAnswer({ model, value, subject, disabled = false, onChange }: {
   model: MatchingModel;
   value: AnswerValue | undefined;
   subject?: string;
@@ -142,25 +150,201 @@ export function MatchingAnswer({ model, value, subject, disabled = false, onChan
   onChange: (value: AnswerValue) => void;
 }) {
   const compactValue = typeof value === "string" ? value : "";
-  const [sequenceSelections, setSequenceSelections] = useState(() => [...compactValue]);
-  const [openRow, setOpenRow] = useState<number | null>(null);
-  const triggerRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const lastEmittedSequence = useRef<string | undefined>(undefined);
-  const sheetWasOpenedBy = openRow === null ? null : triggerRefs.current[openRow];
+  const [selections, setSelections] = useState(() => [...compactValue]);
+  const [activeRow, setActiveRow] = useState(() => Math.min(
+    [...compactValue].length,
+    Math.max(model.answerLength - 1, 0),
+  ));
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const cellRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const sheetOpener = useRef<HTMLElement | null>(null);
+  const sheetRef = useRef<HTMLElement | null>(null);
+  const lastEmitted = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    if (model.source !== "sequence") return;
-    if (lastEmittedSequence.current === compactValue) {
-      lastEmittedSequence.current = undefined;
+    if (lastEmitted.current === compactValue) {
+      lastEmitted.current = undefined;
       return;
     }
-    setSequenceSelections([...compactValue]);
-  }, [compactValue, model.source]);
+    setSelections([...compactValue]);
+    setActiveRow(Math.min([...compactValue].length, Math.max(model.answerLength - 1, 0)));
+  }, [compactValue, model.answerLength]);
+
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const sheet = sheetRef.current;
+    const firstEnabled = sheet?.querySelector<HTMLButtonElement>('button[role="radio"]:not([disabled])');
+    firstEnabled?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSheetOpen(false);
+      if (event.key !== "Tab") return;
+      const focusable = sheet
+        ? [...sheet.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled])')]
+        : [];
+      if (focusable.length < 2) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      const opener = sheetOpener.current;
+      if (opener) opener.focus();
+      else cellRefs.current[activeRow]?.focus();
+      sheetOpener.current = null;
+    };
+  }, [activeRow, sheetOpen]);
+
+  const selectedKeys = model.rows.map((_, index) => selections[index] ?? "");
+  const usedBy = new Map<string, number>();
+  selectedKeys.forEach((key, index) => {
+    if (key && !usedBy.has(key)) usedBy.set(key, index);
+  });
+  const useSheet = model.options.length > SHEET_OPTION_LIMIT + 1
+    || model.options.some((option) => option.label.length > LONG_OPTION_LENGTH / 2);
+  const firstEmpty = selectedKeys.findIndex((selection) => !selection);
+  const filled = compactPrefix(selectedKeys).length;
+  const choose = (option: MatchingOption) => {
+    const targetRow = firstEmpty < 0
+      ? Math.min(activeRow, Math.max(model.answerLength - 1, 0))
+      : Math.min(activeRow, firstEmpty);
+    const usedAt = usedBy.get(option.key);
+    if (disabled || (usedAt !== undefined && usedAt !== targetRow && !model.allowReuse)) return;
+    const next = [...selections];
+    next[targetRow] = option.marker;
+    setSelections(next);
+    const prefix = compactPrefix(next);
+    lastEmitted.current = prefix;
+    onChange(prefix);
+    const nextEmpty = next.findIndex((selection) => !selection);
+    setActiveRow(nextEmpty >= 0 ? nextEmpty : Math.min(targetRow + 1, model.answerLength - 1));
+    setSheetOpen(false);
+  };
+  const clearAll = () => {
+    if (disabled) return;
+    setSelections([]);
+    setActiveRow(0);
+    lastEmitted.current = "";
+    onChange("");
+  };
+  const openSheet = (opener: HTMLElement) => {
+    sheetOpener.current = opener;
+    setSheetOpen(true);
+  };
+  const renderOption = (option: MatchingOption) => {
+    const targetRow = firstEmpty < 0
+      ? Math.min(activeRow, Math.max(model.answerLength - 1, 0))
+      : Math.min(activeRow, firstEmpty);
+    const selected = selectedKeys[targetRow] === option.key;
+    const usedAt = usedBy.get(option.key);
+    const blocked = usedAt !== undefined && usedAt !== targetRow && !model.allowReuse;
+    return (
+      <button
+        aria-checked={selected}
+        aria-label={`${option.marker} — ${option.label}${blocked ? `, в строке ${model.rows[usedAt]?.marker ?? ""}` : ""}`}
+        className={`matching-answer-option${selected ? " selected" : ""}`}
+        data-option-key={option.key}
+        disabled={disabled || blocked}
+        key={option.key}
+        onClick={() => choose(option)}
+        role="radio"
+        type="button"
+      >
+        <strong>{option.marker}</strong>
+        <span><FormattedMathText text={option.label} subject={subject} /></span>
+        {blocked && <small>в строке {model.rows[usedAt]?.marker ?? ""}</small>}
+      </button>
+    );
+  };
+
+  return (
+    <section className="matching-answer matching-answer-sequence" aria-labelledby="sequence-answer-title">
+      <div className="matching-answer-intro">
+        <span>Ответ без ручного ввода</span>
+        <h2 id="sequence-answer-title">Составьте последовательность</h2>
+        <p>Нажмите на ячейку, затем выберите цифру.</p>
+      </div>
+      <div className="sequence-answer-cells" aria-label="Позиции ответа">
+        {model.rows.map((row, index) => {
+          const selected = selectedKeys[index];
+          const isLaterEmpty = firstEmpty >= 0 && index > firstEmpty && !selected;
+          return (
+            <button
+              aria-label={`Позиция ${row.marker}: ${row.label}${selected ? `, выбрано ${selected}` : ", не заполнено"}`}
+              aria-pressed={activeRow === index}
+              className={`sequence-answer-cell${selected ? " is-filled" : " is-empty"}${activeRow === index ? " is-active" : ""}`}
+              data-sequence-cell={row.marker}
+              disabled={disabled || isLaterEmpty}
+              key={row.key}
+              onClick={(event) => {
+                if (isLaterEmpty) return;
+                setActiveRow(index);
+                if (useSheet) openSheet(event.currentTarget);
+              }}
+              ref={(element) => { cellRefs.current[index] = element; }}
+              type="button"
+            >
+              <strong>{row.marker}</strong>
+              <span>{selected || "—"}</span>
+              <small>{row.label}</small>
+            </button>
+          );
+        })}
+      </div>
+      <p className="sequence-answer-progress" aria-live="polite">Заполнено {filled} из {model.answerLength}</p>
+      {!useSheet && (
+        <div className="sequence-answer-palette" aria-label="Цифры для выбора" role="radiogroup">
+          {model.options.map(renderOption)}
+        </div>
+      )}
+      {useSheet && (
+          <button
+            className="matching-answer-trigger sequence-answer-sheet-trigger"
+            aria-expanded={sheetOpen}
+            aria-haspopup="dialog"
+            disabled={disabled}
+          onClick={(event) => openSheet(event.currentTarget)}
+          type="button"
+        >
+          Открыть полный список вариантов для {model.rows[activeRow]?.marker}
+        </button>
+      )}
+      <button className="matching-answer-clear sequence-answer-clear" disabled={disabled || filled === 0} onClick={clearAll} type="button">
+        Очистить всё
+      </button>
+      {sheetOpen && useSheet && (
+        <div className="matching-answer-sheet-backdrop" role="presentation" onClick={() => setSheetOpen(false)}>
+          <section ref={sheetRef} className="matching-answer-sheet" data-sequence-sheet role="dialog" aria-modal="true" aria-labelledby="sequence-answer-sheet-title" onClick={(event) => event.stopPropagation()}>
+            <h3 id="sequence-answer-sheet-title">Варианты для позиции {model.rows[activeRow]?.marker}</h3>
+            <div className="matching-answer-sheet-options" aria-label={`Варианты для позиции ${model.rows[activeRow]?.marker}`} role="radiogroup">
+              {model.options.map(renderOption)}
+            </div>
+            <button className="secondary-button" onClick={() => setSheetOpen(false)} type="button">Закрыть</button>
+          </section>
+        </div>
+      )}
+      <AnswerPreview markers={model.markers} selected={selectedKeys} />
+    </section>
+  );
+}
+
+function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }: MatchingAnswerProps) {
+  const [openRow, setOpenRow] = useState<number | null>(null);
+  const triggerRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const sheetWasOpenedBy = openRow === null ? null : triggerRefs.current[openRow];
+  const sheetRefs = useRef<Array<HTMLElement | null>>([]);
 
   useEffect(() => {
     if (openRow === null) return;
     const trigger = sheetWasOpenedBy;
-    const sheet = document.querySelector<HTMLElement>(`[data-matching-sheet-row="${openRow}"]`);
+    const sheet = sheetRefs.current[openRow];
     sheet?.querySelector<HTMLButtonElement>('button[role="radio"]:not([disabled])')?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpenRow(null);
@@ -172,7 +356,7 @@ export function MatchingAnswer({ model, value, subject, disabled = false, onChan
     };
   }, [openRow, sheetWasOpenedBy]);
 
-  const selectedKeys = model.rows.map((_, index) => selectedKey(model, value, sequenceSelections, index));
+  const selectedKeys = model.rows.map((_, index) => selectedKey(model, value, [], index));
   const usedBy = new Map<string, number>();
   selectedKeys.forEach((key, index) => {
     if (key && !usedBy.has(key)) usedBy.set(key, index);
@@ -182,30 +366,12 @@ export function MatchingAnswer({ model, value, subject, disabled = false, onChan
   const choose = (rowIndex: number, option: MatchingOption) => {
     const usedAt = usedBy.get(option.key);
     if (disabled || (usedAt !== undefined && usedAt !== rowIndex && !model.allowReuse)) return;
-    if (model.source === "sequence") {
-      const next = [...sequenceSelections];
-      next[rowIndex] = option.marker;
-      setSequenceSelections(next);
-      const prefix = compactPrefix(next);
-      lastEmittedSequence.current = prefix;
-      onChange(prefix);
-    } else {
-      onChange(encodeSelection(model, value, sequenceSelections, rowIndex, option));
-    }
+    onChange(encodeSelection(model, value, [], rowIndex, option));
     setOpenRow(null);
   };
   const clear = (rowIndex: number) => {
     if (disabled) return;
-    if (model.source === "sequence") {
-      const next = [...sequenceSelections];
-      next[rowIndex] = "";
-      setSequenceSelections(next);
-      const prefix = compactPrefix(next);
-      lastEmittedSequence.current = prefix;
-      onChange(prefix);
-    } else {
-      onChange(clearSelection(model, value, sequenceSelections, rowIndex));
-    }
+    onChange(clearSelection(model, value, [], rowIndex));
   };
   const renderOption = (rowIndex: number, option: MatchingOption, inSheet = false) => {
     const selected = selectedKeys[rowIndex] === option.key;
@@ -248,7 +414,7 @@ export function MatchingAnswer({ model, value, subject, disabled = false, onChan
       </div>
       <div className="matching-answer-rows">
         {model.rows.map((row, rowIndex) => {
-          const selectedMarker = selectedOptionMarker(model, value, sequenceSelections, rowIndex);
+          const selectedMarker = selectedOptionMarker(model, value, [], rowIndex);
           const duplicateAt = selectedKeys.findIndex((key, index) => index !== rowIndex && key && key === selectedKeys[rowIndex]);
           return (
             <div
@@ -278,7 +444,7 @@ export function MatchingAnswer({ model, value, subject, disabled = false, onChan
               {duplicateAt >= 0 && <small className="matching-answer-duplicate" role="alert">Вариант {selectedMarker} уже выбран в строке {model.rows[duplicateAt].marker}</small>}
               {useSheet && openRow === rowIndex && (
                 <div className="matching-answer-sheet-backdrop" role="presentation" onClick={() => setOpenRow(null)}>
-                  <section className="matching-answer-sheet" data-matching-sheet-row={rowIndex} role="dialog" aria-modal="true" aria-labelledby={`matching-answer-sheet-title-${rowIndex}`} onClick={(event) => event.stopPropagation()}>
+                  <section ref={(element) => { sheetRefs.current[rowIndex] = element; }} className="matching-answer-sheet" data-matching-sheet-row={rowIndex} role="dialog" aria-modal="true" aria-labelledby={`matching-answer-sheet-title-${rowIndex}`} onClick={(event) => event.stopPropagation()}>
                     <h3 id={`matching-answer-sheet-title-${rowIndex}`}>Варианты для {row.marker}</h3>
                     <div className="matching-answer-sheet-options" aria-label={`Варианты для пункта ${row.marker}`} role="radiogroup">
                       {model.options.map((option) => renderOption(rowIndex, option, true))}
@@ -291,9 +457,15 @@ export function MatchingAnswer({ model, value, subject, disabled = false, onChan
           );
         })}
       </div>
-      <AnswerPreview markers={model.markers} selected={model.rows.map((_, index) => selectedOptionMarker(model, value, sequenceSelections, index))} />
+      <AnswerPreview markers={model.markers} selected={model.rows.map((_, index) => selectedOptionMarker(model, value, [], index))} />
     </section>
   );
+}
+
+export function MatchingAnswer({ model, value, subject, disabled = false, onChange }: MatchingAnswerProps) {
+  return model.source === "sequence"
+    ? <SequenceAnswer model={model} value={value} subject={subject} disabled={disabled} onChange={onChange} />
+    : <MapMatchingAnswer model={model} value={value} subject={subject} disabled={disabled} onChange={onChange} />;
 }
 
 export function AnswerPreview({ markers, selected, label = "Твой ответ" }: {

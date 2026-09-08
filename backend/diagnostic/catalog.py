@@ -409,6 +409,7 @@ class InputQuestion(QuestionBase):
     type: Literal["input"]
     correct: tuple[str, ...] = Field(min_length=1, max_length=20, json_schema_extra=SERVER_ONLY)
     answer_format: Literal["number", "sequence"] = "number"
+    answer_unit: str | None = Field(default=None, max_length=32)
     answer_length: int | None = Field(default=None, ge=1, le=20, strict=True)
     allow_reuse: bool | None = Field(default=None, strict=True)
     markers: tuple[str, ...] | None = Field(default=None, min_length=1, max_length=20)
@@ -421,6 +422,11 @@ class InputQuestion(QuestionBase):
         if any(not marker.strip() for marker in value):
             raise ValueError("blank_sequence_marker")
         return tuple(_validate_display_text(marker) for marker in value)
+
+    @field_validator("answer_unit")
+    @classmethod
+    def validate_answer_unit(cls, value: str | None) -> str | None:
+        return None if value is None else _validate_display_text(value)
 
     @model_validator(mode="before")
     @classmethod
@@ -471,6 +477,8 @@ class InputQuestion(QuestionBase):
                     raise ValueError("invalid_input_variant")
             return self
 
+        if self.answer_unit is not None:
+            raise ValueError("sequence_answer_unit")
         if any(field is None for field in sequence_fields):
             raise ValueError("sequence_metadata_required")
         assert self.answer_length is not None
