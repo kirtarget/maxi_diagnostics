@@ -37,6 +37,8 @@ differ only by case. Each file contains one object with every field below:
       "title": "Task 1",
       "prompt": "Enter two plus two.",
       "max_primary_score": 1,
+      "asset": "assets/questions/q1.png",
+      "asset_alt": "A number line showing two plus two",
       "source": {
         "provider": "maximum",
         "official_year": 2026,
@@ -111,6 +113,11 @@ metadata already present in the supplied editorial documents.
 
 The public catalog may include `max_primary_score` and `source`. It never includes
 `correct`, `explanation`, or learning material fields before completion.
+
+`asset` or `assets` reference safe school-local raster/SVG assets. `asset_alt` is an
+optional display-safe description of the question image, at most 200 characters.
+When omitted, the Mini App uses a generic localized illustration label. Blank values
+are invalid, and the field is preserved in immutable review snapshots when supplied.
 
 Every catalog string must have glyphs in both bundled Liberation Sans regular and
 bold fonts. The required validator checks this before

@@ -3,6 +3,7 @@ import { AnswerPreview, MatchingAnswer, matchingModelFromSequence } from "./matc
 import { FormattedMathText, FormattedStem } from "./math-display";
 import { isValidNumericInput, isValidTextInput, updateCompactAnswer } from "./answer-values";
 import { questionAssetPaths } from "./question-assets";
+import { ImageViewer } from "./image-viewer";
 import { PromptTable } from "./prompt-table";
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import {
@@ -193,19 +194,11 @@ export function QuestionView({
     ? parseTableGapPrompt(question.prompt, question)
     : null;
   const questionMedia = imagePaths.length > 0 && (
-    <div className="question-media">
-      {imagePaths.map((imagePath, imageIndex) => (
-        // School assets are mounted by the deployment image, never copied from a source school.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={imagePath}
-          alt={imagePaths.length > 1
-            ? `${labels.illustration_alt} ${imageIndex + 1}`
-            : labels.illustration_alt}
-          key={imagePath}
-        />
-      ))}
-    </div>
+    <ImageViewer
+      className="question-media"
+      assets={imagePaths.map((path) => ({ path, alt: question.asset_alt }))}
+      fallbackAlt={labels.illustration_alt}
+    />
   );
 
   return (

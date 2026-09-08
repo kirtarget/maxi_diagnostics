@@ -48,6 +48,7 @@ type BaseQuestion = {
   source?: QuestionSourceAttribution;
   asset?: string;
   assets?: string[];
+  asset_alt?: string;
 };
 
 export type SingleQuestion = BaseQuestion & {
@@ -314,6 +315,7 @@ export type ReviewItem = {
   prompt: string;
   asset?: string;
   assets?: string[];
+  asset_alt?: string;
   is_correct: boolean;
   status: "correct" | "incorrect" | "skipped";
   user_answer: string;

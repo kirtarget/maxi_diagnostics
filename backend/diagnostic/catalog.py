@@ -253,6 +253,7 @@ class QuestionBase(BaseModel):
     assets: tuple[str, ...] | None = Field(
         default=None, min_length=1, max_length=5
     )
+    asset_alt: str | None = Field(default=None, max_length=200)
 
     @field_validator("id")
     @classmethod
@@ -265,6 +266,11 @@ class QuestionBase(BaseModel):
     @classmethod
     def validate_text(cls, value: str) -> str:
         return _validate_display_text(value)
+
+    @field_validator("asset_alt")
+    @classmethod
+    def validate_asset_alt(cls, value: str | None) -> str | None:
+        return None if value is None else _validate_display_text(value)
 
     @field_validator("topic")
     @classmethod
