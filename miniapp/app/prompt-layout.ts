@@ -2,6 +2,7 @@ import type { PromptBlock } from "./question-prompt";
 
 export type PromptLayoutModel = {
   stem: string | null;
+  stemRepeat: string | null;
   referenceBlocks: PromptBlock[];
   isLongReference: boolean;
   sentenceAnchors: string[];
@@ -19,8 +20,13 @@ export function promptLayout(blocks: PromptBlock[]): PromptLayoutModel {
   const referenceText = referenceBlocks.map(blockText).join(" ");
   const sentenceAnchors = [...referenceText.matchAll(/\((\d{1,3})\)/gu)].map((match) => match[1])
     .filter((value, index, values) => values.indexOf(value) === index);
+  const stemText = stem?.kind === "stem" ? stem.text : null;
   return {
-    stem: stem?.kind === "stem" ? stem.text : null,
+    stem: stemText,
+    // Restating the question above the answer field only earns its place when a
+    // wall of text has pushed the heading off screen. A short task with many
+    // short options keeps the heading in view, so the repeat is pure noise.
+    stemRepeat: stemText && referenceText.length >= 600 ? stemText : null,
     referenceBlocks,
     isLongReference: referenceText.length >= 600 || referenceBlocks.length >= 8,
     sentenceAnchors,
