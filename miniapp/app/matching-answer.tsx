@@ -3,22 +3,23 @@ import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent }
 import { FormattedMathText } from "./math-display";
 import { updateCompactAnswer, updateMatchingAnswer } from "./answer-values";
 import { cleanAnswerLabel } from "./question-prompt";
+import { safeAssetPath } from "./question-assets";
 import type { AnswerValue, MatchingQuestion } from "./types";
 import type { SequenceMatchingPrompt } from "./sequence-matching";
 
 export type MatchingSource = "matching" | "sequence";
 
-export type MatchingRow = {
+export type MatchingCell = {
   key: string;
   marker: string;
   label: string;
+  /** Set when the editor drew this cell instead of writing it. */
+  asset?: string;
 };
 
-export type MatchingOption = {
-  key: string;
-  marker: string;
-  label: string;
-};
+export type MatchingRow = MatchingCell;
+
+export type MatchingOption = MatchingCell;
 
 export type MatchingModel = {
   source: MatchingSource;
@@ -52,6 +53,20 @@ function shouldUseMatchingSheet(options: MatchingOption[]): boolean {
     || (options.length >= 5 && optionDensity > INLINE_OPTION_DENSITY_LIMIT);
 }
 
+// A drawn position carries its letter inside the picture, so the model has to
+// name it. The КИМ run skips Ё.
+const POSITION_MARKERS = ["А", "Б", "В", "Г", "Д", "Е", "Ж", "З", "И", "К", "Л", "М"];
+
+function CellBody({ cell, subject }: { cell: MatchingCell; subject?: string }) {
+  const figure = cell.asset ? safeAssetPath(cell.asset) : undefined;
+  return (
+    <span>
+      {cell.label && <FormattedMathText text={cell.label} subject={subject} />}
+      {figure && <img alt="" className="matching-answer-cell-figure" src={figure} />}
+    </span>
+  );
+}
+
 function displayParts(label: string, fallback: string): { marker: string; text: string } {
   const match = MARKER.exec(label);
   return {
@@ -68,12 +83,22 @@ function normalizeMarker(marker: string, subject?: string): string {
 
 export function matchingModelFromQuestion(question: MatchingQuestion, subject?: string): MatchingModel {
   const rows = question.items.map((item, index) => {
-    const parts = displayParts(item.label, String(index + 1));
-    return { key: item.id, marker: normalizeMarker(parts.marker, subject), label: parts.text };
+    const parts = displayParts(item.label, POSITION_MARKERS[index] ?? String(index + 1));
+    return {
+      key: item.id,
+      marker: normalizeMarker(parts.marker, subject),
+      label: parts.text,
+      asset: item.asset,
+    };
   });
   const options = question.options.map((option, index) => {
     const parts = displayParts(option.label, String(index + 1));
-    return { key: option.id, marker: normalizeMarker(parts.marker, subject), label: parts.text };
+    return {
+      key: option.id,
+      marker: normalizeMarker(parts.marker, subject),
+      label: parts.text,
+      asset: option.asset,
+    };
   });
   return {
     source: "matching",
@@ -307,7 +332,7 @@ function SequenceAnswer({ model, value, subject, disabled = false, onChange }: {
         type="button"
       >
         <strong>{option.marker}</strong>
-        <span><FormattedMathText text={option.label} subject={subject} /></span>
+        <CellBody cell={option} subject={subject} />
         {blocked && <small>в строке {model.rows[usedAt]?.marker ?? ""}</small>}
       </button>
     );
@@ -463,7 +488,7 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
         type="button"
       >
         <strong>{option.marker}</strong>
-        <span><FormattedMathText text={option.label} subject={subject} /></span>
+        <CellBody cell={option} subject={subject} />
         {blocked && <small>в строке {model.rows[usedAt]?.marker ?? ""}</small>}
         {inSheet && selected && <small>выбрано</small>}
       </button>
@@ -481,7 +506,7 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
         {model.options.map((option) => (
           <div className="matching-answer-option-reference" key={option.key} role="listitem">
             <strong>{option.marker}</strong>
-            <span><FormattedMathText text={option.label} subject={subject} /></span>
+            <CellBody cell={option} subject={subject} />
           </div>
         ))}
       </div>
@@ -495,7 +520,7 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
               data-state={selectedMarker ? "filled" : "empty"}
               key={row.key}
             >
-              <div className="matching-answer-row-copy"><strong>{row.marker}</strong><span><FormattedMathText text={row.label} subject={subject} /></span></div>
+              <div className="matching-answer-row-copy"><strong>{row.marker}</strong><CellBody cell={row} subject={subject} /></div>
               {useSheet ? (
                 <button
                   aria-expanded={openRow === rowIndex}

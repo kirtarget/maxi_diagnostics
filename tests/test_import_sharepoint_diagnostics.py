@@ -305,6 +305,75 @@ def test_table_cell_figure_is_rejected_deterministically(tmp_path):
     assert "| 14 | skipped | - | unsupported_table_cell_figure | 0 |" in report
 
 
+def build_drawn_matching_document(path: Path) -> None:
+    """A matching task whose first position is drawn and whose second is written."""
+    document = Document()
+    _task(document, 1)
+    document.add_paragraph("Установите соответствие между веществом и классом.")
+    table = document.add_table(rows=3, cols=2)
+    table.cell(0, 0).text = "ВЕЩЕСТВО"
+    table.cell(0, 1).text = "КЛАСС"
+    table.cell(1, 0).paragraphs[0].add_run().add_picture(_png(), width=Inches(1))
+    table.cell(1, 1).text = "1) Кислота"
+    table.cell(2, 0).text = "Б) NaOH"
+    table.cell(2, 1).text = "2) Основание"
+    _answer(document, None, "12")
+    document.save(path)
+
+
+def test_a_drawn_matching_position_becomes_an_item_figure(tmp_path):
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    build_drawn_matching_document(source_directory / SOURCE_NAME)
+    root = tmp_path
+    catalog_path = build_repository(root)
+
+    importer.main([str(source_directory), "--root", str(root)])
+
+    questions = json.loads(catalog_path.read_text(encoding="utf-8"))["questions"]
+    question = next(q for q in questions if q["id"] == "sp-chemistry-oge-2022-q1")
+    assert question["type"] == "matching"
+    drawn, written = question["items"]
+    assert drawn["label"] == ""
+    assert drawn["asset"] == "assets/questions/sp-chemistry-oge-2022-q1-1.png"
+    assert (root / "school" / drawn["asset"]).is_file()
+    assert written["label"] == "Б) NaOH"
+    assert "asset" not in written
+
+
+def test_a_drawn_matching_position_survives_a_second_run(tmp_path):
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    build_drawn_matching_document(source_directory / SOURCE_NAME)
+    root = tmp_path
+    catalog_path = build_repository(root)
+
+    importer.main([str(source_directory), "--root", str(root)])
+    first = catalog_path.read_bytes()
+    importer.main([str(source_directory), "--root", str(root)])
+
+    assert catalog_path.read_bytes() == first
+
+
+def test_a_figure_outside_a_matching_table_is_still_rejected(tmp_path):
+    """The catalog can place a matching cell's figure, nothing else in a table."""
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    document = Document()
+    _task(document, 1)
+    document.add_paragraph("Определите значение по рисунку.")
+    table = document.add_table(rows=1, cols=1)
+    table.cell(0, 0).paragraphs[0].add_run().add_picture(_png(), width=Inches(1))
+    _answer(document, None, "42")
+    document.save(source_directory / SOURCE_NAME)
+    root = tmp_path
+    catalog_path = build_repository(root)
+
+    importer.main([str(source_directory), "--root", str(root)])
+
+    assert "sp-chemistry-oge-2022-q1" not in _questions(catalog_path)
+
+
 def test_existing_questions_keep_their_exact_bytes(imported):
     _, catalog_path, _ = imported
     text = catalog_path.read_text(encoding="utf-8")
@@ -718,17 +787,62 @@ def test_trusted_chemistry_q16_text_scheme_is_imported():
     assert not any(outcome.number == 16 for outcome in outcomes)
 
 
-def test_trusted_chemistry_q14_q15_wait_on_figures_inside_table_cells():
-    """Their condition is drawn inside the matching table, which is not read yet."""
+def test_trusted_chemistry_q14_q15_draw_their_positions():
+    """Their reagents are drawn inside the matching table, one figure per cell."""
     source_path = editorial_source("ХИМ_ЕГЭ_Диагностика_21-22_Заданий 28.docx")
     source = importer.read_source_file(source_path)
     assert source.content_hash == importer.TRUSTED_SOURCE_HASHES[source.slug]
+    candidates, outcomes = importer.convert_file(source, "2026-09-04")
+    importer.allocate_assets(candidates, 200)
+
+    assert not [outcome for outcome in outcomes if outcome.number in {14, 15}]
+    drawn = {
+        candidate.task.number: [item.get("asset") for item in candidate.question["items"]]
+        for candidate in candidates
+        if candidate.task.number in {14, 15}
+    }
+    assert drawn == {
+        14: [
+            "assets/questions/sp-chemistry-ege-2022-q14-1.png",
+            "assets/questions/sp-chemistry-ege-2022-q14-2.png",
+            None,
+            None,
+        ],
+        15: [None, None, None, "assets/questions/sp-chemistry-ege-2022-q15-1.png"],
+    }
+
+
+def test_trusted_physics_q19_draws_two_of_its_options():
+    source_path = editorial_source("ФИЗ_ЕГЭ_Диагностика_21-22_Заданий 23.docx")
+    source = importer.read_source_file(source_path)
+    candidates, _ = importer.convert_file(source, "2026-09-04")
+    importer.allocate_assets(candidates, 200)
+
+    question = next(
+        candidate.question for candidate in candidates if candidate.task.number == 19
+    )
+    assert [option.get("asset") for option in question["options"]] == [
+        None,
+        None,
+        "assets/questions/sp-physics-ege-2022-q19-1.png",
+        "assets/questions/sp-physics-ege-2022-q19-2.png",
+    ]
+    assert question["correct"] == {"i1": "o3", "i2": "o2"}
+
+
+def test_trusted_physics_q8_repeats_one_picture_so_it_stays_out():
+    """Its picture is the task's own, shown again in two cells.
+
+    Placing it in a cell would claim a meaning the source does not give it, and
+    the first position has no letter of its own to read either.
+    """
+    source_path = editorial_source("ФИЗ_ЕГЭ_Диагностика_21-22_Заданий 23.docx")
+    source = importer.read_source_file(source_path)
     _, outcomes = importer.convert_file(source, "2026-09-04")
 
-    assert {(outcome.number, outcome.status, outcome.reason) for outcome in outcomes} == {
-        (14, "skipped", "unsupported_table_cell_figure"),
-        (15, "skipped", "unsupported_table_cell_figure"),
-    }
+    outcome = next(outcome for outcome in outcomes if outcome.number == 8)
+    assert outcome.status == "skipped"
+    assert outcome.reason == "unsupported_table_cell_figure"
 
 
 def test_visual_reference_with_an_arrow_stays_rejected_without_an_asset():
@@ -1775,7 +1889,7 @@ def test_an_unreadable_matching_table_is_skipped_instead_of_flattened():
         task, kind, payload, verified_at="2026-09-04",
     )
 
-    assert importer._rejection(question, []) == "unreadable_matching"
+    assert importer._rejection(question, [], []) == "unreadable_matching"
 
 
 def test_answer_sheet_instructions_leave_the_prompt_the_app_collects():

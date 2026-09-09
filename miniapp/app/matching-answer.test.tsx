@@ -22,6 +22,67 @@ declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
 }
 
+const drawnQuestion = {
+  id: "q-drawn",
+  type: "matching",
+  prompt: "Установите соответствие.",
+  items: [
+    { id: "i1", label: "", asset: "assets/questions/drawn-1.png" },
+    { id: "i2", label: "Б) Написанный пункт" },
+  ],
+  options: [
+    { id: "o1", label: "1) Первый" },
+    { id: "o2", label: "", asset: "assets/questions/drawn-2.png" },
+  ],
+} as unknown as MatchingQuestion;
+
+
+describe("a drawn matching cell", () => {
+  it("names a position by its letter when the letter is inside the figure", () => {
+    const model = matchingModelFromQuestion(drawnQuestion);
+
+    expect(model.rows.map((row) => row.marker)).toEqual(["А", "Б"]);
+    expect(model.options.map((option) => option.marker)).toEqual(["1", "2"]);
+  });
+
+  it("carries the figure into the model instead of an empty label", () => {
+    const model = matchingModelFromQuestion(drawnQuestion);
+
+    expect(model.rows[0]).toMatchObject({ label: "", asset: "assets/questions/drawn-1.png" });
+    expect(model.rows[1].asset).toBeUndefined();
+    expect(model.options[1]).toMatchObject({ label: "", asset: "assets/questions/drawn-2.png" });
+  });
+
+  it("shows the figure in the position and in the option list", () => {
+    const model = matchingModelFromQuestion(drawnQuestion);
+
+    const html = renderToStaticMarkup(
+      <MatchingAnswer model={model} value={{}} onChange={() => undefined} />,
+    );
+
+    expect(html).toContain('src="/assets/questions/drawn-1.png"');
+    expect(html).toContain('src="/assets/questions/drawn-2.png"');
+    expect(html).toContain('class="matching-answer-cell-figure"');
+  });
+
+  it("refuses a figure path that escapes the asset tree", () => {
+    const escaping = {
+      ...drawnQuestion,
+      items: [
+        { id: "i1", label: "", asset: "../../secret.png" },
+        { id: "i2", label: "Б) Написанный пункт" },
+      ],
+    } as unknown as MatchingQuestion;
+
+    const html = renderToStaticMarkup(
+      <MatchingAnswer model={matchingModelFromQuestion(escaping)} value={{}} onChange={() => undefined} />,
+    );
+
+    expect(html).not.toContain("secret.png");
+  });
+});
+
+
 const mapModel: MatchingModel = {
   source: "matching",
   rows: [

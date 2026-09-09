@@ -137,8 +137,11 @@ class QuestionOption(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: str = Field(min_length=1, max_length=64, pattern=_ID_PATTERN)
-    label: str = Field(min_length=1, max_length=500)
+    label: str = Field(min_length=0, max_length=500)
     stress: str | None = Field(default=None, max_length=500)
+    # A matching position or option whose content the editor drew instead of
+    # writing. Only those may leave the label empty; see MatchingQuestion.
+    asset: str | None = Field(default=None, max_length=255)
 
     @field_validator("id")
     @classmethod
@@ -150,7 +153,15 @@ class QuestionOption(BaseModel):
     @field_validator("label")
     @classmethod
     def validate_label(cls, value: str) -> str:
-        return _validate_display_text(value)
+        return "" if not value else _validate_display_text(value)
+
+    @model_validator(mode="after")
+    def validate_drawn_option(self) -> "QuestionOption":
+        if self.asset:
+            validate_asset_path(self.asset)
+        elif not self.label:
+            raise ValueError("blank_option_label")
+        return self
 
     @field_validator("stress")
     @classmethod
@@ -364,10 +375,14 @@ class QuestionBase(BaseModel):
         return self
 
     @property
+    def drawn_assets(self) -> tuple[str, ...]:
+        """Figures that belong to a cell rather than to the question."""
+        return ()
+
+    @property
     def asset_paths(self) -> tuple[str, ...]:
-        if self.assets:
-            return self.assets
-        return (self.asset,) if self.asset else ()
+        own = self.assets if self.assets else ((self.asset,) if self.asset else ())
+        return own + self.drawn_assets
 
 
 class SingleQuestion(QuestionBase):
@@ -378,6 +393,7 @@ class SingleQuestion(QuestionBase):
     @model_validator(mode="after")
     def validate_correct_option(self) -> "SingleQuestion":
         _validate_unique_option_ids(self.options)
+        _validate_written_labels(self.options)
         _validate_unique_option_labels(self.options)
         _validate_stress_set(self.options)
         if self.correct not in {option.id for option in self.options}:
@@ -396,6 +412,7 @@ class MultipleQuestion(QuestionBase):
     @model_validator(mode="after")
     def validate_multiple_options(self) -> "MultipleQuestion":
         _validate_unique_option_ids(self.options)
+        _validate_written_labels(self.options)
         _validate_unique_option_labels(self.options)
         _validate_stress_set(self.options)
         option_ids = {option.id for option in self.options}
@@ -424,12 +441,19 @@ class MatchingQuestion(QuestionBase):
         _validate_unique_option_ids(self.options)
         _validate_unique_option_labels(self.items)
         _validate_unique_option_labels(self.options)
+        _validate_unique_option_assets(self.items + self.options)
         _validate_matching_marker_layout(self.items, self.options, self.source)
         if set(self.correct) != {item.id for item in self.items}:
             raise ValueError("incomplete_matching_keys")
         if not set(self.correct.values()).issubset({option.id for option in self.options}):
             raise ValueError("invalid_option_reference")
         return self
+
+    @property
+    def drawn_assets(self) -> tuple[str, ...]:
+        return tuple(
+            option.asset for option in self.items + self.options if option.asset
+        )
 
 
 class InputQuestion(QuestionBase):
@@ -734,9 +758,23 @@ def _validate_unique_option_labels(
         .strip()
         .casefold()
         for option in options
+        if option.label
     ]
     if len(set(labels)) != len(labels):
         raise ValueError("duplicate_option_label")
+
+
+def _validate_unique_option_assets(options: tuple[QuestionOption, ...]) -> None:
+    """Two drawn cells showing one figure would read as the same position."""
+    assets = [option.asset for option in options if option.asset]
+    if len(set(assets)) != len(assets):
+        raise ValueError("duplicate_option_asset")
+
+
+def _validate_written_labels(options: tuple[QuestionOption, ...]) -> None:
+    """Only a matching cell may stand on its figure alone."""
+    if any(not option.label for option in options):
+        raise ValueError("blank_option_label")
 
 
 def _validate_stress_set(options: tuple[QuestionOption, ...]) -> None:

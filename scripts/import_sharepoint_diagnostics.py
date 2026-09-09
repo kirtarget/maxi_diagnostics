@@ -162,6 +162,9 @@ CHECKED_IN_TOPIC_MAP = {
         11: "Строение органических соединений",
         12: "Углеводороды и кислородсодержащие соединения",
         13: "Азотсодержащие органические соединения и биомолекулы",
+        14: "Характерные химические свойства углеводородов",
+        15: "Характерные химические свойства спиртов, фенола, альдегидов, "
+        "карбоновых кислот и сложных эфиров",
         16: "Взаимосвязь углеводородов, кислородсодержащих и азотсодержащих "
         "органических соединений",
         17: "Классификация химических реакций",
@@ -245,7 +248,8 @@ CHECKED_IN_TOPIC_MAP = {
         14: "Электрическое поле и постоянный ток",
         15: "Магнитное поле и электромагнитная индукция",
         16: "Электромагнитные колебания, волны и оптика",
-        **dict.fromkeys((17, 18), "Электродинамика"),
+        # The 2022 structure table puts positions 17-19 in content section 3.
+        **dict.fromkeys((17, 18, 19), "Электродинамика"),
         **dict.fromkeys((20, 21), "Специальная теория относительности и квантовая физика"),
         23: "Планирование эксперимента и подбор оборудования",
     },
@@ -653,9 +657,17 @@ class MultipleAnswerSpec:
     indices: tuple[int, ...]
 
 @dataclass(frozen=True)
+class MatchingCell:
+    """One side of a matching row: what the editor wrote and what they drew."""
+
+    label: str
+    images: tuple[bytes, ...] = ()
+
+
+@dataclass(frozen=True)
 class MatchingAnswerSpec:
-    items: tuple[str, ...]
-    options: tuple[tuple[str, str], ...]
+    items: tuple[MatchingCell, ...]
+    options: tuple[tuple[str, MatchingCell], ...]
     key: str
     table: SourceTable | None = None
 
@@ -1287,26 +1299,48 @@ def read_source_file(path: Path, entry: PlanEntry | None = None) -> SourceFile:
 # --------------------------------------------------------------------------
 
 
+def _cell_images(table: SourceTable, row: int, column: int) -> tuple[bytes, ...]:
+    """Figures drawn in one cell, or none when the table carries text only."""
+    if row >= len(table.cells) or column >= len(table.cells[row]):
+        return ()
+    return table.cells[row][column].images
+
+
 def _matching_table(
     tables: list[SourceTable],
-) -> tuple[SourceTable, list[str], list[tuple[str, str]]] | None:
-    """Return (source table, item labels, [(option digit, label)]) for a matching table."""
+) -> tuple[SourceTable, list[MatchingCell], list[tuple[str, MatchingCell]]] | None:
+    """Return (source table, item cells, [(option digit, cell)]) for a matching table.
+
+    A cell the editor drew carries no marker to read, so it takes the next place
+    in its column's run, keeps an empty label and travels with its figure. Only
+    the first labelled line of a cell owns that cell's figures.
+    """
     for table in tables:
         if table.columns != 2 or len(table.rows) < 3:
             continue
-        items: list[str] = []
-        options: list[tuple[str, str]] = []
-        for row in table.rows[1:]:
+        items: list[MatchingCell] = []
+        options: list[tuple[str, MatchingCell]] = []
+        for offset, row in enumerate(table.rows[1:], start=1):
             if len(row) < 2:
                 continue
-            for line in row[0]:
-                found = MATCHING_ITEM.match(line)
-                if found:
-                    items.append(line)
-            for line in row[1]:
-                found = MATCHING_OPTION.match(line)
-                if found:
-                    options.append((found.group(1), line))
+            left_images = _cell_images(table, offset, 0)
+            right_images = _cell_images(table, offset, 1)
+            marked_items = [line for line in row[0] if MATCHING_ITEM.match(line)]
+            for position, line in enumerate(marked_items):
+                items.append(MatchingCell(line, left_images if not position else ()))
+            if not marked_items and left_images:
+                items.append(MatchingCell("", left_images))
+            marked_options = [
+                (found.group(1), line)
+                for line, found in ((line, MATCHING_OPTION.match(line)) for line in row[1])
+                if found
+            ]
+            for position, (digit, line) in enumerate(marked_options):
+                options.append(
+                    (digit, MatchingCell(line, right_images if not position else ()))
+                )
+            if not marked_options and right_images:
+                options.append((str(len(options) + 1), MatchingCell("", right_images)))
         if len(items) >= 2 and len(options) >= 2:
             return table, items, options
     return None
@@ -1453,7 +1487,7 @@ def classify(task: SourceTask) -> tuple[str, AnswerSpec | str]:
     if matching is not None and len(parts) == 1 and DIGITS.fullmatch(key):
         table, items, options = matching
         option_digits = {digit for digit, _ in options}
-        if len(key) == len(items) and set(key) <= option_digits:
+        if len(key) == len(items) and set(key) <= option_digits:  # noqa: SIM102
             return "matching", MatchingAnswerSpec(
                 tuple(items), tuple(options), key, table
             )
@@ -1560,6 +1594,20 @@ def strip_answer_sheet_instructions(prompt: str) -> str:
         if line and line != ".":
             lines.append(line)
     return "\n".join(lines)
+
+
+def _matching_cell_label(cell: MatchingCell) -> str | None:
+    """A drawn cell shows its figure, so it is allowed to say nothing.
+
+    `3.` is such a cell: the marker names its place in the run and the formula
+    itself is the picture, so stripping the marker rightly leaves nothing.
+    """
+    if not cell.label.strip():
+        return "" if cell.images else None
+    label = _option_label(cell.label)
+    if label is None and cell.images:
+        return ""
+    return label
 
 
 def _option_label(value: str) -> str | None:
@@ -1695,8 +1743,8 @@ def build_question(
     elif kind == "matching":
         if not isinstance(payload, MatchingAnswerSpec):
             return "invalid_answer_spec"
-        items = [_option_label(item) for item in payload.items]
-        options = [(digit, _option_label(label)) for digit, label in payload.options]
+        items = [_matching_cell_label(cell) for cell in payload.items]
+        options = [(digit, _matching_cell_label(cell)) for digit, cell in payload.options]
         if any(item is None for item in items) or any(label is None for _, label in options):
             return "invalid_options"
         if len(items) > MAX_OPTIONS or len(options) > MAX_OPTIONS:
@@ -1810,6 +1858,9 @@ class Candidate:
     question: dict[str, Any]
     images: list[tuple[bytes, str]]
     outcome: Outcome
+    # One entry per image: the id of the matching cell that shows it, or None
+    # when the figure belongs to the question as a whole.
+    cell_targets: list[str | None] = field(default_factory=list)
 
 
 def load_answer_variants(path: Path) -> dict[str, list[str]]:
@@ -1876,12 +1927,13 @@ def convert_file(
     outcomes: list[Outcome] = []
     variants = answer_variants or {}
     for task in source.tasks:
-        if _has_table_cell_figure(task):
+        kind, payload = classify(task)
+        placed = _placed_cell_images(task, payload)
+        if _unplaced_cell_images(task, placed):
             outcomes.append(
                 Outcome(task.number, "skipped", reason="unsupported_table_cell_figure")
             )
             continue
-        kind, payload = classify(task)
         if kind == "skip":
             outcomes.append(Outcome(task.number, "skipped", reason=str(payload)))
             continue
@@ -1896,8 +1948,14 @@ def convert_file(
             if problem is not None:
                 raise ImportError(f"{problem}: {question['id']}")
 
-        prepared = [prepare_image(payload_bytes) for payload_bytes in task.images]
-        reason = _rejection(question, prepared)
+        cell_figures = _cell_figures(task, payload)
+        prepared = [
+            prepare_image(payload_bytes)
+            for payload_bytes in list(task.images) + [data for _, data in cell_figures]
+        ]
+        targets: list[str | None] = [None] * len(task.images)
+        targets.extend(target for target, _ in cell_figures)
+        reason = _rejection(question, prepared, targets)
         if reason is not None:
             outcomes.append(Outcome(task.number, "skipped", kind, reason))
             continue
@@ -1906,13 +1964,16 @@ def convert_file(
             Candidate(
                 source, task, question, images,
                 Outcome(task.number, "imported", kind, images=len(images)),
+                targets,
             )
         )
     return candidates, outcomes
 
 
 def _rejection(
-    question: dict[str, Any], images: list[tuple[bytes, str] | None]
+    question: dict[str, Any],
+    images: list[tuple[bytes, str] | None],
+    targets: list[str | None],
 ) -> str | None:
     """Why this converted question cannot ship, or None when it can."""
     if any(image is None for image in images):
@@ -1928,7 +1989,38 @@ def _rejection(
         return "unreadable_matching"
     if EXTERNAL_RESOURCE.search(question["prompt"]):
         return "external_resource"
-    return validate_question(question)
+    return validate_question(_with_pending_cell_assets(question, targets))
+
+
+def _with_pending_cell_assets(
+    question: dict[str, Any], targets: list[str | None]
+) -> dict[str, Any]:
+    """Validate a drawn cell as though its figure already had its path.
+
+    The asset budget hands out paths after this check, and a drawn cell is only
+    a valid cell once it has one. The stand-in never reaches the catalog: the
+    real path is written onto the question itself, and a candidate that never
+    gets one is dropped.
+    """
+    drawn = [target for target in targets if target is not None]
+    if not drawn:
+        return question
+    stand_in = {
+        target: f"assets/questions/pending-{position + 1}.png"
+        for position, target in enumerate(dict.fromkeys(drawn))
+    }
+    pending = dict(question)
+    for group in ("items", "options"):
+        entries = pending.get(group)
+        if not entries:
+            continue
+        pending[group] = [
+            entry | {"asset": stand_in[entry["id"]]}
+            if entry["id"] in stand_in
+            else entry
+            for entry in entries
+        ]
+    return pending
 
 
 def _figure_reference_prompt(prompt: str) -> str:
@@ -1947,13 +2039,62 @@ def _figure_reference_prompt(prompt: str) -> str:
     return "\n".join(lines)
 
 
-def _has_table_cell_figure(task: SourceTask) -> bool:
-    """Table-cell figures cannot retain their relative layout in the catalog."""
+def _attach_cell_assets(
+    question: dict[str, Any], paths: list[str], targets: list[str | None]
+) -> None:
+    """Give every drawn matching cell the path its figure was granted."""
+    by_id = {
+        entry["id"]: entry
+        for group in ("items", "options")
+        for entry in question.get(group, ())
+    }
+    for path, target in zip(paths, targets):
+        if target is None:
+            continue
+        entry = by_id.get(target)
+        if entry is not None:
+            entry.setdefault("asset", path)
+
+
+def _cell_figures(task: SourceTask, payload: AnswerSpec | str) -> list[tuple[str, bytes]]:
+    """Every drawn matching cell, paired with the catalog id that will show it.
+
+    A picture repeated across cells, or one the task already shows on its own,
+    illustrates the whole task. Placing it in a cell would claim a meaning the
+    source does not give it, so it is left unplaced and the task stays out.
+    """
+    if not isinstance(payload, MatchingAnswerSpec):
+        return []
+    figures: list[tuple[str, bytes]] = []
+    for index, cell in enumerate(payload.items):
+        figures.extend((f"i{index + 1}", data) for data in cell.images)
+    for digit, cell in payload.options:
+        figures.extend((f"o{digit}", data) for data in cell.images)
+    shared = {data for data in task.images}
+    counts = Counter(data for _, data in figures)
+    return [
+        (target, data)
+        for target, data in figures
+        if counts[data] == 1 and data not in shared
+    ]
+
+
+def _placed_cell_images(task: SourceTask, payload: AnswerSpec | str) -> set[bytes]:
+    return {data for _, data in _cell_figures(task, payload)}
+
+
+def _unplaced_cell_images(task: SourceTask, placed: set[bytes]) -> bool:
+    """A table figure the catalog has nowhere to put keeps the task out.
+
+    Only a matching cell can carry one. Anywhere else in a table the figure
+    would lose the layout that gives it meaning.
+    """
     return any(
-        cell.images
+        data not in placed
         for table in task.prompt_tables
         for row in table.cells
         for cell in row
+        for data in cell.images
     )
 
 
@@ -1991,10 +2132,15 @@ def allocate_assets(
                         f"assets/questions/{candidate.question['id']}-{index + 1}{extension}"
                     )
                 paths.append(granted[digest])
-            unique_paths = list(dict.fromkeys(paths))
+            targets = candidate.cell_targets or [None] * len(paths)
+            _attach_cell_assets(candidate.question, paths, targets)
+            own = [
+                path for path, target in zip(paths, targets) if target is None
+            ]
+            unique_paths = list(dict.fromkeys(own))
             if len(unique_paths) == 1:
                 candidate.question["asset"] = unique_paths[0]
-            else:
+            elif unique_paths:
                 candidate.question["assets"] = unique_paths
     return granted, dropped
 
