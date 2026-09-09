@@ -173,8 +173,8 @@ def test_build_report_embeds_cyrillic_brand_catalog_and_persisted_result():
     assert "100" in text
     assert "Результат" in text
     assert "Правильных ответов" in text
-    assert "Сильные темы" in text
-    assert "Точки роста" in text
+    assert "Получилось в этой проверке" in text
+    assert "Повторить по этой проверке" in text
     assert "Ваш ответ" in text
     assert "Уравнения" in text
 
@@ -346,11 +346,11 @@ def test_premium_report_renders_zero_summary_and_frozen_provenance_in_footer():
     assert "Предмет: Физика" in text
     assert "Режим: быстрая диагностика" in text
     assert "Дата завершения: 11.08.2026" in text
-    assert "Текущий результат: 0 из 100 баллов" in text
+    assert "Правильных ответов: 0%" in text
     assert "Верных ответов: 0 из 4" in text
-    assert "Границы проверки: Письменная часть не проверялась" in text
-    assert "Сильные темы: Механика" in text
-    assert "Точки роста: Оптика" in text
+    assert "Это не прогноз балла ЕГЭ или ОГЭ" in text
+    assert "Получилось в этой проверке: Механика" in text
+    assert "Повторить по этой проверке: Оптика" in text
     assert "ID результата: attempt_zero" in text
     assert "Диагностика: demo-physics" in text
     assert "Версия диагностики: content-v0" in text

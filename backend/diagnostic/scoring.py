@@ -23,6 +23,11 @@ from diagnostic.school import GradeScale, TestScoreScale
 
 ScoreScale = TestScoreScale | GradeScale
 
+COVERAGE_LIMITATION = (
+    "Результат относится только к выполненным заданиям. "
+    "Другие задания и части экзамена не проверены. Это не прогноз балла ЕГЭ или ОГЭ."
+)
+
 
 def round_half_up(value: float) -> int:
     return math.floor(value + 0.5)
@@ -94,6 +99,7 @@ class ScoreResult(BaseModel):
     growth_topics: tuple[TopicScore, ...]
     recoverable_primary_score: int = Field(default=0, ge=0)
     estimate: ScoreEstimate | None = None
+    accuracy_percent: int = Field(default=0, ge=0, le=100)
 
 
 def score_answers(
@@ -146,12 +152,7 @@ def score_answers(
         recoverable_primary_score=sum(
             item.max_primary_score - item.primary_score for item in growth_topics
         ),
-        estimate=(
-            estimate_for_primary(
-                scale, primary_score, max_primary_score, len(questions)
-            )
-            if scale is not None else None
-        ),
+        accuracy_percent=round_half_up(correct_count / len(questions) * 100),
     )
 
 

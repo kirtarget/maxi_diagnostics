@@ -234,6 +234,8 @@ def test_trainer_plan_mode_rejects_a_plan_built_on_older_content(monkeypatch):
 def test_bootstrap_carries_the_daily_plan_summary(monkeypatch):
     from diagnostic.api import sessions
 
+    monkeypatch.setattr(sessions.onboarding, "get_status", AsyncMock(return_value="completed"))
+
     monkeypatch.setattr(sessions.attempts, "mark_opened", AsyncMock(return_value=False))
     monkeypatch.setattr(sessions, "get_resumable_attempt", AsyncMock(return_value=None))
     monkeypatch.setattr(sessions, "list_completed_attempts", AsyncMock(return_value=[]))
@@ -264,6 +266,8 @@ def test_bootstrap_carries_the_daily_plan_summary(monkeypatch):
 
 def test_bootstrap_reports_no_plan_before_the_first_completed_diagnostic(monkeypatch):
     from diagnostic.api import sessions
+
+    monkeypatch.setattr(sessions.onboarding, "get_status", AsyncMock(return_value="welcome"))
 
     monkeypatch.setattr(sessions.attempts, "mark_opened", AsyncMock(return_value=False))
     monkeypatch.setattr(sessions, "get_resumable_attempt", AsyncMock(return_value=None))

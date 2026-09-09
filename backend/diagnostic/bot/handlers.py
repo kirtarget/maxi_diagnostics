@@ -16,10 +16,11 @@ from diagnostic.daily_plan import ensure_today_plan, plan_summary
 from diagnostic.db import attempts, funnel
 from diagnostic.messages import render_message
 from diagnostic.school import SchoolConfig
-from diagnostic.score_text import estimate_caption, estimate_headline
+from diagnostic.scoring import COVERAGE_LIMITATION, round_half_up
 from diagnostic.settings import Settings
 
 from .keyboards import home_keyboard, result_keyboard, results_keyboard, webapp_keyboard
+from .sender import send_school_message
 
 
 def _value(row: Mapping[str, Any], key: str, default: Any = None) -> Any:
@@ -28,11 +29,6 @@ def _value(row: Mapping[str, Any], key: str, default: Any = None) -> Any:
     except (KeyError, TypeError):
         value = default
     return default if value is None else value
-
-
-def _estimate(row: Mapping[str, Any]) -> Any:
-    snapshot = _value(row, "result_snapshot")
-    return snapshot.get("estimate") if isinstance(snapshot, Mapping) else None
 
 
 def _diagnostic_value(
@@ -81,10 +77,12 @@ async def send_home(
     except ValueError as exc:
         if str(exc) != "diagnostic_user_erased":
             raise
-        await message.answer(
-            await render_message("DATA_ERASED", school),
-            parse_mode="HTML",
-            disable_web_page_preview=True,
+        await send_school_message(
+            send_text=message.answer,
+            send_photo=getattr(message, "answer_photo", None),
+            school=school,
+            message_key="DATA_ERASED",
+            text=await render_message("DATA_ERASED", school),
         )
         return
     if first_open:
@@ -95,11 +93,13 @@ async def send_home(
             action="opened",
         )
     text = await render_message("WELCOME", school)
-    await message.answer(
-        text,
-        parse_mode="HTML",
+    await send_school_message(
+        send_text=message.answer,
+        send_photo=getattr(message, "answer_photo", None),
+        school=school,
+        message_key="WELCOME",
+        text=text,
         reply_markup=home_keyboard(school, settings.miniapp_url, user_id),
-        disable_web_page_preview=True,
     )
 
 
@@ -110,7 +110,7 @@ async def send_results(
     catalog: DiagnosticCatalog,
 ) -> None:
     await _send_results_to(
-        message.answer,
+        message,
         message.from_user.id,
         settings,
         school,
@@ -118,15 +118,17 @@ async def send_results(
     )
 
 
-async def _send_results_to(answer, user_id: int, settings, school, catalog) -> None:
+async def _send_results_to(message, user_id: int, settings, school, catalog) -> None:
     rows = list(await attempts.list_completed_attempts(user_id))
     if not rows:
         text = await render_message("RESULTS_EMPTY", school)
-        await answer(
-            text,
-            parse_mode="HTML",
+        await send_school_message(
+            send_text=message.answer,
+            send_photo=getattr(message, "answer_photo", None),
+            school=school,
+            message_key="RESULTS_EMPTY",
+            text=text,
             reply_markup=webapp_keyboard(school, settings.miniapp_url),
-            disable_web_page_preview=True,
         )
         return
 
@@ -135,12 +137,9 @@ async def _send_results_to(answer, user_id: int, settings, school, catalog) -> N
     lines = [f"<b>{html.escape(interface.results_heading, quote=True)}</b>", ""]
     for row in rows[:10]:
         subject = html.escape(_diagnostic_value(row, catalog, "subject", fallback), quote=True)
-        score = html.escape(str(_value(row, "score", 0)), quote=True)
-        score_suffix = "%" if _value(row, "score_unit") == "accuracy_percent" else ""
-        headline = estimate_headline(_estimate(row), _value(row, "exam", ""))
-        estimate_part = (
-            f" · {html.escape(headline, quote=True)}" if headline is not None else ""
-        )
+        correct = _value(row, "correct_count", 0)
+        count = _value(row, "question_count", 0)
+        accuracy = round_half_up(correct / count * 100) if count else 0
         mode = (
             interface.quick_result
             if _value(row, "mode", "quick") == "quick"
@@ -148,16 +147,18 @@ async def _send_results_to(answer, user_id: int, settings, school, catalog) -> N
         )
         mode = html.escape(mode, quote=True)
         lines.append(
-            f"• <b>{subject}</b> — {score}{score_suffix}{estimate_part} ({mode})"
+            f"• <b>{subject}</b> · верно {correct}/{count} ({accuracy}%) · {mode}"
         )
-    await answer(
-        "\n".join(lines),
-        parse_mode="HTML",
+    await send_school_message(
+        send_text=message.answer,
+        send_photo=getattr(message, "answer_photo", None),
+        school=school,
+        message_key="RESULTS",
+        text="\n".join(lines),
         reply_markup=results_keyboard(
             school, rows[:10], settings.miniapp_url,
             timezone_name=settings.timezone,
         ),
-        disable_web_page_preview=True,
     )
     for row in rows[:10]:
         await _mark_viewed(str(_value(row, "attempt_id", "")), user_id, settings)
@@ -170,7 +171,7 @@ async def send_plan(
     catalog: DiagnosticCatalog,
 ) -> None:
     await _send_plan_to(
-        message.answer,
+        message,
         message.from_user.id,
         settings,
         school,
@@ -191,7 +192,7 @@ def task_count_text(count: int) -> str:
     return f"{count} заданий"
 
 
-async def _send_plan_to(answer, user_id: int, settings, school, catalog) -> None:
+async def _send_plan_to(message, user_id: int, settings, school, catalog) -> None:
     interface = school.brand.interface
     try:
         plan = await ensure_today_plan(
@@ -204,11 +205,13 @@ async def _send_plan_to(answer, user_id: int, settings, school, catalog) -> None
         plan = None
     summary = plan_summary(plan, catalog)
     if summary["status"] == "no_diagnostic":
-        await answer(
-            await render_message("PLAN_EMPTY", school),
-            parse_mode="HTML",
+        await send_school_message(
+            send_text=message.answer,
+            send_photo=getattr(message, "answer_photo", None),
+            school=school,
+            message_key="PLAN_EMPTY",
+            text=await render_message("PLAN_EMPTY", school),
             reply_markup=webapp_keyboard(school, settings.miniapp_url),
-            disable_web_page_preview=True,
         )
         return
 
@@ -223,11 +226,15 @@ async def _send_plan_to(answer, user_id: int, settings, school, catalog) -> None
     ]
     if summary["status"] == "done":
         lines.append(html.escape(interface.open_result_hint, quote=True))
-    await answer(
-        "\n".join(lines),
-        parse_mode="HTML",
-        reply_markup=webapp_keyboard(school, settings.miniapp_url, label=interface.plan),
-        disable_web_page_preview=True,
+    await send_school_message(
+        send_text=message.answer,
+        send_photo=getattr(message, "answer_photo", None),
+        school=school,
+        message_key="PLAN",
+        text="\n".join(lines),
+        reply_markup=webapp_keyboard(
+            school, settings.miniapp_url, label=interface.plan, screen="plan"
+        ),
     )
 
 
@@ -255,25 +262,17 @@ async def show_result(
         ),
         quote=True,
     )
-    score = html.escape(str(_value(attempt, "score", 0)), quote=True)
     question_count = html.escape(str(_value(attempt, "question_count", 0)), quote=True)
     correct_count = html.escape(str(_value(attempt, "correct_count", 0)), quote=True)
-    estimate = _estimate(attempt)
-    headline = estimate_headline(estimate, _value(attempt, "exam", ""))
-    caption = estimate_caption(estimate)
-    estimate_lines = (
-        f"<b>{html.escape(headline, quote=True)}</b>\n"
-        f"{html.escape(caption, quote=True)}\n"
-        if headline is not None and caption is not None else ""
-    )
     if callback.message:
-        await callback.message.answer(
-            f"<b>{subject}</b>\n"
-            f"{estimate_lines}"
-            f"{html.escape(school.brand.pdf.score_label, quote=True)}: {score}\n"
+        await send_school_message(
+            send_text=callback.message.answer,
+            send_photo=getattr(callback.message, "answer_photo", None),
+            school=school,
+            message_key="RESULTS",
+            text=f"<b>{subject}</b>\n"
             f"{html.escape(school.brand.pdf.correct_label, quote=True)}: "
-            f"{correct_count}/{question_count}",
-            parse_mode="HTML",
+            f"{correct_count}/{question_count}\n{COVERAGE_LIMITATION}",
             reply_markup=result_keyboard(
                 school,
                 user_id,
@@ -281,7 +280,6 @@ async def show_result(
                 str(_value(attempt, "mode", "full")),
                 miniapp_url=settings.miniapp_url,
             ),
-            disable_web_page_preview=True,
         )
         await _mark_viewed(attempt_id, user_id, settings)
 
@@ -292,6 +290,24 @@ def build_router(
     catalog: DiagnosticCatalog,
 ) -> Router:
     router = Router(name="diagnostic")
+
+    @router.message(Command("stop"))
+    async def stop_notifications(message: Message) -> None:
+        if message.from_user:
+            await attempts.set_notification_preference(message.from_user.id, False)
+            await message.answer(
+                "Хорошо, напоминания выключил 🔕 Результаты никуда не пропадут. "
+                "Если захочешь вернуть напоминания, отправь /notifications."
+            )
+
+    @router.message(Command("notifications"))
+    async def enable_notifications(message: Message) -> None:
+        if message.from_user:
+            await attempts.set_notification_preference(message.from_user.id, True)
+            await message.answer(
+                "Готово, напоминания снова включены 🔔 Если захочешь тишины, "
+                "отправь /stop."
+            )
 
     @router.message(CommandStart())
     @router.message(Command("diagnostics"))
@@ -310,11 +326,13 @@ def build_router(
     async def menu_callback(callback: CallbackQuery) -> None:
         await callback.answer()
         if callback.message:
-            await callback.message.answer(
-                await render_message("WELCOME", school),
-                parse_mode="HTML",
+            await send_school_message(
+                send_text=callback.message.answer,
+                send_photo=getattr(callback.message, "answer_photo", None),
+                school=school,
+                message_key="WELCOME",
+                text=await render_message("WELCOME", school),
                 reply_markup=home_keyboard(school, settings.miniapp_url, callback.from_user.id),
-                disable_web_page_preview=True,
             )
 
     @router.callback_query(F.data == "diag:results")
@@ -322,7 +340,7 @@ def build_router(
         await callback.answer()
         if callback.message:
             await _send_results_to(
-                callback.message.answer,
+                callback.message,
                 callback.from_user.id,
                 settings,
                 school,
@@ -334,7 +352,7 @@ def build_router(
         await callback.answer()
         if callback.message:
             await _send_plan_to(
-                callback.message.answer,
+                callback.message,
                 callback.from_user.id,
                 settings,
                 school,

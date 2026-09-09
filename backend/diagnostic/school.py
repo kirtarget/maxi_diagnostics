@@ -16,6 +16,7 @@ import tinycss2
 
 from diagnostic.font_support import validate_report_text
 from diagnostic.jsonutil import load_json_file
+from diagnostic.message_validation import contains_unsafe_message_text
 
 
 _ASSET_PATH = re.compile(
@@ -379,7 +380,11 @@ class MessageTemplates(BaseModel):
     @field_validator("*")
     @classmethod
     def validate_template_text(cls, value: str) -> str:
-        if not value.strip() or len(value) > 2048 or _contains_unsafe_text(value):
+        if (
+            not value.strip()
+            or len(value) > 2048
+            or contains_unsafe_message_text(value)
+        ):
             raise ValueError("invalid_message_template")
         return value
 
@@ -402,6 +407,51 @@ class MessageTemplates(BaseModel):
         }
 
 
+class MessageImages(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    welcome: str | None = None
+    results_empty: str | None = None
+    results: str | None = None
+    plan_empty: str | None = None
+    plan: str | None = None
+    data_erased: str | None = None
+    not_started: str | None = None
+    incomplete: str | None = None
+    result_unviewed: str | None = None
+    day_followup: str | None = None
+    quick_to_full: str | None = None
+    month_retest: str | None = None
+    lives_refill: str | None = None
+    streak_save: str | None = None
+    generic: str | None = None
+
+    @field_validator("*")
+    @classmethod
+    def validate_image_path(cls, value: str | None) -> str | None:
+        return validate_asset_path(value) if value is not None else None
+
+    def keyed(self) -> dict[str, str]:
+        configured = {
+            "WELCOME": self.welcome,
+            "RESULTS_EMPTY": self.results_empty,
+            "RESULTS": self.results,
+            "PLAN_EMPTY": self.plan_empty,
+            "PLAN": self.plan,
+            "DATA_ERASED": self.data_erased,
+            "NOT_STARTED": self.not_started,
+            "INCOMPLETE": self.incomplete,
+            "RESULT_UNVIEWED": self.result_unviewed,
+            "DAY_FOLLOWUP": self.day_followup,
+            "QUICK_TO_FULL": self.quick_to_full,
+            "MONTH_RETEST": self.month_retest,
+            "LIVES_REFILL": self.lives_refill,
+            "STREAK_SAVE": self.streak_save,
+            "GENERIC": self.generic,
+        }
+        return {key: path for key, path in configured.items() if path is not None}
+
+
 class BrandConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -413,6 +463,7 @@ class BrandConfig(BaseModel):
     )
     colors: BrandColors
     logo: str
+    message_images: MessageImages = Field(default_factory=MessageImages)
     pdf: PdfBrand
     interface: InterfaceLabels
     messages: MessageTemplates

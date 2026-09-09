@@ -459,12 +459,12 @@ def test_completion_returns_server_scored_result_and_pending_pdf(monkeypatch):
     )
     assert stored["completion"].forecast == {
         "kind": "accuracy_percent",
-        "points": [{"id": "intensive", "label": "Интенсив", "value": 100}],
+        "points": [],
     }
     assert not hasattr(stored["completion"], "telegram_username")
     assert not hasattr(stored["completion"], "first_name")
     assert response.json()["result"]["forecast"] == stored["completion"].forecast
-    assert response.json()["result"]["unassessed_part"] == "оставшаяся часть полной диагностики"
+    assert "Это не прогноз" in response.json()["result"]["unassessed_part"]
 
 
 def test_completion_freezes_review_snapshot(monkeypatch):
@@ -676,11 +676,13 @@ def test_completion_records_funnel_steps_without_a_telegram_identifier(monkeypat
     secret = client.app.state.settings.application_secret
 
     assert response.status_code == 200
-    assert [call.kwargs["action"] for call in recorded.await_args_list] == [
-        "started", "completed"
-    ]
+    actions = [call.kwargs["action"] for call in recorded.await_args_list]
+    assert {"started", "completed", "diagnostic_started", "diagnostic_completed",
+            "onboarding_completed", "streak_updated", "question_answered"} <= set(actions)
+    assert actions.count("question_answered") == len(base_completion()["answers"])
     for call in recorded.await_args_list:
-        assert call.kwargs["exam"] and call.kwargs["subject"]
+        if call.kwargs["action"] in {"started", "completed", "question_answered"}:
+            assert call.kwargs["exam"] and call.kwargs["subject"]
         assert session_subject_key(secret, call.kwargs["user_id"]) is not None
         assert "init_data" not in call.kwargs
 
@@ -934,14 +936,14 @@ def capture_completion(monkeypatch, school):
     return stored["completion"], response.json()
 
 
-def test_forecast_recovers_a_share_of_the_missed_growth_points(monkeypatch):
+def test_forecast_does_not_invent_recovery_of_missed_points(monkeypatch):
     completion, payload = capture_completion(monkeypatch, school_with())
 
     assert payload["result"]["score"] == 50
     assert payload["result"]["recoverable_primary_score"] == 1
     assert completion.forecast == {
         "kind": "accuracy_percent",
-        "points": [{"id": "intensive", "label": "Интенсив", "value": 100}],
+        "points": [],
     }
 
 
@@ -950,27 +952,20 @@ def test_forecast_keeps_the_current_value_when_nothing_is_recovered(monkeypatch)
         monkeypatch, school_with(recovery_share=0)
     )
 
-    assert completion.forecast["points"][0]["value"] == 50
+    assert completion.forecast["points"] == []
 
 
-def test_completion_estimates_the_exam_score_from_the_matching_scale(monkeypatch):
+def test_completion_does_not_estimate_exam_score_even_with_a_scale(monkeypatch):
     completion, payload = capture_completion(
         monkeypatch, school_with(scales=[DEMO_SCALE])
     )
 
-    assert payload["result"]["estimate"] == {
-        "kind": "test_score",
-        "value": 50,
-        "scaled_primary": 4,
-        "exam_max_primary": 8,
-        "sample_max_primary": 2,
-        "sample_size": 2,
-        "min_pass": 27,
-    }
+    assert payload["result"]["estimate"] is None
+    assert payload["result"]["accuracy_percent"] == 50
     assert completion.result_snapshot["estimate"] == payload["result"]["estimate"]
     assert completion.forecast == {
-        "kind": "test_score",
-        "points": [{"id": "intensive", "label": "Интенсив", "value": 100}],
+        "kind": "accuracy_percent",
+        "points": [],
     }
 
 

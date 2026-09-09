@@ -333,6 +333,10 @@ CREATE TABLE IF NOT EXISTS diagnostic_engagements (
 );
 CREATE INDEX IF NOT EXISTS idx_diagnostic_engagements_retention
     ON diagnostic_engagements(last_opened_at);
+ALTER TABLE diagnostic_engagements
+    ADD COLUMN IF NOT EXISTS onboarding_started_at TIMESTAMPTZ;
+ALTER TABLE diagnostic_engagements
+    ADD COLUMN IF NOT EXISTS notifications_enabled BOOLEAN NOT NULL DEFAULT true;
 
 CREATE TABLE IF NOT EXISTS diagnostic_offer_events (
     event_id TEXT PRIMARY KEY,
@@ -482,6 +486,19 @@ CREATE TABLE IF NOT EXISTS message_templates (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS message_media_cache (
+    school_id TEXT NOT NULL,
+    message_key TEXT NOT NULL,
+    asset_sha256 TEXT NOT NULL,
+    telegram_file_id TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (school_id, message_key),
+    CHECK (school_id ~ '^[a-z0-9][a-z0-9-]{1,62}$'),
+    CHECK (message_key ~ '^[A-Z][A-Z0-9_]{1,63}$'),
+    CHECK (asset_sha256 ~ '^[0-9a-f]{64}$'),
+    CHECK (length(telegram_file_id) BETWEEN 1 AND 512)
+);
+
 CREATE TABLE IF NOT EXISTS diagnostic_content_drafts (
     diagnostic_id TEXT PRIMARY KEY,
     payload JSONB NOT NULL,
@@ -550,6 +567,25 @@ CREATE INDEX IF NOT EXISTS idx_diagnostic_funnel_events_subject_day
     ON diagnostic_funnel_events(subject_hash, occurred_on);
 CREATE INDEX IF NOT EXISTS idx_diagnostic_funnel_events_retention
     ON diagnostic_funnel_events(occurred_at);
+
+ALTER TABLE diagnostic_funnel_events ADD COLUMN IF NOT EXISTS dedupe_hash TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_diagnostic_funnel_event_dedupe
+    ON diagnostic_funnel_events(subject_hash, action, dedupe_hash);
+DO $$
+BEGIN
+IF NOT EXISTS (SELECT 1 FROM diagnostic_schema_migrations WHERE version='2026-09-06-mvp-product-events') THEN
+ALTER TABLE diagnostic_funnel_events DROP CONSTRAINT IF EXISTS diagnostic_funnel_events_action_check;
+ALTER TABLE diagnostic_funnel_events ADD CONSTRAINT diagnostic_funnel_events_action_check
+    CHECK (action IN (
+        'opened', 'started', 'completed', 'result_viewed', 'trainer_answered', 'offer_clicked',
+        'registration_started', 'registration_completed', 'onboarding_started',
+        'onboarding_completed', 'diagnostic_started', 'question_answered',
+        'diagnostic_abandoned', 'diagnostic_completed', 'daily_started', 'daily_completed',
+        'life_lost', 'streak_updated', 'notification_sent', 'notification_opened', 'user_returned'
+    ));
+INSERT INTO diagnostic_schema_migrations(version) VALUES ('2026-09-06-mvp-product-events');
+END IF;
+END $$;
 
 DO $$
 BEGIN

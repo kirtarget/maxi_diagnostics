@@ -3,6 +3,7 @@ import type {
   AnswerValue,
   BootstrapResponse,
   CompletionResponse,
+  DailyPlanDetail,
   DiagnosticMode,
   PublicDiagnostic,
   PublicDiagnosticSummary,
@@ -17,6 +18,7 @@ import type {
 } from "./trainer-model";
 import type { OfferPlacement } from "./offer-ux";
 import { parseLeagueResponse, type LeagueResponse } from "./league-model";
+import { parseDailyPlan } from "./plan-model";
 import {
   isValidNumericInput,
   isValidTextInput,
@@ -596,8 +598,16 @@ export async function postDiagnostic<T>(
   throw lastError instanceof Error ? lastError : new Error("diagnostic_api_failed");
 }
 
-export const loadBootstrap = (initData: string) =>
-  postDiagnostic<BootstrapResponse>("/api/diagnostics/bootstrap", initData);
+export const loadBootstrap = (initData: string) => {
+  const token = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("n");
+  return postDiagnostic<BootstrapResponse>("/api/diagnostics/bootstrap", initData,
+    token && token.length <= 160 ? { notification_token: token } : undefined);
+};
+
+export const startOnboarding = (initData: string, sessionScope: string) =>
+  postDiagnostic<{ status: "selection" | "completed" }>("/api/diagnostics/onboarding", initData, {
+    session_scope: sessionScope, status: "selection",
+  });
 
 export const loadDiagnostic = async (
   initData: string,
@@ -660,6 +670,19 @@ export async function loadWeeklyLeague(
   const league = parseLeagueResponse(payload);
   if (!league) throw new Error("diagnostic_league_invalid_response");
   return league;
+}
+
+export async function loadDailyPlan(
+  initData: string,
+  sessionScope: string,
+  fetcher: FetchLike = fetch,
+): Promise<DailyPlanDetail> {
+  const payload = await postDiagnostic<unknown>(
+    "/api/diagnostics/daily-plan", initData, { session_scope: sessionScope }, fetcher,
+  );
+  const plan = parseDailyPlan(payload);
+  if (!plan) throw new Error("diagnostic_plan_invalid_response");
+  return plan;
 }
 
 export type TrainerStartPayload =

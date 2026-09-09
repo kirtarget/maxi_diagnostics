@@ -14,6 +14,7 @@ export type Screen =
   | "review"
   | "forecast"
   | "route"
+  | "plan"
   | "trainer";
 
 export type DiagnosticMode = "quick" | "full";
@@ -214,6 +215,11 @@ export type ServerResult = {
 };
 
 export type ServerAttempt = {
+  result?: ServerResult;
+  exam?: string;
+  subject?: string;
+  completed_at?: string;
+  pdf_status?: ReviewResponse["pdf_status"];
   attempt_id: string;
   diagnostic_id: string;
   content_version: string;
@@ -272,7 +278,19 @@ export type DailyPlanSummary = {
   status: PlanStatus;
 };
 
+/** One task of today's plan, as listed on the plan screen. */
+export type DailyPlanTask = {
+  question_id: string;
+  topic: string;
+  reason: PlanReason;
+  completed: boolean;
+};
+
+/** Full plan from `/daily-plan`: the summary plus the task list behind it. */
+export type DailyPlanDetail = DailyPlanSummary & { questions: DailyPlanTask[] };
+
 export type BootstrapResponse = {
+  onboarding?: { status: "welcome" | "selection" | "completed" };
   catalog_contract: 3;
   session_scope: string;
   latest_attempt_id: string | null;

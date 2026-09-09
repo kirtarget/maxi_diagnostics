@@ -46,6 +46,16 @@ def find_formal_address(text: str) -> list[str]:
     return FORMAL_ADDRESS_PATTERN.findall(text)
 
 
+def contains_unsafe_message_text(value: str) -> bool:
+    """Allow paragraph line breaks while rejecting other unsafe characters."""
+    without_line_breaks = value.replace("\r\n", "").replace("\n", "")
+    return any(
+        unicodedata.category(character).startswith("C")
+        or unicodedata.category(character) in {"Zl", "Zp"}
+        for character in without_line_breaks
+    )
+
+
 class _TelegramHtmlValidator(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=False)
@@ -119,11 +129,7 @@ class _TelegramHtmlValidator(HTMLParser):
 def validate_message_template(
     key: str, template: str, values: Mapping[str, str]
 ) -> str:
-    if any(
-        unicodedata.category(character).startswith("C")
-        or unicodedata.category(character) in {"Zl", "Zp"}
-        for character in template
-    ):
+    if contains_unsafe_message_text(template):
         raise ValueError("message_text_invalid")
     try:
         parsed_fields = tuple(Formatter().parse(template))

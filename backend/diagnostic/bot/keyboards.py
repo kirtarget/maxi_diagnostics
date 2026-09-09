@@ -29,16 +29,26 @@ def tracked_url(url: object, user_id: int, content: str) -> str:
     return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
 
+def screen_url(url: str, screen: str) -> str:
+    """Point the mini app at one screen, preserving notification attribution."""
+    parts = urlsplit(str(url))
+    query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    query["screen"] = screen
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+
+
 def webapp_keyboard(
     school: SchoolConfig,
     miniapp_url: str,
     *,
     label: str | None = None,
+    screen: str | None = None,
 ) -> InlineKeyboardMarkup:
     button_label = label or school.brand.interface.start_diagnostic
+    target = screen_url(miniapp_url, screen) if screen else miniapp_url
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=button_label, web_app=WebAppInfo(url=miniapp_url))]
+            [InlineKeyboardButton(text=button_label, web_app=WebAppInfo(url=target))]
         ]
     )
 

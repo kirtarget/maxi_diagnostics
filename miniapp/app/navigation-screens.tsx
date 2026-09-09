@@ -10,6 +10,21 @@ import type {
   SchoolLinks,
 } from "./types";
 
+function questionWord(count: number): string {
+  const lastHundred = count % 100;
+  if (lastHundred >= 11 && lastHundred <= 14) return "заданий";
+  const last = count % 10;
+  return last === 1 ? "задание" : last >= 2 && last <= 4 ? "задания" : "заданий";
+}
+
+function dayWord(count: number | undefined): string {
+  const value = count ?? 0;
+  const lastHundred = value % 100;
+  if (lastHundred >= 11 && lastHundred <= 14) return "дней";
+  const last = value % 10;
+  return last === 1 ? "день" : last >= 2 && last <= 4 ? "дня" : "дней";
+}
+
 export function NotTelegramScreen({ botUrl }: { botUrl: string | null }) {
   return (
     <section className="screen centered-state not-telegram-screen" role="alert">
@@ -45,7 +60,6 @@ export type GameplayHomeScreenProps = {
 };
 
 export function GameplayHomeScreen({
-  diagnostics,
   labels,
   profile,
   dailyPlan,
@@ -60,10 +74,8 @@ export function GameplayHomeScreen({
   onOfferDismiss,
 }: GameplayHomeScreenProps) {
   const offer = useMemo(() => normalizeOffer(offers[0] ?? {}), [offers]);
-  const subjects = [...new Set(diagnostics.map((item) => item.subject))];
-  const pathItems = diagnostics.slice(0, 3);
-  const firstSubject = subjects[0] ?? "предмет";
   const planReady = dailyPlan?.status === "ready" && Boolean(onStartPlan);
+  const livesRemaining = profile.livesRemaining ?? 0;
 
   return (
     <section className="screen gameplay-home" aria-labelledby="gameplay-home-title">
@@ -84,36 +96,37 @@ export function GameplayHomeScreen({
 
       <div className="gameplay-home-body">
         {profile.serverBacked && (
-          <div className="gameplay-dashboard" aria-label="Игровой прогресс">
-            <div><strong>{profile.xpTotal} XP</strong><small>опыт</small></div>
-            <div><strong>{profile.streakDays}</strong><small>дней подряд</small></div>
-            <div className="gameplay-dashboard-lives"><strong>{"♥".repeat(profile.livesRemaining ?? 0)}</strong><small>жизни</small></div>
-            <div><strong>{profile.dailyGoal?.progress}/{profile.dailyGoal?.target}</strong><small>цель дня</small></div>
+          <div className="gameplay-home-status" aria-label="Текущий прогресс">
+            <div><strong>{profile.streakDays}</strong><small>{dayWord(profile.streakDays)} подряд</small></div>
+            <div><strong>{livesRemaining}</strong><small>ошибок до паузы в тренажёре</small></div>
           </div>
         )}
-        {profile.serverBacked && profile.quest && (
-          <div className="gameplay-quest"><div><small>Квест</small><strong>{profile.quest.progress}/{profile.quest.target} активностей</strong></div></div>
-        )}
         {planReady && dailyPlan && (
-          <button className="primary-button gameplay-home-cta gameplay-plan-cta" onClick={onStartPlan} type="button">
-            План на сегодня: {dailyPlan.completed} из {dailyPlan.total} <span aria-hidden="true">→</span>
-          </button>
+          <div className="gameplay-next-action">
+            <button className="primary-button gameplay-home-cta gameplay-plan-cta" onClick={onStartPlan} type="button">
+              План на сегодня · {dailyPlan.completed} из {dailyPlan.total} <span aria-hidden="true">→</span>
+            </button>
+            <p>Задания из слабых тем и повтор прошлых ошибок.</p>
+          </div>
         )}
         {dailyPlan?.status === "done" && (
           <p className="gameplay-plan-done" role="status">
-            <span aria-hidden="true">✓</span> План выполнен
+            <span aria-hidden="true">✓</span> План на сегодня выполнен
           </p>
         )}
         <button className={`${planReady ? "secondary-button" : "primary-button"} gameplay-home-cta`} onClick={onStart} type="button">
-          {profile.completionCount > 0 ? "Продолжить диагностику" : labels.start_diagnostic} <span aria-hidden="true">→</span>
+          {profile.completionCount > 0 ? "Выбрать диагностику" : labels.start_diagnostic} <span aria-hidden="true">→</span>
         </button>
         <div className="gameplay-cta-row">
           <button className="secondary-button gameplay-trainer-cta" onClick={onStartTrainer ?? onStart} type="button">
-            Тренировка
+            Тренажёр
+          </button>
+          <button className="secondary-button gameplay-profile-cta" onClick={onOpenProfile} type="button">
+            Прогресс
           </button>
           {onOpenLeague && (
             <button className="secondary-button gameplay-league-cta" onClick={onOpenLeague} type="button">
-              Лига недели
+              Лига
             </button>
           )}
         </div>
@@ -126,26 +139,6 @@ export function GameplayHomeScreen({
           />
         )}
 
-        <div className="gameplay-section-heading">
-          <div><h2>Ближайшие диагностики</h2></div>
-          <span className="gameplay-count">{diagnostics.length}</span>
-        </div>
-        <div className="gameplay-path" aria-label="Доступные диагностики">
-          {pathItems.map((item, index) => (
-            <button className="gameplay-path-item" key={item.id} onClick={onStart} type="button">
-              <span className={`gameplay-path-node ${index === 0 ? "is-current" : ""}`}>{index + 1}</span>
-              <div><strong>{item.subject}</strong><small>{item.exam} · {item.quick_count} заданий</small></div>
-              <span className="gameplay-path-arrow" aria-hidden="true">→</span>
-            </button>
-          ))}
-        </div>
-        <p className="gameplay-path-note">Сейчас доступны {subjects.length || 1} {subjects.length === 1 ? "предмет" : "предмета"}, включая {firstSubject}.</p>
-
-        <button className="gameplay-profile-card" onClick={onOpenProfile} type="button">
-          <span className="gameplay-profile-icon" aria-hidden="true">✦</span>
-          <span><strong>Твой профиль</strong><small>{profile.unlockedAchievements.length > 0 ? `${profile.unlockedAchievements.length} достижение открыто` : "Заверши первую диагностику, чтобы открыть достижение"}</small></span>
-          <span aria-hidden="true">→</span>
-        </button>
       </div>
     </section>
   );
@@ -162,12 +155,11 @@ export function GameplayProfileScreen({ profile, onBack, onStart }: { profile: G
       {profile.serverBacked && (
         <div className="gameplay-dashboard gameplay-dashboard-profile" aria-label="Игровой прогресс">
           <div><strong>{profile.xpTotal} XP</strong><small>опыт</small></div>
-          <div><strong>{profile.streakDays}</strong><small>дней подряд</small></div>
-          <div><strong>{"♥".repeat(profile.livesRemaining ?? 0)}</strong><small>жизни</small></div>
-          <div><strong>{profile.dailyGoal?.progress}/{profile.dailyGoal?.target}</strong><small>цель дня</small></div>
+          <div><strong>{profile.streakDays}</strong><small>{dayWord(profile.streakDays)} подряд</small></div>
+          <div><strong>{profile.livesRemaining ?? 0}</strong><small>ошибок до паузы в тренажёре</small></div>
+          <div><strong>{profile.dailyGoal?.progress}/{profile.dailyGoal?.target}</strong><small>действий сегодня</small></div>
         </div>
       )}
-      {profile.serverBacked && profile.quest && <div className="gameplay-quest"><small>Квест</small><strong>{profile.quest.progress}/{profile.quest.target} активностей</strong></div>}
       <div className="gameplay-achievements"><h2>Достижения</h2>{profile.unlockedAchievements.length > 0 ? profile.unlockedAchievements.map((achievement) => <div className="gameplay-achievement" key={achievement.key}><span aria-hidden="true">✓</span><span><strong>{achievement.title}</strong><small>{achievement.description}</small></span></div>) : <p>Первые достижения появятся после завершённой диагностики.</p>}</div>
       <button className="primary-button" onClick={onStart} type="button">Начать диагностику <span aria-hidden="true">→</span></button>
     </section>
@@ -181,7 +173,7 @@ export function WelcomeScreen({
   onStart,
 }: WelcomeScreenProps) {
   const minimumQuestions = Math.min(...diagnostics.map((item) => item.quick_count));
-  const maximumQuestions = Math.max(...diagnostics.map((item) => item.full_count));
+  const maximumQuestions = Math.max(...diagnostics.map((item) => item.quick_count));
   const questionRange = minimumQuestions === maximumQuestions
     ? String(maximumQuestions)
     : `${minimumQuestions}–${maximumQuestions}`;
@@ -191,7 +183,7 @@ export function WelcomeScreen({
       <div className="welcome-copy">
         <span className="state-code">Подготовка к экзаменам</span>
         <h1 id="welcome-title">Твой путь к успеху <em>на ОГЭ и ЕГЭ</em></h1>
-        <p className="hero-copy">Пройди диагностику — увидишь карту тем, разбор ошибок и прогноз баллов.</p>
+        <p className="hero-copy">Начни с короткой диагностики. Получишь разбор ответов и задания для повторения.</p>
       </div>
       <div className="welcome-path" role="img" aria-label="Путь подготовки: от старта через шаги к цели">
         <svg viewBox="0 0 390 150" preserveAspectRatio="none" aria-hidden="true">
@@ -203,7 +195,7 @@ export function WelcomeScreen({
         <span className="welcome-path-goal" style={{ right: 40, top: 8, width: 54, height: 54 }} aria-hidden="true">🏆</span>
       </div>
       <div className="welcome-facts" aria-label="Параметры диагностики">
-        <div><strong>{questionRange}</strong><span>заданий</span></div>
+        <div><strong>{questionRange}</strong><span>{questionWord(maximumQuestions)}</span></div>
         <div><strong>Без таймера</strong><span>свой темп</span></div>
         <div><strong>PDF</strong><span>в Telegram</span></div>
       </div>
@@ -238,7 +230,7 @@ export function ModeScreen({ labels, onBack, onSelect }: ModeScreenProps) {
             <span className="mode-card-icon" aria-hidden="true">🗺️</span>
             <div><strong>Полная диагностика</strong><div className="mode-card-meta">{labels.full_result}</div></div>
           </div>
-          <span>Полная карта тем, разбор ошибок, прогноз баллов и персональный маршрут.</span>
+          <span>Все задания этой диагностики, разбор ответов и план повторения.</span>
           <em>{labels.choose_label}</em>
         </button>
         <button className="mode-card" onClick={() => onSelect("quick")} type="button">
@@ -246,7 +238,7 @@ export function ModeScreen({ labels, onBack, onSelect }: ModeScreenProps) {
             <span className="mode-card-icon" aria-hidden="true">⚡</span>
             <div><strong>Быстрый замер</strong><div className="mode-card-meta">{labels.quick_result}</div></div>
           </div>
-          <span>Примерная оценка уровня без подробной карты. Хорош для первого раза.</span>
+          <span>Короткая проверка нескольких заданий и первый шаг для повторения.</span>
           <em>{labels.choose_label}</em>
         </button>
       </div>
@@ -307,7 +299,7 @@ export function SubjectsScreen({
               <SubjectIllustration subject={item.subject} />
               <span className="subject-copy">
                 <strong>{item.subject}</strong>
-                <small>{count} заданий · полный разбор</small>
+                <small>{count} {questionWord(count)} · разбор ответов</small>
               </span>
               <span className="subject-action">
                 <span>{labels.start_diagnostic}</span><span aria-hidden="true">→</span>

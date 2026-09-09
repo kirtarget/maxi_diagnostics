@@ -66,11 +66,12 @@ async def test_record_event_stores_only_the_subject_hash_and_bounded_labels(monk
     sql, arguments = executed[0]
     assert sql.startswith("INSERT INTO diagnostic_funnel_events")
     assert "user_id" not in sql
-    subject_hash, action, exam, subject = arguments
+    subject_hash, action, exam, subject, dedupe_hash = arguments
     assert subject_hash == session_subject_key("stable-secret", 42)
     assert action == "started"
     assert exam == "e" * 32
     assert subject is None
+    assert dedupe_hash is None
 
 
 @pytest.mark.parametrize("days", [0, 1, 14, 90])
@@ -83,5 +84,5 @@ def test_window_sql_filters_are_parameterized_and_bounded():
     assert "$1::int" in funnel._SUMMARY_SQL
     assert "$2::text IS NULL OR exam = $2::text" in funnel._SUMMARY_SQL
     assert "LIMIT 200" in funnel._BREAKDOWN_SQL
-    for action in funnel.FUNNEL_ACTIONS:
+    for action in funnel._COUNTED_ACTIONS:
         assert f"'{action}'" in funnel._SUMMARY_SQL

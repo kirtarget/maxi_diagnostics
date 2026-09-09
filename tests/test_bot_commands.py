@@ -31,7 +31,41 @@ def test_bot_command_menu_is_diagnostic_only():
         "diagnostics",
         "results",
         "plan",
+        "stop",
+        "notifications",
     ]
+
+
+@pytest.mark.asyncio
+async def test_start_sends_the_welcome_as_a_photo_caption(monkeypatch):
+    from diagnostic.bot import handlers, sender
+
+    monkeypatch.setattr(handlers.attempts, "mark_opened", AsyncMock(return_value=False))
+    monkeypatch.setattr(
+        handlers,
+        "render_message",
+        AsyncMock(return_value="Привет 👋 Готовимся к ЕГЭ."),
+    )
+    monkeypatch.setattr(
+        sender.message_media,
+        "get_telegram_file_id",
+        AsyncMock(return_value="welcome-file-id"),
+    )
+    message = SimpleNamespace(
+        from_user=SimpleNamespace(id=731),
+        answer=AsyncMock(),
+        answer_photo=AsyncMock(
+            return_value=SimpleNamespace(message_id=1, photo=[])
+        ),
+    )
+    school = load_school()
+
+    await handlers.send_home(message, _settings(), school, load_catalog(school))
+
+    message.answer.assert_not_awaited()
+    assert message.answer_photo.await_args.args[0] == "welcome-file-id"
+    assert "ЕГЭ" in message.answer_photo.await_args.kwargs["caption"]
+    assert message.answer_photo.await_args.kwargs["reply_markup"] is not None
 
 
 @pytest.mark.asyncio
@@ -343,7 +377,7 @@ def _completed_row(**overrides) -> dict:
 
 
 @pytest.mark.asyncio
-async def test_results_listing_shows_the_estimate_next_to_the_percent(monkeypatch):
+async def test_results_listing_omits_unvalidated_exam_estimate(monkeypatch):
     from diagnostic.bot import handlers
 
     monkeypatch.setattr(
@@ -360,7 +394,7 @@ async def test_results_listing_shows_the_estimate_next_to_the_percent(monkeypatc
 
     text = message.answer.await_args.args[0]
     assert "50%" in text
-    assert "≈ 53 балла ЕГЭ" in text
+    assert "≈ 53 балла ЕГЭ" not in text
 
 
 @pytest.mark.asyncio
@@ -385,7 +419,7 @@ async def test_results_listing_keeps_the_percent_only_for_older_attempts(monkeyp
 
 
 @pytest.mark.asyncio
-async def test_result_message_repeats_the_estimate_and_its_caption(monkeypatch):
+async def test_result_message_omits_estimate_and_explains_coverage(monkeypatch):
     from diagnostic.bot import handlers
 
     monkeypatch.setattr(
@@ -404,8 +438,5 @@ async def test_result_message_repeats_the_estimate_and_its_caption(monkeypatch):
     )
 
     text = callback.message.answer.await_args.args[0]
-    assert "≈ 53 балла ЕГЭ" in text
-    assert (
-        "ориентировочно, "
-        "по 10 заданиям" in text
-    )
+    assert "≈ 53 балла ЕГЭ" not in text
+    assert "Это не прогноз балла ЕГЭ или ОГЭ" in text

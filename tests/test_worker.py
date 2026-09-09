@@ -11,6 +11,8 @@ async def test_dispatch_work_caps_pdf_and_notification_batches(monkeypatch):
     from diagnostic import worker
 
     deliver = AsyncMock(return_value="sent")
+    abandonment = AsyncMock(return_value=0)
+    monkeypatch.setattr(worker.funnel, "record_abandoned_attempts", abandonment)
     followups = AsyncMock(return_value=20)
     monkeypatch.setattr(worker, "deliver_attempt", deliver)
     monkeypatch.setattr(worker, "dispatch_followups", followups)
@@ -30,6 +32,7 @@ async def test_dispatch_work_caps_pdf_and_notification_batches(monkeypatch):
     counts = await worker.dispatch_work(SimpleNamespace(), settings, SimpleNamespace())
 
     assert counts == {"pdfs": 20, "notifications": 20}
+    abandonment.assert_awaited_once_with("stable-secret")
     assert deliver.await_count == 20
     followups.assert_awaited_once_with(ANY, ANY, ANY, limit=20)
     purge.assert_awaited_once_with()

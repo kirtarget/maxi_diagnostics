@@ -12,6 +12,7 @@ import { QuestionView } from "./question-screen";
 import { ForecastEmptyScreen, ForecastScreen, ResultScreen, ReviewScreen, RouteScreen } from "./result-flow";
 import { TrainerScreen } from "./trainer-screen";
 import { LeagueScreen } from "./league-screen";
+import { PlanScreen } from "./plan-screen";
 import { gameplayProfileView } from "./gameplay-profile-model";
 import brand from "../../school/brand.json";
 import schoolLinks from "../../school/links.json";
@@ -104,7 +105,7 @@ const noop = () => undefined;
 
 const screens: Array<[string, string]> = [
   ["welcome", renderToStaticMarkup(<WelcomeScreen diagnostics={diagnostics} labels={labels} links={links} onStart={noop} />)],
-  ["home", renderToStaticMarkup(<GameplayHomeScreen diagnostics={diagnostics} labels={labels} profile={profile} onStart={noop} onOpenProfile={noop} onOpenLeague={noop} offers={links.offers} />)],
+  ["home", renderToStaticMarkup(<GameplayHomeScreen diagnostics={diagnostics} labels={labels} profile={profile} dailyPlan={{ plan_date: "2026-09-08", diagnostic_id: "math", subject: "Математика", exam: "ОГЭ", total: 5, completed: 0, status: "ready" }} onStart={noop} onStartPlan={noop} onOpenProfile={noop} onOpenLeague={noop} offers={links.offers} />)],
   ["profile", renderToStaticMarkup(<GameplayProfileScreen profile={profile} onBack={noop} onStart={noop} />)],
   ["mode", renderToStaticMarkup(<ModeScreen labels={labels} onBack={noop} onSelect={noop} />)],
   ["subjects", renderToStaticMarkup(<SubjectsScreen diagnostics={diagnostics} exam="ОГЭ" labels={labels} mode="full" onBack={noop} onExam={noop} onSelect={noop} />)],
@@ -150,6 +151,22 @@ const screens: Array<[string, string]> = [
     { rank: 4, display_label: "Кир", xp_week: 1240, is_me: true },
     { rank: 5, display_label: "Лиза Т.", xp_week: 980, is_me: false },
   ], me: { rank: 4, xp_week: 1240 } } }} onHome={noop} />)],
+  ["plan", renderToStaticMarkup(<PlanScreen state={{ kind: "ready", data: {
+    plan_date: "2026-09-09",
+    diagnostic_id: "ege-chemistry-1208",
+    subject: "Химия",
+    exam: "ЕГЭ",
+    total: 5,
+    completed: 2,
+    status: "ready",
+    questions: [
+      { question_id: "q1", topic: "Строение атома", reason: "mistake_review", completed: true },
+      { question_id: "q2", topic: "Химическая связь", reason: "mistake_review", completed: true },
+      { question_id: "q3", topic: "Окислительно-восстановительные реакции", reason: "growth_topic", completed: false },
+      { question_id: "q4", topic: "Растворы и концентрация", reason: "growth_topic", completed: false },
+      { question_id: "q5", topic: "Органическая химия", reason: "growth_topic", completed: false },
+    ],
+  } }} onStart={noop} onBack={noop} />)],
 ];
 
 describe("design preview gallery", () => {

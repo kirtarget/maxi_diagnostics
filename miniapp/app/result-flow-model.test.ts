@@ -64,8 +64,8 @@ describe("result flow model", () => {
 
   it("builds a bounded route from persisted growth topics", () => {
     expect(personalRoute(["Алгоритмы", "Информация", "Лишняя тема"]).map((item) => item.title)).toEqual([
-      "Закрыть тему «Алгоритмы»",
-      "Укрепить тему «Информация»",
+      "Разобрать «Алгоритмы»",
+      "Повторить «Информация»",
       "Проверить рост",
     ]);
   });

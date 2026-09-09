@@ -133,6 +133,27 @@ def test_load_school_returns_brand_and_offer_links(tmp_path: Path):
     assert school.resolve_asset("assets/logo.svg").is_file()
 
 
+def test_message_image_paths_are_typed_and_resolvable(tmp_path: Path):
+    write_sample_school(tmp_path)
+    brand_path = tmp_path / "brand.json"
+    brand = json.loads(brand_path.read_text(encoding="utf-8"))
+    brand["message_images"] = {
+        "welcome": "assets/logo.svg",
+        "results": "assets/logo.svg",
+    }
+    brand_path.write_text(json.dumps(brand), encoding="utf-8")
+
+    school = load_school(tmp_path)
+
+    assert school.brand.message_images.keyed() == {
+        "WELCOME": "assets/logo.svg",
+        "RESULTS": "assets/logo.svg",
+    }
+    assert school.resolve_asset(
+        school.brand.message_images.keyed()["WELCOME"]
+    ).is_file()
+
+
 def test_brand_color_roles_have_backwards_compatible_defaults(tmp_path: Path):
     write_sample_school(tmp_path)
 

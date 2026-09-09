@@ -7,7 +7,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from diagnostic import alerts
 from diagnostic.catalog import DiagnosticCatalog
 from diagnostic.delivery import deliver_attempt
-from diagnostic.db import attempts
+from diagnostic.db import attempts, funnel
 from diagnostic.followups import dispatch_followups
 from diagnostic.school import SchoolConfig
 from diagnostic.settings import Settings
@@ -47,6 +47,7 @@ async def _dispatch_work(
             f"pending={pending} threshold={PENDING_PDF_ALERT_THRESHOLD}",
         )
     await attempts.purge_expired_erasure_tombstones()
+    await funnel.record_abandoned_attempts(settings.application_secret)
     await attempts.purge_retained_diagnostic_data(
         settings.application_secret,
         settings.diagnostic_retention_days,

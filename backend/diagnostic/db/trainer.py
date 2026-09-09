@@ -529,7 +529,9 @@ async def schedule_lives_refill_reminder(
                 VALUES ('lives_refill:' || $1::bigint::text, $1, 'lives_refill', $2)
                 ON CONFLICT (dedupe_key) DO UPDATE SET
                     due_at=EXCLUDED.due_at, status='pending', locked_at=NULL,
-                    last_error=NULL, updated_at=now()
+                    attempts=0, sent_at=NULL, last_error=NULL, updated_at=now()
+                WHERE diagnostic_notifications.due_at <> EXCLUDED.due_at
+                  AND diagnostic_notifications.status <> 'sending'
                 """,
                 user_id, due_at,
             )

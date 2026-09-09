@@ -272,6 +272,32 @@ async def mark_opened(user_id: int) -> bool:
             return created is not None
 
 
+async def set_notification_preference(user_id: int, enabled: bool) -> None:
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        async with connection.transaction():
+            await connection.execute("SELECT pg_advisory_xact_lock($1)", user_id)
+            await _raise_if_erased(connection, user_id)
+            await connection.execute(
+                """
+                INSERT INTO diagnostic_engagements
+                    (user_id, opened_at, last_opened_at, notifications_enabled)
+                VALUES ($1, now(), now(), $2)
+                ON CONFLICT (user_id) DO UPDATE SET notifications_enabled=$2
+                """,
+                user_id, enabled,
+            )
+            if not enabled:
+                await connection.execute(
+                    """
+                    UPDATE diagnostic_notifications
+                       SET status='cancelled', locked_at=NULL, updated_at=now()
+                     WHERE user_id=$1 AND status IN ('pending','failed','sending')
+                    """,
+                    user_id,
+                )
+
+
 async def store_report_asset_bundle(bundle_id: str, payload: bytes) -> None:
     if len(bundle_id) != 64 or not payload or len(payload) > 25 * 1024 * 1024:
         raise ValueError("report_assets_invalid")
@@ -1167,8 +1193,12 @@ async def schedule_streak_save_notifications(
                   SELECT (now() AT TIME ZONE $1)::date AS today
               ) AS school
              WHERE profile.streak_days >= 2
-               AND (profile.streak_last_date IS NULL
-                    OR profile.streak_last_date < school.today)
+               AND profile.streak_last_date = school.today - 1
+               AND NOT EXISTS (
+                   SELECT 1 FROM diagnostic_notifications existing
+                    WHERE existing.dedupe_key = 'streak_save:' || profile.user_id::text
+                        || ':' || to_char(school.today, 'YYYYMMDD')
+               )
                AND NOT EXISTS (
                    SELECT 1 FROM diagnostic_erased_users erased
                     WHERE erased.user_id=profile.user_id
@@ -1202,6 +1232,19 @@ async def claim_due_notifications(limit: int = 1) -> list:
                 """
                 SELECT * FROM diagnostic_notifications
                  WHERE due_at <= now() AND attempts < 8
+                   AND NOT EXISTS (
+                       SELECT 1 FROM diagnostic_engagements engagement
+                        WHERE engagement.user_id=diagnostic_notifications.user_id
+                          AND NOT engagement.notifications_enabled
+                   )
+                   AND (kind='result_unviewed' OR NOT EXISTS (
+                       SELECT 1 FROM diagnostic_notifications recent
+                        WHERE recent.user_id=diagnostic_notifications.user_id
+                          AND recent.id <> diagnostic_notifications.id
+                          AND recent.kind <> 'result_unviewed'
+                          AND ((recent.status='sent' AND recent.sent_at > now() - interval '24 hours')
+                            OR (recent.status='sending' AND recent.locked_at > now() - interval '10 minutes'))
+                   ))
                    AND NOT EXISTS (
                        SELECT 1 FROM diagnostic_erased_users erased
                         WHERE erased.user_id=diagnostic_notifications.user_id
@@ -1294,6 +1337,8 @@ async def get_claimed_notification(
                    profile.streak_days,
                    profile.streak_last_date
                        = (now() AT TIME ZONE $3)::date AS streak_active_today,
+                   profile.streak_last_date
+                       = (now() AT TIME ZONE $3)::date - 1 AS streak_at_risk,
                    EXISTS (
                        SELECT 1 FROM diagnostic_attempts AS later
                         WHERE later.user_id=n.user_id
@@ -1307,6 +1352,11 @@ async def get_claimed_notification(
               LEFT JOIN diagnostic_progress_profiles AS profile
                      ON profile.user_id=n.user_id
              WHERE n.id=$1 AND n.status='sending' AND n.locked_at=$2
+               AND NOT EXISTS (
+                   SELECT 1 FROM diagnostic_engagements engagement
+                    WHERE engagement.user_id=n.user_id
+                      AND NOT engagement.notifications_enabled
+               )
                AND NOT EXISTS (
                    SELECT 1 FROM diagnostic_erased_users erased
                     WHERE erased.user_id=n.user_id

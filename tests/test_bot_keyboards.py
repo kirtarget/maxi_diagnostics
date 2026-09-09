@@ -89,6 +89,8 @@ def test_non_english_school_labels_flow_through_commands_and_all_keyboards():
         interface.command_diagnostics,
         interface.command_results,
         interface.command_plan,
+        "Отключить напоминания",
+        "Включить напоминания",
     ]
     assert [button.text for button in _buttons(webapp_keyboard(school, miniapp_url))] == [
         interface.start_diagnostic
@@ -173,3 +175,28 @@ def test_result_date_is_rendered_in_configured_school_timezone():
     )
 
     assert "11.08" in _buttons(keyboard)[0].text
+
+
+def test_plan_button_deeplinks_to_the_plan_screen_and_keeps_attribution():
+    from diagnostic.bot.keyboards import webapp_keyboard
+
+    school = load_school(SAMPLE_SCHOOL)
+    keyboard = webapp_keyboard(
+        school,
+        "https://diagnostic.school.example/?n=token",
+        label=school.brand.interface.plan,
+        screen="plan",
+    )
+
+    button = _buttons(keyboard)[0]
+    assert button.text == school.brand.interface.plan
+    assert button.web_app.url == "https://diagnostic.school.example/?n=token&screen=plan"
+
+
+def test_webapp_keyboard_without_a_screen_keeps_the_url_untouched():
+    from diagnostic.bot.keyboards import webapp_keyboard
+
+    school = load_school(SAMPLE_SCHOOL)
+    keyboard = webapp_keyboard(school, "https://diagnostic.school.example/")
+
+    assert _buttons(keyboard)[0].web_app.url == "https://diagnostic.school.example/"

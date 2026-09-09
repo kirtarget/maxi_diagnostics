@@ -70,11 +70,13 @@ export function useTrainer({
   initData,
   sessionScope,
   setScreen,
+  refreshProgress,
 }: {
   bootstrap: BootstrapResponse | null;
   initData: { current: string };
   sessionScope: string | undefined;
   setScreen: (screen: Screen) => void;
+  refreshProgress?: () => Promise<void>;
 }): TrainerSession {
   const [trainer, dispatch] = useReducer(trainerReducer, trainerInitialState);
   const [livesReminder, setLivesReminder] = useState<LivesReminderState>({ status: "idle" });
@@ -132,13 +134,14 @@ export function useTrainer({
         idempotency_key: `trainer-answer-${session.trainer_session_id}-${questionId}-${session.revision}`,
       });
       dispatch({ type: "answer_result", response });
+      void refreshProgress?.();
     } catch (answerError) {
       if (RESTART_ON_ANSWER.has(apiErrorDetail(answerError) ?? "")) {
         recoveryMode.current = "restart";
       }
       dispatch({ type: "error", message: trainerErrorMessage(answerError) });
     }
-  }, [initData, sessionScope, trainer.session]);
+  }, [initData, sessionScope, trainer.session, refreshProgress]);
 
   const finish = useCallback(async () => {
     const session = trainer.session;
@@ -150,13 +153,14 @@ export function useTrainer({
         revision: session.revision,
       });
       dispatch({ type: "finish_result", response });
+      void refreshProgress?.();
     } catch (finishError) {
       if (RESTART_ON_FINISH.has(apiErrorDetail(finishError) ?? "")) {
         recoveryMode.current = "restart";
       }
       dispatch({ type: "error", message: trainerErrorMessage(finishError) });
     }
-  }, [initData, sessionScope, trainer.session]);
+  }, [initData, sessionScope, trainer.session, refreshProgress]);
 
   const remindLives = useCallback(async () => {
     if (!sessionScope || !initData.current) return;

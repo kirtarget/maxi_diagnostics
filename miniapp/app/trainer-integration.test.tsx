@@ -157,7 +157,7 @@ describe("trainer integration contracts", () => {
       onOpenProfile={() => undefined}
     />);
     expect(html).toContain("Начать диагностику");
-    expect(html).toContain("Тренировка");
+    expect(html).toContain("Тренажёр");
   });
 
   it("renders server feedback for the answered question, including the last question", () => {

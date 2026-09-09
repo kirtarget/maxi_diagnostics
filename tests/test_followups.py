@@ -53,6 +53,55 @@ async def test_followup_sends_known_kind_and_finalizes_exact_lease(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_followup_sends_configured_image_as_one_captioned_message(monkeypatch):
+    from diagnostic import followups
+    from diagnostic.bot import sender
+
+    lease = claimed("quick_to_full")
+    context = lease | {
+        "attempt_status": "completed",
+        "result_viewed_at": None,
+        "subject": "Математика",
+        "mode": "quick",
+        "payload": {},
+    }
+    monkeypatch.setattr(
+        followups.attempts, "claim_due_notifications", AsyncMock(return_value=[lease])
+    )
+    monkeypatch.setattr(
+        followups.attempts,
+        "get_claimed_notification",
+        AsyncMock(return_value=context),
+    )
+    monkeypatch.setattr(followups, "render_message", AsyncMock(return_value="safe"))
+    monkeypatch.setattr(
+        followups.attempts, "mark_notification_sent", AsyncMock(return_value=True)
+    )
+    monkeypatch.setattr(
+        sender.message_media,
+        "get_telegram_file_id",
+        AsyncMock(return_value="full-diagnostic-file-id"),
+    )
+    bot = SimpleNamespace(
+        send_message=AsyncMock(),
+        send_photo=AsyncMock(
+            return_value=SimpleNamespace(message_id=3, photo=[])
+        ),
+    )
+
+    sent = await followups.dispatch_followups(
+        bot,
+        SimpleNamespace(miniapp_url="https://app.example"),
+        load_school(ROOT / "school"),
+    )
+
+    assert sent == 1
+    bot.send_message.assert_not_awaited()
+    assert bot.send_photo.await_args.kwargs["photo"] == "full-diagnostic-file-id"
+    assert bot.send_photo.await_args.kwargs["caption"] == "safe"
+
+
+@pytest.mark.asyncio
 async def test_followup_sends_lives_refill_reminder_without_attempt(monkeypatch):
     from diagnostic import followups
 
@@ -77,7 +126,7 @@ async def test_streak_save_is_sent_while_the_streak_is_alive_and_today_is_idle(m
     lease = claimed("streak_save") | {"attempt_id": None}
     context = lease | {
         "attempt_status": None, "result_viewed_at": None, "subject": "diagnostic",
-        "mode": "full", "payload": {}, "streak_days": 4, "streak_active_today": False,
+        "mode": "full", "payload": {}, "streak_days": 4, "streak_at_risk": True,
     }
     monkeypatch.setattr(followups.attempts, "claim_due_notifications", AsyncMock(return_value=[lease]))
     monkeypatch.setattr(followups.attempts, "get_claimed_notification", AsyncMock(return_value=context))
@@ -101,8 +150,9 @@ async def test_streak_save_is_sent_while_the_streak_is_alive_and_today_is_idle(m
 @pytest.mark.parametrize(
     "profile",
     [
-        {"streak_days": 4, "streak_active_today": True},
-        {"streak_days": 1, "streak_active_today": False},
+        {"streak_days": 4, "streak_at_risk": False},
+        {"streak_days": 1, "streak_at_risk": True},
+        {"streak_days": 4},
     ],
 )
 async def test_streak_save_is_cancelled_when_it_is_no_longer_needed(monkeypatch, profile):
@@ -146,7 +196,9 @@ async def test_day_followup_keyboard_points_at_todays_plan(monkeypatch):
     keyboard = bot.send_message.await_args.kwargs["reply_markup"]
     assert len(keyboard.inline_keyboard) == 1
     assert keyboard.inline_keyboard[0][0].text == school.brand.interface.plan
-    assert keyboard.inline_keyboard[0][0].web_app is not None
+    web_app = keyboard.inline_keyboard[0][0].web_app
+    assert web_app is not None
+    assert web_app.url == "https://app.example?screen=plan"
 
 
 def test_streak_save_template_is_seeded_for_the_school():
