@@ -26,6 +26,17 @@ function markerScaffold(promptBlocks: ReturnType<typeof parseQuestionPrompt>): s
   return [];
 }
 
+// Headings with nothing under them are the paper answer form. Their cells name the
+// answer slots, so they belong on the cells instead of in the reference text.
+function blankCaptions(promptBlocks: ReturnType<typeof parseQuestionPrompt>): string[] {
+  for (const block of promptBlocks) {
+    if (block.kind !== "table" || block.rows.length > 0 || block.headerRows.length !== 1) continue;
+    const cells = block.headerRows[0].map((cell) => cell.trim());
+    if (cells.every((cell) => cell && !LETTER_MARKER.test(cell))) return cells;
+  }
+  return [];
+}
+
 function parseTableLeft(promptBlocks: ReturnType<typeof parseQuestionPrompt>): Array<{ marker: string; label: string }> {
   const left: Array<{ marker: string; label: string }> = [];
   for (const block of promptBlocks) {
@@ -104,11 +115,13 @@ export function parseSequenceMatchingPrompt(
   if (answerLength < 1 || options.length < 1) return null;
 
   const leftByMarker = new Map(parsedLeft.map((item) => [item.marker, item]));
+  const captions = blankCaptions(promptBlocks);
   const left = Array.from({ length: answerLength }, (_, index) => {
     const marker = markers[index] ?? parsedLeft[index]?.marker ?? String(index + 1);
     // A cell named by a table heading has no separate wording of its own, so
     // repeating the name as a label would print it twice in the same row.
-    return leftByMarker.get(marker) ?? { marker, label: "" };
+    return leftByMarker.get(marker)
+      ?? { marker, label: captions.length === answerLength ? captions[index] : "" };
   });
 
   return {
