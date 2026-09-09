@@ -15,7 +15,7 @@
       "type": "input",
       "topic": "Понимание основного содержания прочитанного текста",
       "title": "Задание 1",
-      "prompt": "Установите соответствие заголовков 1–8 абзацам текста А–G. Используйте каждую цифру только один раз. В задании одна тема лишняя. В ответ запишите последовательность цифр, соответствующую заголовкам ABCDEFG.\n1. The best viewpoints\n2. Plan beforehand\n3. Carnival roots\n4. The time to attend the Carnival\n5. Carnival’s music\n6. Styles of dancing\n7. A music group for a street\n8. The time for pleasure\nCarnival World Capital\nA | Carnival is the most famous holiday in Brazil and has become a world-famous annual celebration. It is celebrated in towns and villages throughout Brazil for almost a week 40 days before Easter, which is usually in February, the hottest month in the Southern Hemisphere. Officially, it starts on Saturday and finishes on Fat Tuesday with the beginning of Lent on Ash Wednesday, during which some Christians give up something that they enjoy.\nB | The most colourful events take place in the Carnival World Capital, Rio de Janeiro. It was the original place where, in 1723, Portuguese immigrants went out onto the streets soaking each other with buckets of water and throwing mud and food, often ending up in street brawls and riots. The concept kept changing throughout the 1800s with more organized parades, where the Emperor with a group of aristocrats joined in masks with luxurious costumes and music.\nC | Now the parade varies from state to state. It is a mixture of arts. The music played during Rio Carnival is samba — a unique Brazilian music originating from Rio. It’s also a dance form that was invented by the poor Afro-Brazilians as a type of ritual music. The word “samba” meant to pray to the spirits of the ancestors and the gods of the African Pantheon. As a noun, it could mean a complaint or a cry.\nD | Even today, the most involved groups in Rio Carnival are the poorest, the so-called “favelas”, where houses are made of cardboard or other metal remains, and there is often no water, electricity or sewage system. However, the favelas’ residents always join in the festivities and actually make the Carnival, which really means a lot to them. Because, for once during the year, they get to go out and have as much fun as they can.\nE | Residents of the favelas are often members of local samba schools and are deeply involved with the performance and costumes of their groups. Each neighborhood in Rio has its favorite Carnival street band. There are more than 300 of them in Rio nowadays, and each year this number increases. Each band has its place or street for its parade and the big ones usually close the streets to the traffic.\nF | Rio de Janeiro is usually divided into three zones. The so-called Zona Sul is by far the most pleasant place to stay in Rio, as it is by the sea and is the most civilized part of the city. Districts Copacabana and Ipanema together form a big stage offering a carnival happening at every corner. Leblon, being a bit more upscale, is also an excellent location.\nG | Except the industries, malls and the carnival-related workers, the country stops completely for almost a week and festivities are intense, day and night. If you plan to go to watch the Carnival, you should organize your trip well in advance. The best hotels, especially in the Zona Sul, are booked up early, so it’s a good idea to make a reservation at least 3 or 4 months in advance.\nВведите последовательность цифр без пробелов.",
+      "prompt": "Установите соответствие заголовков 1–8 абзацам текста А–G. Используйте каждую цифру только один раз. В задании одна тема лишняя. В ответ запишите последовательность цифр, соответствующую заголовкам ABCDEFG.\n1. The best viewpoints\n2. Plan beforehand\n3. Carnival roots\n4. The time to attend the Carnival\n5. Carnival’s music\n6. Styles of dancing\n7. A music group for a street\n8. The time for pleasure\nCarnival World Capital\nA | Carnival is the most famous holiday in Brazil and has become a world-famous annual celebration. It is celebrated in towns and villages throughout Brazil for almost a week 40 days before Easter, which is usually in February, the hottest month in the Southern Hemisphere. Officially, it starts on Saturday and finishes on Fat Tuesday with the beginning of Lent on Ash Wednesday, during which some Christians give up something that they enjoy.\nB | The most colourful events take place in the Carnival World Capital, Rio de Janeiro. It was the original place where, in 1723, Portuguese immigrants went out onto the streets soaking each other with buckets of water and throwing mud and food, often ending up in street brawls and riots. The concept kept changing throughout the 1800s with more organized parades, where the Emperor with a group of aristocrats joined in masks with luxurious costumes and music.\nC | Now the parade varies from state to state. It is a mixture of arts. The music played during Rio Carnival is samba — a unique Brazilian music originating from Rio. It’s also a dance form that was invented by the poor Afro-Brazilians as a type of ritual music. The word “samba” meant to pray to the spirits of the ancestors and the gods of the African Pantheon. As a noun, it could mean a complaint or a cry.\nD | Even today, the most involved groups in Rio Carnival are the poorest, the so-called “favelas”, where houses are made of cardboard or other metal remains, and there is often no water, electricity or sewage system. However, the favelas’ residents always join in the festivities and actually make the Carnival, which really means a lot to them. Because, for once during the year, they get to go out and have as much fun as they can.\nE | Residents of the favelas are often members of local samba schools and are deeply involved with the performance and costumes of their groups. Each neighborhood in Rio has its favorite Carnival street band. There are more than 300 of them in Rio nowadays, and each year this number increases. Each band has its place or street for its parade and the big ones usually close the streets to the traffic.\nF | Rio de Janeiro is usually divided into three zones. The so-called Zona Sul is by far the most pleasant place to stay in Rio, as it is by the sea and is the most civilized part of the city. Districts Copacabana and Ipanema together form a big stage offering a carnival happening at every corner. Leblon, being a bit more upscale, is also an excellent location.\nG | Except the industries, malls and the carnival-related workers, the country stops completely for almost a week and festivities are intense, day and night. If you plan to go to watch the Carnival, you should organize your trip well in advance. The best hotels, especially in the Zona Sul, are booked up early, so it’s a good idea to make a reservation at least 3 or 4 months in advance.",
       "max_primary_score": 1,
       "correct": [
         "4358712"
@@ -37,7 +37,7 @@
       "type": "input",
       "topic": "Структурно-смысловые связи в прочитанном тексте",
       "title": "Задание 2",
-      "prompt": "Прочитайте текст и заполните пропуски A–F частями предложений 1–7. Одна из частей в списке 1–7 лишняя. В ответ запишите последовательность цифр, соответствующую пропускам ABCDEF.\nThe relationship between the study of literature and job prospects\nLiterature students are often concerned about the utilitarian value of what they are doing. This is understandable, but it is misguided. It is undoubtedly true A _____ or to consider the influence of one 19th-century novelist on another. But life is about more than simply one's employment prospects. Literature teaches us B ______ and why we behave as we do. It encourages us not just to read, C ______, and this makes us much more rounded people. It achieves this by helping us to examine our assumptions and the ways in which we relate to the world. The lessons of literature have a profound impact on our minds and souls, and surely this is as significant as any of the practical skills D ______.\nWhen students are worried about the job market, when they perceive an urgent need for job skills and training, how do I argue for the value of the study of literature and the humanities more broadly? Well, I do what any judicious participant in the neoliberal university does: I tell them that the study of literature will make them entrepreneurial. It will make them attractive to employers E ______. They will have good critical thinking skills and be better writers F _______. They will become creative problem-solvers, which is so crucial in the 21st-century knowledge economy.\n1. But to reflect on what we have read.\n2. That few jobs will require an employee to discuss a poem's rhyme scheme.\n3. Which will help them deal with people from a wide range of backgrounds.\n4. About ourselves and other people.\n5. Because they will be adaptable and flexible.\n6. Than most of the people competing for those same positions.\n7. Whose importance no one questions.\nВведите последовательность цифр без пробелов.",
+      "prompt": "Прочитайте текст и заполните пропуски A–F частями предложений 1–7. Одна из частей в списке 1–7 лишняя. В ответ запишите последовательность цифр, соответствующую пропускам ABCDEF.\nThe relationship between the study of literature and job prospects\nLiterature students are often concerned about the utilitarian value of what they are doing. This is understandable, but it is misguided. It is undoubtedly true A _____ or to consider the influence of one 19th-century novelist on another. But life is about more than simply one's employment prospects. Literature teaches us B ______ and why we behave as we do. It encourages us not just to read, C ______, and this makes us much more rounded people. It achieves this by helping us to examine our assumptions and the ways in which we relate to the world. The lessons of literature have a profound impact on our minds and souls, and surely this is as significant as any of the practical skills D ______.\nWhen students are worried about the job market, when they perceive an urgent need for job skills and training, how do I argue for the value of the study of literature and the humanities more broadly? Well, I do what any judicious participant in the neoliberal university does: I tell them that the study of literature will make them entrepreneurial. It will make them attractive to employers E ______. They will have good critical thinking skills and be better writers F _______. They will become creative problem-solvers, which is so crucial in the 21st-century knowledge economy.\n1. But to reflect on what we have read.\n2. That few jobs will require an employee to discuss a poem's rhyme scheme.\n3. Which will help them deal with people from a wide range of backgrounds.\n4. About ourselves and other people.\n5. Because they will be adaptable and flexible.\n6. Than most of the people competing for those same positions.\n7. Whose importance no one questions.",
       "max_primary_score": 1,
       "correct": [
         "241756"
@@ -348,6 +348,8 @@
         "women"
       ],
       "max_length": 80,
+      "answer_format": "word",
+      "lang": "en",
       "explanation": "Women — Единственное преобразование существительных в данном форматном задании — изменение числа.",
       "source": {
         "provider": "maximum_editorial",
@@ -370,6 +372,8 @@
         "fell"
       ],
       "max_length": 80,
+      "answer_format": "word",
+      "lang": "en",
       "explanation": "Fell — Последовательность действий в прошлом. Опять же, используем нарративные времена.",
       "source": {
         "provider": "maximum_editorial",
@@ -392,6 +396,8 @@
         "dreaming"
       ],
       "max_length": 80,
+      "answer_format": "word",
+      "lang": "en",
       "explanation": "Dreaming — Видим, что перед пропуском запятая, значит это придаточное. В данном случае глагол требуется поставить в форму причастия настоящего времени.",
       "source": {
         "provider": "maximum_editorial",
@@ -414,6 +420,8 @@
         "explorations"
       ],
       "max_length": 80,
+      "answer_format": "word",
+      "lang": "en",
       "explanation": "Explorations — Дан глагол. Пропуск после аналитической глагольной формы, поэтому требуется дополнение в виде существительного.",
       "source": {
         "provider": "maximum_editorial",
@@ -436,6 +444,8 @@
         "perilous"
       ],
       "max_length": 80,
+      "answer_format": "word",
+      "lang": "en",
       "explanation": "Perilous — Ситуация как в предыдущем, но после пропуска стоит существительное, значит преобразуем исходное существительное в прилагательное.",
       "source": {
         "provider": "maximum_editorial",
@@ -458,6 +468,8 @@
         "unbelievable"
       ],
       "max_length": 80,
+      "answer_format": "word",
+      "lang": "en",
       "explanation": "Unbelievable — Пропуск является частью вводной фразы. Можно было запутаться и поставить наречие, как мы обычно их используем в вводных фразах. Но в данном случае используется безличная конструкция и глагол seem, с которыми по правилам мы используем прилагательное. (У нас есть урок про это в ОГЭ). Можно было просто инвертировать конструкцию обратно, возможно это помогло бы не сделать ошибку.",
       "source": {
         "provider": "maximum_editorial",
@@ -480,6 +492,8 @@
         "analysis"
       ],
       "max_length": 80,
+      "answer_format": "word",
+      "lang": "en",
       "explanation": "Analysis — Конструкция «что-то чего-то», нужно существительное.",
       "source": {
         "provider": "maximum_editorial",
@@ -502,6 +516,8 @@
         "plentiful"
       ],
       "max_length": 80,
+      "answer_format": "word",
+      "lang": "en",
       "explanation": "Plentiful — В пропуске может быть существительное или прилагательное, но у нас исходное слово — существительное, значит делаем прилагательное. Это понятно еще и по смыслу предложения.",
       "source": {
         "provider": "maximum_editorial",
@@ -524,6 +540,8 @@
         "bravery"
       ],
       "max_length": 80,
+      "answer_format": "word",
+      "lang": "en",
       "explanation": "Bravery — Конструкция «что-то чего-то» и перед пропуском определенный артикль, нужно существительное.",
       "source": {
         "provider": "maximum_editorial",
@@ -540,7 +558,7 @@
       "type": "input",
       "topic": "Лексико-грамматический выбор в контексте",
       "title": "Задание 23",
-      "prompt": "Прочитайте текст с пропусками, обозначенными буквами A–G. Эти буквы соответствуют заданиям A–G, в таблице ниже, в которых представлены возможные варианты ответов.\nВ ответ запишите последовательность цифр. соответствующую пропускам ABCDEFG.\nThree theories about sleep\nPeople spend about one-third of their lives asleep. It seems certain, therefore, that sleep has a (A) _______ function. However, what that function might be is still in (B) _________ Scientists are far from being in agreement about (C) _______ why so much of our precious time is given over to sleep.\nThere seem to be three main theories. The most popular states that the functions and (D) _______ of sleep are primarily physiological. It claims that we sleep in order to (E) _______ the health of our body. In other words, biological processes work hard as we sleep to repair any damage done during the day and to restore ourselves to full efficiency. However, a second theory places more emphasis on the learning benefits of sleep. This theory holds that sleep allows us to process the information that we (F) _______ during the day, and asserts that, without sleep, learning would not take place. A third popular theory is based on ideas about energy, saying that we need (G) _______ of sleep in order to, in a sense, recharge our batteries and so have an adequate supply of energy for the coming day.\nВведите последовательность цифр без пробелов.",
+      "prompt": "Прочитайте текст с пропусками, обозначенными буквами A–G. Эти буквы соответствуют заданиям A–G, в таблице ниже, в которых представлены возможные варианты ответов.\nВ ответ запишите последовательность цифр. соответствующую пропускам ABCDEFG.\nThree theories about sleep\nPeople spend about one-third of their lives asleep. It seems certain, therefore, that sleep has a (A) _______ function. However, what that function might be is still in (B) _________ Scientists are far from being in agreement about (C) _______ why so much of our precious time is given over to sleep.\nThere seem to be three main theories. The most popular states that the functions and (D) _______ of sleep are primarily physiological. It claims that we sleep in order to (E) _______ the health of our body. In other words, biological processes work hard as we sleep to repair any damage done during the day and to restore ourselves to full efficiency. However, a second theory places more emphasis on the learning benefits of sleep. This theory holds that sleep allows us to process the information that we (F) _______ during the day, and asserts that, without sleep, learning would not take place. A third popular theory is based on ideas about energy, saying that we need (G) _______ of sleep in order to, in a sense, recharge our batteries and so have an adequate supply of energy for the coming day.",
       "max_primary_score": 1,
       "correct": [
         "2241241"

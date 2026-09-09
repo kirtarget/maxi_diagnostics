@@ -221,7 +221,10 @@ def test_every_mapping_is_emitted_in_the_catalog_format(imported):
     sequence = questions["sp-chemistry-oge-2022-q5"]
     assert sequence["type"] == "input"
     assert sequence["correct"] == ["312"]
-    assert sequence["prompt"].endswith(importer.SEQUENCE_HINT)
+    # The app says what the field wants: `Введи число` under a number box, and
+    # cells that need no typing under a sequence. A line of our own here would
+    # contradict one of them.
+    assert "последовательность цифр без пробелов" not in sequence["prompt"]
 
     text = questions["sp-chemistry-oge-2022-q6"]
     assert text["type"] == "text"
@@ -1695,6 +1698,36 @@ def test_oge_physics_q11_is_a_sequence_of_two_cells():
         "Скорость бруска",
         "Полная механическая энергия пружины",
     ]
+
+
+def test_no_converted_question_is_told_how_to_type_its_answer():
+    """The screen already says what the field wants; the prompt must not argue."""
+    source = importer.read_source_file(
+        editorial_source("БИО_ЕГЭ_Диагностика_21-22_Заданий 21.docx")
+    )
+    candidates, _ = importer.convert_file(source, "2026-09-04")
+
+    assert not [
+        candidate.question["id"]
+        for candidate in candidates
+        if "цифр без пробелов" in candidate.question["prompt"]
+    ]
+
+
+def test_установите_последовательность_builds_a_sequence():
+    """`Установите последовательность` names an order as plainly as `Расположите`."""
+    source = importer.read_source_file(
+        editorial_source("БИО_ЕГЭ_Диагностика_21-22_Заданий 21.docx")
+    )
+    candidates, _ = importer.convert_file(source, "2026-09-04")
+    questions = {c.task.number: c.question for c in candidates}
+
+    for number, key in ((11, "21345"), (14, "35142"), (19, "24315")):
+        question = questions[number]
+        assert question["answer_format"] == "sequence", number
+        assert question["answer_length"] == len(key), number
+        assert question["allow_reuse"] is False, number
+        assert question["correct"] == [key], number
 
 
 def test_colliding_ids_stop_the_import(tmp_path):

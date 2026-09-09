@@ -282,10 +282,10 @@ describe("table blocks", () => {
 
 describe("catalog table contracts", () => {
   const diagnosticsDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../school/diagnostics");
-  function catalogQuestion(id: string): { prompt: string; type: string; answer_format?: string; allow_reuse?: boolean } {
+  function catalogQuestion(id: string): { prompt: string; type: string; answer_format?: string; allow_reuse?: boolean; markers?: string[] } {
     for (const file of readdirSync(diagnosticsDir).filter((name) => name.endsWith(".json"))) {
       const diagnostic = JSON.parse(readFileSync(resolve(diagnosticsDir, file), "utf8")) as {
-        questions?: Array<{ id?: string; prompt?: string; type?: string; answer_format?: string; allow_reuse?: boolean }>;
+        questions?: Array<{ id?: string; prompt?: string; type?: string; answer_format?: string; allow_reuse?: boolean; markers?: string[] }>;
       };
       const question = diagnostic.questions?.find((candidate) => candidate.id === id);
       if (question?.prompt) return {
@@ -293,6 +293,7 @@ describe("catalog table contracts", () => {
         type: question.type ?? "",
         answer_format: question.answer_format,
         allow_reuse: question.allow_reuse,
+        markers: question.markers,
       };
     }
     throw new Error(`Missing catalog question ${id}`);
@@ -303,13 +304,18 @@ describe("catalog table contracts", () => {
       "sp-biology-ege-2022-q1",
       "sp-biology-ege-2022-q21",
       "sp-chemistry-ege-2022-q8",
-      "sp-chemistry-oge-2022-q7",
     ]) {
       const blocks = parseQuestionPrompt(catalogQuestion(id).prompt);
       expect(blocks.some((block) => block.kind === "table"), id).toBe(true);
       expect(blocks.flatMap((block) => block.kind === "table" ? [...block.headerRows.flat(), ...block.rows.flat()] : [])
         .some((cell) => cell.includes("|")), id).toBe(false);
     }
+    // Its two-column table names the cells of the answer, so it is the widget
+    // rather than part of the wording and no longer prints in the prompt.
+    const drawnCells = catalogQuestion("sp-chemistry-oge-2022-q7");
+    expect(parseQuestionPrompt(drawnCells.prompt).some((block) => block.kind === "table")).toBe(false);
+    expect(drawnCells.markers).toEqual(["Кислотный оксид", "Соль"]);
+
     const englishQuestion = catalogQuestion("sp-english-language-ege-2022-q1");
     const english = parseSequenceMatchingPrompt(englishQuestion.prompt);
     expect(english?.left.map((item) => item.marker)).toEqual(["A", "B", "C", "D", "E", "F", "G"]);

@@ -553,10 +553,13 @@ TEXTUAL_REACTION_INTRO = re.compile(
 )
 EXTERNAL_RESOURCE = re.compile(r"https?://|воспользуйтесь файлом|аудиозапис|прослушайте", re.IGNORECASE)
 SEQUENCE_MARKERS = re.compile(r"^[А-ЯЁ]\)", re.MULTILINE)
-SEQUENCE_HINT = "Введите последовательность цифр без пробелов."
+# The converter used to append a line telling the student to type the
+# digits together. The app already says what each field wants: `Введи
+# число` under a number box, and cells that need no typing under a
+# sequence. The line contradicted one or the other, so it is gone.
 ORDERING_LANGUAGE = re.compile(
     r"располож\w*|в\s+порядк\w*|последовательност\w*\s+цифр|"
-    r"соответствующ\w*\s+букв",
+    r"соответствующ\w*\s+букв|установите\s+последовательност\w*",
     re.IGNORECASE,
 )
 # A two-column matching table the converter could not read stays in the prompt as
@@ -1907,13 +1910,6 @@ def build_question(
         prompt = strip_answer_sheet_instructions(prompt)
     if not prompt:
         return "empty_prompt"
-    if (
-        kind == "input"
-        and isinstance(payload, InputAnswerSpec)
-        and payload.sequence
-        and not SEQUENCE_MARKERS.search(prompt)
-    ):
-        prompt = f"{prompt}\n{SEQUENCE_HINT}"
     if len(prompt) > MAX_PROMPT_CHARS:
         return "prompt_too_long"
 

@@ -20,7 +20,17 @@
       "correct": [
         "624371"
       ],
-      "answer_format": "number",
+      "answer_format": "sequence",
+      "answer_length": 6,
+      "allow_reuse": false,
+      "markers": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ],
       "source": {
         "provider": "maximum_editorial",
         "official_year": 2022,
