@@ -63,9 +63,16 @@ export function textAnswerGuidance(question: TextQuestion): string | null {
   return null;
 }
 
+// The КИМ numbers the choices of a single and multiple question 1..N and asks
+// for those digits on the blank. A Latin letter here is a marker the student
+// cannot write down anywhere.
+function optionMarkers(options: { label: string }[]): string[] {
+  return options.map((_, index) => String(index + 1));
+}
+
 // A choice list whose labels are exactly 1..N in order is the numbering of the
-// sentences the student reads above, not a list of values. Adding a letter on
-// top of that number would label the same choice twice.
+// sentences the student reads above, not a list of values. Printing the label
+// next to the marker would then write the same number twice.
 function optionsAreTheirOwnPosition(options: { label: string }[]): boolean {
   return options.length > 0
     && options.every((option, index) => option.label.trim() === String(index + 1));
@@ -136,6 +143,7 @@ function SingleEditor({ question, subject, value, disabled, onChange }: {
 }) {
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const selectedIndex = question.options.findIndex((option) => option.id === value);
+  const markers = optionMarkers(question.options);
   const move = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
     const delta = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1
       : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1
@@ -153,7 +161,7 @@ function SingleEditor({ question, subject, value, disabled, onChange }: {
           key={option.id}
           label={option.label}
           stress={optionDisplay(question, option, subject)}
-          marker={String.fromCharCode(65 + index)}
+          marker={markers[index]}
           selected={value === option.id}
           disabled={disabled}
           selectionMode="radio"
@@ -182,9 +190,7 @@ function MultipleEditor({ question, subject, value, disabled, onChange }: {
   };
 
   const numbered = optionsAreTheirOwnPosition(question.options);
-  const markers = question.options.map((option, index) =>
-    numbered ? option.label.trim() : String.fromCharCode(65 + index),
-  );
+  const markers = optionMarkers(question.options);
   return (
     <>
       <div className="answer-list" role="group" aria-label={`Выбери ${question.selection_limit} ${plural(question.selection_limit, ["вариант", "варианта", "вариантов"])}`} aria-describedby={selectionCountId}>

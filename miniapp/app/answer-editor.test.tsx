@@ -208,12 +208,13 @@ describe("options that are their own position", () => {
     expect(html).toContain(">6<");
   });
 
-  it("keeps letters when the options are values rather than positions", () => {
+  it("numbers value options too, because the blank takes digits", () => {
     const html = renderToStaticMarkup(
       <AnswerEditor question={multiple} value={[]} onChange={() => undefined} subject="Алгебра" />,
     );
 
     expect(html).toContain(">12<");
-    expect(html).toContain(">A<");
+    expect(html).toContain(">1<");
+    expect(html).not.toContain(">A<");
   });
 });
