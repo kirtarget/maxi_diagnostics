@@ -830,19 +830,38 @@ def test_trusted_physics_q19_draws_two_of_its_options():
     assert question["correct"] == {"i1": "o3", "i2": "o2"}
 
 
-def test_trusted_physics_q8_repeats_one_picture_so_it_stays_out():
-    """Its picture is the task's own, shown again in two cells.
+def test_trusted_physics_q8_reads_a_position_that_lost_its_letter():
+    """Its first position is written without `А)`, and its picture is the task's.
 
-    Placing it in a cell would claim a meaning the source does not give it, and
-    the first position has no letter of its own to read either.
+    The drawing stands for the whole task and is repeated inside both cells, so
+    it stays a question figure. The position itself is plain text and is read by
+    its place in the column.
     """
     source_path = editorial_source("ФИЗ_ЕГЭ_Диагностика_21-22_Заданий 23.docx")
     source = importer.read_source_file(source_path)
-    _, outcomes = importer.convert_file(source, "2026-09-04")
+    candidates, outcomes = importer.convert_file(source, "2026-09-04")
 
-    outcome = next(outcome for outcome in outcomes if outcome.number == 8)
-    assert outcome.status == "skipped"
-    assert outcome.reason == "unsupported_table_cell_figure"
+    assert not [outcome for outcome in outcomes if outcome.number == 8]
+    question = next(
+        candidate.question for candidate in candidates if candidate.task.number == 8
+    )
+    assert [item["label"] for item in question["items"]] == [
+        "А) Плечо силы относительно оси О.",
+        "Б) Момент силы относительно оси О.",
+    ]
+    assert not any(item.get("asset") for item in question["items"])
+    assert question["correct"] == {"i1": "o3", "i2": "o4"}
+
+
+def test_a_matching_column_needs_at_least_one_written_marker():
+    """Without a marker anywhere, a two-column table is not a matching table."""
+    table = importer.SourceTable(rows=(
+        (("Слева",), ("Справа",)),
+        (("Первый пункт",), ("Первый вариант",)),
+        (("Второй пункт",), ("Второй вариант",)),
+    ))
+
+    assert importer._matching_table([table]) is None
 
 
 def test_visual_reference_with_an_arrow_stays_rejected_without_an_asset():
@@ -1517,6 +1536,52 @@ def test_no_tracked_authoring_document_is_a_trusted_source():
 
     assert tracked
     assert not (tracked & trusted)
+
+
+def test_a_specification_score_does_not_claim_editorial_approval():
+    """The structure table states the weight; it says nothing about review."""
+    source_path = editorial_source("ХИМ_ЕГЭ_Диагностика_21-22_Заданий 28.docx")
+    source = importer.read_source_file(source_path)
+    candidates, _ = importer.convert_file(source, "2026-09-04")
+
+    scored = {
+        candidate.task.number: (
+            candidate.question["max_primary_score"],
+            candidate.question["source"]["approval_status"],
+        )
+        for candidate in candidates
+        if candidate.task.number in {14, 15, 16, 17}
+    }
+    assert scored[14] == (2, "draft")
+    assert scored[15] == (2, "draft")
+    # Position 16 is worth one mark, and 17 was reviewed, so it stays approved.
+    assert scored[16] == (1, "draft")
+    assert scored[17] == (1, "approved")
+
+
+def test_a_reviewed_position_still_carries_its_approval():
+    source_path = editorial_source("ХИМ_ЕГЭ_Диагностика_21-22_Заданий 28.docx")
+    source = importer.read_source_file(source_path)
+    candidates, _ = importer.convert_file(source, "2026-09-04")
+
+    question = next(
+        candidate.question for candidate in candidates if candidate.task.number == 5
+    )
+    assert question["source"]["approval_status"] == "approved"
+    assert question["source"]["exam_position"] == "5"
+
+
+def test_physics_q19_takes_its_topic_from_what_it_asks():
+    """Its position says electrodynamics, but the task is special relativity."""
+    source_path = editorial_source("ФИЗ_ЕГЭ_Диагностика_21-22_Заданий 23.docx")
+    source = importer.read_source_file(source_path)
+    candidates, _ = importer.convert_file(source, "2026-09-04")
+
+    question = next(
+        candidate.question for candidate in candidates if candidate.task.number == 19
+    )
+    assert question["topic"] == "Специальная теория относительности и квантовая физика"
+    assert question["max_primary_score"] == 2
 
 
 def test_colliding_ids_stop_the_import(tmp_path):

@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import hashlib
 import io
 import json
@@ -240,7 +240,8 @@ CHECKED_IN_TOPIC_MAP = {
         3: "Кинематика и динамика",
         4: "Законы сохранения в механике",
         5: "Статика, механические колебания и волны",
-        **dict.fromkeys((6, 7), "Механические процессы и законы"),
+        # Positions 6-8 all sit in content section 1.
+        **dict.fromkeys((6, 7, 8), "Механические процессы и законы"),
         9: "Молекулярная физика",
         10: "Молекулярная физика и термодинамика",
         11: "Термодинамика",
@@ -249,7 +250,13 @@ CHECKED_IN_TOPIC_MAP = {
         15: "Магнитное поле и электромагнитная индукция",
         16: "Электромагнитные колебания, волны и оптика",
         # The 2022 structure table puts positions 17-19 in content section 3.
-        **dict.fromkeys((17, 18, 19), "Электродинамика"),
+        **dict.fromkeys((17, 18), "Электродинамика"),
+        # Position 19 is section 3 too, but this document's task 19 asks for the
+        # momentum and rest energy of a particle near the speed of light. The
+        # student is told what they were tested on, so the topic follows the
+        # task rather than the seat it sits in. Sections 4 and 5 are the group
+        # positions 20 and 21 already name.
+        19: "Специальная теория относительности и квантовая физика",
         **dict.fromkeys((20, 21), "Специальная теория относительности и квантовая физика"),
         23: "Планирование эксперимента и подбор оборудования",
     },
@@ -485,6 +492,20 @@ CHECKED_IN_SCORE_POLICY: dict[tuple[str, str, frozenset[int]], int] = {
     ("ЕГЭ", "biology", frozenset({18})): 2,
     ("ОГЭ", "mathematics", frozenset({6, 8, 9, 13})): 1,
     ("ЕГЭ", "russian-language", frozenset({4})): 1,
+}
+# The weight a position carries, read from the ФИПИ 2022 structure table in the
+# same materials TOPIC_EVIDENCE_URLS already cites. A weight is a published fact
+# about the position; editorial review of the task is not, so this table grants
+# no approval. Positions here have been read off the table by hand and quoted in
+# the change that added them.
+SPECIFICATION_SCORES: dict[tuple[str, str, frozenset[int]], int] = {
+    # Physics part 1, all 23 positions of the 2022 table.
+    ("ЕГЭ", "physics", frozenset({1, 2, 6, 7, 8, 12, 13, 17, 18, 19, 21})): 2,
+    ("ЕГЭ", "physics", frozenset({3, 4, 5, 9, 10, 11, 14, 15, 16, 20, 22, 23})): 1,
+    # Chemistry is listed only where the row was read off the table by hand; the
+    # rest of that table does not survive text extraction cleanly enough to
+    # trust, so those positions keep the converter's default.
+    ("ЕГЭ", "chemistry", frozenset({14, 15})): 2,
 }
 EXAM_CODES = {"ЕГЭ": "ege", "ОГЭ": "oge"}
 EXAM_NAMES = {code: name for name, code in EXAM_CODES.items()}
@@ -1158,12 +1179,88 @@ def _numbered_choice_table(table: SourceTable) -> list[tuple[str, str]]:
     return choices
 
 
-def _score_policy(exam: str, subject: str, position: int) -> int | None:
-    """Return a primary score only for the checked-in evidence positions."""
-    for (policy_exam, policy_subject, positions), score in CHECKED_IN_SCORE_POLICY.items():
+def _table_score(
+    table: dict[tuple[str, str, frozenset[int]], int],
+    exam: str,
+    subject: str,
+    position: int,
+) -> int | None:
+    for (policy_exam, policy_subject, positions), score in table.items():
         if exam == policy_exam and subject == policy_subject and position in positions:
             return score
     return None
+
+
+def _score_policy(exam: str, subject: str, position: int) -> int | None:
+    """Return a primary score only for the checked-in evidence positions."""
+    return _table_score(CHECKED_IN_SCORE_POLICY, exam, subject, position)
+
+
+def _specification_score(exam: str, subject: str, position: int) -> int | None:
+    """Return the weight the structure table gives this position."""
+    return _table_score(SPECIFICATION_SCORES, exam, subject, position)
+
+
+# One position per document that the editor typed without its letter. The
+# converter refuses to guess which row is a position, because a wrong guess
+# shifts the answer key silently. Naming the row here is a claim about one
+# checked document, and the expected text is spelled out so a changed source
+# fails loudly instead of being repaired into something else.
+MISSING_POSITION_MARKERS: dict[tuple[str, int], tuple[str, str]] = {
+    ("physics-ege-2022", 8): ("Плечо силы относительно оси О.", "А)"),
+}
+
+
+def _repair_source_tasks(
+    slug: str, content_hash: str, tasks: tuple[SourceTask, ...]
+) -> tuple[SourceTask, ...]:
+    """Restore a position marker the source document lost, for checked sources."""
+    if TRUSTED_SOURCE_HASHES.get(slug) != content_hash:
+        return tasks
+    for task in tasks:
+        expected = MISSING_POSITION_MARKERS.get((slug, task.number))
+        if expected is None:
+            continue
+        text, marker = expected
+        # The task holds each table twice: once for the answer model and once as
+        # a node of the prompt. Both have to point at the repaired table, or the
+        # prompt would still show the position without its letter.
+        repaired = {
+            id(table): _with_position_marker(table, text, marker)
+            for table in task.prompt_tables
+        }
+        task.prompt_tables[:] = [repaired[id(table)] for table in task.prompt_tables]
+        task.prompt_nodes[:] = [
+            PromptTable(repaired[id(node.table)])
+            if isinstance(node, PromptTable) and id(node.table) in repaired
+            else node
+            for node in task.prompt_nodes
+        ]
+    return tasks
+
+
+def _with_position_marker(table: SourceTable, text: str, marker: str) -> SourceTable:
+    """Put `marker` in front of the one left-column cell that reads `text`."""
+    def repaired(line: str) -> str:
+        return f"{marker} {line}" if line.strip() == text else line
+
+    rows = tuple(
+        tuple(
+            tuple(repaired(line) for line in cell) if column == 0 else cell
+            for column, cell in enumerate(row)
+        )
+        for row in table.rows
+    )
+    cells = tuple(
+        tuple(
+            replace(cell, paragraphs=tuple(repaired(line) for line in cell.paragraphs))
+            if column == 0
+            else cell
+            for column, cell in enumerate(row)
+        )
+        for row in table.cells
+    )
+    return replace(table, rows=rows, cells=cells)
 
 
 def _repair_source_question(
@@ -1208,6 +1305,12 @@ def _repair_source_question(
         question["max_primary_score"] = score
         question["source"]["approval_status"] = "approved"
         question["source"]["exam_position"] = str(task.number)
+    else:
+        specified = _specification_score(
+            source.exam, source.subject_code, task.number
+        )
+        if specified is not None:
+            question["max_primary_score"] = specified
 
 
 def _fold_answer_explanation(task: SourceTask) -> None:
@@ -1263,6 +1366,12 @@ def load_plan(path: Path) -> dict[str, PlanEntry]:
 
 
 def read_source_file(path: Path, entry: PlanEntry | None = None) -> SourceFile:
+    source = _read_source_file(path, entry)
+    _repair_source_tasks(source.slug, source.content_hash, source.tasks)
+    return source
+
+
+def _read_source_file(path: Path, entry: PlanEntry | None = None) -> SourceFile:
     if entry is not None:
         if file_digest(path) != entry.content_hash:
             raise ImportError(f"Source file does not match the plan hash: {path.name}")
@@ -2089,8 +2198,9 @@ def _unplaced_cell_images(task: SourceTask, placed: set[bytes]) -> bool:
     Only a matching cell can carry one. Anywhere else in a table the figure
     would lose the layout that gives it meaning.
     """
+    shown = set(task.images)
     return any(
-        data not in placed
+        data not in placed and data not in shown
         for table in task.prompt_tables
         for row in table.cells
         for cell in row
