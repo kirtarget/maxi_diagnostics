@@ -79,9 +79,27 @@ _DISPLAY_LETTER_MARKER = re.compile(r"^\s*([А-ЯЁA-Z]+)(?:[).]|\s|$)")
 _DISPLAY_NUMBER_MARKER = re.compile(r"^\s*(\d{1,2})[).]")
 
 
+# The KIM prints Cyrillic positions and skips Ё. The mini app draws these same
+# markers, so the review has to name a position the way the screen did.
+_POSITION_MARKERS = ("А", "Б", "В", "Г", "Д", "Е", "Ж", "З", "И", "К", "Л", "М")
+# Latin letters an editor typed where the KIM prints Cyrillic. B is the shape of
+# В, not of Б, which has no Latin lookalike at all.
+_LOOKALIKE_CYRILLIC = {
+    "A": "А", "B": "В", "C": "С", "E": "Е", "K": "К", "M": "М",
+    "H": "Н", "O": "О", "P": "Р", "T": "Т", "X": "Х", "Y": "У",
+}
+
+
 def _marker(label: str, fallback: str) -> str:
     match = _DISPLAY_LETTER_MARKER.match(label) or _DISPLAY_NUMBER_MARKER.match(label)
     return match.group(1) if match else fallback
+
+
+def _position_marker(label: str, index: int) -> str:
+    """Name a matching position exactly as the answer editor draws it."""
+    fallback = _POSITION_MARKERS[index] if index < len(_POSITION_MARKERS) else str(index + 1)
+    marker = _marker(label, fallback)
+    return _LOOKALIKE_CYRILLIC.get(marker, marker)
 
 
 def _sequence_option_labels(prompt: str) -> dict[str, str]:
@@ -125,7 +143,7 @@ def _structured_answer_preview(
             option_markers[option.id] = marker
             option_labels[marker] = option.label
         row_markers = [
-            _marker(item.label, str(index + 1))
+            _position_marker(item.label, index)
             for index, item in enumerate(question.items)
         ]
         user_map = user_value if isinstance(user_value, Mapping) else {}
@@ -138,10 +156,7 @@ def _structured_answer_preview(
             "option_labels": option_labels,
         }
     if isinstance(question, MultipleQuestion):
-        markers = [
-            _marker(option.label, chr(ord("A") + index))
-            for index, option in enumerate(question.options)
-        ]
+        markers = [str(index + 1) for index, _ in enumerate(question.options)]
         option_markers = {option.id: markers[index] for index, option in enumerate(question.options)}
         user_values = user_value if isinstance(user_value, (list, tuple, set, frozenset)) else ()
         expected_values = expected_value_ if isinstance(expected_value_, (list, tuple, set, frozenset)) else ()
