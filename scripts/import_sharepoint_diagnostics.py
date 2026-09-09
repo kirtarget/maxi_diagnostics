@@ -1531,7 +1531,11 @@ def _matching_table(
     the first labelled line of a cell owns that cell's figures.
     """
     for table in tables:
-        if table.columns != 2 or len(table.rows) < 3:
+        # Two rows is enough: some editors type each column as a single cell,
+        # a heading above and the whole list below, instead of a row per
+        # position. A column with no marked line yields no positions and no
+        # match, which is what keeps a heading-over-blanks table out of here.
+        if table.columns != 2 or len(table.rows) < 2:
             continue
         items: list[MatchingCell] = []
         options: list[tuple[str, MatchingCell]] = []
@@ -1572,13 +1576,16 @@ def _render_table(table: SourceTable) -> str:
         # data table: one choice per line keeps the app from drawing a header.
         return "\n".join(f"{number}) {label}" for number, label in choices)
     lines = []
-    for row in table.rows:
+    for index, row in enumerate(table.rows):
+        # A stub cell over the row labels is simply empty. Only a gap the
+        # student fills earns a placeholder, and a heading row has none.
+        empty = "" if index == 0 else "___"
         cells = [
             " ".join(cell) if cell and not all(BLANK_CELL.match(line) for line in cell)
-            else "___"
+            else empty
             for cell in row
         ]
-        if any(cell != "___" for cell in cells) and not _is_answer_grid_row(cells):
+        if any(cell.strip() for cell in cells) and not _is_answer_grid_row(cells):
             lines.append(" | ".join(cells))
     return "\n".join(lines)
 

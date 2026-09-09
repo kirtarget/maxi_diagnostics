@@ -1730,6 +1730,86 @@ def test_установите_последовательность_builds_a_sequ
         assert question["correct"] == [key], number
 
 
+def test_a_matching_table_may_keep_a_whole_column_in_one_cell():
+    """Some editors type both columns as two cells instead of a row per item."""
+    table = importer.SourceTable(rows=(
+        (("РЕАГЕНТЫ",), ("ПРОДУКТЫ",)),
+        (
+            ("А) Первый", "Б) Второй", "В) Третий"),
+            ("1) Один", "2) Два", "3) Три", "4) Четыре"),
+        ),
+    ))
+    task = importer.SourceTask(
+        number=1,
+        prompt_blocks=["Установите соответствие."],
+        prompt_tables=[table],
+        answer=["413"],
+    )
+
+    kind, payload = importer.classify(task)
+
+    assert kind == "matching"
+    assert [cell.label for cell in payload.items] == ["А) Первый", "Б) Второй", "В) Третий"]
+    assert [digit for digit, _ in payload.options] == ["1", "2", "3", "4"]
+
+
+def test_a_two_row_table_of_headings_over_blanks_is_still_not_matching():
+    """The other two-row shape names the cells of a sequence, not a mapping."""
+    table = importer.SourceTable(rows=(
+        (("Скорость",), ("Энергия",)),
+        (("______",), ("______",)),
+    ))
+
+    assert importer._matching_table([table]) is None
+
+
+def test_trusted_chemistry_q8_maps_four_reactions_to_six_products():
+    source_path = editorial_source("ХИМ_ЕГЭ_Диагностика_21-22_Заданий 28.docx")
+    source = importer.read_source_file(source_path)
+    candidates, _ = importer.convert_file(source, "2026-09-04")
+
+    question = next(c.question for c in candidates if c.task.number == 8)
+    assert question["type"] == "matching"
+    assert len(question["items"]) == 4
+    assert len(question["options"]) == 6
+    assert question["correct"] == {"i1": "o5", "i2": "o2", "i3": "o6", "i4": "o3"}
+
+
+def test_an_empty_corner_of_a_heading_row_stays_empty():
+    """A stub cell over the row labels is empty, not a gap to fill."""
+    table = importer.SourceTable(rows=(
+        ((), ("Верхняя поверхность",), ("Нижняя поверхность",)),
+        (("Название растения",), ("Число устьиц",), ("Число устьиц",)),
+        (("Пшеница",), ("47",), ("32",)),
+    ))
+
+    rendered = importer._render_table(table)
+
+    assert rendered.splitlines()[0] == " | Верхняя поверхность | Нижняя поверхность"
+    assert "___" not in rendered
+
+
+def test_a_gap_below_the_heading_row_still_reads_as_a_gap():
+    table = importer.SourceTable(rows=(
+        (("Величина",), ("Изменение",)),
+        (("Скорость",), ()),
+    ))
+
+    assert importer._render_table(table).splitlines()[1] == "Скорость | ___"
+
+
+def test_trusted_biology_q21_keeps_its_table_corner_empty():
+    source = importer.read_source_file(
+        editorial_source("БИО_ЕГЭ_Диагностика_21-22_Заданий 21.docx")
+    )
+    candidates, _ = importer.convert_file(source, "2026-09-04")
+
+    question = next(c.question for c in candidates if c.task.number == 21)
+    assert "___" not in question["prompt"]
+    header = question["prompt"].splitlines()[2]
+    assert header == "| Верхняя поверхность | Нижняя поверхность"
+
+
 def test_colliding_ids_stop_the_import(tmp_path):
     source_directory = tmp_path / "docx"
     source_directory.mkdir()

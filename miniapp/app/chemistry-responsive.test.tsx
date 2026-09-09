@@ -17,20 +17,21 @@ const ogeChemistry = JSON.parse(readFileSync(new URL("../../school/diagnostics/o
 const question = (id: string) => chemistry.questions.find((candidate) => candidate.id === id)!;
 
 describe("real chemistry responsive rendering", () => {
-  it("keeps the reagent/product condition readable as stacked pairs on a narrow screen and formats subscripts", () => {
-    const blocks = parseQuestionPrompt(question("sp-chemistry-ege-2022-q8").prompt as string);
-    const table = blocks.find((block) => block.kind === "table");
-    expect(table?.kind).toBe("table");
-    if (!table || table.kind !== "table") return;
+  it("keeps the reagent/product pairs readable in the matching widget and formats subscripts", () => {
+    // Its two columns are a mapping, so they are the answer widget now and no
+    // longer print as a table inside the condition.
+    const reagents = question("sp-chemistry-ege-2022-q8");
+    expect(parseQuestionPrompt(reagents.prompt as string).some((block) => block.kind === "table")).toBe(false);
 
-    const html = renderToStaticMarkup(<PromptTable {...table} subject="Химия" />);
-    expect(html).toContain('class="question-table-scroll" data-columns="2"');
-    expect(html).toContain("РЕАГИРУЮЩИЕ ВЕЩЕСТВА");
-    expect(html).toContain("ПРОДУКТЫ ВЗАИМОДЕЙСТВИЯ");
+    const model = matchingModelFromQuestion(reagents as unknown as MatchingQuestion, "Химия");
+    expect(model.rows).toHaveLength(4);
+    expect(model.options).toHaveLength(6);
+
+    const html = renderToStaticMarkup(<MatchingAnswer model={model} subject="Химия" value={{}} onChange={() => undefined} />);
     expect(html).toContain("<sub>2</sub>");
     expect(html).toContain("(p-p)");
-    expect(html).toContain("<sub>2</sub>(изб.)");
-    expect(html).toContain("question-table-card-value");
+    expect(html).toContain("Ca(OH)<sub>2</sub>(изб.)");
+    expect(html).toContain('class="matching-answer-option-list"');
   });
 
   it("keeps five long real chemistry options readable in the matching list", () => {

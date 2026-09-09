@@ -303,15 +303,18 @@ describe("catalog table contracts", () => {
     for (const id of [
       "sp-biology-ege-2022-q1",
       "sp-biology-ege-2022-q21",
-      "sp-chemistry-ege-2022-q8",
     ]) {
       const blocks = parseQuestionPrompt(catalogQuestion(id).prompt);
       expect(blocks.some((block) => block.kind === "table"), id).toBe(true);
       expect(blocks.flatMap((block) => block.kind === "table" ? [...block.headerRows.flat(), ...block.rows.flat()] : [])
         .some((cell) => cell.includes("|")), id).toBe(false);
     }
-    // Its two-column table names the cells of the answer, so it is the widget
-    // rather than part of the wording and no longer prints in the prompt.
+    // A two-column table that maps or names answer cells is the widget rather
+    // than part of the wording, so it no longer prints in the prompt.
+    const mapping = catalogQuestion("sp-chemistry-ege-2022-q8");
+    expect(parseQuestionPrompt(mapping.prompt).some((block) => block.kind === "table")).toBe(false);
+    expect(mapping.type).toBe("matching");
+
     const drawnCells = catalogQuestion("sp-chemistry-oge-2022-q7");
     expect(parseQuestionPrompt(drawnCells.prompt).some((block) => block.kind === "table")).toBe(false);
     expect(drawnCells.markers).toEqual(["Кислотный оксид", "Соль"]);

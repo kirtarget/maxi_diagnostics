@@ -39,8 +39,10 @@ type MatchingAnswerProps = {
 };
 
 const MARKER = /^\s*([А-ЯЁA-Z0-9]+)(?:[).]|\s|$)/u;
+// Latin letters an editor types where the КИМ prints Cyrillic. B is the shape
+// of В, not of Б, which has no Latin lookalike at all.
 const LOOKALIKE_CYRILLIC: Record<string, string> = {
-  A: "А", B: "Б", C: "С", E: "Е", K: "К", M: "М", H: "Н", O: "О", P: "Р", T: "Т", X: "Х", Y: "У",
+  A: "А", B: "В", C: "С", E: "Е", K: "К", M: "М", H: "Н", O: "О", P: "Р", T: "Т", X: "Х", Y: "У",
 };
 const CHIP_LABEL_LIMIT = 3;
 const SHEET_OPTION_LIMIT = 6;
