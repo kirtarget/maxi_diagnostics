@@ -80,6 +80,12 @@ describe("N-35 the heading is not printed twice", () => {
     expect(html).not.toContain("question-stem-repeat");
   });
 
+  it("drops the repeat when the collapsed body is a table with a term list", () => {
+    const layout = layoutOf(question("ege-biology-1207", "sp-biology-ege-2022-q20"));
+    expect(layout.isLongReference).toBe(true);
+    expect(layout.stemRepeat).toBeNull();
+  });
+
   it("keeps the repeat for a genuine wall of reading text", () => {
     const layout = layoutOf(question("ege-russian-language-1213", "sp-russian-language-ege-2022-q22"));
     expect(layout.stemRepeat).toBe(layout.stem);

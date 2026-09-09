@@ -24,9 +24,9 @@ export function promptLayout(blocks: PromptBlock[]): PromptLayoutModel {
   return {
     stem: stemText,
     // Restating the question above the answer field only earns its place when a
-    // wall of text has pushed the heading off screen. A short task with many
-    // short options keeps the heading in view, so the repeat is pure noise.
-    stemRepeat: stemText && referenceText.length >= 600 ? stemText : null,
+    // reading wall has pushed the heading off screen. A table or an option list
+    // keeps the heading in view, so the repeat is pure noise there.
+    stemRepeat: stemText && referenceText.length >= 2000 ? stemText : null,
     referenceBlocks,
     isLongReference: referenceText.length >= 600 || referenceBlocks.length >= 8,
     sentenceAnchors,
