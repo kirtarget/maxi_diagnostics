@@ -1284,7 +1284,10 @@ select:disabled {
   font-weight: 800;
 }
 
-.math-expression sup { font-size: 0.68em; }
+.math-expression sup,
+.math-expression sub { font-size: max(11px, 0.75em); line-height: 0; }
+
+.math-annotation { font-size: 16px; font-weight: 500; }
 
 .math-variable {
   font-style: italic;

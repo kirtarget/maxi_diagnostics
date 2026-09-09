@@ -13,7 +13,26 @@ export type MathDisplayPart = {
   text: string;
   isSuperscript: boolean;
   isSubscript: boolean;
+  isAnnotation?: boolean;
 };
+
+// Aggregate-state and concentration marks are reading conditions, not part of
+// the formula, so they keep body type instead of bold or index sizing.
+const STATE_ANNOTATION = /\((?:р-р|р-ра|ж|г|т|тв|изб|конц|разб|крист|aq)\.?\)/giu;
+
+function splitAnnotations(text: string): MathDisplayPart[] {
+  const parts: MathDisplayPart[] = [];
+  let cursor = 0;
+  for (const match of text.matchAll(STATE_ANNOTATION)) {
+    if (match.index > cursor) {
+      parts.push({ text: text.slice(cursor, match.index), isSuperscript: false, isSubscript: false });
+    }
+    parts.push({ text: match[0], isSuperscript: false, isSubscript: false, isAnnotation: true });
+    cursor = match.index + match[0].length;
+  }
+  if (cursor < text.length) parts.push({ text: text.slice(cursor), isSuperscript: false, isSubscript: false });
+  return parts;
+}
 
 const IMPORTANT_SENTENCE = /(?:^|[,;:]\s)(?:выберите|вычислите|запишите|найдите|назовите|определите|решите|сопоставьте|укажите|установите)(?:\s|$)|^(?:какой|какая|какие|каково|сколько|чему равен|чему равна)(?:\s|$)/iu;
 const DIGIT_ANSWER = /(?:без пробелов|двоичн|кодовое слово|последовательност[ьи]\s+цифр|числов|цифр|решите\s+уравнение|ответ\s+дайте\s+в)/iu;
@@ -68,6 +87,12 @@ function consumeAtom(text: string, start: number): number {
       while (index < text.length && /[0-9₀-₉⁰-⁹]/u.test(text[index])) index += 1;
       continue;
     }
+    // A formula continues after an index or a state annotation: H_(2)O is one
+    // token, not "H_(2)" plus a stray "O".
+    if (/[A-Za-zА-ЯЁа-яё0-9₀-₉⁰-⁹]/u.test(text[index])) {
+      while (index < text.length && /[A-Za-zА-ЯЁа-яё0-9₀-₉⁰-⁹]/u.test(text[index])) index += 1;
+      continue;
+    }
     break;
   }
   return index;
@@ -110,7 +135,7 @@ function nextMathSpan(text: string, from: number): MathSpan | null {
     }
 
     if (/^\d/u.test(text.slice(start, expressionEnd))) {
-      const unit = /^\s*(?:кг|г|мг|м|см|мм|км|л|мл|с|мин|ч|°C|кДж|Н|Па|Вт|В|А|Ом|моль)(?![\p{L}])/iu.exec(text.slice(expressionEnd));
+      const unit = /^\s*(?:кг|г|мг|м|см|мм|км|л|мл|с|мин|ч|°C|кДж|Н|Па|Вт|В|А|Ом|моль)(?![\p{L}])(?:\s*\/\s*(?:кг|г|мг|м|см|мм|км|л|мл|с|мин|ч|моль)(?![\p{L}]))?/iu.exec(text.slice(expressionEnd));
     if (unit) {
       expressionEnd += unit[0].length;
       const marker = text[expressionEnd];
@@ -197,13 +222,13 @@ export function mathDisplayParts(text: string): MathDisplayPart[] {
       continue;
     }
     if (cursor > 0) {
-      parts.push({ text: text.slice(0, cursor), isSuperscript: false, isSubscript: false });
+      parts.push(...splitAnnotations(text.slice(0, cursor)));
     }
     const content = text.slice(cursor + 2, end - 1).trim();
     const state = marker === "_" ? /^(\d[0-9₀-₉⁰-⁹]*)?\s*(\([^()]*\))$/u.exec(content) : null;
     if (state) {
       if (state[1]) parts.push({ text: state[1], isSuperscript: false, isSubscript: true });
-      parts.push({ text: state[2], isSuperscript: false, isSubscript: false });
+      parts.push({ text: state[2], isSuperscript: false, isSubscript: false, isAnnotation: true });
     } else {
       parts.push({
         text: content,
@@ -215,7 +240,7 @@ export function mathDisplayParts(text: string): MathDisplayPart[] {
     cursor = 0;
   }
   if (text.length > 0) {
-    parts.push({ text, isSuperscript: false, isSubscript: false });
+    parts.push(...splitAnnotations(text));
   }
   return parts.length ? parts : [{ text, isSuperscript: false, isSubscript: false }];
 }

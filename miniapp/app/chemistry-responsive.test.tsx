@@ -30,7 +30,7 @@ describe("real chemistry responsive rendering", () => {
     const html = renderToStaticMarkup(<MatchingAnswer model={model} subject="Химия" value={{}} onChange={() => undefined} />);
     expect(html).toContain("<sub>2</sub>");
     expect(html).toContain("(p-p)");
-    expect(html).toContain("Ca(OH)<sub>2</sub>(изб.)");
+    expect(html).toContain('Ca(OH)<sub>2</sub><span class="math-annotation">(изб.)</span>');
     expect(html).toContain('class="matching-answer-option-list"');
   });
 
