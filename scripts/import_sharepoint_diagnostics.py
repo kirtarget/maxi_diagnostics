@@ -701,6 +701,9 @@ class InputAnswerSpec:
     allow_reuse: bool | None = None
     markers: tuple[str, ...] = ()
     options: tuple[tuple[str, str], ...] = ()
+    # A table whose heading row names the cells is the answer widget, not part
+    # of the wording, so the prompt must not print it as `left | right` too.
+    table: SourceTable | None = None
 
 @dataclass(frozen=True)
 class TextAnswerSpec:
@@ -1029,6 +1032,33 @@ def _table_gap_markers(task: SourceTask) -> tuple[str, ...]:
     return tuple(markers)
 
 
+BLANK_ONLY_CELL = re.compile(r"^[_\s.…-]*$")
+
+
+def _header_row_marker_table(
+    task: SourceTask,
+) -> tuple[SourceTable | None, tuple[str, ...]]:
+    """Name the cells of a table that prints headings over one blank row.
+
+    The KIM writes `как изменятся X и Y` as a two-row table: the quantities as
+    column headings, and one blank under each for the digit the student picks.
+    The heading is what the cell is called, so it becomes the marker.
+    """
+    for table in task.prompt_tables:
+        if len(table.rows) != 2 or table.columns < 2:
+            continue
+        heads = [clean_block(cell) for cell in table.rows[0]]
+        body = [" ".join(cell) for cell in table.rows[1]]
+        if len(heads) != len(body) or not all(heads):
+            continue
+        if not all(BLANK_ONLY_CELL.fullmatch(cell) for cell in body):
+            continue
+        if any(len(head) > MAX_OPTION_LABEL_CHARS for head in heads):
+            continue
+        return table, tuple(heads)
+    return None, ()
+
+
 def _numbered_prompt_choices(task: SourceTask) -> list[tuple[str, str]]:
     """Read the last contiguous 1..N choice list kept in prompt text.
 
@@ -1211,6 +1241,49 @@ MISSING_POSITION_MARKERS: dict[tuple[str, int], tuple[str, str]] = {
 }
 
 
+@dataclass(frozen=True)
+class TextRepair:
+    """One exact substitution in the prompt of one task of one checked source."""
+
+    old: str
+    new: str
+    # The new text spells out what an inline picture said, so that picture is no
+    # longer content and must not be shown again as a figure of the question.
+    replaces_inline_image: bool = False
+
+
+# Wording a checked document lost or contradicts, named per task. Each repair
+# quotes the text it expects, so a changed source stops the import instead of
+# being repaired into something the editor did not write.
+SOURCE_TEXT_REPAIRS: dict[tuple[str, int], tuple[TextRepair, ...]] = {
+    # The legend explains m and the temperature difference, but the symbol the
+    # formula `cm(t2 - t1)` uses is missing from the document.
+    ("physics-oge-2022", 2): (
+        TextRepair("обозначения: —", "обозначения: c —"),
+    ),
+    # The unit is a drawn fraction, Дж over кг·°С, so the sentence stopped at
+    # the preposition and the unit arrived as a separate figure.
+    ("physics-oge-2022", 7): (
+        TextRepair(
+            "Ответ дайте в",
+            "Ответ дайте в Дж/(кг·°С).",
+            replaces_inline_image=True,
+        ),
+    ),
+    # The table asks about the speed of the block, and the key 23 is speed
+    # falling and total energy holding. The sentence names the spring's
+    # potential energy, which would make the key 13.
+    ("physics-oge-2022", 11): (
+        TextRepair(
+            "как изменятся потенциальная энергия пружины и полная механическая "
+            "энергия пружины?",
+            "как изменятся скорость бруска и полная механическая энергия "
+            "пружины?",
+        ),
+    ),
+}
+
+
 def _repair_source_tasks(
     slug: str, content_hash: str, tasks: tuple[SourceTask, ...]
 ) -> tuple[SourceTask, ...]:
@@ -1218,6 +1291,7 @@ def _repair_source_tasks(
     if TRUSTED_SOURCE_HASHES.get(slug) != content_hash:
         return tasks
     for task in tasks:
+        _apply_text_repairs(task, SOURCE_TEXT_REPAIRS.get((slug, task.number), ()))
         expected = MISSING_POSITION_MARKERS.get((slug, task.number))
         if expected is None:
             continue
@@ -1237,6 +1311,35 @@ def _repair_source_tasks(
             for node in task.prompt_nodes
         ]
     return tasks
+
+
+def _apply_text_repairs(task: SourceTask, repairs: tuple[TextRepair, ...]) -> None:
+    """Rewrite the prompt of one task, refusing to work on text it does not find."""
+    for repair in repairs:
+        matches = [
+            index
+            for index, node in enumerate(task.prompt_nodes)
+            if isinstance(node, PromptParagraph) and repair.old in node.text
+        ]
+        if len(matches) != 1:
+            raise ImportError(
+                f"Текст для починки задания {task.number} не найден однажды: "
+                f"{repair.old!r}"
+            )
+        index = matches[0]
+        node = task.prompt_nodes[index]
+        images = node.images
+        if repair.replaces_inline_image:
+            for data in images:
+                if data in task.images:
+                    task.images.remove(data)
+            images = ()
+        task.prompt_nodes[index] = PromptParagraph(
+            node.text.replace(repair.old, repair.new), images
+        )
+        task.prompt_blocks[:] = [
+            block.replace(repair.old, repair.new) for block in task.prompt_blocks
+        ]
 
 
 def _with_position_marker(table: SourceTable, text: str, marker: str) -> SourceTable:
@@ -1558,6 +1661,9 @@ def classify(task: SourceTask) -> tuple[str, AnswerSpec | str]:
         return "input", InputAnswerSpec(tuple(parts), sequence=True)
 
     gap_markers = _table_gap_markers(task)
+    heading_table = None
+    if not gap_markers:
+        heading_table, gap_markers = _header_row_marker_table(task)
     if len(parts) == 1 and DIGITS.fullmatch(key) and gap_markers and len(key) == len(gap_markers):
         numbered = _flattened_numbered_choices(task) or _numbered_prompt_choices(task)
         if not numbered and task.options:
@@ -1574,6 +1680,7 @@ def classify(task: SourceTask) -> tuple[str, AnswerSpec | str]:
                 allow_reuse=allow_reuse,
                 markers=gap_markers,
                 options=tuple(numbered),
+                table=heading_table,
             )
 
     if len(parts) == 1 and DIGITS.fullmatch(key):
@@ -1785,7 +1892,7 @@ def build_question(
     *,
     verified_at: str,
 ) -> dict[str, Any] | str:
-    table = payload.table if isinstance(payload, MatchingAnswerSpec) else None
+    table = payload.table if isinstance(payload, (MatchingAnswerSpec, InputAnswerSpec)) else None
     include_sequence_options = (
         kind == "input"
         and isinstance(payload, InputAnswerSpec)
@@ -1793,7 +1900,7 @@ def build_question(
     )
     prompt = build_prompt(
         task,
-        skip_table=table if kind == "matching" else None,
+        skip_table=table,
         include_sequence_options=include_sequence_options,
     )
     if kind in UI_COLLECTS_THE_ANSWER:

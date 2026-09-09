@@ -476,8 +476,35 @@ describe("MatchingAnswer", () => {
     expect(model.rows.every((row) => !/[A-Z]/u.test(row.marker))).toBe(true);
   });
 
+  it("labels the answer summary by position when a cell is named by a heading", () => {
+    const html = renderToStaticMarkup(
+      <AnswerPreview
+        markers={["Скорость бруска", "Полная механическая энергия пружины"]}
+        selected={["2", ""]}
+      />,
+    );
+
+    // The chip is 31px wide, so a heading would overrun its neighbour.
+    expect(html).not.toContain("Полная механическая энергия пружины");
+    expect(html).toContain("<small>1</small>");
+    expect(html).toContain("<small>2</small>");
+  });
+
+  it("keeps a short marker in the answer summary", () => {
+    const html = renderToStaticMarkup(
+      <AnswerPreview markers={["А", "Б"]} selected={["1", "2"]} />,
+    );
+
+    expect(html).toContain("<small>А</small>");
+    expect(html).toContain("<small>Б</small>");
+  });
+
   it("keeps every non-English catalog matching marker Cyrillic", () => {
     const violations: string[] = [];
+    // A marker that is one letter must be the Cyrillic letter of the КИМ, not
+    // its Latin lookalike. A marker named by a table heading is free text and
+    // may hold Latin inside a formula or a unit, such as NaCl.
+    const isLatinLetterMarker = (marker: string) => /^[A-Z][).]?$/u.test(marker.trim());
     let englishQuestions = 0;
     for (const file of readdirSync(diagnosticsDir).filter((name) => name.endsWith(".json"))) {
       const diagnostic = JSON.parse(readFileSync(resolve(diagnosticsDir, file), "utf8")) as {
@@ -495,7 +522,7 @@ describe("MatchingAnswer", () => {
         if (question.type === "matching") {
           const model = matchingModelFromQuestion(question as unknown as MatchingQuestion);
           for (const row of model.rows) {
-            if (/[A-Z]/u.test(row.marker)) violations.push(id + ":" + row.marker);
+            if (isLatinLetterMarker(row.marker)) violations.push(id + ":" + row.marker);
           }
         }
         if (question.type === "input") {
@@ -503,7 +530,7 @@ describe("MatchingAnswer", () => {
           if (sequence) {
             const model = matchingModelFromSequence(sequence);
             for (const row of model.rows) {
-              if (/[A-Z]/u.test(row.marker)) violations.push(id + ":" + row.marker);
+              if (isLatinLetterMarker(row.marker)) violations.push(id + ":" + row.marker);
             }
           }
         }

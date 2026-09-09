@@ -1584,6 +1584,119 @@ def test_physics_q19_takes_its_topic_from_what_it_asks():
     assert question["max_primary_score"] == 2
 
 
+def _oge_physics_questions():
+    source = importer.read_source_file(
+        editorial_source("ФИЗ_ОГЭ_МРКТ_март_21-22_Заданий 18.docx")
+    )
+    assert source.content_hash == importer.TRUSTED_SOURCE_HASHES[source.slug]
+    candidates, _ = importer.convert_file(source, "2026-09-04")
+    return {candidate.task.number: candidate for candidate in candidates}
+
+
+def test_oge_physics_q2_names_the_symbol_its_formula_uses():
+    """The legend explains m and the temperature difference but lost the c."""
+    question = _oge_physics_questions()[2].question
+
+    assert "обозначения: c — удельная теплоёмкость вещества" in question["prompt"]
+    assert "обозначения: —" not in question["prompt"]
+
+
+def test_oge_physics_q7_writes_out_the_unit_its_source_drew():
+    """The unit is a picture of a fraction, so the sentence ended mid-air."""
+    candidate = _oge_physics_questions()[7]
+
+    assert "Ответ дайте в Дж/(кг·°С)." in candidate.question["prompt"]
+    # The picture said only what the sentence now says, so it is not a figure.
+    assert len(candidate.images) == 1
+
+
+def test_oge_physics_q11_asks_about_the_quantities_its_table_names():
+    """Its key is 23, which is speed falling and total energy holding."""
+    question = _oge_physics_questions()[11].question
+
+    assert "как изменятся скорость бруска и полная механическая энергия" in question["prompt"]
+    assert "потенциальная энергия пружины" not in question["prompt"]
+
+
+def test_a_text_repair_that_no_longer_matches_stops_the_import(tmp_path):
+    """A changed source must fail loudly instead of being repaired blindly."""
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    build_source_document(source_directory / SOURCE_NAME)
+    source = importer.read_source_file(source_directory / SOURCE_NAME)
+
+    with pytest.raises(importer.ImportError, match="не найден"):
+        importer._apply_text_repairs(
+            source.tasks[0], (importer.TextRepair("нет такой строки", "неважно"),)
+        )
+
+
+def test_a_header_row_over_blanks_names_the_cells_of_a_sequence():
+    """The KIM prints the quantities as column headings and one blank per column."""
+    table = importer.SourceTable(rows=(
+        (("Скорость бруска",), ("Полная механическая энергия",)),
+        (("______",), ("______",)),
+    ))
+    task = importer.SourceTask(
+        number=1,
+        prompt_blocks=[
+            "Как изменятся величины?",
+            "1) Увеличивается;",
+            "2) Уменьшается;",
+            "3) Не изменяется.",
+            "В ответ запишите последовательность цифр, соответствующую графам таблицы.",
+            "Цифры в ответе могут повторяться.",
+        ],
+        prompt_tables=[table],
+        answer=["23"],
+    )
+
+    kind, payload = importer.classify(task)
+
+    assert kind == "input"
+    assert payload.answer_format == "sequence"
+    assert payload.answer_length == 2
+    assert payload.allow_reuse is True
+    assert payload.markers == ("Скорость бруска", "Полная механическая энергия")
+    # The heading row is the answer widget, so the prompt must not print it.
+    assert payload.table is table
+
+
+def test_a_header_row_over_blanks_needs_a_key_as_long_as_the_row():
+    """Two columns and a three-digit key mean the table was read wrongly."""
+    table = importer.SourceTable(rows=(
+        (("Первое",), ("Второе",)),
+        (("______",), ("______",)),
+    ))
+    task = importer.SourceTask(
+        number=1,
+        prompt_blocks=[
+            "Как изменятся величины?",
+            "1) Увеличивается;",
+            "2) Уменьшается;",
+            "В ответ запишите последовательность цифр, соответствующую графам таблицы.",
+        ],
+        prompt_tables=[table],
+        answer=["212"],
+    )
+
+    kind, payload = importer.classify(task)
+
+    assert getattr(payload, "answer_format", "number") == "number"
+
+
+def test_oge_physics_q11_is_a_sequence_of_two_cells():
+    candidate = _oge_physics_questions()[11]
+
+    assert candidate.question["answer_format"] == "sequence"
+    assert candidate.question["answer_length"] == 2
+    assert candidate.question["allow_reuse"] is True
+    assert candidate.question["markers"] == [
+        "Скорость бруска",
+        "Полная механическая энергия пружины",
+    ]
+
+
 def test_colliding_ids_stop_the_import(tmp_path):
     source_directory = tmp_path / "docx"
     source_directory.mkdir()

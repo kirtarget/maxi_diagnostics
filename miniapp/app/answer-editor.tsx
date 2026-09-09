@@ -63,6 +63,15 @@ export function textAnswerGuidance(question: TextQuestion): string | null {
   return null;
 }
 
+// A choice list whose labels are exactly 1..N in order is the numbering of the
+// sentences the student reads above, not a list of values. Adding a letter on
+// top of that number would label the same choice twice.
+function optionsAreTheirOwnPosition(options: { label: string }[]): boolean {
+  return options.length > 0
+    && options.every((option, index) => option.label.trim() === String(index + 1));
+}
+
+
 export function AnswerEditor({ question, subject, value, onChange, disabled = false, suppressAutoHint = false, labels }: AnswerEditorProps) {
   const text = { ...DEFAULT_LABELS, ...labels };
   const asText = typeof value === "string" ? value : "";
@@ -172,15 +181,18 @@ function MultipleEditor({ question, subject, value, disabled, onChange }: {
     else if (value.length < question.selection_limit) onChange([...value, id]);
   };
 
-  const markers = question.options.map((_, index) => String.fromCharCode(65 + index));
+  const numbered = optionsAreTheirOwnPosition(question.options);
+  const markers = question.options.map((option, index) =>
+    numbered ? option.label.trim() : String.fromCharCode(65 + index),
+  );
   return (
     <>
       <div className="answer-list" role="group" aria-label={`Выбери ${question.selection_limit} ${plural(question.selection_limit, ["вариант", "варианта", "вариантов"])}`} aria-describedby={selectionCountId}>
         {question.options.map((option, index) => (
           <OptionButton
             key={option.id}
-            label={option.label}
-            stress={optionDisplay(question, option, subject)}
+            label={numbered ? "" : option.label}
+            stress={numbered ? undefined : optionDisplay(question, option, subject)}
             marker={markers[index]}
             selected={value.includes(option.id)}
             disabled={disabled}
