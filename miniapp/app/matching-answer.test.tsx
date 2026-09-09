@@ -499,6 +499,36 @@ describe("MatchingAnswer", () => {
     expect(html).toContain("<small>Б</small>");
   });
 
+  it("reads a Latin B as the Cyrillic В it looks like", () => {
+    // Б has no Latin lookalike. Reading B as Б gave the chemistry mapping two
+    // positions called Б and left В missing.
+    const question = {
+      id: "q-lookalike",
+      type: "matching",
+      prompt: "Установите соответствие.",
+      items: [
+        { id: "i1", label: "А) Первый" },
+        { id: "i2", label: "Б) Второй" },
+        { id: "i3", label: "B) Третий" },
+      ],
+      options: [{ id: "o1", label: "1) Один" }, { id: "o2", label: "2) Два" }],
+    } as unknown as MatchingQuestion;
+
+    const model = matchingModelFromQuestion(question, "Химия");
+
+    expect(model.rows.map((row) => row.marker)).toEqual(["А", "Б", "В"]);
+  });
+
+  it("gives the real chemistry mapping four separate positions", () => {
+    const file = readFileSync(resolve(diagnosticsDir, "ege-chemistry-1208.json"), "utf8");
+    const question = (JSON.parse(file) as { questions: Array<{ id: string }> }).questions
+      .find((candidate) => candidate.id === "sp-chemistry-ege-2022-q8");
+
+    const model = matchingModelFromQuestion(question as unknown as MatchingQuestion, "Химия");
+
+    expect(model.rows.map((row) => row.marker)).toEqual(["А", "Б", "В", "Г"]);
+  });
+
   it("keeps every non-English catalog matching marker Cyrillic", () => {
     const violations: string[] = [];
     // A marker that is one letter must be the Cyrillic letter of the КИМ, not
