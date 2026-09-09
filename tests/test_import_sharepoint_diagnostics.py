@@ -1810,6 +1810,58 @@ def test_trusted_biology_q21_keeps_its_table_corner_empty():
     assert header == "| Верхняя поверхность | Нижняя поверхность"
 
 
+# Formulas the editor typed with a Cyrillic letter where the element symbol is
+# Latin, and the one Russian word typed with a Latin letter.
+MIXED_ALPHABET_DEFECTS = (
+    ("К_(3)PO_(4)", "K_(3)PO_(4)"),
+    ("К_(2)HPO_(4)", "K_(2)HPO_(4)"),
+    ("СН_(2)Cl", "CH_(2)Cl"),
+    ("СНCl", "CHCl"),
+    ("С_(6)Н_(5)CH=CH_(2)", "C_(6)H_(5)CH=CH_(2)"),
+    ("СН_(3)СOONa", "CH_(3)COONa"),
+    ("(pазб.)", "(разб.)"),
+)
+# Mixed scripts that are correct: a Latin formula with a Russian subscript.
+MIXED_ALPHABET_KEEPERS = (
+    "Ca(OH)_(2(изб.))",
+    "3O_(2)(избыток)",
+    "SO_(2(г))",
+    "SO_(2)Cl_(2(г))",
+    "2SO_(3(г))",
+    "n_(стекла)",
+    "n_(воздуха)",
+)
+
+
+def test_a_cyrillic_letter_inside_a_formula_becomes_its_element_symbol():
+    for typed, meant in MIXED_ALPHABET_DEFECTS:
+        assert importer.clean_line(typed) == meant, typed
+
+
+def test_a_russian_word_used_as_a_subscript_keeps_its_alphabet():
+    for token in MIXED_ALPHABET_KEEPERS:
+        assert importer.clean_line(token) == token, token
+
+
+def test_a_cyrillic_run_that_is_not_an_element_symbol_is_left_alone():
+    """The first attempt at this rule broke a genotype and two abbreviations."""
+    for token in (
+        "2Аа", "m (в-ва)_(исх.)", "m (р-ра)_(конч)", "F1:", "АА,", "аа",
+        # Sentence numbers in front of a Russian word, not boron and holmium.
+        "(13)В", "(22)Но", "(45)Не", "(25)С",
+    ):
+        assert importer.clean_line(token) == token, token
+
+
+def test_ordinary_russian_and_english_text_is_left_alone():
+    russian = "Установите соответствие между реагирующими веществами и продуктами."
+    english = "People spend about one-third of their lives asleep."
+    assert importer.clean_line(russian) == russian
+    assert importer.clean_line(english) == english
+    # A lone Cyrillic С is a word here, not carbon.
+    assert importer.clean_line("раствор С массой 10 г") == "раствор С массой 10 г"
+
+
 def test_colliding_ids_stop_the_import(tmp_path):
     source_directory = tmp_path / "docx"
     source_directory.mkdir()
