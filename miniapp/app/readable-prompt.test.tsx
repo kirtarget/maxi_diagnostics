@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { FormattedMathText } from "./math-display";
 import { mathDisplayParts, tokenizeMathText } from "./math-text";
-import { promptLayout } from "./prompt-layout";
+import { createPromptAnchorAllocator, promptLayout } from "./prompt-layout";
 import { parseQuestionPrompt, questionTitleClassName } from "./question-prompt";
 import { QuestionView } from "./question-screen";
 import type { Brand, Question } from "./types";
@@ -132,6 +132,27 @@ describe("formulas are formatted as one whole token", () => {
     const html = renderToStaticMarkup(<FormattedMathText text="KOH(р-р)" subject="Химия" />);
     expect(html).toContain('<span class="math-annotation">(р-р)</span>');
     expect(html).not.toContain("<sub>(р-р)</sub>");
+  });
+
+  it("does not cut an equation at a sentence anchor", () => {
+    const anchors = createPromptAnchorAllocator();
+    const equation = "C_(2)H_(4(г)) + H_(2(г)) ↔ C_(2)H_(6(г))";
+    expect(anchors.sentenceSegments(equation).map((segment) => segment.text)).toEqual([equation]);
+    const html = renderToStaticMarkup(<>
+      {anchors.sentenceSegments(equation).map((segment, index) => (
+        <span key={index}><FormattedMathText text={segment.text} subject="Химия" /></span>
+      ))}
+    </>);
+    expect(html).not.toContain("C_(2)");
+    expect(html).toContain("C<sub>2</sub>");
+  });
+
+  it("still splits numbered sentences in a reading text", () => {
+    const anchors = createPromptAnchorAllocator();
+    const segments = anchors.sentenceSegments("(1) Первое предложение. (2) Второе предложение.");
+    expect(segments).toHaveLength(2);
+    expect(segments[0]?.anchorId).toBe("prompt-sentence-1");
+    expect(segments[1]?.anchorId).toBe("prompt-sentence-2");
   });
 
   it("does not split a formula that carries an index in the middle", () => {
