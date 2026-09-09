@@ -1,5 +1,6 @@
 import io
 import json
+import os
 from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
@@ -14,6 +15,20 @@ from scripts import import_sharepoint_diagnostics as importer
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_NAME = "ХИМ_ОГЭ_Диагностика_21-22_Заданий 8.docx"
+AUTHORED_ROOT = ROOT / "authoring" / "sharepoint-authoring"
+# The converter reads the editorial documents, and only those hash to
+# TRUSTED_SOURCE_HASHES. They carry MAXIMUM content, so the repository keeps
+# them out and a checkout without them skips the tests that need one.
+EDITORIAL_ROOT = Path(
+    os.environ.get("SHAREPOINT_SOURCE_DIR", ROOT / ".tmp" / "sharepoint-sample")
+)
+
+
+def editorial_source(name: str) -> Path:
+    path = EDITORIAL_ROOT / name
+    if not path.is_file():
+        pytest.skip(f"Редакционный исходник недоступен: {path}")
+    return path
 
 
 def _png(width: int = 40, height: int = 30) -> io.BytesIO:
@@ -659,9 +674,7 @@ def test_non_input_controls_do_not_duplicate_ordering_worded_options(
 def test_kir254_trusted_source_targets_build_explicit_sequence_contract(
     source_name: str, targets: dict[int, tuple[int, bool, tuple[str, ...]]]
 ):
-    source = importer.read_source_file(
-        ROOT / "authoring" / "sharepoint-authoring" / source_name
-    )
+    source = importer.read_source_file(editorial_source(source_name))
     candidates, _ = importer.convert_file(source, "2026-09-04")
     questions = {candidate.task.number: candidate.question for candidate in candidates}
 
@@ -692,16 +705,9 @@ def test_kir254_trusted_source_targets_build_explicit_sequence_contract(
 
 
 def test_trusted_chemistry_q16_text_scheme_is_imported():
-    source_path = (
-        ROOT
-        / "authoring"
-        / "sharepoint-authoring"
-        / "ХИМ_ЕГЭ_Диагностика_21-22_Заданий 28.docx"
-    )
+    source_path = editorial_source("ХИМ_ЕГЭ_Диагностика_21-22_Заданий 28.docx")
     source = importer.read_source_file(source_path)
-    source = replace(
-        source, content_hash=importer.TRUSTED_SOURCE_HASHES[source.slug]
-    )
+    assert source.content_hash == importer.TRUSTED_SOURCE_HASHES[source.slug]
     candidates, outcomes = importer.convert_file(source, "2026-09-04")
 
     question = next(
@@ -712,22 +718,17 @@ def test_trusted_chemistry_q16_text_scheme_is_imported():
     assert not any(outcome.number == 16 for outcome in outcomes)
 
 
-def test_trusted_chemistry_q15_missing_scheme_stays_rejected():
-    source_path = (
-        ROOT
-        / "authoring"
-        / "sharepoint-authoring"
-        / "ХИМ_ЕГЭ_Диагностика_21-22_Заданий 28.docx"
-    )
+def test_trusted_chemistry_q14_q15_wait_on_figures_inside_table_cells():
+    """Their condition is drawn inside the matching table, which is not read yet."""
+    source_path = editorial_source("ХИМ_ЕГЭ_Диагностика_21-22_Заданий 28.docx")
     source = importer.read_source_file(source_path)
-    source = replace(
-        source, content_hash=importer.TRUSTED_SOURCE_HASHES[source.slug]
-    )
+    assert source.content_hash == importer.TRUSTED_SOURCE_HASHES[source.slug]
     _, outcomes = importer.convert_file(source, "2026-09-04")
 
-    outcome = next(outcome for outcome in outcomes if outcome.number == 15)
-    assert outcome.status == "skipped"
-    assert outcome.reason == "missing_figure"
+    assert {(outcome.number, outcome.status, outcome.reason) for outcome in outcomes} == {
+        (14, "skipped", "unsupported_table_cell_figure"),
+        (15, "skipped", "unsupported_table_cell_figure"),
+    }
 
 
 def test_visual_reference_with_an_arrow_stays_rejected_without_an_asset():
@@ -1299,6 +1300,111 @@ def test_a_file_outside_the_plan_keeps_its_filename_derived_id(tmp_path):
     assert "sp-chemistry-oge-2022-q1" in _questions(catalog_path)
 
 
+def build_authoring_document(path: Path) -> None:
+    """The same tasks written in the authoring template the editor now uses."""
+    document = Document()
+    document.add_paragraph("Предмет: Химия")
+    document.add_paragraph("Экзамен: ОГЭ")
+    document.add_paragraph("Класс: 9")
+    document.add_paragraph("Сезон: 21-22")
+    document.add_paragraph("Тема: Первоначальные понятия")
+
+    _task(document, 1)
+    document.add_paragraph("Тип: один ответ")
+    document.add_paragraph("Условие:")
+    document.add_paragraph("Выберите одно вещество.")
+    document.add_paragraph("Варианты:")
+    for index, label in enumerate(("Кислород", "Азот", "Хлор"), start=1):
+        document.add_paragraph(f"{index}) {label}")
+    document.add_paragraph("Ответ: 3")
+
+    _task(document, 2)
+    document.add_paragraph("Тип: несколько ответов")
+    document.add_paragraph("Условие:")
+    document.add_paragraph("Выберите два вещества.")
+    document.add_paragraph("Варианты:")
+    for index, label in enumerate(("Медь", "Сера", "Железо", "Неон"), start=1):
+        document.add_paragraph(f"{index}) {label}")
+    document.add_paragraph("Ответ: 1, 3")
+    document.save(path)
+
+
+def test_an_authoring_template_document_stops_the_import(tmp_path):
+    """The authoring template is a different format, not a damaged source."""
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    build_authoring_document(source_directory / SOURCE_NAME)
+    catalog_path = build_repository(tmp_path)
+    before = catalog_path.read_bytes()
+
+    with pytest.raises(importer.ImportError, match=SOURCE_NAME):
+        importer.main([str(source_directory), "--root", str(tmp_path)])
+
+    assert catalog_path.read_bytes() == before
+
+
+def test_an_authoring_template_document_stops_a_dry_run(tmp_path):
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    build_authoring_document(source_directory / SOURCE_NAME)
+    build_repository(tmp_path)
+
+    with pytest.raises(importer.ImportError, match="авторск"):
+        importer.main([str(source_directory), "--root", str(tmp_path), "--dry-run"])
+
+
+def test_one_authoring_document_stops_the_whole_run(tmp_path):
+    """A mixed directory must not import its editorial half and drop the rest."""
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    authoring_name = "ФИЗ_ОГЭ_МРКТ_21-22_Заданий 8.docx"
+    build_source_document(source_directory / SOURCE_NAME)
+    build_authoring_document(source_directory / authoring_name)
+    catalog_path = build_repository(tmp_path)
+    before = catalog_path.read_bytes()
+
+    with pytest.raises(importer.ImportError, match=authoring_name):
+        importer.main([str(source_directory), "--root", str(tmp_path)])
+
+    assert catalog_path.read_bytes() == before
+
+
+def test_an_editorial_document_is_not_taken_for_the_authoring_template(tmp_path):
+    source_directory = tmp_path / "docx"
+    source_directory.mkdir()
+    build_source_document(source_directory / SOURCE_NAME)
+    catalog_path = build_repository(tmp_path)
+
+    importer.main([str(source_directory), "--root", str(tmp_path)])
+
+    assert "sp-chemistry-oge-2022-q1" in _questions(catalog_path)
+
+
+def test_every_tracked_authoring_document_is_refused():
+    """The tracked copies are the authoring format, so none of them is input.
+
+    They read like sources: the same filenames, the same `Задание N` headings.
+    Pointing the converter at them used to drop most of a document and replace
+    the live source group with the remainder.
+    """
+    documents = sorted(AUTHORED_ROOT.glob("*.docx"))
+    assert documents, AUTHORED_ROOT
+
+    for path in documents:
+        with pytest.raises(importer.ImportError, match="авторском формате"):
+            importer.parse_document(path)
+
+
+def test_no_tracked_authoring_document_is_a_trusted_source():
+    trusted = set(importer.TRUSTED_SOURCE_HASHES.values())
+    tracked = {
+        importer.file_digest(path) for path in AUTHORED_ROOT.glob("*.docx")
+    }
+
+    assert tracked
+    assert not (tracked & trusted)
+
+
 def test_colliding_ids_stop_the_import(tmp_path):
     source_directory = tmp_path / "docx"
     source_directory.mkdir()
@@ -1579,7 +1685,7 @@ def test_text_metadata_and_stress_are_inferred_only_from_verified_shapes():
 
 
 def test_tracked_russian_q04_docx_rebuilds_all_stress_options():
-    source_path = ROOT / "authoring" / "sharepoint-authoring" / "РЯ_ЕГЭ_Диагностика_21-22_Заданий 26.docx"
+    source_path = editorial_source("РЯ_ЕГЭ_Диагностика_21-22_Заданий 26.docx")
     source = importer.read_source_file(source_path)
     task = next(task for task in importer.parse_document(source_path) if task.number == 4)
 
