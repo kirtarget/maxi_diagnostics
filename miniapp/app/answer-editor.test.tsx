@@ -187,3 +187,33 @@ describe("AnswerEditor", () => {
     }
   });
 });
+
+describe("options that are their own position", () => {
+  const sentences: Question = {
+    ...base,
+    id: "q-sentences",
+    type: "multiple",
+    prompt: "Выберите три предложения.",
+    selection_limit: 3,
+    options: [1, 2, 3, 4, 5, 6].map((n) => ({ id: `o${n}`, label: String(n) })),
+  } as Question;
+
+  it("numbers a sentence choice by itself instead of adding a letter", () => {
+    const html = renderToStaticMarkup(
+      <AnswerEditor question={sentences} value={[]} onChange={() => undefined} subject="Биология" />,
+    );
+
+    expect(html).not.toContain(">A<");
+    expect(html).toContain(">1<");
+    expect(html).toContain(">6<");
+  });
+
+  it("keeps letters when the options are values rather than positions", () => {
+    const html = renderToStaticMarkup(
+      <AnswerEditor question={multiple} value={[]} onChange={() => undefined} subject="Алгебра" />,
+    );
+
+    expect(html).toContain(">12<");
+    expect(html).toContain(">A<");
+  });
+});

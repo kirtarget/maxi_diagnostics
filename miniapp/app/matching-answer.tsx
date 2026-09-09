@@ -42,6 +42,7 @@ const MARKER = /^\s*([А-ЯЁA-Z0-9]+)(?:[).]|\s|$)/u;
 const LOOKALIKE_CYRILLIC: Record<string, string> = {
   A: "А", B: "Б", C: "С", E: "Е", K: "К", M: "М", H: "Н", O: "О", P: "Р", T: "Т", X: "Х", Y: "У",
 };
+const CHIP_LABEL_LIMIT = 3;
 const SHEET_OPTION_LIMIT = 6;
 const LONG_OPTION_LENGTH = 42;
 const INLINE_OPTION_DENSITY_LIMIT = 90;
@@ -572,12 +573,17 @@ export function AnswerPreview({ markers, selected, label = "Твой ответ"
   label?: string;
 }) {
   const values = markers.map((_, index) => selected[index] ?? "");
+  // The chip that carries this label is one character wide. A cell named by a
+  // table heading is written out in the rows above, so here it is its position.
+  const chips = markers.map((marker, index) =>
+    marker.trim().length <= CHIP_LABEL_LIMIT ? marker : String(index + 1),
+  );
   return (
     <div className={`matching-answer-preview${values.length > 0 && values.every(Boolean) ? " complete" : ""}`}>
       <span>{label}</span>
       <strong>
         {markers.map((marker, index) => (
-          <span key={`${marker}-${index}`}>{values[index] || "—"}<small>{marker}</small></span>
+          <span key={`${marker}-${index}`}>{values[index] || "—"}<small>{chips[index]}</small></span>
         ))}
       </strong>
     </div>

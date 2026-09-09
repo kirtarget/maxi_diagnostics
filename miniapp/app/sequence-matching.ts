@@ -106,7 +106,9 @@ export function parseSequenceMatchingPrompt(
   const leftByMarker = new Map(parsedLeft.map((item) => [item.marker, item]));
   const left = Array.from({ length: answerLength }, (_, index) => {
     const marker = markers[index] ?? parsedLeft[index]?.marker ?? String(index + 1);
-    return leftByMarker.get(marker) ?? { marker, label: marker };
+    // A cell named by a table heading has no separate wording of its own, so
+    // repeating the name as a label would print it twice in the same row.
+    return leftByMarker.get(marker) ?? { marker, label: "" };
   });
 
   return {
