@@ -776,6 +776,73 @@ def _belongs_to_source_artifact(identifier: str, source_slug: str) -> bool:
 # --------------------------------------------------------------------------
 
 
+# Letters an editor can type in the wrong alphabet without seeing a difference.
+# A formula wants the Latin element symbol; a Russian word wants Cyrillic.
+CYRILLIC_TO_LATIN = str.maketrans("АВЕКМНОРСТХаеорсух", "ABEKMHOPCTXaeopcyx")
+LATIN_TO_CYRILLIC = str.maketrans("ABEKMHOPCTXaeopcyx", "АВЕКМНОРСТХаеорсух")
+LETTER_RUN = re.compile(r"[^\W\d_]+", re.UNICODE)
+CYRILLIC_LETTER = re.compile(r"[А-Яа-яЁё]")
+# A run of three or more letters that is mostly Cyrillic is a Russian word,
+# even inside a formula, where it is the subscript saying `изб.` or `разб.`.
+RUSSIAN_WORD_LENGTH = 3
+# A lone letter is not enough to go on: Cyrillic С alone is as likely to be a
+# Russian word as it is to be carbon, so the token has to show a formula too.
+# A bare digit does not count. `(13)В` is the thirteenth sentence of a text
+# followed by the preposition В, and reading that as boron is worse than
+# leaving a formula in an explanation half converted.
+FORMULA_EVIDENCE = re.compile(r"_\(|=|[A-Za-z]")
+ELEMENT_SYMBOLS = frozenset(
+    "H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti V Cr Mn Fe Co Ni "
+    "Cu Zn Ga Ge As Se Br Kr Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I "
+    "Xe Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta W Re Os Ir Pt "
+    "Au Hg Tl Pb Bi Po At Rn Fr Ra Ac Th Pa U Np Pu Am Cm Bk Cf Es Fm Md No Lr".split()
+)
+
+
+def _spells_elements(run: str) -> bool:
+    """Whether a run of Latin letters reads as one or more element symbols.
+
+    `CH` is carbon and hydrogen, `COONa` is carbon, oxygen, oxygen and sodium.
+    `Aa` of a genotype and `pa` of `р-ра` are neither, so they are left alone.
+    """
+    index = 0
+    while index < len(run):
+        pair = run[index:index + 2]
+        if len(pair) == 2 and pair in ELEMENT_SYMBOLS:
+            index += 2
+            continue
+        if run[index] in ELEMENT_SYMBOLS:
+            index += 1
+            continue
+        return False
+    return bool(run)
+
+
+def _fix_alphabet(token: str) -> str:
+    """Put every letter of one token into the alphabet its neighbours use.
+
+    A Cyrillic letter only becomes Latin when the whole run then reads as
+    element symbols. That is what tells `К_(3)PO_(4)`, where К is potassium,
+    from `2Аа` of a genotype and `в-ва` of an abbreviation.
+    """
+    if not CYRILLIC_LETTER.search(token) or not FORMULA_EVIDENCE.search(token):
+        return token
+
+    def repair(match: "re.Match[str]") -> str:
+        run = match.group(0)
+        # Element symbols come first: `СООН` is a carboxyl group, not a Russian
+        # word, even though it is four Cyrillic letters.
+        latin = run.translate(CYRILLIC_TO_LATIN)
+        if latin != run and _spells_elements(latin):
+            return latin
+        cyrillic = len(CYRILLIC_LETTER.findall(run))
+        if len(run) >= RUSSIAN_WORD_LENGTH and cyrillic * 2 > len(run):
+            return run.translate(LATIN_TO_CYRILLIC)
+        return run
+
+    return LETTER_RUN.sub(repair, token)
+
+
 def clean_line(value: str) -> str:
     normalized = unicodedata.normalize("NFC", value).translate(PDF_SAFE_REPLACEMENTS)
     normalized = "".join(
@@ -785,7 +852,8 @@ def clean_line(value: str) -> str:
         for character in normalized
         if not unicodedata.category(character).startswith("C")
     )
-    return re.sub(r"\s+", " ", normalized).strip()
+    collapsed = re.sub(r"\s+", " ", normalized).strip()
+    return " ".join(_fix_alphabet(token) for token in collapsed.split(" "))
 
 
 def clean_block(parts: list[str]) -> str:
