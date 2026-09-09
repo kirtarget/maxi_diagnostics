@@ -125,7 +125,7 @@ describe("parseQuestionPrompt", () => {
     const blocks = parseQuestionPrompt(question?.prompt ?? "");
     expect(blocks[0]).toEqual({
       kind: "stem",
-      text: "Прочитайте приведённый ниже текст. Преобразуйте, если необходимо, слово, напечатанное заглавными буквами в конце строки так, чтобы оно грамматически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову.",
+      text: "Преобразуйте, если необходимо, слово, напечатанное заглавными буквами в конце строки так, чтобы оно грамматически соответствовало содержанию текста.",
     });
     expect(blocks).toContainEqual({ kind: "instruction", text: "В ответ запишите полученное слово (без пробелов)." });
     expect(blocks.some((block) => block.kind === "stem" && block.text.includes("В ответ"))).toBe(false);
