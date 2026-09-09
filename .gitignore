@@ -33,6 +33,10 @@ id_ecdsa
 id_ed25519
 school/private/
 
+# Design sources. The artwork the bot actually sends lives in
+# school/assets/messages, which brand.json references by path.
+design/
+
 # Agent and review scratch
 .claude/
 .superpowers/
