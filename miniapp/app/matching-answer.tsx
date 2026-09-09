@@ -47,13 +47,31 @@ const LOOKALIKE_CYRILLIC: Record<string, string> = {
 const CHIP_LABEL_LIMIT = 3;
 const SHEET_OPTION_LIMIT = 6;
 const LONG_OPTION_LENGTH = 42;
+const SEQUENCE_OPTION_LENGTH = 21;
 const INLINE_OPTION_DENSITY_LIMIT = 90;
+// Chips share one row, so each gets about a sixth of the screen. Past this the
+// text inside them wraps into a tower instead of a chip.
+const CHIP_TEXT_DENSITY_LIMIT = 30;
+const CHIP_TEXT_LENGTH = 12;
+
+function optionDensity(options: MatchingOption[]): number {
+  return options.reduce((total, option) => total + option.marker.length + option.label.length, 0);
+}
 
 function shouldUseMatchingSheet(options: MatchingOption[]): boolean {
-  const optionDensity = options.reduce((total, option) => total + option.marker.length + option.label.length, 0);
   return options.length > SHEET_OPTION_LIMIT
     || options.some((option) => option.label.length > LONG_OPTION_LENGTH)
-    || (options.length >= 5 && optionDensity > INLINE_OPTION_DENSITY_LIMIT);
+    || (options.length >= 5 && optionDensity(options) > INLINE_OPTION_DENSITY_LIMIT);
+}
+
+/**
+ * A chip that cannot hold its text carries the number instead. The wording it
+ * drops is the wording of the list printed right above the rows, so nothing is
+ * lost, and the student picks the digit the blank asks for.
+ */
+function shouldCompactChips(options: MatchingOption[]): boolean {
+  return optionDensity(options) > CHIP_TEXT_DENSITY_LIMIT
+    || options.some((option) => option.label.length > CHIP_TEXT_LENGTH);
 }
 
 // A drawn position carries its letter inside the picture, so the model has to
@@ -136,6 +154,30 @@ export function matchingModelFromSequence(matching: SequenceMatchingPrompt, subj
 
 function mapAnswer(value: AnswerValue | undefined): Record<string, string> {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+/** Fewer options than positions means the КИМ expects a digit to repeat. */
+function repeatsExpected(model: MatchingModel): boolean {
+  return model.options.length < model.rows.length;
+}
+
+export type MatchingReadiness = { isAnswered: boolean; reason: string };
+
+/**
+ * The button hint reads the markers the rows are drawn with. Deriving them a
+ * second time is what sent students looking for a row «А» next to a circle «1».
+ */
+export function matchingReadiness(model: MatchingModel, value: AnswerValue | undefined): MatchingReadiness {
+  const answer = mapAnswer(value);
+  const selected = model.rows.map((row) => answer[row.key] ?? "");
+  const missing = model.rows.filter((_, index) => !selected[index]).map((row) => row.marker);
+  if (missing.length > 0) return { isAnswered: false, reason: `Осталось заполнить: ${missing.join(", ")}` };
+  const duplicate = repeatsExpected(model)
+    ? -1
+    : selected.findIndex((key, index) => selected.indexOf(key) !== index);
+  if (duplicate < 0) return { isAnswered: true, reason: "" };
+  const marker = model.options.find((option) => option.key === selected[duplicate])?.marker ?? "";
+  return { isAnswered: false, reason: `Вариант ${marker} выбран дважды` };
 }
 
 function selectedKey(model: MatchingModel, value: AnswerValue | undefined, sequenceSelections: string[], rowIndex: number): string {
@@ -273,7 +315,7 @@ function SequenceAnswer({ model, value, subject, disabled = false, onChange }: {
     if (key && !usedBy.has(key)) usedBy.set(key, index);
   });
   const useSheet = model.options.length > SHEET_OPTION_LIMIT + 1
-    || model.options.some((option) => option.label.length > LONG_OPTION_LENGTH / 2);
+    || model.options.some((option) => option.label.length > SEQUENCE_OPTION_LENGTH);
   const firstEmpty = selectedKeys.findIndex((selection) => !selection);
   const filled = compactPrefix(selectedKeys).length;
   const selectOption = (option: MatchingOption) => {
@@ -453,6 +495,8 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
     if (key && !usedBy.has(key)) usedBy.set(key, index);
   });
   const useSheet = shouldUseMatchingSheet(model.options);
+  const compactChips = shouldCompactChips(model.options);
+  const repeatsAreNormal = repeatsExpected(model);
   const selectOption = (rowIndex: number, option: MatchingOption) => {
     const usedAt = usedBy.get(option.key);
     if (disabled || (usedAt !== undefined && usedAt !== rowIndex && !model.allowReuse)) return;
@@ -480,7 +524,7 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
       <button
         aria-checked={selected}
         aria-label={`${option.marker} — ${option.label}${blocked ? `, в строке ${model.rows[usedAt]?.marker ?? ""}` : ""}`}
-        className={`matching-answer-option${selected ? " selected" : ""}`}
+        className={`matching-answer-option${selected ? " selected" : ""}${compactChips && !inSheet ? " compact" : ""}`}
         data-option-key={option.key}
         disabled={disabled || blocked}
         key={option.key}
@@ -491,7 +535,7 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
         type="button"
       >
         <strong>{option.marker}</strong>
-        <CellBody cell={option} subject={subject} />
+        {!(compactChips && !inSheet) && <CellBody cell={option} subject={subject} />}
         {blocked && <small>в строке {model.rows[usedAt]?.marker ?? ""}</small>}
         {inSheet && selected && <small>выбрано</small>}
       </button>
@@ -516,7 +560,10 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
       <div className="matching-answer-rows">
         {model.rows.map((row, rowIndex) => {
           const selectedMarker = selectedOptionMarker(model, value, [], rowIndex);
-          const duplicateAt = selectedKeys.findIndex((key, index) => index !== rowIndex && key && key === selectedKeys[rowIndex]);
+          const selectedOption = model.options.find((option) => option.marker === selectedMarker);
+          const duplicateAt = repeatsAreNormal
+            ? -1
+            : selectedKeys.findIndex((key, index) => index !== rowIndex && key && key === selectedKeys[rowIndex]);
           return (
             <div
               className={`matching-answer-row${selectedMarker ? " is-filled" : " is-empty"}`}
@@ -534,7 +581,7 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
                   ref={(element) => { triggerRefs.current[rowIndex] = element; }}
                   type="button"
                 >
-                  {selectedMarker ? <><strong>{selectedMarker}</strong> <span>{model.options.find((option) => option.marker === selectedMarker)?.label}</span></> : "Выбери вариант"}
+                  {selectedMarker && selectedOption ? <><strong>{selectedMarker}</strong> <CellBody cell={selectedOption} subject={subject} /></> : "Выбери вариант"}
                 </button>
               ) : (
                 <div className="matching-answer-options" aria-label={`Варианты для пункта ${row.marker}`} role="radiogroup">

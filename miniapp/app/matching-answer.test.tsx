@@ -12,6 +12,7 @@ import {
   MatchingAnswer,
   matchingModelFromQuestion,
   matchingModelFromSequence,
+  matchingReadiness,
   type MatchingModel,
 } from "./matching-answer";
 import { parseSequenceMatchingPrompt } from "./sequence-matching";
@@ -228,7 +229,11 @@ describe("MatchingAnswer", () => {
     });
     const selectedTrigger = container.querySelector<HTMLButtonElement>('[data-state="filled"] .matching-answer-trigger');
     expect(selectedTrigger?.textContent).toContain("5");
-    expect(selectedTrigger?.textContent).toContain(model.options[4].label);
+    // The trigger prints the formula the way the list above does, not the raw
+    // «FeCl_(2)» the catalog stores.
+    expect(selectedTrigger?.textContent).toContain("FeCl");
+    expect(selectedTrigger?.textContent).not.toContain("_(");
+    expect(selectedTrigger?.querySelectorAll("sub").length).toBeGreaterThan(0);
   });
 
   it("keeps sequence activation sequential and clears the whole sequence", async () => {
@@ -568,5 +573,169 @@ describe("MatchingAnswer", () => {
     }
     expect(englishQuestions).toBeGreaterThan(0);
     expect(violations).toEqual([]);
+  });
+});
+
+describe("one marker source for the row and the hint", () => {
+  // N-07: the hint under the button used to derive its own markers, so a row
+  // drawn «А» was asked for as «1», and a row drawn «В» as the Latin «B».
+  const rowMarkerFromOwnRegex = (label: string, index: number) =>
+    /^\s*([А-ЯЁA-Z0-9]+)(?:[).]|\s|$)/u.exec(label)?.[1] ?? String(index + 1);
+
+  it("names an unanswered row exactly as the editor drew it", () => {
+    const question = catalogQuestion("sp-chemistry-ege-2022-q14") as unknown as MatchingQuestion;
+    const model = matchingModelFromQuestion(question);
+    const readiness = matchingReadiness(model, {});
+
+    expect(readiness.isAnswered).toBe(false);
+    expect(readiness.reason).toBe("Осталось заполнить: " + model.rows.map((row) => row.marker).join(", "));
+    expect(readiness.reason).toContain("А");
+    expect(readiness.reason).not.toMatch(/[A-Z]/u);
+  });
+
+  it("agrees with the drawn marker on every catalog matching row", () => {
+    const divergences: string[] = [];
+    for (const file of readdirSync(diagnosticsDir).filter((name) => name.endsWith(".json"))) {
+      const diagnostic = JSON.parse(readFileSync(resolve(diagnosticsDir, file), "utf8")) as {
+        subject?: string;
+        questions?: Array<Record<string, unknown>>;
+      };
+      for (const question of diagnostic.questions ?? []) {
+        if (question.type !== "matching") continue;
+        const model = matchingModelFromQuestion(question as unknown as MatchingQuestion, diagnostic.subject);
+        const asked = matchingReadiness(model, {}).reason.replace("Осталось заполнить: ", "").split(", ");
+        model.rows.forEach((row, index) => {
+          if (asked[index] !== row.marker) divergences.push(`${String(question.id)}: drawn ${row.marker}, asked ${asked[index]}`);
+        });
+      }
+    }
+    expect(divergences).toEqual([]);
+  });
+
+  it("reproduces the old divergence, so the sweep above is not vacuous", () => {
+    const question = catalogQuestion("sp-chemistry-ege-2022-q8") as unknown as MatchingQuestion;
+    const model = matchingModelFromQuestion(question);
+    const own = question.items.map((item, index) => rowMarkerFromOwnRegex(item.label, index));
+
+    expect(model.rows.map((row) => row.marker)).not.toEqual(own);
+    expect(own).toContain("B");
+  });
+});
+
+describe("a repeated option", () => {
+  const fourRows = {
+    id: "q-repeat",
+    type: "matching",
+    prompt: "Установите соответствие.",
+    items: [
+      { id: "i1", label: "А) Первый" },
+      { id: "i2", label: "Б) Второй" },
+      { id: "i3", label: "В) Третий" },
+    ],
+    options: [
+      { id: "o1", label: "1) Один" },
+      { id: "o2", label: "2) Два" },
+      { id: "o3", label: "3) Три" },
+    ],
+  } as unknown as MatchingQuestion;
+
+  it("blocks the hand-off instead of sending three identical positions", () => {
+    // F-22: the repeat was marked under the row, and the answer went anyway.
+    const model = matchingModelFromQuestion(fourRows);
+    const readiness = matchingReadiness(model, { i1: "o1", i2: "o1", i3: "o3" });
+
+    expect(readiness.isAnswered).toBe(false);
+    expect(readiness.reason).toBe("Вариант 1 выбран дважды");
+  });
+
+  it("stays silent when the КИМ has fewer options than positions", () => {
+    const twoOptions = {
+      ...fourRows,
+      options: [{ id: "o1", label: "1) Один" }, { id: "o2", label: "2) Два" }],
+    } as unknown as MatchingQuestion;
+    const model = matchingModelFromQuestion(twoOptions);
+
+    expect(matchingReadiness(model, { i1: "o1", i2: "o1", i3: "o2" })).toEqual({ isAnswered: true, reason: "" });
+  });
+
+  it("does not warn on a row when a repeat is the only way to answer", async () => {
+    const twoOptions = {
+      ...fourRows,
+      options: [{ id: "o1", label: "1) Один" }, { id: "o2", label: "2) Два" }],
+    } as unknown as MatchingQuestion;
+    await act(async () => {
+      root.render(
+        <MatchingAnswer
+          model={matchingModelFromQuestion(twoOptions)}
+          value={{ i1: "o1", i2: "o1", i3: "o2" }}
+          onChange={() => undefined}
+        />,
+      );
+    });
+
+    expect(container.querySelectorAll(".matching-answer-duplicate")).toHaveLength(0);
+  });
+});
+
+describe("a long option", () => {
+  const withOptions = (labels: string[]) => ({
+    id: "q-long",
+    type: "matching",
+    prompt: "Установите соответствие.",
+    items: [{ id: "i1", label: "А) Первый" }, { id: "i2", label: "Б) Второй" }, { id: "i3", label: "В) Третий" }],
+    options: labels.map((label, index) => ({ id: "o" + (index + 1), label: index + 1 + ") " + label })),
+  } as unknown as MatchingQuestion);
+
+  const render = async (question: MatchingQuestion) => {
+    await act(async () => {
+      root.render(<MatchingAnswer model={matchingModelFromQuestion(question)} value={{}} onChange={() => undefined} />);
+    });
+  };
+
+  it("keeps short options as readable chips in the row", async () => {
+    await render(withOptions(["Соль", "Оксид", "Кислота"]));
+
+    const chips = [...container.querySelectorAll(".matching-answer-row .matching-answer-option")];
+    expect(chips).toHaveLength(9);
+    expect(chips.every((chip) => chip.classList.contains("compact"))).toBe(false);
+    expect(chips[0].textContent).toContain("Соль");
+    expect(container.querySelectorAll(".matching-answer-trigger")).toHaveLength(0);
+  });
+
+  it("puts the number in the chip when a formula cannot fit, and keeps the formula above", async () => {
+    // N-36: «Sr(OH)₂, H₂SO₄, (CH₃COO)₂Pb» wrapped into a tower inside a 100px chip.
+    const formula = "Sr(OH)2, H2SO4, (CH3COO)2Pb";
+    await render(withOptions([formula, "Соль", "Оксид", "Кислота"]));
+
+    const chips = [...container.querySelectorAll(".matching-answer-row .matching-answer-option")];
+    expect(chips).toHaveLength(12);
+    expect(chips.every((chip) => chip.classList.contains("compact"))).toBe(true);
+    expect(chips[0].textContent).toBe("1");
+    expect(chips[0].getAttribute("aria-label")).toContain(formula);
+
+    const reference = [...container.querySelectorAll(".matching-answer-option-reference")];
+    expect(reference).toHaveLength(4);
+    expect(reference[0].textContent).toContain(formula);
+  });
+
+  it("keeps the crowded six-option row out of the tower shape", async () => {
+    await render(withOptions(["Кислотный оксид", "Основный оксид", "Соль", "Кислота", "Основание", "Амфотерный"]));
+
+    const chips = [...container.querySelectorAll(".matching-answer-row .matching-answer-option")];
+    const triggers = container.querySelectorAll(".matching-answer-trigger");
+    expect(chips.every((chip) => chip.classList.contains("compact")) || triggers.length > 0).toBe(true);
+    for (const chip of chips) expect(chip.textContent!.length).toBeLessThanOrEqual(2);
+  });
+
+  it("still opens a sheet for an option no chip could ever hold", async () => {
+    const essay = "Автор противопоставляет героя обществу и показывает его одиночество среди людей";
+    await render(withOptions([essay, "Соль", "Оксид", "Кислота"]));
+
+    const triggers = [...container.querySelectorAll<HTMLButtonElement>(".matching-answer-trigger")];
+    expect(triggers).toHaveLength(3);
+    await act(async () => { triggers[0].click(); });
+    const sheetOptions = [...container.querySelectorAll('[role="dialog"] [role="radio"]')];
+    expect(sheetOptions).toHaveLength(4);
+    expect(sheetOptions[0].textContent).toContain(essay);
   });
 });
