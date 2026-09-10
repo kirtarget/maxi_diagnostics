@@ -1162,7 +1162,8 @@ select:disabled {
   background: var(--brand-ink);
 }
 
-.assessment-header button {
+/* Rail nodes are the one header button that must not grow to the 44px target: they carry it on ::after. */
+.assessment-header button:not(.question-progress-node) {
   flex: 0 0 auto;
   min-width: 44px;
   min-height: 44px;
@@ -1230,6 +1231,11 @@ select:disabled {
 .question-progress-node.is-skipped {
   border: 1.5px solid var(--brand-accent);
   background: transparent;
+}
+
+/* The bar variant clips its fill; the dots rail must not, or it cuts the tap overlay below to 6px. */
+.question-progress-rail.assessment-progress-dots {
+  overflow: visible;
 }
 
 /* Rail nodes double as jump targets: the visible bar stays 6px, the tap area is 44px. */
