@@ -225,7 +225,7 @@ describe("trainer integration contracts", () => {
     });
     const html = renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />);
     // option a carries the correct label "4"; option b is what the student picked
-    expect(html).toContain("answer-option is-correct");
+    expect(html).toContain("answer-option is-right");
     expect(html).toContain("answer-option selected is-wrong");
     expect(html).toContain("Правильный ответ");
     expect(html).toContain("−1 жизнь · осталось 2 жизни");

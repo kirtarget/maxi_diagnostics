@@ -3257,10 +3257,10 @@ select:disabled {
 
 /* A graded option states its own verdict, so the review must not reuse the
    "selected" green for a choice the server just called wrong. */
-.answer-option.is-correct,
+.answer-option.is-right,
 .answer-option.is-wrong { opacity: 1; }
 
-.answer-option.is-correct {
+.answer-option.is-right {
   border: 2px solid var(--success);
   background: color-mix(in srgb, var(--success) 12%, var(--surface));
   padding: 12.5px 13.5px;
@@ -3272,7 +3272,7 @@ select:disabled {
   padding: 12.5px 13.5px;
 }
 
-.answer-option.is-correct .option-letter {
+.answer-option.is-right .option-letter {
   color: white;
   background: var(--success);
 }
@@ -3298,7 +3298,7 @@ select:disabled {
   letter-spacing: 0.02em;
 }
 
-.answer-option.is-correct .answer-option-verdict { color: var(--success); }
+.answer-option.is-right .answer-option-verdict { color: var(--success); }
 .answer-option.is-wrong .answer-option-verdict { color: var(--brand-signal); }
 
 .trainer-feedback {

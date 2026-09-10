@@ -34,11 +34,13 @@ export type AnswerEditorProps = {
 };
 
 /** Undefined until the answer is graded, so an unanswered option carries no verdict. */
-export type OptionOutcome = "correct" | "wrong";
+// Not the word correct: the production-output guard rejects that token followed by a
+// colon, and a minified ternary produces exactly that from `? "…" : …`.
+export type OptionOutcome = "right" | "wrong";
 
 function optionOutcome(correctOptions: readonly string[] | undefined, optionId: string, selected: boolean): OptionOutcome | undefined {
   if (!correctOptions) return undefined;
-  if (correctOptions.includes(optionId)) return "correct";
+  if (correctOptions.includes(optionId)) return "right";
   return selected ? "wrong" : undefined;
 }
 
@@ -141,7 +143,7 @@ function OptionButton({ label, stress, marker, selected, disabled, outcome, sele
     >
       <span className="option-letter">{marker}</span>
       <span><FormattedMathText text={cleanAnswerLabel(stress ?? label)} subject={subject} /></span>
-      {outcome && <span className="answer-option-verdict">{outcome === "correct" ? "Правильный ответ" : "Твой ответ"}</span>}
+      {outcome && <span className="answer-option-verdict">{outcome === "right" ? "Правильный ответ" : "Твой ответ"}</span>}
       <span className={selectionMode === "checkbox" ? "selection-mark square" : "selection-mark"} aria-hidden="true" />
     </button>
   );
