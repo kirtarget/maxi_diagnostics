@@ -1,7 +1,5 @@
 import type { AnswerValue, BootstrapResponse, PlanReason, Question } from "./types";
-import { isValidNumericInput, isValidTextInput } from "./answer-values";
-import { isCompleteSequenceMatchingAnswer, parseSequenceMatchingPrompt } from "./sequence-matching";
-import { isCompleteTableGapAnswer, parseTableGapPrompt } from "./table-gap-matching";
+import { answerReadiness } from "./answer-readiness";
 
 /** Plan context the server attaches when a session runs today's plan. */
 export type TrainerPlanInfo = {
@@ -196,19 +194,12 @@ function currentQuestion(state: TrainerState): Question | null {
   return state.session?.questions[state.currentIndex] ?? null;
 }
 
-export function isTrainerAnswerComplete(question: Question, answer: AnswerValue | undefined): boolean {
-  if (question.type === "single") return typeof answer === "string" && answer.length > 0;
-  if (question.type === "multiple") return Array.isArray(answer) && answer.length === question.selection_limit;
-  if (question.type === "matching") {
-    return Boolean(answer && !Array.isArray(answer) && typeof answer === "object"
-      && question.items.every((item) => Boolean(answer[item.id])));
-  }
-  if (question.type === "text") return isValidTextInput(answer, question.max_length);
-  const tableGap = parseTableGapPrompt(question.prompt, question);
-  if (tableGap) return isCompleteTableGapAnswer(tableGap, answer);
-  const sequence = parseSequenceMatchingPrompt(question.prompt, question);
-  if (sequence) return isCompleteSequenceMatchingAnswer(sequence, answer);
-  return isValidNumericInput(answer);
+/**
+ * The trainer submits exactly what the question screen would let through, so the
+ * guard reads the same readiness the action bar explains.
+ */
+export function isTrainerAnswerComplete(question: Question, answer: AnswerValue | undefined, subject?: string): boolean {
+  return answerReadiness(question, answer, subject).isAnswered;
 }
 
 export function trainerReducer(state: TrainerState, action: TrainerAction): TrainerState {

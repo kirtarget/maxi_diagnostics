@@ -1,23 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState, type Dispatch, type ReactNode } from "react";
+import { ActionBar } from "./action-bar";
+import { answerReadiness } from "./answer-readiness";
 import { StructuredAnswerEditor } from "./question-screen";
-import { textAnswerGuidance } from "./answer-editor";
 import { AssessmentHeader } from "./assessment-header";
 import { ConfirmSheet } from "./confirm-sheet";
-import { FormattedMathText, FormattedStem } from "./math-display";
-import { PromptTable } from "./prompt-table";
+import { FormattedMathText } from "./math-display";
 import { normalizeOffer, OfferSurface, type OfferPlacement, type OfferTelemetryEvent } from "./offer-ux";
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
-import { parseQuestionPrompt } from "./question-prompt";
-import { createPromptAnchorAllocator, focusPromptReference, promptLayout } from "./prompt-layout";
-import { ImageViewer } from "./image-viewer";
-import { parseSequenceMatchingPrompt } from "./sequence-matching";
-import { parseTableGapPrompt } from "./table-gap-matching";
+import { QuestionBody, questionBodyModel } from "./question-body";
+import { focusPromptReference } from "./prompt-layout";
 import { plural } from "./text-utils";
 import type { AnswerValue, Brand, Question, SchoolLinks } from "./types";
 import {
-  isTrainerAnswerComplete,
   planProgress,
   planReasonLabel,
   trainerFeedbackKind,
@@ -47,45 +43,6 @@ export type TrainerScreenProps = {
   onOfferEvent?: (event: OfferTelemetryEvent) => void;
   labels?: Brand["interface"];
 };
-
-function QuestionPrompt({ question, subject, reason }: { question: Question; subject?: string; reason?: string | null }) {
-  const allBlocks = parseQuestionPrompt(question.prompt);
-  const layout = promptLayout(allBlocks);
-  const anchors = createPromptAnchorAllocator();
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  const referenceRef = useRef<HTMLDivElement>(null);
-  const [referenceExpanded, setReferenceExpanded] = useState(false);
-  useEffect(() => {
-    setReferenceExpanded(false);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-    headingRef.current?.focus({ preventScroll: true });
-  }, [question.id]);
-  const tableGap = question.type === "input" ? parseTableGapPrompt(question.prompt, question) : null;
-  const sequence = question.type === "input" ? parseSequenceMatchingPrompt(question.prompt, question) : null;
-  const blocks = allBlocks.filter((block) => {
-    if (block.kind === "instruction") return false;
-    if (tableGap && block.kind !== "stem") return false;
-    if (sequence && (block.kind === "item" || block.kind === "heading" || block.kind === "table")) return false;
-    if (sequence && block.kind === "paragraph" && sequence.left.some((item) => item.marker === block.text)) return false;
-    return true;
-  });
-  const text = blocks
-    .filter((block) => block.kind !== "table")
-    .map((block) => block.kind === "item" ? `${block.marker}) ${block.text}` : block.text)
-    .join("\n");
-  const imageAssets = [question.asset, ...(question.assets ?? [])]
-    .filter((asset): asset is string => Boolean(asset))
-    .map((path) => ({ path, alt: question.asset_alt }));
-  const renderReference = () => layout.referenceBlocks.map((block, index) => {
-    if (tableGap || (sequence && (block.kind === "item" || block.kind === "heading" || block.kind === "table"))) return null;
-    if (block.kind === "table") return <div id={anchors.blockId(block)} key={index}><PromptTable headerRows={block.headerRows} rows={block.rows} columns={block.columns} subject={subject} /></div>;
-    if (block.kind === "heading") return <h2 id={anchors.blockId(block)} key={index} className="question-section-title"><FormattedMathText text={block.text} subject={subject} /></h2>;
-    if (block.kind === "item") return <div className="question-list-item" id={anchors.blockId(block)} key={index}><span>{block.marker}</span><p><FormattedMathText text={block.text} subject={subject} /></p></div>;
-    return <p className="question-paragraph" key={index}>{anchors.sentenceSegments(block.text).map((segment, segmentIndex) => <span id={segment.anchorId} key={segmentIndex}><FormattedMathText text={segment.text} subject={subject} /></span>)}</p>;
-  });
-  return <div className="trainer-prompt"><div className="trainer-prompt-meta">{reason && <span className="trainer-plan-reason">{reason}</span>}{hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}</div><h1 ref={headingRef} tabIndex={-1} id="trainer-title"><FormattedStem text={(layout.isLongReference ? layout.stem : text) || "Задание"} subject={subject} /></h1>{imageAssets.length > 0 && <ImageViewer className="trainer-media" assets={imageAssets} fallbackAlt="Иллюстрация к заданию" />}{layout.isLongReference ? <><button className="prompt-reference-toggle" type="button" aria-controls="trainer-reference" aria-expanded={referenceExpanded} onClick={() => setReferenceExpanded((expanded) => !expanded)}>{referenceExpanded ? "Свернуть текст" : "Развернуть текст"}</button><div id="trainer-reference" ref={referenceRef} tabIndex={-1} className={`prompt-reference prompt-reference-long${referenceExpanded ? " is-expanded" : ""}`}>{renderReference()}</div></> : blocks.filter((block) => block.kind === "table").map((block, index) => block.kind === "table" ? <PromptTable key={index} headerRows={block.headerRows} rows={block.rows} columns={block.columns} subject={subject} /> : null)}<small>{question.topic}</small></div>;
-}
 
 const LIFE_REFILL_INTERVAL_MS = 4 * 60 * 60 * 1000;
 
@@ -194,20 +151,24 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
   if (!question || !state.session) return null;
   const locked = state.phase !== "answering";
   const plan = planProgress(state);
-  const canSubmit = isTrainerAnswerComplete(question, state.draftAnswer);
+  const subject = header?.subject ?? state.session.diagnostic_id;
+  const readiness = answerReadiness(question, state.draftAnswer, subject);
   const isLast = state.currentIndex >= state.session.questions.length;
   const submit = () => {
     dispatch({ type: "submit_answer" });
     if (state.draftAnswer) onAnswer?.(question.id, state.draftAnswer);
   };
-  const subject = header?.subject ?? state.session.diagnostic_id;
-  const trainerInstructions = parseQuestionPrompt(question.prompt).flatMap((block) => block.kind === "instruction" ? [block.text] : []);
-  const textGuidance = question.type === "text" ? textAnswerGuidance(question) : null;
-  const renderedTrainerInstructions = textGuidance && trainerInstructions.length > 0
-    ? [`${trainerInstructions.join(" ")} ${textGuidance}`]
-    : trainerInstructions;
   const modeLabel = header?.modeLabel ?? trainerModeLabel(state.session.mode);
-  const trainerLayout = promptLayout(parseQuestionPrompt(question.prompt));
+  const body = questionBodyModel(question);
+  const scored = state.session.mode !== "mistakes";
+  const livesLeft = state.session.lives_remaining;
+  const barMessage = state.phase === "feedback"
+    ? (isLast ? "Тренировка почти закончена" : "Разбор ниже, дальше следующий вопрос")
+    : state.phase === "awaiting_result"
+      ? "Проверяем ответ"
+      : readiness.isAnswered
+        ? (scored && livesLeft === 1 ? "Это последняя жизнь. Неверный ответ закончит тренировку." : "Готово, можно проверить")
+        : readiness.reason;
   return <section className="screen trainer-screen" aria-labelledby="trainer-title">
     <AssessmentHeader model={{
       topic: `Задание ${Math.min(questionIndex + 1, state.session.questions.length)} из ${state.session.questions.length} · ${question.topic || subject || "Тренажёр"}`,
@@ -219,7 +180,7 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
       titleClassName: "trainer-progress",
       showCount: false,
       exitClassName: "trainer-exit",
-      onReference: trainerLayout.isLongReference ? () => focusPromptReference("trainer-reference") : undefined,
+      onReference: body.layout.isLongReference ? () => focusPromptReference("trainer-reference") : undefined,
       backLabel: labels?.back,
       onBack: () => undefined,
       onExit: () => setConfirmOpen(true),
@@ -230,11 +191,34 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
       {state.session.mode === "normal" && <strong className="trainer-lives" aria-label={`Жизни: ${state.session.lives_remaining}`}>{"♥".repeat(Math.min(5, Math.max(0, state.session.lives_remaining)))}<span className="trainer-lives-empty">{"♥".repeat(Math.max(0, 5 - state.session.lives_remaining))}</span></strong>}
       {plan && <strong className="trainer-plan-progress">План: {plan.completed} из {plan.total}</strong>}
     </div>
-    <QuestionPrompt question={question} subject={subject} reason={planReasonLabel(state, question.id)} />
-    {renderedTrainerInstructions.map((instruction, instructionIndex) => <p className="question-instruction" key={`trainer-instruction-${instructionIndex}`}><FormattedMathText text={instruction} subject={subject} /></p>)}
-    <StructuredAnswerEditor question={question} subject={subject} value={state.draftAnswer} disabled={locked} suppressAutoHint={renderedTrainerInstructions.length > 0} onChange={(answer) => dispatch({ type: "set_answer", answer })} />
-    {state.phase === "feedback" ? <><Feedback state={state} subject={subject} showPrimaryScore={hasApprovedPrimaryScore(question.source)} />{isLast ? <button className="primary-button question-next" type="button" onClick={() => { dispatch({ type: "finish_requested" }); onFinish?.(); }}>Завершить тренировку <span aria-hidden="true">→</span></button> : <button className="primary-button question-next" type="button" onClick={() => dispatch({ type: "next_question" })}>Следующий вопрос <span aria-hidden="true">→</span></button>}</> : <button className="primary-button question-next" type="button" disabled={!canSubmit || state.phase === "awaiting_result"} onClick={submit}>{state.phase === "awaiting_result" ? "Проверяем…" : "Проверить ответ"}<span aria-hidden="true">→</span></button>}
+    <QuestionBody
+      question={question}
+      subject={subject}
+      model={body}
+      idPrefix="trainer"
+      illustrationAlt="Иллюстрация к заданию"
+      meta={(
+        <div className="trainer-prompt-meta">
+          {planReasonLabel(state, question.id) && <span className="trainer-plan-reason">{planReasonLabel(state, question.id)}</span>}
+          {hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}
+        </div>
+      )}
+    />
+    <StructuredAnswerEditor question={question} subject={subject} value={state.draftAnswer} disabled={locked} suppressAutoHint={body.instructions.length > 0} onChange={(answer) => dispatch({ type: "set_answer", answer })} />
+    {state.phase === "feedback" && <Feedback state={state} subject={subject} showPrimaryScore={hasApprovedPrimaryScore(question.source)} />}
     </div>
+    <ActionBar
+      primaryLabel={state.phase === "feedback"
+        ? (isLast ? "Завершить тренировку" : "Следующий вопрос")
+        : state.phase === "awaiting_result" ? "Проверяем…" : "Проверить ответ"}
+      primaryDisabled={state.phase !== "feedback" && (!readiness.isAnswered || state.phase === "awaiting_result")}
+      onPrimary={() => {
+        if (state.phase !== "feedback") { submit(); return; }
+        if (isLast) { dispatch({ type: "finish_requested" }); onFinish?.(); return; }
+        dispatch({ type: "next_question" });
+      }}
+      message={barMessage}
+    />
     <ConfirmSheet open={confirmOpen} onCancel={() => setConfirmOpen(false)} onConfirm={() => { setConfirmOpen(false); onHome?.(); }} />
   </section>;
 }

@@ -282,7 +282,7 @@ describe("trainer integration contracts", () => {
       },
     });
     const html = renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />);
-    expect(html).toContain('class="image-viewer trainer-media"');
+    expect(html).toContain('class="image-viewer question-media"');
     expect(html).toContain('alt="Схема растения"');
     expect(html).toContain("Нажми, чтобы увеличить");
   });

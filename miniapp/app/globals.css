@@ -1512,8 +1512,7 @@ select:disabled {
 }
 
 .question-media,
-.review-media,
-.trainer-media {
+.review-media {
   min-width: 0;
 }
 
@@ -2311,7 +2310,7 @@ select:disabled {
   transform: translate(-50%, calc(-1 * var(--keyboard-inset, 0px)));
 }
 
-.question-screen .question-next {
+.question-action-bar .question-next {
   /* Same border box as the disabled state, so enabling the button cannot move it.
      A whole pixel avoids the half-pixel rounding that shifted it by 1px. */
   border: 2px dashed transparent;
@@ -2323,9 +2322,9 @@ select:disabled {
 /* The disabled button is pinned with transform: none, so the base hover lift would
    raise it by 1px at the exact moment the answer completes. That is the shift this
    bar exists to prevent, only smaller. Press feedback stays. */
-.question-screen .question-next:hover { transform: none; }
+.question-action-bar .question-next:hover { transform: none; }
 
-.question-screen .question-next:disabled {
+.question-action-bar .question-next:disabled {
   border: 2px dashed var(--control-line);
   color: var(--muted);
   background: color-mix(in srgb, var(--brand-ink) 8%, var(--brand-background));
@@ -3070,7 +3069,8 @@ select:disabled {
   width: 100%;
   max-width: 430px;
   margin: 0 auto;
-  padding: 8px 18px calc(30px + env(safe-area-inset-bottom));
+  /* Clears the fixed action bar, the same way the diagnostic worksheet does. */
+  padding: 8px 18px calc(var(--action-bar-height, 180px) + 24px);
   display: flex;
   flex-direction: column;
   gap: 12px;
