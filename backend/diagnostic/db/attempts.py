@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import Any, Literal
 
 from diagnostic.db.core import get_pool
-from diagnostic.db import funnel, gameplay, offer_events
+from diagnostic.db import funnel, gameplay, offer_events, topic_progress
 from diagnostic.session_identity import new_session_generation, session_subject_key
 
 
@@ -221,6 +221,42 @@ async def _materialize_mistakes(connection, completion: AttemptCompletion) -> No
                 completion.user_id, completion.diagnostic_id, question_id,
                 completion.attempt_id, completion.content_version,
             )
+
+
+async def _seed_topic_progress(connection, completion: AttemptCompletion) -> None:
+    """Seed the topic path from a completed diagnostic's immutable snapshot.
+
+    Each correctly answered question masters its topic on the path, so after the
+    onboarding diagnostic the path starts from real progress instead of zero. The
+    result is derived from the already-computed ``is_correct`` in the snapshot, so
+    scoring is untouched. The union is idempotent, so a replay or a superseding
+    completion never double-counts a question.
+    """
+    private_items = completion.report_snapshot.get("review_snapshot")
+    if not isinstance(private_items, list):
+        return
+    correct_by_topic: dict[str, list[str]] = {}
+    for item in private_items:
+        if not isinstance(item, dict):
+            continue
+        question_id = item.get("question_id")
+        topic = item.get("topic")
+        if (
+            item.get("is_correct") is True
+            and isinstance(question_id, str)
+            and isinstance(topic, str)
+            and topic
+        ):
+            correct_by_topic.setdefault(topic, []).append(question_id)
+    if not correct_by_topic:
+        return
+    await topic_progress.seed_topic_progress(
+        connection,
+        user_id=completion.user_id,
+        diagnostic_id=completion.diagnostic_id,
+        content_version=completion.content_version,
+        correct_by_topic=correct_by_topic,
+    )
 
 
 async def mark_opened(user_id: int) -> bool:
@@ -614,6 +650,7 @@ async def complete_attempt(completion: AttemptCompletion):
                     and row["completed_transition"] is True
                 ):
                     await _materialize_mistakes(connection, completion)
+                    await _seed_topic_progress(connection, completion)
             stored_mode = row["mode"]
             stored_subject = row["subject"]
             if stored_mode == "full":

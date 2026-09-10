@@ -84,6 +84,52 @@ async def record_topic_correct(
         )
 
 
+async def seed_topic_progress(
+    connection,
+    *,
+    user_id: int,
+    diagnostic_id: str,
+    content_version: str,
+    correct_by_topic: Mapping[str, Sequence[str]],
+) -> None:
+    """Union each topic's correctly-answered question ids into its mastery set.
+
+    Used to seed the path from a completed diagnostic. The caller owns the
+    transaction, the per-user advisory lock and the erase guard. ``done_at`` is
+    left unstamped on purpose: a quick diagnostic covers only part of a topic, so
+    the path derives ``done`` from ``mastered >= total`` against the full catalog
+    topic instead of a premature stamp.
+    """
+    for topic, question_ids in correct_by_topic.items():
+        ids = [qid for qid in question_ids if isinstance(qid, str) and qid]
+        if not topic or not ids:
+            continue
+        await connection.execute(
+            """
+            INSERT INTO diagnostic_topic_progress (
+                user_id, diagnostic_id, content_version, topic, correct_question_ids
+            ) VALUES ($1,$2,$3,$4, to_jsonb($5::text[]))
+            ON CONFLICT (user_id, diagnostic_id, content_version, topic) DO UPDATE
+               SET correct_question_ids = (
+                       SELECT to_jsonb(array_agg(DISTINCT value))
+                         FROM (
+                             SELECT jsonb_array_elements_text(
+                                        diagnostic_topic_progress.correct_question_ids
+                                    ) AS value
+                             UNION
+                             SELECT unnest($5::text[]) AS value
+                         ) AS merged
+                   ),
+                   updated_at=now()
+            """,
+            user_id,
+            diagnostic_id,
+            content_version,
+            topic,
+            ids,
+        )
+
+
 def _progress_map(rows: Sequence[Mapping[str, Any]]) -> dict[str, TopicProgress]:
     result: dict[str, TopicProgress] = {}
     for row in rows:
