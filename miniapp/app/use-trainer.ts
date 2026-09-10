@@ -35,7 +35,7 @@ export type TrainerSessionState = {
 
 export type TrainerActions = {
   dispatch: Dispatch<TrainerAction>;
-  start(diagnosticId: string, mode?: TrainerMode, sourceAttemptId?: string, topic?: string): Promise<void>;
+  start(diagnosticId: string, mode?: TrainerMode, sourceAttemptId?: string, topic?: string, count?: number): Promise<void>;
   answer(questionId: string, answer: AnswerValue, giveUp?: boolean): Promise<void>;
   finish(): Promise<void>;
   remindLives(): Promise<void>;
@@ -87,6 +87,7 @@ export function useTrainer({
   const mode = useRef<TrainerMode>("normal");
   const sourceAttemptId = useRef<string | null>(null);
   const topic = useRef<string | null>(null);
+  const count = useRef<number | undefined>(undefined);
   const requestGeneration = useRef(0);
   const recoveryMode = useRef<"retry" | "restart">("retry");
 
@@ -95,6 +96,7 @@ export function useTrainer({
     requestedMode: TrainerMode = "normal",
     requestedSourceAttemptId?: string,
     requestedTopic?: string,
+    requestedCount?: number,
   ) => {
     if (!sessionScope || !initData.current) return;
     const selected = bootstrap?.diagnostics.find((item) => item.id === selectedId);
@@ -108,21 +110,25 @@ export function useTrainer({
     mode.current = requestedMode;
     sourceAttemptId.current = requestedMode === "mistakes" ? (requestedSourceAttemptId ?? null) : null;
     topic.current = requestedMode === "mistakes" ? (requestedTopic ?? null) : null;
+    count.current = requestedCount;
     recoveryMode.current = "retry";
     dispatch({ type: "reset" });
     setLivesReminder({ status: "idle" });
     setScreen("trainer");
     try {
+      const requested = requestedCount && requestedCount > 0 ? requestedCount : 5;
       const scope = {
         session_scope: sessionScope,
         diagnostic_id: selected.id,
-        count: Math.min(5, selected.question_count),
+        count: Math.min(requested, selected.question_count),
       };
       const payload = requestedMode === "mistakes" && requestedSourceAttemptId
         ? { ...scope, mode: "mistakes" as const, source_attempt_id: requestedSourceAttemptId, ...(requestedTopic ? { topic: requestedTopic } : {}) }
         : requestedMode === "plan"
           ? { ...scope, mode: "plan" as const }
-          : { ...scope, mode: "normal" as const };
+          : requestedMode === "today"
+            ? { ...scope, mode: "today" as const }
+            : { ...scope, mode: "normal" as const };
       const response = await startTrainer(initData.current, payload);
       if (generation !== requestGeneration.current) return;
       dispatch({ type: "start", response });
@@ -188,7 +194,7 @@ export function useTrainer({
   const retry = useCallback(() => {
     const restart = () => {
       if (diagnosticId.current) {
-        void start(diagnosticId.current, mode.current, sourceAttemptId.current ?? undefined, topic.current ?? undefined);
+        void start(diagnosticId.current, mode.current, sourceAttemptId.current ?? undefined, topic.current ?? undefined, count.current);
       }
     };
     if (recoveryMode.current === "restart" && diagnosticId.current) {

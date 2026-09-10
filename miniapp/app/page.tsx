@@ -21,6 +21,12 @@ import { LeagueScreen } from "./league-screen";
 import { useBootstrap } from "./use-bootstrap";
 import { useDiagnosticSession } from "./use-diagnostic-session";
 import { useTrainer } from "./use-trainer";
+import { useTodaySession } from "./use-today-session";
+import { TodayScreen } from "./today-screen";
+import { TopicPathScreen } from "./topic-path-screen";
+import { ResultsScreen } from "./results-screen";
+import { SessionCompleteScreen } from "./session-complete-screen";
+import { sessionCompleteView, type SessionStartSnapshot } from "./session-complete-model";
 import { isEmptyAnswer } from "./answer-values";
 import { ConfirmSheet } from "./confirm-sheet";
 import type { Brand, DeliveryStatus, PublicDiagnosticSummary, Screen } from "./types";
@@ -79,6 +85,11 @@ export default function Home() {
     setScreen,
     refreshProgress: bootstrapSession.actions.refreshProgress,
   });
+  const { today: todayState, path: pathState, refreshToday, loadPath } = useTodaySession({
+    initData: bootstrapSession.initData,
+    sessionScope: bootstrapSession.sessionScope,
+  });
+  const [startSnapshot, setStartSnapshot] = useState<SessionStartSnapshot | null>(null);
 
   const { bootstrap, error, outsideTelegram, dismissedOfferPlacements, leagueState } = bootstrapSession.state;
   const { dismissOfferPlacement, handleOfferEvent, openLeague } = bootstrapSession.actions;
@@ -130,7 +141,10 @@ export default function Home() {
   const goHome = () => {
     setNavigationIntent(null);
     void bootstrapSession.actions.refreshProgress();
-    if (onboardingComplete) setScreen("home");
+    if (onboardingComplete) {
+      void refreshToday();
+      setScreen("today");
+    }
     else if (bootstrap?.onboarding?.status === "selection") {
       setNavigationSelection((current) => ({ ...current, diagnosticId: null, mode: null }));
       setScreen("subjects");
@@ -269,6 +283,39 @@ export default function Home() {
   const trainerHeader = trainerHeaderView(bootstrap, trainer.state.trainer.session);
   const activeAssessment = screen === "question" || screen === "trainer";
 
+  const readyToday = todayState.kind === "ready" ? todayState.today : null;
+  const startTodaySession = () => {
+    if (!readyToday || readyToday.status !== "ready" || !readyToday.diagnostic_id) return;
+    setStartSnapshot({
+      topic: readyToday.topic,
+      mastered: readyToday.topic_mastered,
+      total: readyToday.topic_total,
+      streakDays: readyToday.streak_days,
+    });
+    void trainer.actions.start(readyToday.diagnostic_id, "today", undefined, undefined, readyToday.size);
+  };
+  const openPath = () => {
+    if (readyToday?.diagnostic_id && readyToday.content_version) {
+      void loadPath(readyToday.diagnostic_id, readyToday.content_version);
+    }
+    setScreen("path");
+  };
+  // Load today's session whenever the home tab is shown without data yet.
+  useEffect(() => {
+    if (screen === "today" && bootstrapSession.sessionScope && todayState.kind === "idle") {
+      void refreshToday();
+    }
+  }, [screen, bootstrapSession.sessionScope, todayState.kind, refreshToday]);
+  // Land the finished daily session on its own completion screen, then refresh
+  // today so the "what grew" panel reads the new mastery and streak.
+  const todaySessionMode = trainer.state.trainer.session?.mode === "today";
+  useEffect(() => {
+    if (screen === "trainer" && todaySessionMode && trainer.state.trainer.phase === "completed") {
+      void refreshToday();
+      setScreen("session-complete");
+    }
+  }, [screen, todaySessionMode, trainer.state.trainer.phase, refreshToday]);
+
   const style = brand ? {
     "--brand-primary": brand.colors.primary,
     "--brand-accent": brand.colors.accent,
@@ -393,10 +440,71 @@ export default function Home() {
         </>
       )}
 
+      {screen === "today" && bootstrap && (
+        todayState.kind === "ready" ? (
+          <TodayScreen
+            today={todayState.today}
+            onStartSession={startTodaySession}
+            onOpenPath={openPath}
+            onStartOnboarding={openNewDiagnostic}
+          />
+        ) : todayState.kind === "error" ? (
+          <section className="screen centered-state" role="alert">
+            <span className="state-icon" aria-hidden="true">✈️</span>
+            <h1>Сессия пока недоступна</h1>
+            <p>Не удалось загрузить сегодняшнюю сессию. Проверь связь и повтори попытку.</p>
+            <button className="primary-button" type="button" onClick={() => void refreshToday()}>Повторить</button>
+          </section>
+        ) : (
+          <section className="screen loading-screen" aria-busy="true" aria-live="polite">
+            <div className="skeleton skeleton-wide" />
+            <div className="skeleton skeleton-card" />
+            <div className="loading-spinner" aria-hidden="true" />
+            <p className="loading-note">Готовим сегодняшнюю сессию…</p>
+          </section>
+        )
+      )}
+
+      {screen === "path" && bootstrap && (
+        pathState.kind === "ready" ? (
+          <TopicPathScreen path={pathState.path} />
+        ) : pathState.kind === "error" ? (
+          <section className="screen centered-state" role="alert">
+            <span className="state-icon" aria-hidden="true">✈️</span>
+            <h1>Путь пока недоступен</h1>
+            <p>Не удалось загрузить путь по темам. Повтори попытку.</p>
+            <button className="primary-button" type="button" onClick={() => { if (readyToday?.diagnostic_id && readyToday.content_version) void loadPath(readyToday.diagnostic_id, readyToday.content_version); }}>Повторить</button>
+          </section>
+        ) : (
+          <section className="screen loading-screen" aria-busy="true" aria-live="polite">
+            <div className="skeleton skeleton-wide" />
+            <div className="skeleton skeleton-card" />
+            <div className="loading-spinner" aria-hidden="true" />
+            <p className="loading-note">Загружаем путь по темам…</p>
+          </section>
+        )
+      )}
+
+      {screen === "results" && bootstrap && (
+        <ResultsScreen
+          results={bootstrap.results}
+          onOpenResult={session.actions.openSavedResult}
+          onStartDiagnostic={openNewDiagnostic}
+        />
+      )}
+
+      {screen === "session-complete" && trainer.state.trainer.finishResult && (
+        <SessionCompleteScreen
+          view={sessionCompleteView(trainer.state.trainer.finishResult, startSnapshot, readyToday)}
+          onHome={goHome}
+          onReview={() => setScreen("results")}
+        />
+      )}
+
       {screen === "profile" && bootstrap && (
         <GameplayProfileScreen
           profile={gameplayProfile}
-          onBack={() => setScreen("home")}
+          onBack={() => { void refreshToday(); setScreen("today"); }}
           onStart={openNewDiagnostic}
         />
       )}
@@ -405,7 +513,7 @@ export default function Home() {
         <LeagueScreen
           state={leagueState}
           onRetry={() => void openLeague()}
-          onHome={() => setScreen(bootstrap?.diagnostics.length ? "home" : "welcome")}
+          onHome={() => setScreen(bootstrap?.diagnostics.length ? "today" : "welcome")}
           onTrain={openTrainer}
         />
       )}
@@ -414,7 +522,7 @@ export default function Home() {
         selectedDiagnostic && <ModeScreen
           diagnostic={selectedDiagnostic}
           labels={bootstrap.school.brand.interface}
-          onBack={() => setScreen(navigationSelection.diagnosticId ? "subjects" : "home")}
+          onBack={() => setScreen(navigationSelection.diagnosticId ? "subjects" : "today")}
           onSelect={(selectedMode) => {
             void session.actions.chooseFormat(selectedMode, selectedDiagnostic);
           }}
@@ -429,7 +537,7 @@ export default function Home() {
           mode={navigationSelection.mode ?? undefined}
           onBack={() => {
             setNavigationIntent(null);
-            setScreen(onboardingComplete ? "home" : "welcome");
+            setScreen(onboardingComplete ? "today" : "welcome");
           }}
           onExam={session.actions.setExam}
           onSelect={(summary) => {
@@ -617,10 +725,10 @@ export default function Home() {
         <BottomNav
           screen={screen}
           onNavigate={(nextScreen) => {
-            if (nextScreen === "home") goHome();
-            else if (nextScreen === "league") void openLeague();
-            else if (nextScreen === "trainer") openTrainer();
-            else setScreen(nextScreen);
+            if (nextScreen === "today") goHome();
+            else if (nextScreen === "path") openPath();
+            else if (nextScreen === "results") setScreen("results");
+            else setScreen("profile");
           }}
         />
       )}

@@ -27,7 +27,7 @@ export type TrainerStartResponse = {
   plan?: TrainerPlanInfo | null;
 };
 
-export type TrainerMode = "normal" | "mistakes" | "plan";
+export type TrainerMode = "normal" | "mistakes" | "plan" | "today";
 
 export type TrainerHeaderView = {
   diagnosticId: string;
@@ -45,6 +45,7 @@ export const TRAINER_MODE_LABELS: Record<TrainerMode, string> = {
   normal: "Тренировка",
   mistakes: "Повтор ошибок",
   plan: "План на сегодня",
+  today: "Сегодняшняя сессия",
 };
 
 export function trainerModeLabel(mode: TrainerMode): string {

@@ -33,11 +33,13 @@ const diagnostic: PublicDiagnostic = {
   }],
 };
 
-const secondDiagnostic: PublicDiagnostic = {
-  ...diagnostic,
-  id: "demo-english",
-  subject: "Английский язык",
-};
+function todayNoDiagnostic() {
+  return { status: "no_diagnostic", diagnostic_id: null, content_version: null, subject: null, exam: null, topic: null, topic_total: 0, topic_mastered: 0, size: 0, estimated_minutes: 0, streak_days: 0, daily_goal: { date: null, target: 3, progress: 0, complete: false }, xp_total: 0, path: [] };
+}
+
+function todayReady(overrides: Record<string, unknown> = {}) {
+  return { status: "ready", diagnostic_id: diagnostic.id, content_version: CONTENT_VERSION, subject: diagnostic.subject, exam: diagnostic.exam, topic: "Тема 1", topic_total: 4, topic_mastered: 1, size: 1, estimated_minutes: 4, streak_days: 4, daily_goal: { date: "2026-09-11", target: 1, progress: 0, complete: false }, xp_total: 100, path: [ { topic: "Тема 0", index: 0, total: 3, mastered: 3, status: "done", done_at: "2026-09-01" }, { topic: "Тема 1", index: 1, total: 4, mastered: 1, status: "current", done_at: null }, { topic: "Тема 2", index: 2, total: 3, mastered: 0, status: "locked", done_at: null } ], ...overrides };
+}
 
 const completedAttempt: ServerAttempt = {
   attempt_id: "attempt-done",
@@ -185,6 +187,12 @@ async function clickAndSettle(selector: string): Promise<void> {
   await act(async () => { click(selector); });
 }
 
+/** Completed diagnostics now live on the Результаты tab, reached from the bottom nav. */
+async function openResults(): Promise<void> {
+  await clickAndSettle(".bottom-nav button:nth-child(3)");
+  await settle();
+}
+
 function screenClasses(): string {
   return [...container.querySelectorAll("section")].map((node) => node.className).join(" | ");
 }
@@ -204,6 +212,7 @@ beforeEach(() => {
     },
   };
   routes = {};
+  routes["/api/diagnostics/today"] = async () => todayNoDiagnostic();
   requestedPaths = [];
   requestedBodies = [];
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -241,7 +250,9 @@ describe("Home screen transitions", () => {
     };
 
     await mountHome();
-    const resultButtons = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+    await settle();
+    await openResults();
+    const resultButtons = [...container.querySelectorAll<HTMLButtonElement>("button.results-card")]
       .filter((button) => button.textContent?.includes("17 из 18"));
     expect(resultButtons).toHaveLength(2);
     await act(async () => resultButtons[0].click());
@@ -258,7 +269,8 @@ describe("Home screen transitions", () => {
     await clickAndSettle(".review-topline .text-back");
     expect(container.querySelector("#review-list-title")?.textContent).toContain("Где ошибся");
     await clickAndSettle(".review-direct-actions .text-back:last-child");
-    const secondResult = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+    await openResults();
+    const secondResult = [...container.querySelectorAll<HTMLButtonElement>("button.results-card")]
       .find((button) => button.textContent?.includes("17 из 18"));
     expect(secondResult).not.toBeUndefined();
     await act(async () => secondResult?.click());
@@ -287,7 +299,9 @@ describe("Home screen transitions", () => {
 
     try {
       await mountHome();
-      const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+      await settle();
+      await openResults();
+      const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.results-card")]
         .find((button) => button.textContent?.includes("15 из 18"));
       expect(resultButton).not.toBeUndefined();
       await act(async () => resultButton?.click());
@@ -316,7 +330,9 @@ describe("Home screen transitions", () => {
     route("/api/diagnostics/catalog", { diagnostic });
 
     await mountHome();
-    const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+    await settle();
+    await openResults();
+    const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.results-card")]
       .find((button) => button.textContent?.includes("0 из 1"));
     expect(resultButton).not.toBeUndefined();
     await act(async () => resultButton?.click());
@@ -350,7 +366,9 @@ describe("Home screen transitions", () => {
     }));
 
     await mountHome();
-    const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+    await settle();
+    await openResults();
+    const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.results-card")]
       .find((button) => button.textContent?.includes("0 из 1"));
     expect(resultButton).not.toBeUndefined();
     await act(async () => resultButton?.click());
@@ -372,7 +390,9 @@ describe("Home screen transitions", () => {
     route("/api/diagnostics/catalog", { diagnostic });
 
     await mountHome();
-    const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+    await settle();
+    await openResults();
+    const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.results-card")]
       .find((button) => button.textContent?.includes("0 из 1"));
     expect(resultButton).not.toBeUndefined();
     await act(async () => resultButton?.click());
@@ -413,16 +433,19 @@ describe("Home screen transitions", () => {
     routes["/api/diagnostics/session/retest-reminder"] = async () => reminder.promise;
 
     await mountHome();
-    const cards = container.querySelectorAll<HTMLButtonElement>(".gameplay-result-card");
+    await settle();
+    await openResults();
+    const cards = container.querySelectorAll<HTMLButtonElement>(".results-card");
     await act(async () => cards[0]?.click());
     await clickAndSettle(".result-actions .secondary-button:last-child");
     await clickAndSettle(".forecast-empty-screen .primary-button");
     await clickAndSettle(".route-action");
     expect(requestedPaths).toContain("/api/diagnostics/session/retest-reminder");
 
-    await clickAndSettle(".plan-home-action");
+    await clickAndSettle(".bottom-nav button:nth-child(1)");
     await settle();
-    const refreshedCards = container.querySelectorAll<HTMLButtonElement>(".gameplay-result-card");
+    await openResults();
+    const refreshedCards = container.querySelectorAll<HTMLButtonElement>(".results-card");
     await act(async () => refreshedCards[1]?.click());
     await clickAndSettle(".result-actions .secondary-button:last-child");
     await clickAndSettle(".forecast-empty-screen .primary-button");
@@ -447,7 +470,9 @@ describe("Home screen transitions", () => {
     );
 
     await mountHome();
-    const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+    await settle();
+    await openResults();
+    const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.results-card")]
       .find((button) => button.textContent?.includes("0 из 1"));
     await act(async () => resultButton?.click());
     await clickAndSettle(".result-actions .secondary-button");
@@ -473,7 +498,9 @@ describe("Home screen transitions", () => {
 
     try {
       await mountHome();
-      const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+      await settle();
+      await openResults();
+      const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.results-card")]
         .find((button) => button.textContent?.includes("17 из 18"));
       expect(resultButton).not.toBeUndefined();
       await act(async () => resultButton?.click());
@@ -512,7 +539,9 @@ describe("Home screen transitions", () => {
 
     try {
       await mountHome();
-      const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+      await settle();
+      await openResults();
+      const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.results-card")]
         .find((button) => button.textContent?.includes("17 из 18"));
       expect(resultButton).not.toBeUndefined();
       await act(async () => resultButton?.click());
@@ -540,7 +569,9 @@ describe("Home screen transitions", () => {
     routes["/api/diagnostics/session/delivery"] = async () => response.promise;
     try {
       await mountHome();
-      const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.secondary-button")]
+      await settle();
+      await openResults();
+      const resultButton = [...container.querySelectorAll<HTMLButtonElement>("button.results-card")]
         .find((button) => button.textContent?.includes("17 из 18"));
       await act(async () => resultButton?.click());
       expect(requestedPaths.filter((path) => path.endsWith("/session/delivery"))).toHaveLength(1);
@@ -591,10 +622,11 @@ describe("Home screen transitions", () => {
     vi.useRealTimers();
     await clickAndSettle(".result-actions .secondary-button:last-child");
     expect(screenClasses()).toContain("route-screen");
+    route("/api/diagnostics/today", todayReady());
     await clickAndSettle(".bottom-nav button:first-child");
-    expect(screenClasses()).toContain("gameplay-home");
-    expect(container.textContent).toContain("1 диагностика завершена");
-    expect(container.textContent).toContain("Задания на сегодня");
+    await settle();
+    expect(screenClasses()).toContain("today-screen");
+    expect(container.querySelector(".today-cta")?.textContent).toContain("Заниматься");
   });
 
   it("resumes persisted selection without showing the dashboard", async () => {
@@ -605,16 +637,17 @@ describe("Home screen transitions", () => {
     expect(container.querySelector("#subject-title")).not.toBeNull();
   });
 
-  it("refreshes completed trainer progress before returning home", async () => {
+  it("refreshes the finished daily session before returning home", async () => {
     const initial = bootstrapPayload({
       onboarding: { status: "completed" },
       progress_profile: { completion_count: 1, achievement_keys: [] },
       gameplay_profile: { xp_total: 0, level: 1, level_progress: 0, streak_days: 0, lives_remaining: 5, daily_goal: { date: null, target: 3, progress: 0, complete: false }, quest: null },
     });
     route("/api/diagnostics/bootstrap", initial);
+    route("/api/diagnostics/today", todayReady());
     route("/api/diagnostics/trainer/start", {
       trainer_session_id: "s".repeat(32), diagnostic_id: diagnostic.id, content_version: CONTENT_VERSION,
-      mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1, status: "active", questions: diagnostic.questions, lives_remaining: 5,
+      mode: "today", question_ids: ["q1"], current_index: 0, revision: 1, status: "active", questions: diagnostic.questions, lives_remaining: 5,
     });
     route("/api/diagnostics/trainer/answer", {
       trainer_session_id: "s".repeat(32), question_id: "q1", is_correct: true, correct_answer: "A", explanation: null,
@@ -625,14 +658,18 @@ describe("Home screen transitions", () => {
       question_count: 1, answered_count: 1, correct_count: 1, xp_earned: 10, lives_spent: 0, lives_remaining: 5,
     });
     await mountHome();
-    await clickAndSettle(".bottom-nav button:nth-child(2)");
+    await settle();
+    await clickAndSettle(".today-cta");
+    await settle();
     await clickAndSettle(".answer-option");
-    route("/api/diagnostics/bootstrap", { ...initial, gameplay_profile: { ...initial.gameplay_profile, xp_total: 10, streak_days: 1 } });
     await clickAndSettle(".question-next");
     await clickAndSettle(".question-next");
-    expect(container.querySelector(".trainer-complete")).not.toBeNull();
-    await clickAndSettle(".trainer-complete button");
-    expect(container.querySelector(".gameplay-dashboard")?.textContent).toContain("10 XP");
+    await settle();
+    expect(container.querySelector(".session-complete")).not.toBeNull();
+    expect(container.textContent).toContain("+10");
+    await clickAndSettle(".session-complete-home");
+    await settle();
+    expect(screenClasses()).toContain("today-screen");
   });
 
   it("opens a persisted result after its diagnostic has left the catalog", async () => {
@@ -641,7 +678,9 @@ describe("Home screen transitions", () => {
       results: [{ ...completedAttempt, diagnostic_id: "removed", exam: "ОГЭ", subject: "Архивный предмет", result: { ...serverResult, diagnostic_id: "removed" } }],
     }));
     await mountHome();
-    await clickAndSettle('[aria-label="Предыдущие результаты"] button');
+    await settle();
+    await openResults();
+    await clickAndSettle(".results-card");
     expect(screenClasses()).toContain("result-screen");
     expect(container.textContent).toContain("Архивный предмет");
     expect(requestedPaths).not.toContain("/api/diagnostics/catalog");
@@ -671,7 +710,8 @@ describe("Home screen transitions", () => {
     }));
 
     await mountHome();
-    expect(screenClasses()).toContain("gameplay-home");
+    await settle();
+    expect(screenClasses()).toContain("today-screen");
     expect(screenClasses()).not.toContain("welcome-screen");
   });
 
@@ -683,9 +723,10 @@ describe("Home screen transitions", () => {
     routes["/api/diagnostics/catalog"] = () => catalog.promise;
 
     await mountHome();
-    expect(screenClasses()).toContain("gameplay-home");
+    await settle();
+    expect(screenClasses()).toContain("today-screen");
 
-    await clickAndSettle(".gameplay-home-cta");
+    await clickAndSettle(".today-cta");
     expect(container.querySelector("#subject-title")).not.toBeNull();
 
     await clickAndSettle(".subject-card");
@@ -710,7 +751,8 @@ describe("Home screen transitions", () => {
     route("/api/diagnostics/catalog", { diagnostic });
 
     await mountHome();
-    await clickAndSettle(".gameplay-home-cta");
+    await settle();
+    await clickAndSettle(".today-cta");
     await clickAndSettle(".subject-card");
     await clickAndSettle(".mode-card.featured");
     await settle();
@@ -748,7 +790,8 @@ describe("Home screen transitions", () => {
     };
 
     await mountHome();
-    await clickAndSettle(".gameplay-home-cta");
+    await settle();
+    await clickAndSettle(".today-cta");
     await clickAndSettle(".subject-card");
     await clickAndSettle(".mode-card.featured");
     await settle();
@@ -757,7 +800,8 @@ describe("Home screen transitions", () => {
     await clickAndSettle(".confirm-sheet .primary-button");
 
     expect(requestedPaths.filter((path) => path.endsWith("/api/diagnostics/session/progress")).length).toBeGreaterThan(0);
-    expect(screenClasses()).toContain("gameplay-home");
+    await settle();
+    expect(screenClasses()).toContain("today-screen");
   });
 
   it("keeps exit open after a progress conflict and retries with the recovered snapshot", async () => {
@@ -794,7 +838,8 @@ describe("Home screen transitions", () => {
     };
 
     await mountHome();
-    await clickAndSettle(".gameplay-home-cta");
+    await settle();
+    await clickAndSettle(".today-cta");
     await clickAndSettle(".subject-card");
     await clickAndSettle(".mode-card.featured");
     await settle();
@@ -809,7 +854,8 @@ describe("Home screen transitions", () => {
 
     await clickAndSettle(".confirm-sheet .primary-button");
     expect(progressCalls).toBe(2);
-    expect(screenClasses()).toContain("gameplay-home");
+    await settle();
+    expect(screenClasses()).toContain("today-screen");
   });
 
   it("resumes autosave after a failed conflict recovery", async () => {
@@ -829,7 +875,8 @@ describe("Home screen transitions", () => {
     };
 
     await mountHome();
-    await clickAndSettle(".gameplay-home-cta");
+    await settle();
+    await clickAndSettle(".today-cta");
     await clickAndSettle(".subject-card");
     await clickAndSettle(".mode-card.featured");
     await settle();
@@ -870,7 +917,8 @@ describe("Home screen transitions", () => {
     });
 
     await mountHome();
-    await clickAndSettle(".gameplay-home-cta");
+    await settle();
+    await clickAndSettle(".today-cta");
     await clickAndSettle(".subject-card");
     await clickAndSettle(".mode-card.featured");
     await settle();
@@ -916,7 +964,8 @@ describe("Home screen transitions", () => {
     routes["/api/diagnostics/session/complete"] = () => completion.promise;
 
     await mountHome();
-    await clickAndSettle(".gameplay-home-cta");
+    await settle();
+    await clickAndSettle(".today-cta");
     await clickAndSettle(".subject-card");
     await clickAndSettle(".mode-card.featured");
     await settle();
@@ -943,7 +992,8 @@ describe("Home screen transitions", () => {
     );
 
     await mountHome();
-    await clickAndSettle(".gameplay-home-cta");
+    await settle();
+    await clickAndSettle(".today-cta");
     await clickAndSettle(".subject-card");
     await clickAndSettle(".mode-card.featured");
     await settle();
@@ -977,7 +1027,8 @@ describe("Home screen transitions", () => {
     routes["/api/diagnostics/session/complete"] = () => completion.promise;
 
     await mountHome();
-    await clickAndSettle(".gameplay-home-cta");
+    await settle();
+    await clickAndSettle(".today-cta");
     await clickAndSettle(".subject-card");
     await clickAndSettle(".mode-card.featured");
     await settle();
@@ -998,40 +1049,16 @@ describe("Home screen transitions", () => {
     });
   });
 
-  it("moves from home into the trainer", async () => {
+  it("moves from the today CTA into the daily session", async () => {
     route("/api/diagnostics/bootstrap", bootstrapPayload({
       progress_profile: { completion_count: 1, achievement_keys: [] },
     }));
-    route("/api/diagnostics/trainer/start", {
-      trainer_session_id: "s".repeat(32),
-      diagnostic_id: "demo-math",
-      content_version: CONTENT_VERSION,
-      mode: "normal",
-      question_ids: ["q1"],
-      current_index: 0,
-      revision: 1,
-      status: "active",
-      questions: diagnostic.questions,
-      lives_remaining: 5,
-    });
-
-    await mountHome();
-    await clickAndSettle(".bottom-nav button:nth-child(2)");
-    await settle();
-
-    expect(screenClasses()).toContain("trainer-screen");
-    expect(requestedPaths).toContain("/api/diagnostics/trainer/start");
-  });
-
-  it("confirms the trainer exit before returning to the home screen", async () => {
-    route("/api/diagnostics/bootstrap", bootstrapPayload({
-      progress_profile: { completion_count: 1, achievement_keys: [] },
-    }));
+    route("/api/diagnostics/today", todayReady());
     route("/api/diagnostics/trainer/start", {
       trainer_session_id: "s".repeat(32),
       diagnostic_id: diagnostic.id,
       content_version: CONTENT_VERSION,
-      mode: "normal",
+      mode: "today",
       question_ids: ["q1"],
       current_index: 0,
       revision: 1,
@@ -1041,7 +1068,37 @@ describe("Home screen transitions", () => {
     });
 
     await mountHome();
-    await clickAndSettle(".bottom-nav button:nth-child(2)");
+    await settle();
+    await clickAndSettle(".today-cta");
+    await settle();
+
+    expect(screenClasses()).toContain("trainer-screen");
+    expect(requestedPaths).toContain("/api/diagnostics/trainer/start");
+    expect(requestedBodies.find(({ path }) => path === "/api/diagnostics/trainer/start")?.body)
+      .toMatchObject({ mode: "today" });
+  });
+
+  it("confirms the trainer exit before returning to the today screen", async () => {
+    route("/api/diagnostics/bootstrap", bootstrapPayload({
+      progress_profile: { completion_count: 1, achievement_keys: [] },
+    }));
+    route("/api/diagnostics/today", todayReady());
+    route("/api/diagnostics/trainer/start", {
+      trainer_session_id: "s".repeat(32),
+      diagnostic_id: diagnostic.id,
+      content_version: CONTENT_VERSION,
+      mode: "today",
+      question_ids: ["q1"],
+      current_index: 0,
+      revision: 1,
+      status: "active",
+      questions: diagnostic.questions,
+      lives_remaining: 5,
+    });
+
+    await mountHome();
+    await settle();
+    await clickAndSettle(".today-cta");
     await settle();
     expect(screenClasses()).toContain("trainer-screen");
 
@@ -1051,183 +1108,19 @@ describe("Home screen transitions", () => {
     expect(screenClasses()).toContain("trainer-screen");
     await clickAndSettle(".trainer-exit");
     await clickAndSettle(".confirm-sheet .primary-button");
-    expect(screenClasses()).toContain("gameplay-home");
-  });
-
-  it("starts the trainer from the latest completed diagnostic instead of the first catalog item", async () => {
-    const latestAttempt: ServerAttempt = {
-      ...completedAttempt,
-      attempt_id: "attempt-latest",
-      diagnostic_id: secondDiagnostic.id,
-      exam: secondDiagnostic.exam,
-      subject: secondDiagnostic.subject,
-      result: { ...serverResult, diagnostic_id: secondDiagnostic.id },
-    };
-    route("/api/diagnostics/bootstrap", bootstrapPayload({
-      diagnostics: [diagnostic, secondDiagnostic],
-      latest_attempt_id: latestAttempt.attempt_id,
-      results: [latestAttempt],
-      progress_profile: { completion_count: 1, achievement_keys: [] },
-    }));
-    route("/api/diagnostics/trainer/start", {
-      trainer_session_id: "s".repeat(32),
-      diagnostic_id: secondDiagnostic.id,
-      content_version: CONTENT_VERSION,
-      mode: "normal",
-      question_ids: ["q1"],
-      current_index: 0,
-      revision: 1,
-      status: "active",
-      questions: secondDiagnostic.questions,
-      lives_remaining: 5,
-    });
-
-    await mountHome();
-    await clickAndSettle(".bottom-nav button:nth-child(2)");
     await settle();
-
-    const startCall = vi.mocked(fetch).mock.calls.find(([path]) => String(path).endsWith("/api/diagnostics/trainer/start"));
-    expect(JSON.parse(String(startCall?.[1]?.body))).toMatchObject({ diagnostic_id: secondDiagnostic.id });
+    expect(screenClasses()).toContain("today-screen");
   });
 
-  it("moves from the home plan CTA into the plan trainer", async () => {
-    route("/api/diagnostics/bootstrap", bootstrapPayload({
-      diagnostics: [diagnostic, secondDiagnostic],
-      progress_profile: { completion_count: 1, achievement_keys: [] },
-      daily_plan: {
-        plan_date: "2026-09-02",
-        diagnostic_id: secondDiagnostic.id,
-        subject: secondDiagnostic.subject,
-        exam: secondDiagnostic.exam,
-        total: 5,
-        completed: 2,
-        status: "ready",
-      },
-    }));
-    let startPayload: unknown;
-    routes["/api/diagnostics/trainer/start"] = async () => ({
-      trainer_session_id: "s".repeat(32),
-      diagnostic_id: secondDiagnostic.id,
-      content_version: CONTENT_VERSION,
-      mode: "plan",
-      question_ids: ["q1"],
-      current_index: 0,
-      revision: 1,
-      status: "active",
-      questions: secondDiagnostic.questions,
-      lives_remaining: 5,
-      plan: { plan_date: "2026-09-02", total: 5, completed: 2, reasons: { q1: "mistake_review" } },
-    });
-    const originalFetch = globalThis.fetch;
-    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      if (String(input).endsWith("/api/diagnostics/trainer/start")) {
-        startPayload = JSON.parse(String(init?.body));
-      }
-      return originalFetch(input, init);
-    }));
-
-    await mountHome();
-    expect(container.querySelector(".gameplay-plan-cta")?.textContent).toContain("Задания на сегодня: 2 из 5");
-
-    await clickAndSettle(".gameplay-plan-cta");
-    await settle();
-
-    expect(screenClasses()).toContain("trainer-screen");
-    expect(startPayload).toMatchObject({ mode: "plan", diagnostic_id: secondDiagnostic.id });
-    expect(container.querySelector(".trainer-progress")?.textContent).toContain("Тема 1");
-    expect(container.textContent).toContain("План: 2 из 5");
-    expect(container.textContent).toContain("повтор ошибки");
-  });
-
-  it("loads the league through the bottom navigation on first visit", async () => {
-    route("/api/diagnostics/bootstrap", bootstrapPayload({ onboarding: { status: "completed" } }));
-    route("/api/diagnostics/league", {
-      status: "active", week_start: "2026-09-07", week_end: "2026-09-13",
-      rows: [{ rank: 1, display_label: "Аня", xp_week: 42, is_me: true }],
-      me: { rank: 1, xp_week: 42 },
-    });
-
-    await mountHome();
-    await clickAndSettle(".bottom-nav button:nth-child(3)");
-    await settle();
-
-    expect(screenClasses()).toContain("league-screen");
-    expect(requestedPaths).toContain("/api/diagnostics/league");
-    expect(container.textContent).toContain("7–13 сентября");
-  });
-
-  it("routes a missing trainer selection through subjects and starts directly", async () => {
-    route("/api/diagnostics/bootstrap", bootstrapPayload({ onboarding: { status: "completed" }, diagnostics: [diagnostic, secondDiagnostic], results: [], progress_profile: { completion_count: 0, achievement_keys: [] } }));
-    route("/api/diagnostics/trainer/start", {
-      trainer_session_id: "s".repeat(32), diagnostic_id: diagnostic.id, content_version: CONTENT_VERSION,
-      mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1, status: "active", questions: diagnostic.questions, lives_remaining: 5,
-    });
-
-    await mountHome();
-    await clickAndSettle(".bottom-nav button:nth-child(2)");
-    expect(container.querySelector("#subject-title")).not.toBeNull();
-    expect(container.querySelector("#mode-title")).toBeNull();
-    await clickAndSettle(".subject-card");
-    await settle();
-
-    expect(container.querySelector("#mode-title")).toBeNull();
-    expect(screenClasses()).toContain("trainer-screen");
-    expect(requestedPaths).toContain("/api/diagnostics/trainer/start");
-  });
-
-  it("clears a cancelled trainer intent before a fresh onboarding selection", async () => {
-    route("/api/diagnostics/bootstrap", bootstrapPayload({
-      onboarding: { status: "welcome" },
-      diagnostics: [diagnostic, secondDiagnostic],
-      results: [],
-      progress_profile: { completion_count: 0, achievement_keys: [] },
-    }));
-    route("/api/diagnostics/onboarding", { status: "selection" });
-
-    await mountHome();
-    await clickAndSettle(".bottom-nav button:nth-child(2)");
-    expect(container.querySelector("#subject-title")).not.toBeNull();
-    await clickAndSettle(".navigation-screen .text-back");
-    expect(container.querySelector("#welcome-title")).not.toBeNull();
-
-    await clickAndSettle(".welcome-screen .primary-button");
-    expect(container.querySelector("#subject-title")).not.toBeNull();
-    await clickAndSettle(".subject-card");
-
-    expect(container.querySelector("#mode-title")).not.toBeNull();
-    expect(container.querySelector(".trainer-screen")).toBeNull();
-    expect(requestedPaths).not.toContain("/api/diagnostics/trainer/start");
-  });
-
-  it("uses the same subject-first start from profile as from home", async () => {
+  it("starts a subject-first diagnostic from the profile tab", async () => {
     route("/api/diagnostics/bootstrap", bootstrapPayload({ onboarding: { status: "completed" } }));
     await mountHome();
+    await settle();
     await clickAndSettle(".bottom-nav button:nth-child(4)");
     expect(screenClasses()).toContain("gameplay-profile");
     await clickAndSettle(".gameplay-profile .primary-button");
 
     expect(container.querySelector("#subject-title")).not.toBeNull();
     expect(container.querySelector("#mode-title")).toBeNull();
-  });
-
-  it("marks the plan done on the home screen once every question is answered", async () => {
-    route("/api/diagnostics/bootstrap", bootstrapPayload({
-      progress_profile: { completion_count: 1, achievement_keys: [] },
-      daily_plan: {
-        plan_date: "2026-09-02",
-        diagnostic_id: "demo-math",
-        subject: "Математика",
-        exam: "ЕГЭ",
-        total: 5,
-        completed: 5,
-        status: "done",
-      },
-    }));
-
-    await mountHome();
-
-    expect(container.querySelector(".gameplay-plan-cta")).toBeNull();
-    expect(container.querySelector(".gameplay-plan-done")?.textContent).toContain("План выполнен");
-    expect(container.querySelector(".gameplay-home-cta")?.className).toContain("primary-button");
   });
 });
