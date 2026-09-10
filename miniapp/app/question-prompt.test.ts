@@ -256,6 +256,22 @@ describe("table blocks", () => {
     expect(blocks[blocks.length - 1]).toEqual({ kind: "instruction", text: "Ответ запишите словом." });
   });
 
+  it("keeps a truth table in one block instead of splitting off its last row", () => {
+    const blocks = parseQuestionPrompt([
+      "Определите, какому столбцу соответствует каждая переменная.",
+      "Переменная 1 | Переменная 2 | Функция",
+      "??? | ??? | F",
+      "1 | ___ | 0",
+      "0 | 1 | 0",
+      "___ | 1 | 0",
+    ].join("\n"));
+
+    const tables = blocks.filter((block) => block.kind === "table");
+    expect(tables).toHaveLength(1);
+    expect(tables[0].kind === "table" && tables[0].headerRows).toHaveLength(2);
+    expect(tables[0].kind === "table" && tables[0].rows).toHaveLength(3);
+  });
+
   it("leaves a lone line with a bar as prose", () => {
     const blocks = parseQuestionPrompt("Задание.\nВыберите a | b как обозначение.");
     expect(blocks.some((block) => block.kind === "table")).toBe(false);

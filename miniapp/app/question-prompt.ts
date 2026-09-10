@@ -69,8 +69,10 @@ function isMarkerCell(value: string): boolean {
   return /^(?:[А-ЯЁA-Z]|\d{1,2})[.)]?$/u.test(value.trim());
 }
 
+// A numbered option carries its own label ("1) увеличилась"). Bare digits are data,
+// so a truth table or a table of measurements must not be split as an option matrix.
 function isOptionMatrixRow(row: string[]): boolean {
-  return row.length >= 2 && row.every((cell) => /^\d[.)]?\s*(?:\S.*)?$/u.test(cell.trim()));
+  return row.length >= 2 && row.every((cell) => /^\d[.)]\s*\S/u.test(cell.trim()));
 }
 
 function tableGroups(rows: string[][]): string[][][] {

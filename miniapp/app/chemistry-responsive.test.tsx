@@ -47,7 +47,7 @@ describe("real chemistry responsive rendering", () => {
   it("uses bounded wrapping rules for formula-heavy content and long choices", () => {
     const css = readFileSync(new URL("./globals.css", import.meta.url), "utf8");
     expect(css).toMatch(/\.question-table-card-cell\s*\{[\s\S]*min-width:\s*0;[\s\S]*overflow-wrap:\s*anywhere;/u);
-    expect(css).toMatch(/\.question-table-scroll\[data-columns="2"\] \.question-table-card\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)/u);
+    expect(css).toMatch(/\.question-table-scroll\[data-columns="2"\] \.question-table-card,[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)/u);
     expect(css).toMatch(/\.matching-answer-option-reference\s*\{[\s\S]*min-width:\s*0;[\s\S]*overflow-wrap:\s*anywhere;/u);
     expect(css).toMatch(/\.matching-answer-option\s*>\s*span\s*\{[\s\S]*overflow-wrap:\s*anywhere;/u);
     expect(css).toMatch(/@media\s*\(max-width:\s*479px\)[\s\S]*\.matching-answer-option-list[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)/u);
