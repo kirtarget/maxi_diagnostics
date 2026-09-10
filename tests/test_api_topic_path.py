@@ -68,6 +68,9 @@ def test_path_endpoint_derives_statuses_from_progress(monkeypatch):
         trainer.topic_progress_store, "get_progress_map",
         AsyncMock(return_value=progress),
     )
+    monkeypatch.setattr(
+        trainer.topic_checkpoints_store, "get_passed_map", AsyncMock(return_value={})
+    )
     client = make_client(monkeypatch)
 
     response = client.post("/api/diagnostics/path", json={
@@ -118,6 +121,9 @@ def test_today_endpoint_describes_the_current_topic(monkeypatch):
         trainer.topic_progress_store, "get_progress_map", AsyncMock(return_value={})
     )
     monkeypatch.setattr(
+        trainer.topic_checkpoints_store, "get_passed_map", AsyncMock(return_value={})
+    )
+    monkeypatch.setattr(
         trainer.attempts, "get_gameplay_profile", AsyncMock(return_value=None)
     )
     client = make_client(monkeypatch)
@@ -165,6 +171,12 @@ def test_today_start_mode_selects_the_current_topic(monkeypatch):
     monkeypatch.setattr(
         trainer.topic_progress_store, "get_progress_map", AsyncMock(return_value={})
     )
+    monkeypatch.setattr(
+        trainer.topic_checkpoints_store, "get_passed_map", AsyncMock(return_value={})
+    )
+    monkeypatch.setattr(
+        trainer.trainer, "get_resumable_session", AsyncMock(return_value=None)
+    )
     start_session = AsyncMock(return_value=(
         {
             "trainer_session_id": "T" * 32,
@@ -209,6 +221,9 @@ def test_today_start_mode_reports_a_complete_path(monkeypatch):
     monkeypatch.setattr(
         trainer.topic_progress_store, "get_progress_map",
         AsyncMock(return_value=everything),
+    )
+    monkeypatch.setattr(
+        trainer.topic_checkpoints_store, "get_passed_map", AsyncMock(return_value={})
     )
     client = make_client(monkeypatch)
 

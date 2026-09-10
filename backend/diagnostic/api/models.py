@@ -92,6 +92,20 @@ class TodayRequest(ApiRequest):
     diagnostic_id: str | None = Field(default=None, min_length=3, max_length=64)
 
 
+class CheckpointStartRequest(ApiRequest):
+    session_scope: str = Field(pattern=r"^[0-9a-f]{24}$")
+    diagnostic_id: str = Field(min_length=3, max_length=64)
+    content_version: str = Field(pattern=r"^[0-9a-f]{64}$")
+    unit_index: int = Field(ge=0, le=200, strict=True)
+
+
+class CheckpointRecordRequest(ApiRequest):
+    session_scope: str = Field(pattern=r"^[0-9a-f]{24}$")
+    trainer_session_id: str = Field(pattern=r"^[A-Za-z0-9_-]{32,64}$")
+    unit_index: int = Field(ge=0, le=200, strict=True)
+    revision: int = Field(ge=1, le=100000, strict=True)
+
+
 class TrainerAnswerRequest(ApiRequest):
     session_scope: str = Field(pattern=r"^[0-9a-f]{24}$")
     trainer_session_id: str = Field(pattern=r"^[A-Za-z0-9_-]{32,64}$")

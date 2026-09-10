@@ -10,6 +10,8 @@ import type {
   DeliveryStatus,
   SavedSession,
   ServerAttempt,
+  CheckpointStartResponse,
+  CheckpointRecordResponse,
   TodaySession,
   TopicPathResponse,
 } from "./types";
@@ -756,6 +758,20 @@ export const loadToday = (
   payload: { session_scope: string; diagnostic_id?: string },
   fetcher: FetchLike = fetch,
 ) => postDiagnostic<TodaySession>("/api/diagnostics/today", initData, payload, fetcher);
+
+/** Start the weekly checkpoint for one unit. The server picks the срез questions. */
+export const startCheckpoint = (
+  initData: string,
+  payload: { session_scope: string; diagnostic_id: string; content_version: string; unit_index: number },
+  fetcher: FetchLike = fetch,
+) => postDiagnostic<CheckpointStartResponse>("/api/diagnostics/checkpoint/start", initData, payload, fetcher);
+
+/** Finish a checkpoint session and record the unit pass. Answer questions via `answerTrainer` first. */
+export const recordCheckpoint = (
+  initData: string,
+  payload: { session_scope: string; trainer_session_id: string; unit_index: number; revision: number },
+  fetcher: FetchLike = fetch,
+) => postDiagnostic<CheckpointRecordResponse>("/api/diagnostics/checkpoint/record", initData, payload, fetcher);
 
 export const answerTrainer = (
   initData: string,

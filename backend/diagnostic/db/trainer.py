@@ -13,9 +13,14 @@ from diagnostic.db.attempts import _raise_if_erased
 from diagnostic.db.core import get_pool
 
 
-#: Modes that spend lives, award XP and advance topic progress. ``mistakes`` is a
-#: free review lane. ``today`` is the daily session over the path's current topic.
+#: Modes that spend lives, award XP and advance topic progress. ``today`` is the
+#: daily session over the path's current topic.
 SCORED_MODES = frozenset({"normal", "plan", "today"})
+
+#: Free lanes: no lives spent, no XP, no path mastery. ``mistakes`` is spaced
+#: review; ``checkpoint`` is the weekly срез whose only side effect is its own
+#: pass record, written by ``diagnostic.db.topic_checkpoints`` after the session.
+FREE_MODES = frozenset({"mistakes", "checkpoint"})
 
 
 def answer_fingerprint(
@@ -311,6 +316,57 @@ async def start_session(
     return _session_payload(row), profile
 
 
+async def start_checkpoint_session(
+    *, session_id: str, user_id: int, diagnostic_id: str, content_version: str,
+    selected_question_ids: list[str],
+) -> tuple[dict[str, Any], Mapping[str, Any]]:
+    """Start (or resume) the checkpoint session for one unit's question set.
+
+    Checkpoint sessions are scoped by their exact question set, which is unique per
+    unit, so a resumed start returns the same session instead of colliding with a
+    different unit's checkpoint the way a mode-only match would.
+    """
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        async with connection.transaction():
+            await connection.execute("SELECT pg_advisory_xact_lock($1)", user_id)
+            await _raise_if_erased(connection, user_id)
+            profile = await gameplay.get_reconciled_profile(connection, user_id)
+            existing = await connection.fetchrow(
+                """
+                SELECT session_id, diagnostic_id, content_version, mode,
+                       source_attempt_id, topic,
+                       selected_question_ids, current_index, revision, status,
+                       started_at, updated_at, completed_at
+                  FROM diagnostic_trainer_sessions
+                 WHERE user_id=$1 AND diagnostic_id=$2 AND content_version=$3
+                   AND mode='checkpoint'
+                   AND status IN ('active', 'exhausted')
+                   AND selected_question_ids = $4::jsonb
+                 ORDER BY updated_at DESC, started_at DESC
+                 LIMIT 1
+                 FOR UPDATE
+                """,
+                user_id, diagnostic_id, content_version, selected_question_ids,
+            )
+            if existing is not None:
+                return _session_payload(existing), profile
+            row = await connection.fetchrow(
+                """
+                INSERT INTO diagnostic_trainer_sessions (
+                    session_id, user_id, diagnostic_id, content_version, mode,
+                    selected_question_ids
+                ) VALUES ($1,$2,$3,$4,'checkpoint',$5::jsonb)
+                RETURNING session_id, diagnostic_id, content_version, mode,
+                          source_attempt_id, topic,
+                          selected_question_ids, current_index, revision, status,
+                          started_at, updated_at, completed_at
+                """,
+                session_id, user_id, diagnostic_id, content_version, selected_question_ids,
+            )
+    return _session_payload(row), profile
+
+
 async def answer_question(
     *, session_id: str, user_id: int, question_id: str, answer: Any,
     revision: int, idempotency_key: str, fingerprint: str, is_correct: bool,
@@ -373,7 +429,7 @@ async def answer_question(
                 raise ValueError("trainer_no_lives")
 
             xp_delta = 10 if is_correct and session["mode"] in SCORED_MODES else 0
-            life_delta = 0 if is_correct or session["mode"] == "mistakes" else -1
+            life_delta = 0 if is_correct or session["mode"] in FREE_MODES else -1
             answer_row = await connection.fetchrow(
                 """
                 INSERT INTO diagnostic_trainer_answers (
@@ -406,7 +462,7 @@ async def answer_question(
                         timezone_name=timezone_name,
                     ),
                 )
-            elif session["mode"] != "mistakes":
+            elif session["mode"] not in FREE_MODES:
                 now = datetime.now(timezone.utc)
                 await connection.execute(
                     """

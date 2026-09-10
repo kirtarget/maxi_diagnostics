@@ -107,6 +107,31 @@ def test_topic_progress_table_is_additive_and_privacy_safe():
         assert forbidden not in progress_ddl.casefold()
 
 
+def test_checkpoint_table_is_additive_and_privacy_safe():
+    start = DDL.index("CREATE TABLE IF NOT EXISTS diagnostic_topic_checkpoints")
+    end = DDL.index("idx_diagnostic_topic_checkpoints_lookup")
+    checkpoint_ddl = DDL[start:end]
+    assert "PRIMARY KEY (user_id, diagnostic_id, content_version, unit_index)" in checkpoint_ddl
+    assert "REFERENCES diagnostic_progress_profiles(user_id) ON DELETE CASCADE" in checkpoint_ddl
+    assert "content_version ~ '^[0-9a-f]{64}$'" in checkpoint_ddl
+    assert "CHECK (correct_count <= question_count)" in checkpoint_ddl
+    # No private answer content ever lands in this table.
+    for forbidden in ("correct_answer", "answers", "init_data", "explanation"):
+        assert forbidden not in checkpoint_ddl.casefold()
+
+
+def test_checkpoint_migration_widens_modes_and_runs_after_earlier_ones():
+    assert "CHECK (mode IN ('normal', 'mistakes', 'plan', 'today', 'checkpoint'))" in DDL
+    assert "2026-09-11-kir-117-checkpoints" in DDL
+    # The checkpoint mode-widening runs after the four-value migrations it relies on.
+    assert DDL.index("2026-09-10-kir-117-today-topic-path") < DDL.index(
+        "2026-09-11-kir-117-checkpoints"
+    )
+    assert DDL.index("CREATE TABLE IF NOT EXISTS diagnostic_topic_checkpoints") < DDL.index(
+        "2026-09-11-kir-117-checkpoints"
+    )
+
+
 def test_today_mode_migration_widens_trainer_modes_after_table_creation():
     assert "CHECK (mode IN ('normal', 'mistakes', 'plan', 'today'))" in DDL
     assert "2026-09-10-kir-117-today-topic-path" in DDL
