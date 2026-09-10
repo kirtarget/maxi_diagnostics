@@ -41,3 +41,8 @@ tmp/
 output/
 .pytest_cache/
 *.tsbuildinfo
+
+# Next.js 16 auto-generates these agent-rules files on `next dev` when an AI agent
+# is detected; keep the injected block out of version control.
+/miniapp/AGENTS.md
+/miniapp/CLAUDE.md
