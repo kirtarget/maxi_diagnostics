@@ -260,7 +260,7 @@ describe("QuestionView", () => {
       current: 2,
       total: 4,
       percent: 50,
-      message: "Набираем темп",
+      message: "",
     });
 
     const html = renderToStaticMarkup(
@@ -286,11 +286,10 @@ describe("QuestionView", () => {
 
     expect(html).toContain('role="progressbar"');
     expect(html).toContain('aria-valuenow="50"');
-    expect(html).toContain('aria-valuetext="Задание 2 из 4. Набираем темп"');
+    expect(html).toContain('aria-valuetext="Задание 2 из 4"');
     expect(html.match(/class="question-progress-node(?: |\")/g)).toHaveLength(4);
     expect(html).toContain("question-progress-node is-current");
     expect(html).toContain("question-progress-node is-complete is-skipped");
-    expect(html).toContain("Набираем темп");
   });
 
   it("shows the subject-and-answer-type chip from the mock", () => {
@@ -473,5 +472,18 @@ describe("QuestionView", () => {
     );
 
     expect(html.indexOf('src="/assets/questions/q9861.png"')).toBeLessThan(html.indexOf("ПРИЗНАК"));
+  });
+
+  it("shows the motivational caption at most once every five tasks", () => {
+    const captions = Array.from({ length: 21 }, (_, index) => questionProgress(index, 21).message);
+    const shown = captions.flatMap((message, index) => message ? [index + 1] : []);
+    expect(shown).toEqual([1, 6, 11, 16, 21]);
+    shown.slice(1).forEach((position, index) => {
+      expect(position - shown[index]).toBeGreaterThanOrEqual(5);
+    });
+    expect(captions[0]).toBe("Стартуем спокойно");
+    expect(captions[20]).toBe("Последний рывок");
+    // A four-task assessment must not repeat it three times over.
+    expect(Array.from({ length: 4 }, (_, index) => questionProgress(index, 4).message).filter(Boolean)).toEqual(["Стартуем спокойно"]);
   });
 });
