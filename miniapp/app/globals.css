@@ -59,6 +59,7 @@ html {
   --success-tint: color-mix(in srgb, var(--success) 13%, white);
   --success-line: color-mix(in srgb, var(--success) 38%, white);
   --danger: var(--brand-signal);
+  --warning: color-mix(in srgb, var(--brand-signal) 55%, var(--brand-accent));
   --info: var(--primary-tint);
 
   --hero-gradient: linear-gradient(165deg, var(--primary-deep), var(--brand-primary));
@@ -3173,6 +3174,52 @@ select:disabled {
 
 .trainer-screen .answer-option.selected:disabled { opacity: 1; }
 
+/* A graded option states its own verdict, so the review must not reuse the
+   "selected" green for a choice the server just called wrong. */
+.answer-option.is-correct,
+.answer-option.is-wrong { opacity: 1; }
+
+.answer-option.is-correct {
+  border: 2px solid var(--success);
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  padding: 12.5px 13.5px;
+}
+
+.answer-option.is-wrong {
+  border: 2px solid var(--brand-signal);
+  background: color-mix(in srgb, var(--brand-signal) 10%, var(--surface));
+  padding: 12.5px 13.5px;
+}
+
+.answer-option.is-correct .option-letter {
+  color: white;
+  background: var(--success);
+}
+
+.answer-option.is-wrong .option-letter {
+  color: white;
+  background: var(--brand-signal);
+}
+
+.answer-option.is-wrong .selection-mark,
+.answer-option.is-wrong .selection-mark.square {
+  border-color: var(--brand-signal);
+  background: var(--brand-signal);
+  box-shadow: inset 0 0 0 3px var(--surface);
+}
+
+.answer-option-verdict {
+  flex: 0 0 auto;
+  align-self: center;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.answer-option.is-correct .answer-option-verdict { color: var(--success); }
+.answer-option.is-wrong .answer-option-verdict { color: var(--brand-signal); }
+
 .trainer-feedback {
   display: flex;
   flex-direction: column;
@@ -3198,6 +3245,58 @@ select:disabled {
   background: var(--brand-accent);
 }
 
+/* A wrong answer scores zero, so its plaque stays neutral instead of lime. */
+.trainer-feedback.is-incorrect .primary-score-badge {
+  color: white;
+  background: color-mix(in srgb, white 22%, transparent);
+}
+
+.trainer-correct-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 1;
+}
+
+.trainer-correct-answer > span {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  opacity: 0.7;
+}
+
+/* The blank a student would actually write on, not a sentence. */
+.trainer-correct-answer > b {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: 12px;
+  color: var(--brand-ink);
+  background: white;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.trainer-feedback-tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trainer-life-note {
+  color: white;
+  background: color-mix(in srgb, var(--brand-signal) 70%, transparent);
+}
+
+.trainer-life-note.is-warning { background: var(--brand-signal); }
+
+.trainer-last-life {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 1;
+}
+
 .trainer-feedback strong::before {
   content: "✓";
   width: 34px;
@@ -3211,11 +3310,19 @@ select:disabled {
   font-weight: 900;
 }
 
-.trainer-feedback.is-wrong strong { color: var(--brand-signal); }
+.trainer-feedback.is-incorrect strong { color: var(--brand-signal); }
 
-.trainer-feedback.is-wrong strong::before {
+.trainer-feedback.is-incorrect strong::before {
   content: "✕";
   background: var(--brand-signal);
+}
+
+/* Partial credit is neither a win nor a loss, and "Почти" with a red cross reads as one. */
+.trainer-feedback.is-partial strong { color: var(--brand-accent); }
+
+.trainer-feedback.is-partial strong::before {
+  content: "≈";
+  background: var(--warning);
 }
 
 .trainer-feedback p {

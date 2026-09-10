@@ -204,6 +204,72 @@ describe("trainer integration contracts", () => {
     expect(html).not.toContain("offer-surface");
   });
 
+  it("marks the correct option green, the wrong pick red, and announces the spent life", () => {
+    let state: TrainerState = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [question], lives_remaining: 3,
+      },
+    });
+    state = trainerReducer(state, { type: "set_answer", answer: "b" });
+    state = trainerReducer(state, { type: "submit_answer" });
+    state = trainerReducer(state, {
+      type: "answer_result",
+      response: {
+        trainer_session_id: "s".repeat(32), question_id: "q1", is_correct: false,
+        correct_answer: "4", explanation: "Проверь сложение.", xp_delta: 0,
+        life_delta: -1, current_index: 1, revision: 2, status: "exhausted", lives_remaining: 2,
+      },
+    });
+    const html = renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />);
+    // option a carries the correct label "4"; option b is what the student picked
+    expect(html).toContain("answer-option is-correct");
+    expect(html).toContain("answer-option selected is-wrong");
+    expect(html).toContain("Правильный ответ");
+    expect(html).toContain("−1 жизнь · осталось 2 жизни");
+    expect(html).toContain("trainer-feedback is-incorrect");
+  });
+
+  it("warns before the last life is gone", () => {
+    let state: TrainerState = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [question], lives_remaining: 2,
+      },
+    });
+    state = trainerReducer(state, { type: "set_answer", answer: "b" });
+    state = trainerReducer(state, { type: "submit_answer" });
+    state = trainerReducer(state, {
+      type: "answer_result",
+      response: {
+        trainer_session_id: "s".repeat(32), question_id: "q1", is_correct: false,
+        correct_answer: "4", explanation: null, xp_delta: 0,
+        life_delta: -1, current_index: 1, revision: 2, status: "exhausted", lives_remaining: 1,
+      },
+    });
+    const html = renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />);
+    expect(html).toContain("Осталась одна жизнь");
+  });
+
+  it("keeps the primary action in the shared bar and explains why it is blocked", () => {
+    const state: TrainerState = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [question], lives_remaining: 5,
+      },
+    });
+    const html = renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />);
+    expect(html).toContain("question-action-bar");
+    expect(html).toContain("question-announcement");
+    expect(html).toContain("Выбери вариант");
+  });
+
   it("shows partial credit as Почти and formats explanation math", () => {
     let state: TrainerState = trainerReducer(trainerInitialState, {
       type: "start",

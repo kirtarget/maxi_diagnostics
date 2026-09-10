@@ -39,7 +39,7 @@ export type QuestionScreenProps = {
   onJumpToQuestion?: (index: number) => void;
 };
 
-export function StructuredAnswerEditor({ question, subject, value, onChange, disabled = false, suppressAutoHint = false, labels }: {
+export function StructuredAnswerEditor({ question, subject, value, onChange, disabled = false, suppressAutoHint = false, labels, correctOptions }: {
   question: Question;
   subject?: string;
   value: AnswerValue | undefined;
@@ -47,6 +47,7 @@ export function StructuredAnswerEditor({ question, subject, value, onChange, dis
   disabled?: boolean;
   suppressAutoHint?: boolean;
   labels?: Partial<AnswerEditorLabels>;
+  correctOptions?: readonly string[];
 }) {
   const tableGap = question.type === "input" ? parseTableGapPrompt(question.prompt, question) : null;
   if (tableGap) {
@@ -56,7 +57,7 @@ export function StructuredAnswerEditor({ question, subject, value, onChange, dis
   if (sequence) {
     return <MatchingAnswer model={matchingModelFromSequence(sequence, subject)} subject={subject} disabled={disabled} onChange={onChange} value={typeof value === "string" ? value : ""} />;
   }
-  return <AnswerEditor question={question} subject={subject} value={value} disabled={disabled} suppressAutoHint={suppressAutoHint} labels={labels} onChange={onChange} />;
+  return <AnswerEditor question={question} subject={subject} value={value} disabled={disabled} suppressAutoHint={suppressAutoHint} labels={labels} correctOptions={correctOptions} onChange={onChange} />;
 }
 
 export type QuestionProgress = {

@@ -29,7 +29,18 @@ export type AnswerEditorProps = {
   disabled?: boolean;
   suppressAutoHint?: boolean;
   labels?: Partial<AnswerEditorLabels>;
+  /** Set once the answer is graded: the options the server called correct. */
+  correctOptions?: readonly string[];
 };
+
+/** Undefined until the answer is graded, so an unanswered option carries no verdict. */
+export type OptionOutcome = "correct" | "wrong";
+
+function optionOutcome(correctOptions: readonly string[] | undefined, optionId: string, selected: boolean): OptionOutcome | undefined {
+  if (!correctOptions) return undefined;
+  if (correctOptions.includes(optionId)) return "correct";
+  return selected ? "wrong" : undefined;
+}
 
 const DEFAULT_LABELS: AnswerEditorLabels = {
   answer: "Твой ответ",
@@ -79,14 +90,14 @@ function optionsAreTheirOwnPosition(options: { label: string }[]): boolean {
 }
 
 
-export function AnswerEditor({ question, subject, value, onChange, disabled = false, suppressAutoHint = false, labels }: AnswerEditorProps) {
+export function AnswerEditor({ question, subject, value, onChange, disabled = false, suppressAutoHint = false, labels, correctOptions }: AnswerEditorProps) {
   const text = { ...DEFAULT_LABELS, ...labels };
   const asText = typeof value === "string" ? value : "";
   if (question.type === "single") {
-    return <SingleEditor question={question} subject={subject} value={asText} disabled={disabled} onChange={onChange} />;
+    return <SingleEditor question={question} subject={subject} value={asText} disabled={disabled} correctOptions={correctOptions} onChange={onChange} />;
   }
   if (question.type === "multiple") {
-    return <MultipleEditor question={question} subject={subject} value={Array.isArray(value) ? value : []} disabled={disabled} onChange={onChange} />;
+    return <MultipleEditor question={question} subject={subject} value={Array.isArray(value) ? value : []} disabled={disabled} correctOptions={correctOptions} onChange={onChange} />;
   }
   if (question.type === "matching") {
     const pairs = value && typeof value === "object" && !Array.isArray(value) ? value : {};
@@ -100,12 +111,13 @@ export function AnswerEditor({ question, subject, value, onChange, disabled = fa
 
 type SelectionMode = "radio" | "checkbox";
 
-function OptionButton({ label, stress, marker, selected, disabled, selectionMode, subject, tabIndex, describedBy, buttonRef, onClick, onKeyDown }: {
+function OptionButton({ label, stress, marker, selected, disabled, outcome, selectionMode, subject, tabIndex, describedBy, buttonRef, onClick, onKeyDown }: {
   label: string;
   stress?: string;
   marker: string;
   selected: boolean;
   disabled: boolean;
+  outcome?: OptionOutcome;
   selectionMode: SelectionMode;
   subject?: string;
   tabIndex?: number;
@@ -123,22 +135,24 @@ function OptionButton({ label, stress, marker, selected, disabled, selectionMode
       tabIndex={tabIndex}
       ref={buttonRef}
       disabled={disabled}
-      className={`answer-option${selected ? " selected" : ""}`}
+      className={`answer-option${selected ? " selected" : ""}${outcome ? ` is-${outcome}` : ""}`}
       onClick={onClick}
       onKeyDown={onKeyDown}
     >
       <span className="option-letter">{marker}</span>
       <span><FormattedMathText text={cleanAnswerLabel(stress ?? label)} subject={subject} /></span>
+      {outcome && <span className="answer-option-verdict">{outcome === "correct" ? "Правильный ответ" : "Твой ответ"}</span>}
       <span className={selectionMode === "checkbox" ? "selection-mark square" : "selection-mark"} aria-hidden="true" />
     </button>
   );
 }
 
-function SingleEditor({ question, subject, value, disabled, onChange }: {
+function SingleEditor({ question, subject, value, disabled, correctOptions, onChange }: {
   question: SingleQuestion;
   subject?: string;
   value: string;
   disabled: boolean;
+  correctOptions?: readonly string[];
   onChange: (value: AnswerValue) => void;
 }) {
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -164,6 +178,7 @@ function SingleEditor({ question, subject, value, disabled, onChange }: {
           marker={markers[index]}
           selected={value === option.id}
           disabled={disabled}
+          outcome={optionOutcome(correctOptions, option.id, value === option.id)}
           selectionMode="radio"
           tabIndex={selectedIndex >= 0 ? (selectedIndex === index ? 0 : -1) : (index === 0 ? 0 : -1)}
           subject={subject}
@@ -176,11 +191,12 @@ function SingleEditor({ question, subject, value, disabled, onChange }: {
   );
 }
 
-function MultipleEditor({ question, subject, value, disabled, onChange }: {
+function MultipleEditor({ question, subject, value, disabled, correctOptions, onChange }: {
   question: MultipleQuestion;
   subject?: string;
   value: string[];
   disabled: boolean;
+  correctOptions?: readonly string[];
   onChange: (value: AnswerValue) => void;
 }) {
   const selectionCountId = `multiple-selection-count-${question.id}`;
@@ -202,6 +218,7 @@ function MultipleEditor({ question, subject, value, disabled, onChange }: {
             marker={markers[index]}
             selected={value.includes(option.id)}
             disabled={disabled}
+            outcome={optionOutcome(correctOptions, option.id, value.includes(option.id))}
             subject={subject}
             selectionMode="checkbox"
             describedBy={selectionCountId}

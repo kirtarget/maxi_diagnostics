@@ -10,6 +10,7 @@ import { FormattedMathText } from "./math-display";
 import { normalizeOffer, OfferSurface, type OfferPlacement, type OfferTelemetryEvent } from "./offer-ux";
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
 import { QuestionBody, questionBodyModel } from "./question-body";
+import { correctOptionIds, lifeNote } from "./trainer-feedback";
 import { focusPromptReference } from "./prompt-layout";
 import { plural } from "./text-utils";
 import type { AnswerValue, Brand, Question, SchoolLinks } from "./types";
@@ -19,6 +20,7 @@ import {
   trainerFeedbackKind,
   trainerModeLabel,
   type TrainerAction,
+  type TrainerMode,
   type TrainerHeaderView,
   type TrainerState,
 } from "./trainer-model";
@@ -104,17 +106,27 @@ function TrainerNoLivesScreen({ nextLifeAt, livesReminder, onRemindLives, onHome
   </section>;
 }
 
-function Feedback({ state, subject, showPrimaryScore }: { state: TrainerState; subject?: string; showPrimaryScore: boolean }) {
+function Feedback({ state, subject, showPrimaryScore, mode }: { state: TrainerState; subject?: string; showPrimaryScore: boolean; mode: TrainerMode }) {
   const result = state.answerResult;
   if (!result) return null;
   const kind = trainerFeedbackKind(result);
   const label = kind === "correct" ? "Верно" : kind === "partial" ? "Почти" : "Неверно";
-  return <aside className={`trainer-feedback ${kind === "correct" ? "is-correct" : "is-wrong"}`} aria-live="polite">
+  const life = lifeNote(result, mode);
+  return <aside className={`trainer-feedback is-${kind}`} aria-live="polite">
     <strong>{label}</strong>
     {showPrimaryScore && <PrimaryScoreBadge maxPrimaryScore={result.max_primary_score} earnedPrimaryScore={result.earned_primary_score} />}
-    {result.correct_answer && <p>Ответ: <FormattedMathText text={result.correct_answer} subject={subject} /></p>}
+    {result.correct_answer && (
+      <p className="trainer-correct-answer">
+        <span>Правильный ответ</span>
+        <b><FormattedMathText text={result.correct_answer} subject={subject} /></b>
+      </p>
+    )}
     {result.explanation && <p><FormattedMathText text={result.explanation} subject={subject} /></p>}
-    {result.xp_delta > 0 && <small>+{result.xp_delta} XP</small>}
+    <div className="trainer-feedback-tally">
+      {result.xp_delta > 0 && <small>+{result.xp_delta} XP</small>}
+      {life && <small className={`trainer-life-note${life.isWarning ? " is-warning" : ""}`} role={life.isWarning ? "alert" : undefined}>{life.text}</small>}
+    </div>
+    {life?.isWarning && result.lives_remaining === 1 && <p className="trainer-last-life">Осталась одна жизнь. Следующий неверный ответ закончит тренировку.</p>}
   </aside>;
 }
 
@@ -204,8 +216,16 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
         </div>
       )}
     />
-    <StructuredAnswerEditor question={question} subject={subject} value={state.draftAnswer} disabled={locked} suppressAutoHint={body.instructions.length > 0} onChange={(answer) => dispatch({ type: "set_answer", answer })} />
-    {state.phase === "feedback" && <Feedback state={state} subject={subject} showPrimaryScore={hasApprovedPrimaryScore(question.source)} />}
+    <StructuredAnswerEditor
+      question={question}
+      subject={subject}
+      value={state.phase === "feedback" ? state.submittedAnswer : state.draftAnswer}
+      disabled={locked}
+      suppressAutoHint={body.instructions.length > 0}
+      correctOptions={state.phase === "feedback" ? correctOptionIds(question, state.answerResult?.correct_answer) : undefined}
+      onChange={(answer) => dispatch({ type: "set_answer", answer })}
+    />
+    {state.phase === "feedback" && <Feedback state={state} subject={subject} showPrimaryScore={hasApprovedPrimaryScore(question.source)} mode={state.session.mode} />}
     </div>
     <ActionBar
       primaryLabel={state.phase === "feedback"
