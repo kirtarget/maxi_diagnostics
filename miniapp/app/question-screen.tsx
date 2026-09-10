@@ -242,7 +242,7 @@ function TableGapAnswer({ matching, onChange, value, disabled = false }: {
                           updateCompactAnswer(value, currentIndex, event.target.value),
                         )}
                       >
-                        <option value="">Выбери…</option>
+                        <option value="">Выбрать вариант</option>
                         {matching.options.map((option) => (
                           <option disabled={!matching.allowReuse && used.has(option.marker)} key={option.marker} value={option.marker}>
                             {option.marker} — {option.label}

@@ -222,6 +222,7 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
       value={state.phase === "feedback" ? state.submittedAnswer : state.draftAnswer}
       disabled={locked}
       suppressAutoHint={body.instructions.length > 0}
+      labels={labels && { answer: labels.answer_label, placeholder: labels.enter_answer, choose: labels.choose_option }}
       correctOptions={state.phase === "feedback" ? correctOptionIds(question, state.answerResult?.correct_answer) : undefined}
       onChange={(answer) => dispatch({ type: "set_answer", answer })}
     />

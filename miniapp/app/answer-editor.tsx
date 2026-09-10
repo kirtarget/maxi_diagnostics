@@ -45,7 +45,7 @@ function optionOutcome(correctOptions: readonly string[] | undefined, optionId: 
 const DEFAULT_LABELS: AnswerEditorLabels = {
   answer: "Твой ответ",
   placeholder: "Введи ответ",
-  choose: "Выбери",
+  choose: "Выбрать вариант",
 };
 
 const STRESS_CONTEXT = /ошибк\p{L}*\s+в\s+постановк\p{L}*\s+ударени\p{L}*.*выделен\p{L}*\s+букв\p{L}*.*ударн\p{L}*\s+гласн/isu;
