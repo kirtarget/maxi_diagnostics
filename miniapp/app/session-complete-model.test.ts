@@ -37,6 +37,8 @@ function today(overrides: Partial<TodaySession>): TodaySession {
     daily_goal: { date: "2026-09-11", target: 1, progress: 1, complete: true },
     xp_total: 320,
     path: [pathNode("Тепловые явления", 7, 12, "current")],
+    checkpoints: [],
+    checkpoint_unit_index: null,
     ...overrides,
   };
 }

@@ -23,6 +23,7 @@ const response: TopicPathResponse = {
     pathNode("Электромагнитные явления", 3, "locked"),
     pathNode("Квантовые явления", 4, "locked"),
   ],
+  checkpoints: [],
 };
 
 describe("TopicPathScreen", () => {

@@ -28,6 +28,8 @@ function today(overrides: Partial<TodaySession> = {}): TodaySession {
       pathNode("Тепловые явления", 1, "current", 7, 12),
       pathNode("Электромагнитные явления", 2, "locked"),
     ],
+    checkpoints: [],
+    checkpoint_unit_index: null,
     ...overrides,
   };
 }
