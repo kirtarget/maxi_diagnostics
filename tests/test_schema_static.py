@@ -125,7 +125,7 @@ def test_trainer_resume_identity_includes_nullable_topic():
     )
     assert "topic IS NOT DISTINCT FROM $6" in " ".join(sql.split())
     assert "2026-09-02-kir-173-daily-plan" in DDL
-    assert "CHECK (mode IN ('normal', 'mistakes', 'plan'))" in DDL
+    assert "CHECK (mode IN ('normal', 'mistakes', 'plan', 'today'))" in DDL
 
 
 def test_daily_plan_migration_runs_after_the_tables_it_alters():

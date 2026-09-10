@@ -537,11 +537,13 @@ BEGIN
     ) THEN
         -- The inline mode CHECK predates the plan trainer mode. Installations created
         -- before this migration carry the two-value version under a generated name.
+        -- The set includes 'today' so this block never re-removes the daily-session
+        -- mode that the later kir-117 migration relies on.
         ALTER TABLE diagnostic_trainer_sessions
             DROP CONSTRAINT IF EXISTS diagnostic_trainer_sessions_mode_check;
         ALTER TABLE diagnostic_trainer_sessions
             ADD CONSTRAINT diagnostic_trainer_sessions_mode_check
-            CHECK (mode IN ('normal', 'mistakes', 'plan'));
+            CHECK (mode IN ('normal', 'mistakes', 'plan', 'today'));
         -- Existing mistakes have never been reviewed, so the column default puts
         -- every one of them at tomorrow, the first interval.
         INSERT INTO diagnostic_schema_migrations(version)
