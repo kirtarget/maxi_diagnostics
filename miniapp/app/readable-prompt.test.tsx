@@ -155,6 +155,12 @@ describe("formulas are formatted as one whole token", () => {
     expect(segments[1]?.anchorId).toBe("prompt-sentence-2");
   });
 
+  it("sizes an index and a state annotation by the rules the audit asked for", () => {
+    const css = readFileSync(resolve(fileURLToPath(new URL("./globals.css", import.meta.url))), "utf8");
+    expect(css).toMatch(/\.math-expression sup,\s*\.math-expression sub \{[^}]*font-size:\s*max\(11px,\s*0\.75em\)/u);
+    expect(css).toMatch(/\.math-annotation \{[^}]*font-size:\s*16px/u);
+  });
+
   it("does not split a formula that carries an index in the middle", () => {
     const parts = tokenizeMathText("Б) HCl (р-р) и Na_(2)S", "Химия").filter((part) => part.isMath);
     expect(parts.map((part) => part.text)).toContain("Na_(2)S");
