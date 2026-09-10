@@ -1,4 +1,5 @@
 import { isValidNumericInput, isValidTextInput } from "./answer-values";
+import { matchingModelFromQuestion, matchingReadiness } from "./matching-answer";
 import { isCompleteSequenceMatchingAnswer, parseSequenceMatchingPrompt } from "./sequence-matching";
 import { isCompleteTableGapAnswer, parseTableGapPrompt } from "./table-gap-matching";
 import type { AnswerValue, Question } from "./types";
@@ -9,7 +10,7 @@ export type AnswerReadiness = {
   reason: string;
 };
 
-export function answerReadiness(question: Question, answer: AnswerValue | undefined): AnswerReadiness {
+export function answerReadiness(question: Question, answer: AnswerValue | undefined, subject?: string): AnswerReadiness {
   switch (question.type) {
     case "single":
       return typeof answer === "string" && answer.length > 0
@@ -21,21 +22,9 @@ export function answerReadiness(question: Question, answer: AnswerValue | undefi
         ? { isAnswered: true, reason: "" }
         : { isAnswered: false, reason: `Выбрано ${selected} из ${question.selection_limit}` };
     }
-    case "matching": {
-      const value = answer
-        && typeof answer === "object"
-        && !Array.isArray(answer)
-          ? answer
-          : {};
-      const missing = question.items.flatMap((item, index) => {
-        if (value[item.id]) return [];
-        const marker = /^\s*([А-ЯЁA-Z0-9]+)(?:[).]|\s|$)/u.exec(item.label)?.[1];
-        return [marker ?? String(index + 1)];
-      });
-      return missing.length === 0
-        ? { isAnswered: true, reason: "" }
-        : { isAnswered: false, reason: `Осталось заполнить: ${missing.join(", ")}` };
-    }
+    case "matching":
+      // The editor owns the markers it draws, so the hint has to ask for those.
+      return matchingReadiness(matchingModelFromQuestion(question, subject), answer);
     case "text":
       return isValidTextInput(answer, question.max_length)
         ? { isAnswered: true, reason: "" }

@@ -108,7 +108,7 @@ export function QuestionView({
   onJumpToQuestion,
 }: QuestionScreenProps) {
   const progress = questionProgress(index, total);
-  const readiness = answerReadiness(question, answer);
+  const readiness = answerReadiness(question, answer, subject);
   const questionAnnouncement = progressAnnouncement || (
     skipped
       ? "Задание пропущено. Можно вернуться и ответить позже."
