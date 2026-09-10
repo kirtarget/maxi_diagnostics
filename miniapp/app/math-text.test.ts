@@ -50,20 +50,18 @@ describe("tokenizeMathText", () => {
     expect(mathDisplayParts("SO_(2)(г)")).toEqual([
       { text: "SO", isSuperscript: false, isSubscript: false },
       { text: "2", isSuperscript: false, isSubscript: true },
-      { text: "(г)", isSuperscript: false, isSubscript: false },
+      { text: "(г)", isSuperscript: false, isSubscript: false, isAnnotation: true },
     ]);
     expect(mathDisplayParts("SO_(2(г))")).toEqual([
       { text: "SO", isSuperscript: false, isSubscript: false },
       { text: "2", isSuperscript: false, isSubscript: true },
-      { text: "(г)", isSuperscript: false, isSubscript: false },
+      { text: "(г)", isSuperscript: false, isSubscript: false, isAnnotation: true },
     ]);
     expect(tokenizeMathText("(NH_(4))_(2)CO_(3)")).toEqual([
-      { text: "(NH_(4))_(2)", isMath: true },
-      { text: "CO_(3)", isMath: true },
+      { text: "(NH_(4))_(2)CO_(3)", isMath: true },
     ]);
     expect(tokenizeMathText("(CH_(3)COO)_(2)Pb")).toEqual([
-      { text: "(CH_(3)COO)_(2)", isMath: true },
-      { text: "Pb", isMath: false },
+      { text: "(CH_(3)COO)_(2)Pb", isMath: true },
     ]);
   });
 

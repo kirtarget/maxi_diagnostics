@@ -20,7 +20,9 @@ export function FormattedMathText({ text, subject }: { text: string; subject?: s
                   ? <sup key={displayIndex}>{displayPart.text}</sup>
                   : displayPart.isSubscript
                     ? <sub key={displayIndex}>{displayPart.text}</sub>
-                    : displayPart.text
+                    : displayPart.isAnnotation
+                      ? <span className="math-annotation" key={displayIndex}>{displayPart.text}</span>
+                      : displayPart.text
               ))}
             </span>
           )

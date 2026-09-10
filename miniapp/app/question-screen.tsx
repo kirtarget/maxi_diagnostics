@@ -311,8 +311,8 @@ export function QuestionView({
         </p>
       ))}
 
-      {layout.isLongReference && layout.stem && (
-        <p className="question-stem-repeat" aria-hidden="true"><FormattedStem text={layout.stem} subject={subject} /></p>
+      {layout.stemRepeat && (
+        <p className="question-stem-repeat" aria-hidden="true"><FormattedStem text={layout.stemRepeat} subject={subject} /></p>
       )}
 
       {tableGap ? (
