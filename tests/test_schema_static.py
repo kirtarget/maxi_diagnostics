@@ -11,6 +11,7 @@ def test_schema_contains_only_starter_tables():
         "diagnostic_funnel_events",
         "diagnostic_notifications",
         "diagnostic_daily_plans",
+        "diagnostic_topic_progress",
         "message_templates",
         "diagnostic_content_drafts",
         "diagnostic_content_audit",
@@ -86,10 +87,33 @@ def test_topic_scoped_trainer_sessions_are_backward_compatible_and_bounded():
     fresh = DDL[start:end]
     assert "topic TEXT" in fresh
     assert "CHECK (topic IS NULL OR length(topic) BETWEEN 1 AND 128)" in fresh
-    assert "CHECK (mode = 'mistakes' OR topic IS NULL)" in fresh
+    assert "CHECK (mode IN ('mistakes', 'today') OR topic IS NULL)" in fresh
     assert "ADD COLUMN IF NOT EXISTS topic TEXT" in fresh
     assert "topic_check" in DDL
     assert "topic_mode_check" in DDL
+
+
+def test_topic_progress_table_is_additive_and_privacy_safe():
+    start = DDL.index("CREATE TABLE IF NOT EXISTS diagnostic_topic_progress")
+    end = DDL.index("idx_diagnostic_topic_progress_lookup")
+    progress_ddl = DDL[start:end]
+    assert "PRIMARY KEY (user_id, diagnostic_id, content_version, topic)" in progress_ddl
+    assert "correct_question_ids JSONB NOT NULL DEFAULT '[]'::jsonb" in progress_ddl
+    assert "done_at TIMESTAMPTZ" in progress_ddl
+    assert "REFERENCES diagnostic_progress_profiles(user_id) ON DELETE CASCADE" in progress_ddl
+    assert "content_version ~ '^[0-9a-f]{64}$'" in progress_ddl
+    # No private answer content ever lands in this table.
+    for forbidden in ("correct_answer", "answers", "init_data", "explanation"):
+        assert forbidden not in progress_ddl.casefold()
+
+
+def test_today_mode_migration_widens_trainer_modes_after_table_creation():
+    assert "CHECK (mode IN ('normal', 'mistakes', 'plan', 'today'))" in DDL
+    assert "2026-09-10-kir-117-today-topic-path" in DDL
+    for table in ("diagnostic_trainer_sessions", "diagnostic_topic_progress"):
+        assert DDL.index("CREATE TABLE IF NOT EXISTS " + table) < DDL.index(
+            "2026-09-10-kir-117-today-topic-path"
+        )
 
 
 def test_trainer_resume_identity_includes_nullable_topic():
