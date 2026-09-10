@@ -304,6 +304,58 @@ export type DailyPlanSummary = {
   status: PlanStatus;
 };
 
+/** One node of the topic path. `done` topics are closed, exactly one is `current`, the rest are `locked`. */
+export type TopicStatus = "done" | "current" | "locked";
+
+export type TopicPathNode = {
+  topic: string;
+  /** Position in codifier order, starting at 0. */
+  index: number;
+  /** Questions of this topic in the diagnostic. */
+  total: number;
+  /** Questions of this topic answered correctly at least once. */
+  mastered: number;
+  status: TopicStatus;
+  /** ISO date the topic was closed, or null while it is open. */
+  done_at: string | null;
+};
+
+/** Ordered topic path for one diagnostic, from `POST /api/diagnostics/path`. */
+export type TopicPathResponse = {
+  diagnostic_id: string;
+  content_version: string;
+  subject: string;
+  exam: string;
+  current_topic: string | null;
+  done_count: number;
+  total_count: number;
+  topics: TopicPathNode[];
+};
+
+export type TodaySessionStatus = "ready" | "path_complete" | "no_diagnostic";
+
+/** Today's session descriptor for the home screen, from `POST /api/diagnostics/today`. */
+export type TodaySession = {
+  status: TodaySessionStatus;
+  diagnostic_id: string | null;
+  content_version: string | null;
+  subject: string | null;
+  exam: string | null;
+  /** The current topic the session trains, or null when the path is complete. */
+  topic: string | null;
+  topic_total: number;
+  topic_mastered: number;
+  /** How many questions the session serves. Start it with `startTrainer(..., { mode: "today", count: size })`. */
+  size: number;
+  estimated_minutes: number;
+  /** Reused gameplay fields so the home card needs no extra call. */
+  streak_days: number;
+  daily_goal: GameplayDailyGoal;
+  xp_total: number;
+  /** The full path, so home can render its preview from one response. */
+  path: TopicPathNode[];
+};
+
 export type BootstrapResponse = {
   onboarding?: { status: "welcome" | "selection" | "completed" };
   catalog_contract: 3 | 4;

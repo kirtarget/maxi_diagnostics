@@ -205,10 +205,10 @@ CREATE TABLE IF NOT EXISTS diagnostic_trainer_sessions (
     completed_at TIMESTAMPTZ,
     CHECK (session_id ~ '^[A-Za-z0-9_-]{32,64}$'),
     CHECK (content_version ~ '^[0-9a-f]{64}$'),
-    CHECK (mode IN ('normal', 'mistakes', 'plan')),
+    CHECK (mode IN ('normal', 'mistakes', 'plan', 'today')),
     CHECK ((mode = 'mistakes') = (source_attempt_id IS NOT NULL)),
     CHECK (topic IS NULL OR length(topic) BETWEEN 1 AND 128),
-    CHECK (mode = 'mistakes' OR topic IS NULL),
+    CHECK (mode IN ('mistakes', 'today') OR topic IS NULL),
     CHECK (status IN ('active', 'completed', 'exhausted')),
     CHECK (jsonb_typeof(selected_question_ids) = 'array'),
     CHECK (jsonb_array_length(selected_question_ids) BETWEEN 1 AND 200),
@@ -244,6 +244,29 @@ CREATE TABLE IF NOT EXISTS diagnostic_trainer_answers (
 );
 CREATE INDEX IF NOT EXISTS idx_diagnostic_trainer_answers_session_revision
     ON diagnostic_trainer_answers(session_id, revision);
+
+-- KIR-117 «путь по темам»: per-user mastery of each codifier topic. One row per
+-- (user, diagnostic, content version, topic); correct_question_ids is the set of
+-- that topic's questions answered correctly at least once, and done_at is stamped
+-- when the set covers the whole topic. The content version is part of the key so a
+-- catalog change begins fresh progress instead of mixing question sets.
+CREATE TABLE IF NOT EXISTS diagnostic_topic_progress (
+    user_id BIGINT NOT NULL REFERENCES diagnostic_progress_profiles(user_id) ON DELETE CASCADE,
+    diagnostic_id TEXT NOT NULL,
+    content_version TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    correct_question_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+    done_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, diagnostic_id, content_version, topic),
+    CHECK (content_version ~ '^[0-9a-f]{64}$'),
+    CHECK (length(topic) BETWEEN 1 AND 128),
+    CHECK (jsonb_typeof(correct_question_ids) = 'array'),
+    CHECK (jsonb_array_length(correct_question_ids) BETWEEN 0 AND 200)
+);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_topic_progress_lookup
+    ON diagnostic_topic_progress(user_id, diagnostic_id, content_version);
 
 CREATE TABLE IF NOT EXISTS diagnostic_mistakes (
     user_id BIGINT NOT NULL REFERENCES diagnostic_progress_profiles(user_id) ON DELETE CASCADE,
@@ -433,7 +456,31 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='diagnostic_trainer_sessions_topic_mode_check') THEN
         ALTER TABLE diagnostic_trainer_sessions
             ADD CONSTRAINT diagnostic_trainer_sessions_topic_mode_check
-            CHECK (mode='mistakes' OR topic IS NULL);
+            CHECK (mode IN ('mistakes', 'today') OR topic IS NULL);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM diagnostic_schema_migrations
+         WHERE version='2026-09-10-kir-117-today-topic-path'
+    ) THEN
+        -- The daily «today» session is a scored trainer mode that carries its
+        -- current topic, so the mode set gains 'today' and the topic-mode rule
+        -- lets 'today' keep a topic like 'mistakes' does.
+        ALTER TABLE diagnostic_trainer_sessions
+            DROP CONSTRAINT IF EXISTS diagnostic_trainer_sessions_mode_check;
+        ALTER TABLE diagnostic_trainer_sessions
+            ADD CONSTRAINT diagnostic_trainer_sessions_mode_check
+            CHECK (mode IN ('normal', 'mistakes', 'plan', 'today'));
+        ALTER TABLE diagnostic_trainer_sessions
+            DROP CONSTRAINT IF EXISTS diagnostic_trainer_sessions_topic_mode_check;
+        ALTER TABLE diagnostic_trainer_sessions
+            ADD CONSTRAINT diagnostic_trainer_sessions_topic_mode_check
+            CHECK (mode IN ('mistakes', 'today') OR topic IS NULL);
+        INSERT INTO diagnostic_schema_migrations(version)
+        VALUES ('2026-09-10-kir-117-today-topic-path');
     END IF;
 END $$;
 
@@ -490,11 +537,13 @@ BEGIN
     ) THEN
         -- The inline mode CHECK predates the plan trainer mode. Installations created
         -- before this migration carry the two-value version under a generated name.
+        -- The set includes 'today' so this block never re-removes the daily-session
+        -- mode that the later kir-117 migration relies on.
         ALTER TABLE diagnostic_trainer_sessions
             DROP CONSTRAINT IF EXISTS diagnostic_trainer_sessions_mode_check;
         ALTER TABLE diagnostic_trainer_sessions
             ADD CONSTRAINT diagnostic_trainer_sessions_mode_check
-            CHECK (mode IN ('normal', 'mistakes', 'plan'));
+            CHECK (mode IN ('normal', 'mistakes', 'plan', 'today'));
         -- Existing mistakes have never been reviewed, so the column default puts
         -- every one of them at tomorrow, the first interval.
         INSERT INTO diagnostic_schema_migrations(version)
