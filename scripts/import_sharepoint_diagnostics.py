@@ -553,6 +553,11 @@ TEXTUAL_REACTION_INTRO = re.compile(
 )
 EXTERNAL_RESOURCE = re.compile(r"https?://|воспользуйтесь файлом|аудиозапис|прослушайте", re.IGNORECASE)
 SEQUENCE_MARKERS = re.compile(r"^[А-ЯЁ]\)", re.MULTILINE)
+LATIN_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+CYRILLIC_LETTERS = "АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ"
+SPELLED_OUT_MARKERS = re.compile(
+    r"последовательность\s+цифр[^\n]{0,80}?соответствующ\w+\s+\w+\s+([A-ZА-ЯЁ]{2,20})"
+)
 # The converter used to append a line telling the student to type the
 # digits together. The app already says what each field wants: `Введи
 # число` under a number box, and cells that need no typing under a
@@ -1222,6 +1227,46 @@ def _numbered_task_options(task: SourceTask) -> list[tuple[str, str]]:
     return choices
 
 
+def _spelled_out_markers(task: SourceTask) -> tuple[str, ...]:
+    """Cells the answer line spells out, as in "…соответствующую заголовкам ABCDEFG".
+
+    Reading tasks keep their paragraph letters inside running text, so no table
+    or option list carries them. The answer line is the only place the document
+    states the cells, and it states them as one alphabet run.
+    """
+    for line in task.prompt_blocks:
+        match = SPELLED_OUT_MARKERS.search(line)
+        if match is None:
+            continue
+        run = match.group(1)
+        alphabet = LATIN_LETTERS if run[0] in LATIN_LETTERS else CYRILLIC_LETTERS
+        start = alphabet.find(run[0])
+        if start >= 0 and run == alphabet[start : start + len(run)]:
+            return tuple(run)
+    return ()
+
+
+def _spelled_out_sequence(task: SourceTask, key: str) -> InputAnswerSpec | None:
+    """A digit per spelled-out cell, chosen from the numbered list in the prompt."""
+    markers = _spelled_out_markers(task)
+    if len(markers) != len(key):
+        return None
+    choices = _flattened_numbered_choices(task) or _numbered_prompt_choices(task)
+    # Without a numbered list there is no palette to offer, so the cells would
+    # have nothing to hold.
+    if not choices or not set(key) <= {marker for marker, _ in choices}:
+        return None
+    return InputAnswerSpec(
+        (key,),
+        sequence=True,
+        answer_format="sequence",
+        answer_length=len(markers),
+        allow_reuse=len(set(key)) != len(key),
+        markers=markers,
+        options=tuple(choices),
+    )
+
+
 def _ordering_sequence(task: SourceTask, key: str) -> InputAnswerSpec | None:
     """Recognize an ordinary ordering key only with source structure to prove it."""
     if not ORDERING_LANGUAGE.search("\n".join(task.prompt_blocks)) or len(key) < 2:
@@ -1762,6 +1807,9 @@ def classify(task: SourceTask) -> tuple[str, AnswerSpec | str]:
             )
 
     if len(parts) == 1 and DIGITS.fullmatch(key):
+        spelled = _spelled_out_sequence(task, key)
+        if spelled is not None:
+            return "input", spelled
         ordering = _ordering_sequence(task, key)
         if ordering is not None:
             return "input", ordering

@@ -2336,3 +2336,83 @@ def test_a_malformed_answer_variants_file_stops_the_import(tmp_path):
         importer.load_answer_variants(path)
 
     assert importer.load_answer_variants(tmp_path / "missing.json") == {}
+
+
+def test_english_headings_to_paragraphs_becomes_a_lettered_sequence():
+    task = importer.SourceTask(
+        number=1,
+        prompt_blocks=[
+            "Установите соответствие заголовков 1–8 абзацам текста А–G. "
+            "Используйте каждую цифру только один раз. В задании одна тема лишняя. "
+            "В ответ запишите последовательность цифр, соответствующую заголовкам ABCDEFG.",
+            "1. The best viewpoints",
+            "2. Plan beforehand",
+            "3. Carnival roots",
+            "4. The time to attend the Carnival",
+            "5. Carnival’s music",
+            "6. Styles of dancing",
+            "7. A music group for a street",
+            "8. The time for pleasure",
+        ],
+        answer=["4358712"],
+    )
+
+    kind, payload = importer.classify(task)
+    assert kind == "input"
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "sequence"
+    assert payload.answer_length == 7
+    assert payload.markers == ("A", "B", "C", "D", "E", "F", "G")
+    assert payload.allow_reuse is False
+    assert [marker for marker, _ in payload.options] == [str(n) for n in range(1, 9)]
+
+
+def test_a_repeated_digit_in_the_key_allows_reuse_across_the_cells():
+    task = importer.SourceTask(
+        number=2,
+        prompt_blocks=[
+            "В ответ запишите последовательность цифр, соответствующую пропускам ABCD.",
+            "1. First",
+            "2. Second",
+            "3. Third",
+        ],
+        answer=["1221"],
+    )
+
+    kind, payload = importer.classify(task)
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "sequence"
+    assert payload.allow_reuse is True
+
+
+def test_spelled_out_markers_without_a_numbered_list_stay_a_number():
+    """Nothing names the digits, so the cells would have no palette to offer."""
+    task = importer.SourceTask(
+        number=23,
+        prompt_blocks=[
+            "Прочитайте текст с пропусками, обозначенными буквами A–G.",
+            "В ответ запишите последовательность цифр. соответствующую пропускам ABCDEFG.",
+        ],
+        answer=["2241241"],
+    )
+
+    kind, payload = importer.classify(task)
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "number"
+
+
+def test_a_marker_run_that_skips_a_letter_is_not_a_cell_list():
+    task = importer.SourceTask(
+        number=5,
+        prompt_blocks=[
+            "В ответ запишите последовательность цифр, соответствующую пунктам ABDE.",
+            "1. First",
+            "2. Second",
+            "3. Third",
+        ],
+        answer=["1231"],
+    )
+
+    kind, payload = importer.classify(task)
+    assert isinstance(payload, importer.InputAnswerSpec)
+    assert payload.answer_format == "number"
