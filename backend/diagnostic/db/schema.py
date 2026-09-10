@@ -205,7 +205,7 @@ CREATE TABLE IF NOT EXISTS diagnostic_trainer_sessions (
     completed_at TIMESTAMPTZ,
     CHECK (session_id ~ '^[A-Za-z0-9_-]{32,64}$'),
     CHECK (content_version ~ '^[0-9a-f]{64}$'),
-    CHECK (mode IN ('normal', 'mistakes', 'plan', 'today')),
+    CHECK (mode IN ('normal', 'mistakes', 'plan', 'today', 'checkpoint')),
     CHECK ((mode = 'mistakes') = (source_attempt_id IS NOT NULL)),
     CHECK (topic IS NULL OR length(topic) BETWEEN 1 AND 128),
     CHECK (mode IN ('mistakes', 'today') OR topic IS NULL),
@@ -267,6 +267,32 @@ CREATE TABLE IF NOT EXISTS diagnostic_topic_progress (
 );
 CREATE INDEX IF NOT EXISTS idx_diagnostic_topic_progress_lookup
     ON diagnostic_topic_progress(user_id, diagnostic_id, content_version);
+
+-- KIR-117 недельный чекпоинт: an immutable record of one passed unit checkpoint.
+-- A unit is a fixed group of consecutive path topics; passing its checkpoint opens
+-- the next unit and starts the once-a-week cooldown. One row per passed
+-- (user, diagnostic, content version, unit); the row is written once and never
+-- rewritten, so a replayed record keeps the first pass. content_version is part of
+-- the key so a catalog change begins a fresh set of units like the topic path does.
+CREATE TABLE IF NOT EXISTS diagnostic_topic_checkpoints (
+    user_id BIGINT NOT NULL REFERENCES diagnostic_progress_profiles(user_id) ON DELETE CASCADE,
+    diagnostic_id TEXT NOT NULL,
+    content_version TEXT NOT NULL,
+    unit_index SMALLINT NOT NULL,
+    session_id TEXT,
+    correct_count SMALLINT NOT NULL DEFAULT 0,
+    question_count SMALLINT NOT NULL DEFAULT 0,
+    passed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, diagnostic_id, content_version, unit_index),
+    CHECK (content_version ~ '^[0-9a-f]{64}$'),
+    CHECK (unit_index >= 0),
+    CHECK (correct_count >= 0),
+    CHECK (question_count >= 0),
+    CHECK (correct_count <= question_count)
+);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_topic_checkpoints_lookup
+    ON diagnostic_topic_checkpoints(user_id, diagnostic_id, content_version);
 
 CREATE TABLE IF NOT EXISTS diagnostic_mistakes (
     user_id BIGINT NOT NULL REFERENCES diagnostic_progress_profiles(user_id) ON DELETE CASCADE,
@@ -698,6 +724,26 @@ BEGIN
         -- the legacy progress profile; new events begin at this migration boundary.
         INSERT INTO diagnostic_schema_migrations(version)
         VALUES ('2026-08-25-kir-91-gameplay-v1');
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM diagnostic_schema_migrations
+         WHERE version='2026-09-11-kir-117-checkpoints'
+    ) THEN
+        -- The weekly checkpoint is a scored-neutral trainer mode, so the mode set
+        -- gains 'checkpoint'. This block runs after the earlier mode-check
+        -- migrations, so it widens the constraint they last set instead of being
+        -- narrowed back to the four-value version.
+        ALTER TABLE diagnostic_trainer_sessions
+            DROP CONSTRAINT IF EXISTS diagnostic_trainer_sessions_mode_check;
+        ALTER TABLE diagnostic_trainer_sessions
+            ADD CONSTRAINT diagnostic_trainer_sessions_mode_check
+            CHECK (mode IN ('normal', 'mistakes', 'plan', 'today', 'checkpoint'));
+        INSERT INTO diagnostic_schema_migrations(version)
+        VALUES ('2026-09-11-kir-117-checkpoints');
     END IF;
 END $$;
 """
