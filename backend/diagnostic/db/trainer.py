@@ -8,13 +8,14 @@ import json
 from typing import Any, Mapping
 
 from diagnostic.daily_plan import plan_date_for
-from diagnostic.db import daily_plan, gameplay
+from diagnostic.db import daily_plan, gameplay, topic_progress
 from diagnostic.db.attempts import _raise_if_erased
 from diagnostic.db.core import get_pool
 
 
-#: Modes that spend lives and award XP. ``mistakes`` is a free review lane.
-SCORED_MODES = frozenset({"normal", "plan"})
+#: Modes that spend lives, award XP and advance topic progress. ``mistakes`` is a
+#: free review lane. ``today`` is the daily session over the path's current topic.
+SCORED_MODES = frozenset({"normal", "plan", "today"})
 
 
 def answer_fingerprint(
@@ -314,6 +315,7 @@ async def answer_question(
     *, session_id: str, user_id: int, question_id: str, answer: Any,
     revision: int, idempotency_key: str, fingerprint: str, is_correct: bool,
     public_feedback: dict[str, str], timezone_name: str = "Europe/Moscow",
+    topic: str | None = None, topic_question_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     pool = await get_pool()
     async with pool.acquire() as connection:
@@ -437,6 +439,18 @@ async def answer_question(
                     diagnostic_id=session["diagnostic_id"],
                     question_id=question_id,
                     is_correct=is_correct,
+                )
+            if is_correct and session["mode"] in SCORED_MODES and topic:
+                # Any scored correct answer masters this question for its topic, so
+                # the path advances no matter which mode drove the answer.
+                await topic_progress.record_topic_correct(
+                    connection,
+                    user_id=user_id,
+                    diagnostic_id=session["diagnostic_id"],
+                    content_version=session["content_version"],
+                    topic=topic,
+                    question_id=question_id,
+                    topic_question_ids=topic_question_ids or [],
                 )
 
             next_index = current_index + 1
