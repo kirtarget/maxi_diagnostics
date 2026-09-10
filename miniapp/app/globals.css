@@ -1935,6 +1935,13 @@ select:disabled {
   flex: 0 0 auto;
 }
 
+/* The chip carries only its number when the wording would not fit inside it.
+   The wording stays in the list above the rows. */
+.matching-answer-option.compact {
+  justify-content: center;
+  font-size: 15px;
+}
+
 .matching-answer-option > span {
   min-width: 0;
   overflow-wrap: anywhere;

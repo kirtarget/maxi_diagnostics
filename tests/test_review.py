@@ -33,16 +33,18 @@ def test_review_snapshot_formats_every_question_type():
     assert snapshot[4]["expected_answer"] == "но / однако"
     assert snapshot[4]["user_answer"] == "зато"
     assert all(item["is_correct"] is False for item in snapshot)
+    # The blank takes the digits the choices are numbered with, so the review
+    # names them the way the answer editor drew them.
     assert snapshot[1]["answer_preview"] == {
         "kind": "multiple",
-        "markers": ["A", "B", "C"],
-        "user": ["A", "B"],
-        "expected": ["A", "C"],
-        "option_labels": {"A": "2/4", "B": "2/3", "C": "3/6"},
+        "markers": ["1", "2", "3"],
+        "user": ["1", "2"],
+        "expected": ["1", "3"],
+        "option_labels": {"1": "2/4", "2": "2/3", "3": "3/6"},
     }
     assert snapshot[2]["answer_preview"] == {
         "kind": "matching",
-        "markers": ["1", "2"],
+        "markers": ["А", "Б"],
         "user": ["1", "2"],
         "expected": ["2", "1"],
         "option_labels": {"1": "6", "2": "4"},
@@ -294,3 +296,22 @@ def test_malformed_nested_preview_is_reduced_to_safe_display_fields():
         },
         "status": "incorrect",
     }]
+
+
+def test_matching_review_names_positions_the_way_the_screen_draws_them():
+    """N-07: the review used to print the Latin «B» and the digit «1» for rows
+    the answer editor draws «В» and «А»."""
+    school = load_school(ROOT / "school")
+    catalog = load_catalog(school)
+    checked = 0
+    for diagnostic in catalog.diagnostics:
+        for question in diagnostic.questions:
+            if question.type != "matching":
+                continue
+            snapshot = build_review_snapshot([question], {question.id: {}})
+            markers = snapshot[0]["answer_preview"]["markers"]
+            assert markers[0] in {"А", "1"}, (question.id, markers)
+            for marker in markers:
+                assert not (len(marker) == 1 and "A" <= marker <= "Z"), (question.id, markers)
+            checked += 1
+    assert checked > 40
