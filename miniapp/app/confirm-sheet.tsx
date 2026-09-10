@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 export type ConfirmSheetProps = {
   open: boolean;
@@ -12,9 +12,11 @@ export type ConfirmSheetProps = {
   cancelLabel?: string;
   confirmDisabled?: boolean;
   messageRole?: "alert";
+  /** Extra content between the message and the actions, e.g. jump links to unanswered questions. */
+  children?: ReactNode;
 };
 
-export function ConfirmSheet({ open, onCancel, onConfirm, title = "Выйти из тренировки?", message = "Прогресс текущего вопроса не сохранится.", confirmLabel = "Выйти", cancelLabel = "Остаться", confirmDisabled = false, messageRole }: ConfirmSheetProps) {
+export function ConfirmSheet({ open, onCancel, onConfirm, title = "Выйти из тренировки?", message = "Прогресс текущего вопроса не сохранится.", confirmLabel = "Выйти", cancelLabel = "Остаться", confirmDisabled = false, messageRole, children }: ConfirmSheetProps) {
   const sheetRef = useRef<HTMLElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const onCancelRef = useRef(onCancel);
@@ -91,6 +93,7 @@ export function ConfirmSheet({ open, onCancel, onConfirm, title = "Выйти и
       >
         <h2 id="confirm-sheet-title">{title}</h2>
         <p role={messageRole}>{message}</p>
+        {children}
         <div className="confirm-sheet-actions">
           <button className="secondary-button" type="button" onClick={cancel}>{cancelLabel}</button>
           <button className="primary-button" type="button" disabled={confirmDisabled} aria-busy={confirmDisabled || undefined} onClick={confirm}>{confirmLabel}</button>

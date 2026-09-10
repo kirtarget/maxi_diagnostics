@@ -1,3 +1,16 @@
+/* The action bar publishes its height here so content, scrolling and the
+   keyboard offset all read one number instead of a hand-tuned constant. */
+html {
+  scroll-padding-bottom: calc(var(--action-bar-height, 180px) + 24px);
+}
+
+.short-answer,
+.short-answer input,
+.short-answer-control input,
+.answer-numeric {
+  scroll-margin-bottom: calc(var(--action-bar-height, 180px) + 24px);
+}
+
 @font-face {
   font-family: "Golos Text";
   font-style: normal;
@@ -1149,7 +1162,8 @@ select:disabled {
   background: var(--brand-ink);
 }
 
-.assessment-header button {
+/* Rail nodes are the one header button that must not grow to the 44px target: they carry it on ::after. */
+.assessment-header button:not(.question-progress-node) {
   flex: 0 0 auto;
   min-width: 44px;
   min-height: 44px;
@@ -1219,6 +1233,59 @@ select:disabled {
   background: transparent;
 }
 
+/* The bar variant clips its fill; the dots rail must not, or it cuts the tap overlay below to 6px. */
+.question-progress-rail.assessment-progress-dots {
+  overflow: visible;
+}
+
+/* Rail nodes double as jump targets: the visible bar stays 6px, the tap area is 44px. */
+.question-progress-jump {
+  position: relative;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+
+.question-progress-jump.is-skipped {
+  border: 1.5px solid var(--brand-accent);
+}
+
+.question-progress-jump::after {
+  content: "";
+  position: absolute;
+  inset: -19px -2px;
+}
+
+.question-progress-jump:disabled {
+  cursor: default;
+}
+
+.question-progress-jump:focus-visible {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 4px;
+}
+
+.submit-review-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.submit-review-jump {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1.5px solid var(--control-line);
+  border-radius: var(--r-pill);
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .question-worksheet {
   flex: 1;
   display: flex;
@@ -1228,7 +1295,7 @@ select:disabled {
   max-width: 430px;
   margin: 0 auto;
   min-height: calc(100dvh - 200px);
-  padding: 26px 22px calc(180px + env(safe-area-inset-bottom));
+  padding: 26px 22px calc(var(--action-bar-height, 180px) + 24px);
   border-radius: 28px 28px 0 0;
   background: var(--paper);
 }
@@ -2309,38 +2376,64 @@ select:disabled {
   width: min(100%, 430px);
   padding: 12px 22px calc(12px + env(safe-area-inset-bottom));
   background: var(--paper);
+  border-top: 1px solid var(--control-line);
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.06);
-  transform: translateX(-50%);
+  /* A fixed element sits under the software keyboard, so lift it by the keyboard inset. */
+  transform: translate(-50%, calc(-1 * var(--keyboard-inset, 0px)));
 }
 
 .question-screen .question-next {
+  /* Same border box as the disabled state, so enabling the button cannot move it.
+     A whole pixel avoids the half-pixel rounding that shifted it by 1px. */
+  border: 2px dashed transparent;
   color: white;
   background: var(--brand-primary);
   box-shadow: none;
 }
 
+/* The disabled button is pinned with transform: none, so the base hover lift would
+   raise it by 1px at the exact moment the answer completes. That is the shift this
+   bar exists to prevent, only smaller. Press feedback stays. */
+.question-screen .question-next:hover { transform: none; }
+
 .question-screen .question-next:disabled {
-  border: 1.5px dashed var(--control-line);
+  border: 2px dashed var(--control-line);
   color: var(--muted);
   background: color-mix(in srgb, var(--brand-ink) 8%, var(--brand-background));
 }
 
 .question-skip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-height: 44px;
+  padding: 0;
   border: 0;
   color: var(--muted);
   background: transparent;
   font: inherit;
+}
+
+/* Kept in the layout so the bar height does not change when the answer becomes complete. */
+.question-skip.is-reserved { visibility: hidden; }
+
+.question-skip-label {
   font-size: 14px;
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
+.question-skip-caption {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
 .question-skip:hover { color: var(--ink); }
 
 .question-announcement {
-  min-height: 20px;
+  min-height: 36px;
   margin: 0;
   color: var(--muted);
   font-size: 14px;

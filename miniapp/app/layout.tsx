@@ -13,6 +13,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   userScalable: true,
+  // Telegram runs the mini app fullscreen, so env(safe-area-inset-*) must resolve
+  // to the real insets instead of 0 for the header and the bottom action bar.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

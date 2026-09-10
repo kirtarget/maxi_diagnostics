@@ -14,6 +14,8 @@ export type AssessmentHeaderModel = {
   announcementRole?: "status" | "alert";
   progressMessage?: string;
   skippedIndexes?: readonly number[];
+  /** When given, the rail nodes become buttons that jump back to a question. */
+  onJumpToQuestion?: (index: number) => void;
   backClassName?: string;
   exitClassName?: string;
   progressClassName?: string;
@@ -60,12 +62,25 @@ export function AssessmentHeader({ model, children }: { model: AssessmentHeaderM
           aria-valuetext={model.progressMessage ?? `${model.topic}. ${progressLabel}`}
         >
           {model.progressVariant === "dots"
-              ? <span className="assessment-progress-dots" aria-hidden="true">{Array.from({ length: model.total }, (_, index) => {
+              ? <span className="assessment-progress-dots" aria-hidden={model.onJumpToQuestion ? undefined : true}>{Array.from({ length: model.total }, (_, index) => {
                 const classes = ["question-progress-node"];
                 if (index < model.current - 1) classes.push("is-complete");
                 if (index === model.current - 1) classes.push("is-current");
-                if (model.skippedIndexes?.includes(index)) classes.push("is-skipped");
-                return <i className={classes.join(" ")} key={index} />;
+                const skipped = model.skippedIndexes?.includes(index);
+                if (skipped) classes.push("is-skipped");
+                if (!model.onJumpToQuestion) return <i className={classes.join(" ")} key={index} />;
+                const visited = index <= model.current - 1;
+                return (
+                  <button
+                    type="button"
+                    className={`${classes.join(" ")} question-progress-jump`}
+                    key={index}
+                    disabled={!visited}
+                    aria-current={index === model.current - 1 ? "step" : undefined}
+                    aria-label={`Задание ${index + 1}${skipped ? ", пропущено" : ""}`}
+                    onClick={() => model.onJumpToQuestion?.(index)}
+                  />
+                );
               })}</span>
             : <span className="assessment-progress-fill" aria-hidden="true" style={{ width: `${model.percent}%` }} />}
         </div>

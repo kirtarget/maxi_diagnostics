@@ -89,7 +89,16 @@ export default function Home() {
   const {
     diagnostic, diagnosticLoad, questions, exam, questionIndex,
     answers, inputDrafts, result, resultDiagnostic, review, reviewIndex, reviewError, syncWarning,
+    skippedQuestionIds, submitReview,
   } = session.state;
+  // A question counts as skipped while the learner has not replaced the skip with a
+  // complete answer, so a half-typed answer does not flip the primary button off.
+  const skippedIds = new Set([
+    ...skippedQuestionIds,
+    ...questions.filter((question) => Object.hasOwn(answers, question.id)
+      && isEmptyAnswer(question, answers[question.id])).map((question) => question.id),
+  ]);
+  const skippedNumbers = questions.flatMap((question, index) => skippedIds.has(question.id) ? [index] : []);
 
   useEffect(() => {
     if (!exam) return;
@@ -441,7 +450,6 @@ export default function Home() {
 
       {screen === "question" && diagnostic && questions[questionIndex] && (
         <>
-          {error && <p className="inline-error" role="alert">{error}</p>}
           <TrainingQuestionView
             question={questions[questionIndex]}
             subject={diagnostic?.subject}
@@ -450,19 +458,15 @@ export default function Home() {
             answer={questions[questionIndex].type === "input" || questions[questionIndex].type === "text"
               ? inputDrafts[questions[questionIndex].id] ?? answers[questions[questionIndex].id]
               : answers[questions[questionIndex].id]}
-            skipped={Object.hasOwn(answers, questions[questionIndex].id)
-              && isEmptyAnswer(questions[questionIndex], answers[questions[questionIndex].id])}
-            skippedIndexes={questions.flatMap((question, questionIndex) => (
-              Object.hasOwn(answers, question.id) && isEmptyAnswer(question, answers[question.id])
-                ? [questionIndex]
-                : []
-            ))}
+            skipped={skippedIds.has(questions[questionIndex].id)}
+            skippedIndexes={skippedNumbers}
+            onJumpToQuestion={session.actions.goToQuestion}
             onAnswer={session.actions.answerQuestion}
             onBack={session.actions.previousQuestion}
             onExit={requestDiagnosticExit}
             progressSaveState={session.state.progressSaveState}
-            progressAnnouncement={syncWarning ?? session.state.progressToast}
-            progressAnnouncementRole={syncWarning ? "alert" : "status"}
+            progressAnnouncement={error ?? syncWarning ?? session.state.progressToast}
+            progressAnnouncementRole={error || syncWarning ? "alert" : "status"}
             onNext={session.actions.nextQuestion}
             onSkip={session.actions.skipQuestion}
             labels={brand!.interface}
@@ -525,6 +529,30 @@ export default function Home() {
           labels={brand?.interface}
         />
       )}
+
+      <ConfirmSheet
+        open={submitReview}
+        title={skippedNumbers.length > 0 ? "Отправить с пропусками?" : "Отправить результат?"}
+        message={skippedNumbers.length > 0
+          ? `Без ответа ${skippedNumbers.length === 1 ? "осталось задание" : "остались задания"} ${skippedNumbers.map((index) => index + 1).join(", ")}. Их можно дозаполнить до отправки.`
+          : "Все задания отвечены. Отправляем на проверку."}
+        confirmLabel="Отправить результат"
+        cancelLabel="Вернуться"
+        onCancel={session.actions.cancelSubmit}
+        onConfirm={session.actions.confirmSubmit}
+      >
+        {skippedNumbers.length > 0 && (
+          <ul className="submit-review-list" aria-label="Задания без ответа">
+            {skippedNumbers.map((index) => (
+              <li key={index}>
+                <button type="button" className="submit-review-jump" onClick={() => session.actions.goToQuestion(index)}>
+                  Задание {index + 1}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </ConfirmSheet>
 
       <ConfirmSheet
         open={diagnosticExitOpen}

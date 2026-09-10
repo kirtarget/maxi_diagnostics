@@ -78,7 +78,10 @@ export function ResultScreen({
   const incorrectCount = Math.max(
     0, result.question_count - result.correct_count - (result.skipped_count ?? 0),
   );
-  const accuracy = result.question_count > 0 ? Math.round(result.correct_count / result.question_count * 100) : 0;
+  // Skipped questions were never answered, so counting them in the denominator
+  // reads as "wrong" next to the breakdown line that says they were skipped.
+  const answeredCount = Math.max(0, result.question_count - (result.skipped_count ?? 0));
+  const accuracy = answeredCount > 0 ? Math.round(result.correct_count / answeredCount * 100) : 0;
   const disclaimer = result.unassessed_part?.includes("не предсказывает")
     ? result.unassessed_part
     : `${result.unassessed_part ? `${result.unassessed_part}. ` : ""}Результат относится только к этим заданиям. Он не предсказывает балл на экзамене и не оценивает весь предмет.`;
@@ -89,7 +92,7 @@ export function ResultScreen({
         <h1 id="result-title">Результат диагностики</h1>
         {result.question_count > 0 && (
           <div className="result-overview" aria-label="Итог тестовой части">
-            {result.mode !== "quick" && <div className="result-score"><span>Точность ответов</span><strong>{accuracy}%</strong><small>в этой диагностике</small></div>}
+            {result.mode !== "quick" && answeredCount > 0 && <div className="result-score"><span>Точность ответов</span><strong>{accuracy}%</strong><small>{result.skipped_count > 0 ? `от ${answeredCount} отвеченных, пропуски не считаем` : "в этой диагностике"}</small></div>}
             <div className="result-correct">
               <span>Верные ответы</span>
               <strong>{result.correct_count} из {result.question_count} верно</strong>

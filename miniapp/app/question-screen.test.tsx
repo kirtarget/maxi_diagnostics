@@ -247,8 +247,10 @@ describe("QuestionView", () => {
     );
 
     expect(available).toContain('class="question-skip"');
-    expect(available).toContain("Не знаю, дальше");
-    expect(skipped).not.toContain('class="question-skip"');
+    expect(available).toContain("Пропустить");
+    expect(available).toContain("Отметим как пропущенное, вернуться можно в любой момент");
+    // The skip keeps its place in the bar so the primary button cannot move under the finger.
+    expect(skipped).toContain('class="question-skip is-reserved"');
     expect(skipped).toContain("Задание пропущено. Можно вернуться и ответить позже.");
     expect(skipped).not.toMatch(/class="primary-button question-next" disabled=""/);
   });
