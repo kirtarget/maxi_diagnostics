@@ -320,6 +320,30 @@ export type TopicPathNode = {
   done_at: string | null;
 };
 
+/**
+ * One weekly-checkpoint node, one per unit of the path.
+ * `locked` until every unit topic is done, then `available`, unless another
+ * checkpoint was passed within the week (`cooldown`); `passed` once cleared.
+ */
+export type CheckpointStatus = "locked" | "available" | "cooldown" | "passed";
+
+/** A unit checkpoint on the path, from `POST /api/diagnostics/path`. */
+export type CheckpointNode = {
+  unit_index: number;
+  /** Inclusive path-index range of the unit's topics. */
+  topic_from: number;
+  topic_to: number;
+  topics: string[];
+  status: CheckpointStatus;
+  /** ISO instant the cooldown lifts, or null when not throttled. */
+  available_at: string | null;
+  /** ISO instant the checkpoint was passed, or null. */
+  passed_at: string | null;
+  /** How many срез questions were answered right (named to avoid the `correct` key). */
+  mastered_count: number | null;
+  question_total: number | null;
+};
+
 /** Ordered topic path for one diagnostic, from `POST /api/diagnostics/path`. */
 export type TopicPathResponse = {
   diagnostic_id: string;
@@ -330,9 +354,11 @@ export type TopicPathResponse = {
   done_count: number;
   total_count: number;
   topics: TopicPathNode[];
+  /** One node per unit; the path screen renders these as real nodes. */
+  checkpoints: CheckpointNode[];
 };
 
-export type TodaySessionStatus = "ready" | "path_complete" | "no_diagnostic";
+export type TodaySessionStatus = "ready" | "checkpoint" | "path_complete" | "no_diagnostic";
 
 /** Today's session descriptor for the home screen, from `POST /api/diagnostics/today`. */
 export type TodaySession = {
@@ -354,6 +380,42 @@ export type TodaySession = {
   xp_total: number;
   /** The full path, so home can render its preview from one response. */
   path: TopicPathNode[];
+  /** One node per unit; mirrors the `/path` checkpoints. */
+  checkpoints: CheckpointNode[];
+  /** The unit whose checkpoint is available or in cooldown, when `status` is `checkpoint`. */
+  checkpoint_unit_index: number | null;
+};
+
+/** A started checkpoint session, from `POST /api/diagnostics/checkpoint/start`. */
+export type CheckpointStartResponse = {
+  ok: true;
+  trainer_session_id: string;
+  diagnostic_id: string;
+  content_version: string;
+  mode: "checkpoint";
+  topic: string | null;
+  source_attempt_id: string | null;
+  question_ids: string[];
+  current_index: number;
+  revision: number;
+  status: "active" | "exhausted" | "completed";
+  unit_index: number;
+  /** Answer each with `answerTrainer(...)`; scoring stays on the server. */
+  questions: Question[];
+  lives_remaining: number;
+  next_life_at: string | null;
+};
+
+/** The checkpoint outcome, from `POST /api/diagnostics/checkpoint/record`. */
+export type CheckpointRecordResponse = {
+  ok: true;
+  passed: boolean;
+  unit_index: number;
+  mastered_count: number;
+  question_total: number;
+  /** The unit's checkpoint node after recording, or null if the unit vanished. */
+  checkpoint: CheckpointNode | null;
+  checkpoints: CheckpointNode[];
 };
 
 export type BootstrapResponse = {
