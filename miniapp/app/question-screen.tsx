@@ -1,18 +1,11 @@
 import { ActionBar } from "./action-bar";
 import { answerReadiness } from "./answer-readiness";
-import { AnswerEditor, textAnswerGuidance, type AnswerEditorLabels } from "./answer-editor";
+import { AnswerEditor, type AnswerEditorLabels } from "./answer-editor";
 import { AnswerPreview, MatchingAnswer, matchingModelFromSequence } from "./matching-answer";
-import { FormattedMathText, FormattedStem } from "./math-display";
 import { isValidNumericInput, isValidTextInput, updateCompactAnswer } from "./answer-values";
-import { questionAssetPaths } from "./question-assets";
-import { ImageViewer } from "./image-viewer";
-import { PromptTable } from "./prompt-table";
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
-import {
-  answerTypeLabel,
-  parseQuestionPrompt,
-  questionTitleClassName,
-} from "./question-prompt";
+import { answerTypeLabel } from "./question-prompt";
+import { QuestionBody, questionBodyModel } from "./question-body";
 import {
   isCompleteSequenceMatchingAnswer,
   parseSequenceMatchingPrompt,
@@ -22,9 +15,8 @@ import {
   parseTableGapPrompt,
   type TableGapPrompt,
 } from "./table-gap-matching";
-import { useEffect, useRef, useState } from "react";
 import { AssessmentHeader } from "./assessment-header";
-import { createPromptAnchorAllocator, focusPromptReference, promptLayout } from "./prompt-layout";
+import { focusPromptReference } from "./prompt-layout";
 import type { AnswerValue, Brand, Question } from "./types";
 
 export type QuestionScreenProps = {
@@ -47,7 +39,7 @@ export type QuestionScreenProps = {
   onJumpToQuestion?: (index: number) => void;
 };
 
-export function StructuredAnswerEditor({ question, subject, value, onChange, disabled = false, suppressAutoHint = false, labels }: {
+export function StructuredAnswerEditor({ question, subject, value, onChange, disabled = false, suppressAutoHint = false, labels, correctOptions }: {
   question: Question;
   subject?: string;
   value: AnswerValue | undefined;
@@ -55,6 +47,7 @@ export function StructuredAnswerEditor({ question, subject, value, onChange, dis
   disabled?: boolean;
   suppressAutoHint?: boolean;
   labels?: Partial<AnswerEditorLabels>;
+  correctOptions?: readonly string[];
 }) {
   const tableGap = question.type === "input" ? parseTableGapPrompt(question.prompt, question) : null;
   if (tableGap) {
@@ -64,7 +57,7 @@ export function StructuredAnswerEditor({ question, subject, value, onChange, dis
   if (sequence) {
     return <MatchingAnswer model={matchingModelFromSequence(sequence, subject)} subject={subject} disabled={disabled} onChange={onChange} value={typeof value === "string" ? value : ""} />;
   }
-  return <AnswerEditor question={question} subject={subject} value={value} disabled={disabled} suppressAutoHint={suppressAutoHint} labels={labels} onChange={onChange} />;
+  return <AnswerEditor question={question} subject={subject} value={value} disabled={disabled} suppressAutoHint={suppressAutoHint} labels={labels} correctOptions={correctOptions} onChange={onChange} />;
 }
 
 export type QuestionProgress = {
@@ -114,40 +107,17 @@ export function QuestionView({
       ? "Задание пропущено. Можно вернуться и ответить позже."
       : readiness.isAnswered ? "Готово, можно дальше" : readiness.reason
   );
-  const imagePaths = questionAssetPaths(question);
-  const promptBlocks = parseQuestionPrompt(question.prompt);
-  const layout = promptLayout(promptBlocks);
-  const anchors = createPromptAnchorAllocator();
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  const referenceRef = useRef<HTMLDivElement>(null);
-  const [referenceExpanded, setReferenceExpanded] = useState(false);
-  useEffect(() => {
-    setReferenceExpanded(false);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-    headingRef.current?.focus({ preventScroll: true });
-  }, [question.id]);
+  const body = questionBodyModel(question);
+  const layout = body.layout;
   const focusReference = () => {
     focusPromptReference("question-reference");
   };
-  const instructions = promptBlocks.flatMap((block) => block.kind === "instruction" ? [block.text] : []);
-  const textGuidance = question.type === "text" ? textAnswerGuidance(question) : null;
-  const renderedInstructions = textGuidance && instructions.length > 0
-    ? [`${instructions.join(" ")} ${textGuidance}`]
-    : instructions;
   const sequenceMatching = question.type === "input"
     ? parseSequenceMatchingPrompt(question.prompt, question)
     : null;
   const tableGap = question.type === "input"
     ? parseTableGapPrompt(question.prompt, question)
     : null;
-  const questionMedia = imagePaths.length > 0 && (
-    <ImageViewer
-      className="question-media"
-      assets={imagePaths.map((path) => ({ path, alt: question.asset_alt }))}
-      fallbackAlt={labels.illustration_alt}
-    />
-  );
 
   return (
     <section className="screen question-screen" aria-labelledby="question-title">
@@ -171,65 +141,19 @@ export function QuestionView({
         }} />
       </div>
       <div className="question-worksheet">
-      <div className="question-meta">
-        <span className="question-type-chip">{subject ?? question.topic} · {answerTypeLabel(question)}</span>
-        {hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}
-      </div>
-      <div className="question-copy">
-        <h1 ref={headingRef} tabIndex={-1} id="question-title" className={layout.stem ? questionTitleClassName(layout.stem) : "question-title"}>
-          <FormattedStem text={layout.stem ?? "Задание"} subject={subject} />
-        </h1>
-        {questionMedia}
-        {layout.isLongReference && (
-          <button className="prompt-reference-toggle" type="button" aria-controls="question-reference" aria-expanded={referenceExpanded} onClick={() => setReferenceExpanded((expanded) => !expanded)}>
-            {referenceExpanded ? "Свернуть текст" : "Развернуть текст"}
-          </button>
+      <QuestionBody
+        question={question}
+        subject={subject}
+        model={body}
+        idPrefix="question"
+        illustrationAlt={labels.illustration_alt}
+        meta={(
+          <div className="question-meta">
+            <span className="question-type-chip">{subject ?? question.topic} · {answerTypeLabel(question)}</span>
+            {hasApprovedPrimaryScore(question.source) && <PrimaryScoreBadge maxPrimaryScore={question.max_primary_score} />}
+          </div>
         )}
-        <div id="question-reference" ref={referenceRef} tabIndex={-1} className={`prompt-reference${layout.isLongReference ? " prompt-reference-long" : ""}${referenceExpanded ? " is-expanded" : ""}`}>
-        {layout.referenceBlocks.map((block, blockIndex) => {
-          if (tableGap) return null;
-          if (sequenceMatching && (block.kind === "item" || block.kind === "heading" || block.kind === "table")) {
-            return null;
-          }
-          if (
-            sequenceMatching
-            && block.kind === "paragraph"
-            && sequenceMatching.left.some((item) => item.marker === block.text)
-          ) return null;
-          if (block.kind === "heading") {
-            return <h2 id={anchors.blockId(block)} className="question-section-title" key={blockIndex}><FormattedMathText text={block.text} subject={subject} /></h2>;
-          }
-          if (block.kind === "item") {
-            return (
-              <div className="question-list-item" id={anchors.blockId(block)} key={blockIndex}>
-                <span>{block.marker}</span>
-                <p><FormattedMathText text={block.text} subject={subject} /></p>
-              </div>
-            );
-          }
-          if (block.kind === "table") {
-            return <div id={anchors.blockId(block)} key={blockIndex}><PromptTable headerRows={block.headerRows} rows={block.rows} columns={block.columns} subject={subject} /></div>;
-          }
-          return (
-            <p className="question-paragraph" key={blockIndex}>
-              {anchors.sentenceSegments(block.text).map((segment, segmentIndex) => (
-                <span id={segment.anchorId} key={segmentIndex}><FormattedMathText text={segment.text} subject={subject} /></span>
-              ))}
-            </p>
-          );
-        })}
-        </div>
-      </div>
-
-      {renderedInstructions.length > 0 && renderedInstructions.map((instruction, instructionIndex) => (
-        <p className="question-instruction" key={`instruction-${instructionIndex}`}>
-          <FormattedMathText text={instruction} subject={subject} />
-        </p>
-      ))}
-
-      {layout.stemRepeat && (
-        <p className="question-stem-repeat" aria-hidden="true"><FormattedStem text={layout.stemRepeat} subject={subject} /></p>
-      )}
+      />
 
       {tableGap ? (
         <TableGapAnswer matching={tableGap} onChange={onAnswer} value={typeof answer === "string" ? answer : ""} />
@@ -241,7 +165,7 @@ export function QuestionView({
           subject={subject}
           value={answer}
           onChange={onAnswer}
-          suppressAutoHint={renderedInstructions.length > 0}
+          suppressAutoHint={body.instructions.length > 0}
           labels={{
             answer: labels.answer_label,
             placeholder: labels.enter_answer,
@@ -318,7 +242,7 @@ function TableGapAnswer({ matching, onChange, value, disabled = false }: {
                           updateCompactAnswer(value, currentIndex, event.target.value),
                         )}
                       >
-                        <option value="">Выбери…</option>
+                        <option value="">Выбрать вариант</option>
                         {matching.options.map((option) => (
                           <option disabled={!matching.allowReuse && used.has(option.marker)} key={option.marker} value={option.marker}>
                             {option.marker} — {option.label}

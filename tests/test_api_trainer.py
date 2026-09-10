@@ -350,6 +350,72 @@ def test_answer_returns_feedback_only_after_submission(monkeypatch):
     assert submit.await_args.kwargs["public_feedback"]["correct_answer"] == "4"
 
 
+def test_give_up_records_a_wrong_attempt_without_a_usable_answer(monkeypatch):
+    """The student asked for the answer. It is graded wrong, so the existing
+    lives rule charges it exactly like any other wrong answer."""
+    from diagnostic.api import trainer
+
+    catalog = load_catalog(load_school(SAMPLE_SCHOOL))
+    monkeypatch.setattr(trainer.trainer, "get_session", AsyncMock(return_value={
+        "diagnostic_id": "demo-math",
+        "content_version": catalog.content_version("demo-math", APPLICATION_SECRET),
+    }))
+    submit = AsyncMock(return_value={
+        "ok": True, "question_id": "q1", "is_correct": False,
+        "correct_answer": "4", "explanation": "Сложите два и два: получится четыре.",
+        "life_delta": -1, "lives_remaining": 3,
+    })
+    monkeypatch.setattr(trainer.trainer, "answer_question", submit)
+    client = make_client(monkeypatch)
+
+    response = client.post(
+        "/api/diagnostics/trainer/answer",
+        json=answer_body(answer=None, give_up=True),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["correct_answer"] == "4"
+    assert response.json()["earned_primary_score"] == 0
+    assert submit.await_args.kwargs["is_correct"] is False
+
+
+def test_give_up_is_not_a_way_to_pass_a_correct_answer(monkeypatch):
+    from diagnostic.api import trainer
+
+    catalog = load_catalog(load_school(SAMPLE_SCHOOL))
+    monkeypatch.setattr(trainer.trainer, "get_session", AsyncMock(return_value={
+        "diagnostic_id": "demo-math",
+        "content_version": catalog.content_version("demo-math", APPLICATION_SECRET),
+    }))
+    submit = AsyncMock(return_value={
+        "ok": True, "question_id": "q1", "is_correct": False,
+        "correct_answer": "4", "explanation": "x", "life_delta": -1, "lives_remaining": 3,
+    })
+    monkeypatch.setattr(trainer.trainer, "answer_question", submit)
+    client = make_client(monkeypatch)
+
+    client.post("/api/diagnostics/trainer/answer", json=answer_body(answer="4", give_up=True))
+
+    assert submit.await_args.kwargs["is_correct"] is False
+
+
+def test_answer_without_give_up_still_rejects_a_blank_answer(monkeypatch):
+    from diagnostic.api import trainer
+
+    catalog = load_catalog(load_school(SAMPLE_SCHOOL))
+    monkeypatch.setattr(trainer.trainer, "get_session", AsyncMock(return_value={
+        "diagnostic_id": "demo-math",
+        "content_version": catalog.content_version("demo-math", APPLICATION_SECRET),
+    }))
+    monkeypatch.setattr(trainer.trainer, "answer_question", AsyncMock())
+    client = make_client(monkeypatch)
+
+    response = client.post("/api/diagnostics/trainer/answer", json=answer_body(answer=None))
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "invalid_answer_value"}
+
+
 def test_answer_accepts_a_normalized_free_text_answer(monkeypatch):
     from diagnostic.api import trainer
 

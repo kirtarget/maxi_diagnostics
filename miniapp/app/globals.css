@@ -59,6 +59,7 @@ html {
   --success-tint: color-mix(in srgb, var(--success) 13%, white);
   --success-line: color-mix(in srgb, var(--success) 38%, white);
   --danger: var(--brand-signal);
+  --warning: color-mix(in srgb, var(--brand-signal) 55%, var(--brand-accent));
   --info: var(--primary-tint);
 
   --hero-gradient: linear-gradient(165deg, var(--primary-deep), var(--brand-primary));
@@ -1143,7 +1144,7 @@ select:disabled {
   padding: 0;
   gap: 0;
   background: var(--brand-ink);
-  animation-name: question-screen-in;
+  animation-name: screen-fade-in;
 }
 
 .assessment-header {
@@ -1583,8 +1584,7 @@ select:disabled {
 }
 
 .question-media,
-.review-media,
-.trainer-media {
+.review-media {
   min-width: 0;
 }
 
@@ -2382,7 +2382,7 @@ select:disabled {
   transform: translate(-50%, calc(-1 * var(--keyboard-inset, 0px)));
 }
 
-.question-screen .question-next {
+.question-action-bar .question-next {
   /* Same border box as the disabled state, so enabling the button cannot move it.
      A whole pixel avoids the half-pixel rounding that shifted it by 1px. */
   border: 2px dashed transparent;
@@ -2394,13 +2394,22 @@ select:disabled {
 /* The disabled button is pinned with transform: none, so the base hover lift would
    raise it by 1px at the exact moment the answer completes. That is the shift this
    bar exists to prevent, only smaller. Press feedback stays. */
-.question-screen .question-next:hover { transform: none; }
+.question-action-bar .question-next:hover { transform: none; }
 
-.question-screen .question-next:disabled {
+.question-action-bar .question-next:disabled {
   border: 2px dashed var(--control-line);
   color: var(--muted);
   background: color-mix(in srgb, var(--brand-ink) 8%, var(--brand-background));
 }
+
+.question-assist {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  text-align: center;
+}
+
+.question-assist .question-skip { flex: 1 1 0; align-items: center; }
 
 .question-skip {
   display: flex;
@@ -3135,13 +3144,15 @@ select:disabled {
   max-width: none;
   padding: 0;
   gap: 0;
+  animation-name: screen-fade-in;
 }
 
 .trainer-body {
   width: 100%;
   max-width: 430px;
   margin: 0 auto;
-  padding: 8px 18px calc(30px + env(safe-area-inset-bottom));
+  /* Clears the fixed action bar, the same way the diagnostic worksheet does. */
+  padding: 8px 18px calc(var(--action-bar-height, 180px) + 24px);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -3244,6 +3255,52 @@ select:disabled {
 
 .trainer-screen .answer-option.selected:disabled { opacity: 1; }
 
+/* A graded option states its own verdict, so the review must not reuse the
+   "selected" green for a choice the server just called wrong. */
+.answer-option.is-right,
+.answer-option.is-wrong { opacity: 1; }
+
+.answer-option.is-right {
+  border: 2px solid var(--success);
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  padding: 12.5px 13.5px;
+}
+
+.answer-option.is-wrong {
+  border: 2px solid var(--brand-signal);
+  background: color-mix(in srgb, var(--brand-signal) 10%, var(--surface));
+  padding: 12.5px 13.5px;
+}
+
+.answer-option.is-right .option-letter {
+  color: white;
+  background: var(--success);
+}
+
+.answer-option.is-wrong .option-letter {
+  color: white;
+  background: var(--brand-signal);
+}
+
+.answer-option.is-wrong .selection-mark,
+.answer-option.is-wrong .selection-mark.square {
+  border-color: var(--brand-signal);
+  background: var(--brand-signal);
+  box-shadow: inset 0 0 0 3px var(--surface);
+}
+
+.answer-option-verdict {
+  flex: 0 0 auto;
+  align-self: center;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.answer-option.is-right .answer-option-verdict { color: var(--success); }
+.answer-option.is-wrong .answer-option-verdict { color: var(--brand-signal); }
+
 .trainer-feedback {
   display: flex;
   flex-direction: column;
@@ -3269,6 +3326,58 @@ select:disabled {
   background: var(--brand-accent);
 }
 
+/* A wrong answer scores zero, so its plaque stays neutral instead of lime. */
+.trainer-feedback.is-incorrect .primary-score-badge {
+  color: white;
+  background: color-mix(in srgb, white 22%, transparent);
+}
+
+.trainer-correct-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 1;
+}
+
+.trainer-correct-answer > span {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  opacity: 0.7;
+}
+
+/* The blank a student would actually write on, not a sentence. */
+.trainer-correct-answer > b {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: 12px;
+  color: var(--brand-ink);
+  background: white;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.trainer-feedback-tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trainer-life-note {
+  color: white;
+  background: color-mix(in srgb, var(--brand-signal) 70%, transparent);
+}
+
+.trainer-life-note.is-warning { background: var(--brand-signal); }
+
+.trainer-last-life {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 1;
+}
+
 .trainer-feedback strong::before {
   content: "✓";
   width: 34px;
@@ -3282,11 +3391,19 @@ select:disabled {
   font-weight: 900;
 }
 
-.trainer-feedback.is-wrong strong { color: var(--brand-signal); }
+.trainer-feedback.is-incorrect strong { color: var(--brand-signal); }
 
-.trainer-feedback.is-wrong strong::before {
+.trainer-feedback.is-incorrect strong::before {
   content: "✕";
   background: var(--brand-signal);
+}
+
+/* Partial credit is neither a win nor a loss, and "Почти" with a red cross reads as one. */
+.trainer-feedback.is-partial strong { color: var(--brand-accent); }
+
+.trainer-feedback.is-partial strong::before {
+  content: "≈";
+  background: var(--warning);
 }
 
 .trainer-feedback p {
@@ -3751,7 +3868,11 @@ select:disabled {
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes question-screen-in {
+/* Screens that carry the fixed action bar fade only. A transform that a filled
+   animation leaves in place makes the screen the containing block for its fixed
+   children, which would park the bar at the bottom of the page instead of the
+   viewport. */
+@keyframes screen-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }

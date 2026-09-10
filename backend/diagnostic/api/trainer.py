@@ -292,7 +292,9 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
         diagnostic, question = _trainer_question(
             catalog, session["diagnostic_id"], body.question_id
         )
-        _validate_answer(question, body.answer)
+        # A given-up question carries no answer to validate; it is graded wrong.
+        if not body.give_up:
+            _validate_answer(question, body.answer)
         key = body.idempotency_key or (
             f"trainer-answer/{body.question_id}/{body.revision}"
         )
@@ -318,7 +320,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
                 revision=body.revision,
                 idempotency_key=key,
                 fingerprint=fingerprint,
-                is_correct=is_answer_correct(question, body.answer),
+                is_correct=False if body.give_up else is_answer_correct(question, body.answer),
                 public_feedback=feedback,
                 timezone_name=request.app.state.settings.timezone,
             )

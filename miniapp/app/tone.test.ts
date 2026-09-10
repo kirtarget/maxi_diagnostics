@@ -17,7 +17,9 @@ const FORMAL_ADDRESS_PATTERN = new RegExp(
   "iu",
 );
 const UI_OWNED_SOURCE_FILES = [
+  "action-bar.tsx",
   "answer-editor.tsx",
+  "answer-readiness.ts",
   "assessment-header.tsx",
   "confirm-sheet.tsx",
   "gameplay-profile-model.ts",
@@ -31,11 +33,13 @@ const UI_OWNED_SOURCE_FILES = [
   "offer-ux.tsx",
   "page.tsx",
   "prompt-table.tsx",
+  "question-body.tsx",
   "question-metadata.tsx",
   "question-screen.tsx",
   "result-flow-model.ts",
   "result-flow.tsx",
   "score-estimate.ts",
+  "trainer-feedback.ts",
   "trainer-model.ts",
   "trainer-screen.tsx",
   "use-bootstrap.ts",

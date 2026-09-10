@@ -36,7 +36,7 @@ export type TrainerSessionState = {
 export type TrainerActions = {
   dispatch: Dispatch<TrainerAction>;
   start(diagnosticId: string, mode?: TrainerMode, sourceAttemptId?: string, topic?: string): Promise<void>;
-  answer(questionId: string, answer: AnswerValue): Promise<void>;
+  answer(questionId: string, answer: AnswerValue, giveUp?: boolean): Promise<void>;
   finish(): Promise<void>;
   remindLives(): Promise<void>;
   retry(): void;
@@ -132,7 +132,7 @@ export function useTrainer({
     }
   }, [bootstrap, initData, sessionScope, setScreen]);
 
-  const answer = useCallback(async (questionId: string, value: AnswerValue) => {
+  const answer = useCallback(async (questionId: string, value: AnswerValue, giveUp = false) => {
     const session = trainer.session;
     if (!session || !sessionScope || !initData.current) return;
     try {
@@ -140,9 +140,10 @@ export function useTrainer({
         session_scope: sessionScope,
         trainer_session_id: session.trainer_session_id,
         question_id: questionId,
-        answer: value,
+        answer: value ?? null,
         revision: session.revision,
         idempotency_key: `trainer-answer-${session.trainer_session_id}-${questionId}-${session.revision}`,
+        ...(giveUp ? { give_up: true } : {}),
       });
       dispatch({ type: "answer_result", response });
       void refreshProgress?.();
