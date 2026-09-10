@@ -1144,7 +1144,7 @@ select:disabled {
   padding: 0;
   gap: 0;
   background: var(--brand-ink);
-  animation-name: question-screen-in;
+  animation-name: screen-fade-in;
 }
 
 .assessment-header {
@@ -3073,6 +3073,7 @@ select:disabled {
   max-width: none;
   padding: 0;
   gap: 0;
+  animation-name: screen-fade-in;
 }
 
 .trainer-body {
@@ -3796,7 +3797,11 @@ select:disabled {
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes question-screen-in {
+/* Screens that carry the fixed action bar fade only. A transform that a filled
+   animation leaves in place makes the screen the containing block for its fixed
+   children, which would park the bar at the bottom of the page instead of the
+   viewport. */
+@keyframes screen-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
