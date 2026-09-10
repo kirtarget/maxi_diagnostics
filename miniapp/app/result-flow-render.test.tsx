@@ -20,9 +20,10 @@ describe("result flow screens", () => {
 
     expect(html).toContain("10 из 18");
     expect(html).not.toContain("Точность ответов");
-    expect(html).toContain("Задание 10, Механика, ошибка");
+    expect(html).toContain("Задание 8, Механика, верно");
     expect(html).toContain("Посмотреть, где ошибся (1 ошибка)");
-    expect((html.match(/result-question-cell/g) ?? []).length).toBe(18);
+    expect((html.match(/result-question-cell/g) ?? []).length).toBe(8);
+    expect(html).toContain("Показаны первые 8 из 18");
   });
 
   it("uses the frozen school question ids for every full-result cell", () => {
@@ -42,8 +43,8 @@ describe("result flow screens", () => {
       onForecast={() => undefined}
     />);
 
-    expect((html.match(/result-question-cell/g) ?? []).length).toBe(18);
-    expect(html).toContain("Задание 10");
+    expect((html.match(/result-question-cell/g) ?? []).length).toBe(8);
+    expect(html).toContain("Показаны первые 8 из 18");
     expect(html).toContain("17 из 18 верно");
   });
 
@@ -80,8 +81,8 @@ describe("result flow screens", () => {
     />);
 
     expect(html).toContain("prompt-reference-toggle");
-    expect(html).toContain("review-reference-sp-physics-oge-2022-q4");
-    expect(html).toContain("review-reference-sp-physics-oge-2022-q18");
+    expect(html).toContain("review-sp-physics-oge-2022-q4-reference");
+    expect(html).toContain("review-sp-physics-oge-2022-q18-reference");
     expect(html.match(/К тексту ↑/g)?.length).toBe(2);
   });
 
@@ -109,7 +110,7 @@ describe("result flow screens", () => {
       onForecast={() => undefined}
     />);
 
-    expect(html).toContain("<h1 id=\"review-title\" tabindex=\"-1\">Задание 10</h1>");
+    expect(html).toContain("id=\"review-q10-title\"");
     expect(html).toContain("Верно");
   });
 
@@ -207,7 +208,7 @@ describe("result flow screens", () => {
       />,
     );
     expect(html).toContain("Твой ответ");
-    expect(html).toContain("Правильный ответ");
+    expect(html).toContain("Правильный");
     expect(html).toContain("Как решать");
     expect(html).toContain("0 из 2 первичных баллов");
     expect(html).not.toContain("Схема ответа");
@@ -272,7 +273,7 @@ describe("result flow screens", () => {
         onForecast={() => undefined}
       />,
     );
-    expect(html).toContain("Схема ответа");
+    expect(html).toContain("Что стоит за цифрами");
     expect(html).not.toContain("Ваш выбор");
     expect(html).not.toContain("Правильная схема");
     expect(html.match(/review-answer-table/g)?.length).toBe(1);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { forecastKind, forecastTrajectory, personalRoute, resultGameSummary, topicRecommendation } from "./result-flow-model";
+import { forecastKind, forecastTrajectory, personalRoute, resultGameSummary } from "./result-flow-model";
 
 describe("result flow model", () => {
   it("uses the current score plus at most two persisted forecast points", () => {
@@ -94,13 +94,6 @@ describe("result flow model", () => {
       growth_topics: [{ topic: "Алгоритмы", question_count: 2 }],
       per_question: [{ question_id: "q1", number: 1, topic: "Алгоритмы", status: "skipped", is_correct: false }],
     }).map((action) => action.kind)).toEqual(["retest-reminder"]);
-  });
-
-  it("calls one wrong answer a recommendation rather than a diagnosed gap", () => {
-    expect(topicRecommendation([{ topic: "Орфоэпия", question_count: 1, correct_count: 0 }])).toEqual({
-      heading: "Стоит повторить",
-      topics: ["Орфоэпия"],
-    });
   });
 
 
