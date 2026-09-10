@@ -29,17 +29,19 @@ function subjectObjectLabel(subject: string): string {
   return SUBJECT_OBJECT_FORMS[normalized] ?? `предмет «${subject}»`;
 }
 
+export type BottomNavTarget = "today" | "path" | "results" | "profile";
+
 export function BottomNav({
   screen,
   onNavigate,
 }: {
   screen: string;
-  onNavigate: (screen: "home" | "trainer" | "league" | "profile") => void;
+  onNavigate: (screen: BottomNavTarget) => void;
 }) {
   const items = [
-    ["home", "Главная"],
-    ["trainer", "Тренажёр"],
-    ["league", "Лига"],
+    ["today", "Сегодня"],
+    ["path", "Путь"],
+    ["results", "Результаты"],
     ["profile", "Профиль"],
   ] as const;
   return <nav className="bottom-nav" aria-label="Основная навигация">{items.map(([target, label]) => (
