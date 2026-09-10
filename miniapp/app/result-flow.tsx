@@ -1,56 +1,90 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
-import { FormattedMathText, FormattedStem } from "./math-display";
+import { FormattedMathText } from "./math-display";
 import { normalizeOffer, OfferSurface, type OfferTelemetryEvent } from "./offer-ux";
-import { PromptTable } from "./prompt-table";
-import { parseQuestionPrompt } from "./question-prompt";
-import { createPromptAnchorAllocator, focusPromptReference, promptLayout } from "./prompt-layout";
+import { AnswerPreview } from "./matching-answer";
+import { QuestionBody, questionBodyModel } from "./question-body";
+import { focusPromptReference } from "./prompt-layout";
 import { hasApprovedPrimaryScore, PrimaryScoreBadge } from "./question-metadata";
-import { ImageViewer } from "./image-viewer";
 import { forecastUnitLabel } from "./score-estimate";
 import { plural } from "./text-utils";
-import { topicRecommendation, type PersonalRouteAction } from "./result-flow-model";
+import type { PersonalRouteAction } from "./result-flow-model";
 import type {
   ForecastKind,
   ForecastPoint,
   PublicDiagnostic,
+  Question,
+  ReviewAnswerPreview,
   ReviewItem,
   DeliveryStatus,
   PublicQuestionOutcome,
   SchoolLinks,
   ServerResult,
-  ServerTopic,
 } from "./types";
 
 export type RouteItem = PersonalRouteAction;
 
-function ReviewPrompt({ prompt, subject, questionId }: { prompt: string; subject?: string; questionId: string }) {
-  const blocks = parseQuestionPrompt(prompt);
-  const layout = promptLayout(blocks);
-  const anchors = createPromptAnchorAllocator();
-  const [expanded, setExpanded] = useState(false);
-  useEffect(() => { setExpanded(false); }, [questionId]);
-  const referenceId = `review-reference-${questionId}`;
-  return (
-    <div className="review-prompt-shell">
-      {layout.stem && <p className="review-prompt-stem"><FormattedStem text={layout.stem} subject={subject} /></p>}
-      {layout.isLongReference && <button className="prompt-reference-toggle" type="button" aria-controls={referenceId} aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? "Свернуть текст" : "Развернуть текст"}</button>}
-      <div id={referenceId} tabIndex={-1} className={`prompt-reference${layout.isLongReference ? " prompt-reference-long" : ""}${expanded ? " is-expanded" : ""}`}>
-        {layout.referenceBlocks.map((block, index) => {
-          const id = `${referenceId}-${anchors.blockId(block) ?? `block-${index}`}`;
-          if (block.kind === "heading") return <h2 id={id} className="question-section-title" key={index}>{block.text}</h2>;
-          if (block.kind === "item") return <div id={id} className="question-list-item" key={index}><span>{block.marker}</span><p><FormattedMathText text={block.text} subject={subject} /></p></div>;
-          if (block.kind === "table") return <div id={id} key={index}><PromptTable headerRows={block.headerRows} rows={block.rows} columns={block.columns} subject={subject} /></div>;
-          return <p className="review-prompt" key={index}>{anchors.sentenceSegments(block.text).map((segment, segmentIndex) => <span id={segment.anchorId ? `${referenceId}-${segment.anchorId}` : undefined} key={segmentIndex}><FormattedMathText text={segment.text} subject={subject} /></span>)}</p>;
-        })}
-      </div>
-      {layout.isLongReference && <button className="text-back review-reference-jump" type="button" onClick={() => focusPromptReference(referenceId)}>К тексту ↑</button>}
-    </div>
-  );
+const CHECKED_FOLD = 8;
+
+function statusWord(status: PublicQuestionOutcome["status"]): string {
+  return status === "correct" ? "верно" : status === "skipped" ? "пропущено" : "неверно";
 }
 
-function topicName(topic: ServerTopic | string): string {
-  return typeof topic === "string" ? topic : topic.topic;
+function statusSymbol(status: PublicQuestionOutcome["status"]): string {
+  return status === "correct" ? "✓" : status === "skipped" ? "−" : "×";
+}
+
+/**
+ * The condition of a reviewed question, so the review draws it with the shared
+ * QuestionBody. Choices are not part of the review payload and the read-only body
+ * never reads them.
+ */
+function reviewQuestion(item: ReviewItem): Question {
+  const base = {
+    id: item.question_id,
+    topic: item.topic,
+    title: item.title,
+    prompt: item.prompt,
+    asset: item.asset,
+    assets: item.assets,
+    asset_alt: item.asset_alt,
+    max_primary_score: item.max_primary_score,
+    source: item.source,
+  };
+  if (item.type === "single") return { ...base, type: "single", options: [] };
+  if (item.type === "multiple") return { ...base, type: "multiple", options: [], selection_limit: 0 };
+  if (item.type === "matching") return { ...base, type: "matching", items: [], options: [] };
+  if (item.type === "text") return { ...base, type: "text" };
+  return { ...base, type: "input" };
+}
+
+/** A wall of glued sentences is unreadable on a phone, so the explanation is listed. */
+function guidancePoints(text: string): string[] {
+  return text
+    .split(/\n+/u)
+    .flatMap((line) => line.split(/(?<=[.!?])\s+(?=[«"(]?[A-ZА-ЯЁ0-9])/u))
+    .map((point) => point.trim())
+    .filter(Boolean);
+}
+
+/** Positions of the blank, as the student writes them: one row of values per answer. */
+function blankRows(preview: ReviewAnswerPreview): { markers: string[]; user: string[]; expected: string[] } {
+  if (preview.kind !== "multiple") {
+    return {
+      markers: preview.markers,
+      user: preview.markers.map((_, index) => preview.user[index] ?? ""),
+      expected: preview.markers.map((_, index) => preview.expected[index] ?? ""),
+    };
+  }
+  // A set answer is written on the blank in ascending order, so it compares in that order.
+  const user = [...preview.user].sort();
+  const expected = [...preview.expected].sort();
+  const length = Math.max(user.length, expected.length);
+  return {
+    markers: Array.from({ length }, (_, index) => String(index + 1)),
+    user: Array.from({ length }, (_, index) => user[index] ?? ""),
+    expected: Array.from({ length }, (_, index) => expected[index] ?? ""),
+  };
 }
 
 export function ResultScreen({
@@ -74,7 +108,9 @@ export function ResultScreen({
   onRetryDelivery?: () => void;
   onOpenChat?: () => void;
 }): ReactNode {
-  const recommendation = topicRecommendation(result.growth_topics);
+  const [checkedExpanded, setCheckedExpanded] = useState(false);
+  const checked = result.per_question ?? [];
+  const shownChecked = checkedExpanded ? checked : checked.slice(0, CHECKED_FOLD);
   const incorrectCount = Math.max(
     0, result.question_count - result.correct_count - (result.skipped_count ?? 0),
   );
@@ -82,7 +118,7 @@ export function ResultScreen({
   // reads as "wrong" next to the breakdown line that says they were skipped.
   const answeredCount = Math.max(0, result.question_count - (result.skipped_count ?? 0));
   const accuracy = answeredCount > 0 ? Math.round(result.correct_count / answeredCount * 100) : 0;
-  const disclaimer = result.unassessed_part?.includes("не предсказывает")
+  const disclaimer = /не предсказывает|не прогноз/u.test(result.unassessed_part ?? "")
     ? result.unassessed_part
     : `${result.unassessed_part ? `${result.unassessed_part}. ` : ""}Результат относится только к этим заданиям. Он не предсказывает балл на экзамене и не оценивает весь предмет.`;
   return (
@@ -107,41 +143,29 @@ export function ResultScreen({
         <p className="result-disclaimer">{disclaimer}</p>
       </div>
       <div className="result-body">
-      {result.per_question && result.per_question.length > 0 && (
-        <section className="result-question-grid" aria-labelledby="result-question-grid-title">
-          <h2 id="result-question-grid-title">Все задания</h2>
-          <div className="result-question-grid-list">
-            {result.per_question.map((question: PublicQuestionOutcome) => (
+      {checked.length > 0 && (
+        <section className="result-checked" aria-labelledby="result-checked-title">
+          <h2 id="result-checked-title">Проверенные задания</h2>
+          <div className="result-checked-list">
+            {shownChecked.map((question: PublicQuestionOutcome) => (
               <button
                 key={question.question_id}
                 type="button"
                 className={`result-question-cell result-question-${question.status}`}
-                aria-label={`Задание ${question.number}, ${question.topic}, ${question.status === "correct" ? "верно" : question.status === "skipped" ? "пропущено" : "ошибка"}`}
+                aria-label={`Задание ${question.number}, ${question.topic}, ${statusWord(question.status)}`}
                 onClick={() => onReview(question.question_id)}
               >
-                {question.number}
+                <b aria-hidden="true">{statusSymbol(question.status)}</b>
+                <strong>{question.number}</strong>
+                <span>{question.topic}</span>
               </button>
             ))}
           </div>
-        </section>
-      )}
-      {(result.strong_topics.length > 0 || result.growth_topics.length > 0) && (
-        <section className="topic-section" aria-labelledby="topic-heading">
-          <h2 id="topic-heading">Проверенные задания</h2>
-          <div className="topic-grid">
-            {result.strong_topics.length > 0 && (
-              <div className="topic-group topic-group-strong">
-                <span><b aria-hidden="true">✓</b> Получилось в этой попытке</span>
-                <ul>{result.strong_topics.map((topic) => <li key={topicName(topic)}>{topicName(topic)}</li>)}</ul>
-              </div>
-            )}
-            {recommendation && (
-              <div className="topic-group topic-group-growth">
-                <span><b aria-hidden="true">↗</b> Задания для повторения</span>
-                <ul>{recommendation.topics.map((topic) => <li key={topic}>{topic}</li>)}</ul>
-              </div>
-            )}
-          </div>
+          {checked.length > shownChecked.length && (
+            <button className="text-back result-checked-more" type="button" onClick={() => setCheckedExpanded(true)}>
+              Показаны первые {shownChecked.length} из {checked.length} · Показать все
+            </button>
+          )}
         </section>
       )}
       <div className="scope-note">
@@ -200,24 +224,19 @@ export function ReviewScreen({
   onSelectQuestion?: (questionId: string) => void;
   onList?: () => void;
 }): ReactNode {
+  const [showAll, setShowAll] = useState(false);
   const mistakes = items.filter((item) => !item.is_correct);
+  const visible = showAll ? items : mistakes;
   const selectedIndex = selectedQuestionId
-    ? mistakes.findIndex((candidate) => candidate.question_id === selectedQuestionId)
+    ? visible.findIndex((candidate) => candidate.question_id === selectedQuestionId)
     : -1;
   const activeIndex = Math.min(
     Math.max(selectedIndex >= 0 ? selectedIndex : index, 0),
-    Math.max(mistakes.length - 1, 0),
+    Math.max(visible.length - 1, 0),
   );
   const item = selectedQuestionId
     ? items.find((candidate) => candidate.question_id === selectedQuestionId)
-    : mistakes[activeIndex];
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  useEffect(() => {
-    if (item) {
-      headingRef.current?.focus();
-      headingRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
-    }
-  }, [item?.question_id]);
+    : visible[activeIndex];
 
   if (loading) {
     return (
@@ -259,10 +278,28 @@ export function ReviewScreen({
     return (
       <section className="screen review-screen" aria-labelledby="review-list-title">
         <div className="review-topline"><button className="text-back" onClick={onBack} type="button">Назад</button><span>Разбор ошибок</span></div>
-        <h1 id="review-list-title">Где ошибся ({mistakes.length} {plural(mistakes.length, ["ошибка", "ошибки", "ошибок"])})</h1>
-        {mistakes.length === 0 ? <p>Ни одной ошибки. Так держать!</p> : (
+        <h1 id="review-list-title">{showAll
+          ? `Проверенные задания (${items.length})`
+          : `Где ошибся (${mistakes.length} ${plural(mistakes.length, ["ошибка", "ошибки", "ошибок"])})`}</h1>
+        <div className="review-filter" role="group" aria-label="Что показывать в разборе">
+          <button type="button" className={showAll ? "is-active" : undefined} aria-pressed={showAll} onClick={() => setShowAll(true)}>Все</button>
+          <button type="button" className={showAll ? undefined : "is-active"} aria-pressed={!showAll} onClick={() => setShowAll(false)}>Только ошибки</button>
+        </div>
+        {visible.length === 0 ? <p>Ни одной ошибки. Так держать!</p> : (
           <div className="review-mistake-list-items">
-            {mistakes.map((mistake) => <button key={mistake.question_id} type="button" onClick={() => onSelectQuestion?.(mistake.question_id)} aria-label={`Открыть задание ${mistake.number}: ${mistake.topic}`}><strong>{mistake.number}</strong><span>{mistake.topic}</span></button>)}
+            {visible.map((listed) => (
+              <button
+                key={listed.question_id}
+                type="button"
+                className={`review-mistake-${listed.status}`}
+                onClick={() => onSelectQuestion?.(listed.question_id)}
+                aria-label={`Открыть задание ${listed.number}: ${listed.topic}, ${statusWord(listed.status)}`}
+              >
+                <b aria-hidden="true">{statusSymbol(listed.status)}</b>
+                <strong>{listed.number}</strong>
+                <span>{listed.topic}</span>
+              </button>
+            ))}
           </div>
         )}
         <div className="review-direct-actions"><button className="text-back" type="button" onClick={onForecast}>К плану</button>{onHome && <button className="text-back" type="button" onClick={onHome}>На главную</button>}</div>
@@ -282,56 +319,75 @@ export function ReviewScreen({
     );
   }
 
-  const imagePaths = [item.asset, ...(item.assets ?? [])]
-    .filter((asset): asset is string => Boolean(asset));
-  const isLast = mistakes.length === 0 || (!item.is_correct && activeIndex === mistakes.length - 1);
+  const position = visible.findIndex((candidate) => candidate.question_id === item.question_id);
+  const isLast = position < 0 || position === visible.length - 1;
+  const nextItem = position >= 0 ? visible[position + 1] : undefined;
+  const question = reviewQuestion(item);
+  const body = questionBodyModel(question, false);
+  const idPrefix = `review-${item.question_id}`;
   const structuredPreview = item.answer_preview;
+  const blank = structuredPreview ? blankRows(structuredPreview) : null;
   const previewLabel = (value: string) => (structuredPreview?.option_labels?.[value] ?? value) || "—";
   const previewRows = structuredPreview?.kind === "multiple"
     ? Array.from(new Set([...structuredPreview.user, ...structuredPreview.expected])).map((marker) => ({ marker, user: structuredPreview.user.includes(marker) ? marker : "", expected: structuredPreview.expected.includes(marker) ? marker : "" }))
     : structuredPreview?.markers.map((marker, markerIndex) => ({ marker, user: structuredPreview.user[markerIndex] ?? "", expected: structuredPreview.expected[markerIndex] ?? "" })) ?? [];
+  const points = guidancePoints(item.learning_material_text || item.guidance);
 
   return (
-    <section className="screen review-screen" aria-labelledby="review-title">
+    <section className="screen review-screen" aria-labelledby={`${idPrefix}-title`}>
       <div className="review-topline">
         <button className="text-back" onClick={onList ?? onBack} type="button">К списку</button>
-        <span>{item.is_correct ? "Выбранное задание" : `Разбор ошибок · ${activeIndex + 1} из ${mistakes.length}`}</span>
+        <span>{position < 0
+          ? "Выбранное задание"
+          : `${showAll ? "Все задания" : "Разбор ошибок"} · ${position + 1} из ${visible.length}`}</span>
       </div>
-      <div className="review-heading">
-        <span className="mistake-status">
-          <b aria-hidden="true">{item.status === "skipped" ? "−" : item.status === "correct" ? "✓" : "×"}</b>
-          {item.status === "skipped" ? "Пропущено" : item.status === "correct" ? "Верно" : "Неверно"}
-        </span>
-        <span>{item.topic}</span>
-        {hasApprovedPrimaryScore(item.source) && <PrimaryScoreBadge maxPrimaryScore={item.max_primary_score} earnedPrimaryScore={item.earned_primary_score} />}
-      </div>
-      <h1 id="review-title" ref={headingRef} tabIndex={-1}>{item.title}</h1>
-      <ReviewPrompt prompt={item.prompt} subject={subject} questionId={item.question_id} />
-      {imagePaths.length > 0 && (
-        <ImageViewer
-          className="review-media"
-          assets={imagePaths.map((path) => ({ path, alt: item.asset_alt }))}
-          fallbackAlt="Иллюстрация к заданию"
-        />
+      <QuestionBody
+        question={question}
+        subject={subject}
+        model={body}
+        idPrefix={idPrefix}
+        illustrationAlt="Иллюстрация к заданию"
+        meta={(
+          <div className="review-heading">
+            <span className="mistake-status">
+              <b aria-hidden="true">{statusSymbol(item.status)}</b>
+              {item.status === "skipped" ? "Пропущено" : item.status === "correct" ? "Верно" : "Неверно"}
+            </span>
+            <span className="review-topic">{item.topic}</span>
+            {hasApprovedPrimaryScore(item.source) && <PrimaryScoreBadge maxPrimaryScore={item.max_primary_score} earnedPrimaryScore={item.earned_primary_score} />}
+          </div>
+        )}
+      />
+      {body.layout.isLongReference && <button className="text-back review-reference-jump" type="button" onClick={() => focusPromptReference(`${idPrefix}-reference`)}>К тексту ↑</button>}
+      {blank ? (
+        <div className="answer-review answer-review-blank">
+          <div className="answer-review-user">
+            <AnswerPreview markers={blank.markers} selected={blank.user} label="Твой ответ" compare={blank.expected} />
+          </div>
+          <div className="answer-review-expected">
+            <AnswerPreview markers={blank.markers} selected={blank.expected} label="Правильный" />
+          </div>
+        </div>
+      ) : (
+        <dl className="answer-review">
+          <div className="answer-review-user">
+            <dt>Твой ответ</dt>
+            <dd><FormattedMathText text={item.user_answer} subject={subject} /></dd>
+          </div>
+          <div className="answer-review-expected">
+            <dt>Правильный</dt>
+            <dd><FormattedMathText text={item.expected_answer} subject={subject} /></dd>
+          </div>
+        </dl>
       )}
-      <dl className="answer-review">
-        <div className="answer-review-user">
-          <dt>Твой ответ</dt>
-          <dd><FormattedMathText text={item.user_answer} subject={subject} /></dd>
-        </div>
-        <div className="answer-review-expected">
-          <dt>Правильный ответ</dt>
-          <dd><FormattedMathText text={item.expected_answer} subject={subject} /></dd>
-        </div>
-      </dl>
       {structuredPreview && (
         <section className="review-answer-preview" aria-labelledby="review-answer-preview-title">
-          <h2 id="review-answer-preview-title">Схема ответа</h2>
+          <h2 id="review-answer-preview-title">Что стоит за цифрами</h2>
           <table className="review-answer-table">
             <caption className="sr-only">Сравнение ответа</caption>
             <thead><tr><th scope="col">Позиция</th><th scope="col">Твой</th><th scope="col">Верный</th></tr></thead>
             <tbody>{previewRows.map((row, rowIndex) => (
-              <tr key={`${row.marker}-${rowIndex}`}><th scope="row">{row.marker}</th><td><FormattedMathText text={previewLabel(row.user)} subject={subject} /></td><td><FormattedMathText text={previewLabel(row.expected)} subject={subject} /></td></tr>
+              <tr key={`${row.marker}-${rowIndex}`} className={row.user === row.expected ? undefined : "is-mismatch"}><th scope="row">{row.marker}</th><td><FormattedMathText text={previewLabel(row.user)} subject={subject} /></td><td><FormattedMathText text={previewLabel(row.expected)} subject={subject} /></td></tr>
             ))}</tbody>
           </table>
         </section>
@@ -339,10 +395,12 @@ export function ReviewScreen({
       <section className="guidance" aria-labelledby="guidance-title">
         <span>Как решать</span>
         <h2 id="guidance-title">Разбери ход решения</h2>
-        <p><FormattedMathText text={item.learning_material_text || item.guidance} subject={subject} /></p>
+        {points.length > 1
+          ? <ul className="guidance-points">{points.map((point, pointIndex) => <li key={pointIndex}><FormattedMathText text={point} subject={subject} /></li>)}</ul>
+          : <p><FormattedMathText text={points[0] ?? ""} subject={subject} /></p>}
       </section>
-      <button className="primary-button" onClick={isLast ? onForecast : onNext} type="button">
-          {isLast ? "Мой план подготовки" : "Следующая ошибка"} <span aria-hidden="true">→</span>
+      <button className="primary-button" onClick={isLast ? onForecast : () => { if (showAll && nextItem && onSelectQuestion) onSelectQuestion(nextItem.question_id); else onNext(); }} type="button">
+          {isLast ? "Мой план подготовки" : showAll ? "Следующее задание" : "Следующая ошибка"} <span aria-hidden="true">→</span>
       </button>
       <div className="review-direct-actions">
         <button className="text-back" type="button" onClick={onList ?? onBack}>К списку</button>

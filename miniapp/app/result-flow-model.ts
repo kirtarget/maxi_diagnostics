@@ -6,11 +6,6 @@ import type {
 type ResultWithForecast = Pick<ServerResult, "score" | "forecast" | "estimate">;
 type GrowthTopic = ServerTopic | string;
 
-export type TopicRecommendation = {
-  heading: "Тема для повторения" | "Стоит повторить";
-  topics: string[];
-};
-
 export type PersonalRouteAction =
   | { id: string; kind: "review"; topic: string; questionId: string; title: string; description: string }
   | { id: string; kind: "mistakes"; topic: string; title: string; description: string }
@@ -140,21 +135,6 @@ function topicName(topic: GrowthTopic): string | null {
   const value = typeof topic === "string" ? topic : topic.topic;
   const normalized = value.trim();
   return normalized ? normalized : null;
-}
-
-export function topicRecommendation(growthTopics: GrowthTopic[]): TopicRecommendation | null {
-  const topics = growthTopics
-    .map(topicName)
-    .filter((topic): topic is string => topic !== null)
-    .filter((topic, index, values) => values.indexOf(topic) === index)
-    .slice(0, 2);
-  if (topics.length === 0) return null;
-  const supported = growthTopics.some((topic) => (
-    typeof topic !== "string"
-    && typeof topic.question_count === "number"
-    && topic.question_count >= 2
-  ));
-  return { heading: supported ? "Тема для повторения" : "Стоит повторить", topics };
 }
 
 export function personalRoute(result: Pick<ServerResult, "growth_topics" | "per_question"> | GrowthTopic[]): PersonalRouteAction[] {

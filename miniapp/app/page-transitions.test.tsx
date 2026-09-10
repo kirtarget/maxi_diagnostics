@@ -245,13 +245,16 @@ describe("Home screen transitions", () => {
       .filter((button) => button.textContent?.includes("17 из 18"));
     expect(resultButtons).toHaveLength(2);
     await act(async () => resultButtons[0].click());
-    const q10 = container.querySelector<HTMLButtonElement>('button[aria-label="Задание 10, Механика, ошибка"]');
+    const more = [...container.querySelectorAll<HTMLButtonElement>("button.result-checked-more")][0];
+    expect(more?.textContent).toContain("Показаны первые 8 из 18");
+    await act(async () => more?.click());
+    const q10 = container.querySelector<HTMLButtonElement>('button[aria-label="Задание 10, Механика, неверно"]');
     expect(q10).not.toBeNull();
     await act(async () => q10?.click());
     expect(reviewCalls).toBe(1);
     firstReview.resolve({ ok: true, available: true, items: [reviewQ10], pdf_status: "sent" });
     await settle();
-    expect(container.querySelector("#review-title")?.textContent).toBe("Задание 10");
+    expect(container.querySelector("#review-q10-title")?.textContent).toContain("Условие");
     await clickAndSettle(".review-topline .text-back");
     expect(container.querySelector("#review-list-title")?.textContent).toContain("Где ошибся");
     await clickAndSettle(".review-direct-actions .text-back:last-child");
