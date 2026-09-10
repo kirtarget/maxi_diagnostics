@@ -2841,13 +2841,6 @@ select:disabled {
 
 .answer-review-blank .matching-answer-preview > strong { flex-wrap: wrap; row-gap: 18px; }
 
-.answer-review-stress {
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-
 .answer-review-user {
   border: 1.5px solid var(--signal-line);
   background: var(--signal-tint);

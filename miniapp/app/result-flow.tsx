@@ -87,11 +87,6 @@ function blankRows(preview: ReviewAnswerPreview): { markers: string[]; user: str
   };
 }
 
-/** A stress mark is written as an inner capital in the catalog; nobody types it that way. */
-function stressHint(answer: string): string | null {
-  return /\p{Ll}\p{Lu}/u.test(answer) ? answer : null;
-}
-
 export function ResultScreen({
   result,
   diagnostic,
@@ -336,7 +331,6 @@ export function ReviewScreen({
   const previewRows = structuredPreview?.kind === "multiple"
     ? Array.from(new Set([...structuredPreview.user, ...structuredPreview.expected])).map((marker) => ({ marker, user: structuredPreview.user.includes(marker) ? marker : "", expected: structuredPreview.expected.includes(marker) ? marker : "" }))
     : structuredPreview?.markers.map((marker, markerIndex) => ({ marker, user: structuredPreview.user[markerIndex] ?? "", expected: structuredPreview.expected[markerIndex] ?? "" })) ?? [];
-  const expectedStress = structuredPreview ? null : stressHint(item.expected_answer);
   const points = guidancePoints(item.learning_material_text || item.guidance);
 
   return (
@@ -382,8 +376,7 @@ export function ReviewScreen({
           </div>
           <div className="answer-review-expected">
             <dt>Правильный</dt>
-            <dd><FormattedMathText text={expectedStress ? item.expected_answer.toLocaleLowerCase("ru") : item.expected_answer} subject={subject} /></dd>
-            {expectedStress && <dd className="answer-review-stress">Ударение: {expectedStress}. В поле ответа пишут строчными.</dd>}
+            <dd><FormattedMathText text={item.expected_answer} subject={subject} /></dd>
           </div>
         </dl>
       )}
