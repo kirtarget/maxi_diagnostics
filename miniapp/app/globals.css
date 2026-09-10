@@ -2766,11 +2766,13 @@ select:disabled {
   flex-wrap: wrap;
 }
 
+/* The topic sits next to a red "Неверно": a green tint here reads as a score. */
 .review-heading > span:not(.mistake-status):not(.primary-score-badge) {
   padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--brand-ink) 14%, transparent);
   border-radius: 9px;
   color: var(--ink);
-  background: var(--accent-tint);
+  background: color-mix(in srgb, var(--brand-ink) 5%, white);
   font-size: 12px;
   font-weight: 700;
 }

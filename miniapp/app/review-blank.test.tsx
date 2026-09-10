@@ -118,6 +118,14 @@ describe("review css", () => {
     expect(css).toMatch(/\.answer-review\s*\{[\s\S]*?flex-direction:\s*column;/u);
     expect(css).toMatch(/@media \(min-width:\s*480px\)\s*\{\s*\.answer-review\s*\{\s*flex-direction:\s*row;/u);
   });
+
+  it("paints the topic chip neutrally, so it reads as a label and not as a score", () => {
+    const chip = css.slice(css.indexOf(".review-heading > span:not("));
+    const rule = chip.slice(0, chip.indexOf("}"));
+    expect(rule).not.toContain("--accent-tint");
+    expect(rule).not.toContain("--success");
+    expect(rule).toMatch(/background:\s*color-mix\(in srgb, var\(--brand-ink\)/u);
+  });
 });
 
 describe("review filter", () => {
