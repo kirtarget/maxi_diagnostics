@@ -11,15 +11,24 @@ export type PromptBlock =
 export type TableBlock = { kind: "table"; headerRows: string[][]; rows: string[][]; columns: number };
 
 const ITEM_PATTERN = /^([А-ЯЁA-Z]|\d{1,2})[.)]\s*(.+)$/u;
-const INSTRUCTION_PATTERN = /^(?:ответ(?:ы|ом)?(?:\s+(?:запишите|запиши|укажите|дайте))?|в\s+ответ(?:е|ом)?(?:\s+(?:запишите|запиши|укажите|дайте))?|запишите(?:\s+(?:ответ|последовательность|число|слово|цифры))?|запиши(?:\s+(?:ответ|последовательность|число|слово|цифры))?|введите(?:\s+(?:ответ|последовательность|число|слово|цифры))?|введи(?:\s+(?:ответ|последовательность|число|слово|цифры))?|в\s+таблиц(?:у|е)|укажите\s+ответ)(?:\s|$)/iu;
+const INSTRUCTION_PATTERN = /^(?:ответ(?:ы|ом)?(?:\s+(?:запишите|запиши|укажите|дайте))?|в\s+ответ(?:е|ом)?(?:\s+(?:запишите|запиши|укажите|дайте))?|запишите(?:\s+(?:ответ|последовательность|число|слово|цифры))?|запиши(?:\s+(?:ответ|последовательность|число|слово|цифры))?|введите(?:\s+(?:ответ|последовательность|число|слово|цифры))?|введи(?:\s+(?:ответ|последовательность|число|слово|цифры))?|в\s+таблиц(?:у|е)|укажите\s+ответ|к\s+каждой\s+позиции)(?:\s|,|$)/iu;
+// Phrases that describe how to answer, never what the task is about.
+const SERVICE_STEM_PATTERN = /^(?:выберите\s+из\s+списка|(?:выберите|укажите|отметьте)\s+(?:все\s+)?(?:правильн|верн)\w*\s+(?:вариант|ответ)\w*|выберите\s+один\s+из\s+вариантов)/iu;
+// A matching task states its subject, then repeats the mechanics after a colon.
+const MATCHING_TAIL_PATTERN = /:\s+(к\s+каждой\s+позиции,\s.*)$/iu;
 const LETTER_PATTERN = /\p{Lu}/gu;
 const HEADING_OPERATOR_PATTERN = /[\p{Ll}\p{Nd}+\-−×÷*/=≤≥<>⇄→√^·∙:≠_]/u;
-const STEM_PATTERN = /^(?:какой|какая|какие|каково|каким|какую|сколько|чему|что|почему|зачем|где|когда|как|установите|определите|выберите|найдите|решите|сопоставьте|назовите|укажите|расставьте|отредактируйте|выпишите|запишите|среди|в\s+тексте|из\s+предложенного)(?:\s|$)/iu;
+// A task verb may sit behind a short participial lead ("Используя данные, ... определите").
+const STEM_PATTERN = /^(?:.{0,80}?,\s+)?(?:какой|какая|какие|каково|каким|какую|сколько|чему|что|почему|зачем|где|когда|как|установите|определите|выберите|найдите|решите|сопоставьте|назовите|укажите|расставьте|отредактируйте|выпишите|запишите|преобразуйте|заполните|проанализируйте|составьте|подберите|вычислите|рассчитайте|оцените|среди|в\s+тексте|из\s+предложенного)(?:\s|,|$)/iu;
 const WORDS_INSTRUCTION_PATTERN = /^раскройте\s+скобки\s+и\s+выпишите\s+(?:это\s+слово|эти\s+два\s+слова)(?:\.|$)/iu;
 
 type StemMatch = { lineIndex: number; start: number; text: string };
 
 function splitTrailingInstruction(line: string): string[] {
+  const matchingTail = MATCHING_TAIL_PATTERN.exec(line);
+  if (matchingTail) {
+    return [line.slice(0, matchingTail.index + 1).trim(), matchingTail[1].trim()].filter(Boolean);
+  }
   const sentences = splitPromptSentences(line);
   const instruction = sentences.at(-1);
   if (!instruction || (!INSTRUCTION_PATTERN.test(instruction) && !WORDS_INSTRUCTION_PATTERN.test(instruction))) return [line];
@@ -31,6 +40,7 @@ function splitTrailingInstruction(line: string): string[] {
 function findStem(lines: string[]): StemMatch | null {
   const questions: StemMatch[] = [];
   const actions: StemMatch[] = [];
+  const service: StemMatch[] = [];
   lines.forEach((line, lineIndex) => {
     if (/^(?:[А-ЯЁA-Z]|\d{1,2})[.)]\s/u.test(line)) return;
     if (/^[—–-]\s*/u.test(line)) return;
@@ -42,7 +52,8 @@ function findStem(lines: string[]): StemMatch | null {
       const candidateText = sentence.slice(citation.length);
       const match = { lineIndex, start: candidateStart, text: candidateText };
       if (/[?]\s*$/u.test(candidateText)) questions.push(match);
-      if (STEM_PATTERN.test(candidateText)) actions.push(match);
+      if (SERVICE_STEM_PATTERN.test(candidateText)) service.push(match);
+      else if (STEM_PATTERN.test(candidateText)) actions.push(match);
     }
   });
   const lastQuestion = questions.at(-1);
@@ -50,7 +61,7 @@ function findStem(lines: string[]): StemMatch | null {
     ? actions.filter((match) => match.lineIndex > lastQuestion.lineIndex
       || (match.lineIndex === lastQuestion.lineIndex && match.start > lastQuestion.start))
     : [];
-  return actionAfterQuestion.at(-1) ?? lastQuestion ?? actions[0] ?? null;
+  return actionAfterQuestion.at(-1) ?? lastQuestion ?? actions[0] ?? service.at(-1) ?? null;
 }
 
 function isHeading(value: string): boolean {
@@ -69,8 +80,10 @@ function isMarkerCell(value: string): boolean {
   return /^(?:[А-ЯЁA-Z]|\d{1,2})[.)]?$/u.test(value.trim());
 }
 
+// A numbered option carries its own label ("1) увеличилась"). Bare digits are data,
+// so a truth table or a table of measurements must not be split as an option matrix.
 function isOptionMatrixRow(row: string[]): boolean {
-  return row.length >= 2 && row.every((cell) => /^\d[.)]?\s*(?:\S.*)?$/u.test(cell.trim()));
+  return row.length >= 2 && row.every((cell) => /^\d[.)]\s*\S/u.test(cell.trim()));
 }
 
 function tableGroups(rows: string[][]): string[][][] {
@@ -173,7 +186,11 @@ export function parseQuestionPrompt(prompt: string): PromptBlock[] {
       continue;
     }
     if (INSTRUCTION_PATTERN.test(line) || WORDS_INSTRUCTION_PATTERN.test(line)) {
-      blocks.push({ kind: "instruction", text: line });
+      // Instructions describe one answer format and are rendered as one group
+      // above the field, so they read as a single note, not a stack of plaques.
+      const existing = blocks.find((block) => block.kind === "instruction");
+      if (existing?.kind === "instruction") existing.text = `${existing.text} ${line}`;
+      else blocks.push({ kind: "instruction", text: line });
       continue;
     }
     blocks.push(isHeading(line) ? { kind: "heading", text: line } : { kind: "paragraph", text: line });
@@ -201,7 +218,7 @@ export function answerTypeLabel(question: Question): string {
 }
 
 export function questionTitleClassName(text: string): string {
-  if (text.length >= 360) return "question-title question-title-long";
-  if (text.length >= 180) return "question-title question-title-medium";
+  if (text.length >= 260) return "question-title question-title-long";
+  if (text.length >= 140) return "question-title question-title-medium";
   return "question-title";
 }

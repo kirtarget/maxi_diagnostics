@@ -54,8 +54,21 @@ describe("AssessmentHeader", () => {
   it("keeps the shell header and actions within the mobile hit-area contract", () => {
     const css = readFileSync(resolve(fileURLToPath(new URL("./globals.css", import.meta.url))), "utf8");
     expect(css).toMatch(/\.assessment-header\s*\{[^}]*height:\s*56px/s);
-    expect(css).toMatch(/\.assessment-header button\s*\{[^}]*min-width:\s*44px/s);
-    expect(css).toMatch(/\.assessment-header button\s*\{[^}]*min-height:\s*44px/s);
+    expect(css).toMatch(/\.assessment-header button:not\(\.question-progress-node\)\s*\{[^}]*min-width:\s*44px/s);
+    expect(css).toMatch(/\.assessment-header button:not\(\.question-progress-node\)\s*\{[^}]*min-height:\s*44px/s);
     expect(css).toMatch(/\.question-action-bar\s*\{[^}]*position:\s*fixed/s);
+  });
+
+  it("keeps a jump node the same 6px segment as a plain one", () => {
+    const css = readFileSync(resolve(fileURLToPath(new URL("./globals.css", import.meta.url))), "utf8");
+    // The header 44px target must skip the rail nodes, or each segment renders as a 44px circle.
+    expect(css).not.toMatch(/\.assessment-header button\s*\{/s);
+    expect(css).toMatch(/\.question-progress-node\s*\{[^}]*height:\s*6px/s);
+    // The tap area lives on ::after, and the rail must not clip it away.
+    expect(css).toMatch(/\.question-progress-jump::after\s*\{[^}]*inset:\s*-19px/s);
+    expect(css).toMatch(/\.question-progress-rail\.assessment-progress-dots\s*\{[^}]*overflow:\s*visible/s);
+    // A jump node carries no size of its own, so it inherits the plain node geometry.
+    const jump = css.match(/\.question-progress-jump\s*\{([^}]*)\}/s)?.[1] ?? "";
+    expect(jump).not.toMatch(/min-height|min-width|height:/);
   });
 });

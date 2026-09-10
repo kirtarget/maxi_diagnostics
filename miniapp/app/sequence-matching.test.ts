@@ -124,4 +124,43 @@ describe("contract-4 sequence metadata", () => {
   it("lets explicit numeric metadata disable prompt matching heuristics", () => {
     expect(parseSequenceMatchingPrompt(chemistryPrompt, { answer_format: "number" })).toBeNull();
   });
+
+  it("names the answer cells after the paper blank instead of dropping it", () => {
+    const physics = [
+      "Как изменились давление в 1 сосуде и внутренняя энергия 2 газа?",
+      "1) увеличилась",
+      "2) уменьшилась",
+      "3) не изменилась",
+      "Давление в 1 сосуде | Внутренняя энергия 2 газа",
+      "В ответ запишите последовательность цифр, соответствующую буквам АБ.",
+    ].join("\n");
+    expect(parseSequenceMatchingPrompt(physics, {
+      answer_format: "sequence",
+      answer_length: 2,
+      allow_reuse: true,
+      markers: ["А", "Б"],
+    })).toMatchObject({
+      left: [
+        { marker: "А", label: "Давление в 1 сосуде" },
+        { marker: "Б", label: "Внутренняя энергия 2 газа" },
+      ],
+    });
+  });
+
+  it("keeps a synthetic letter scaffold as the cell markers", () => {
+    const scaffold = [
+      "Установите соответствие.",
+      "А) первое",
+      "Б) второе",
+      "1) один",
+      "2) два",
+      "А | Б",
+    ].join("\n");
+    expect(parseSequenceMatchingPrompt(scaffold)).toMatchObject({
+      left: [
+        { marker: "А", label: "первое" },
+        { marker: "Б", label: "второе" },
+      ],
+    });
+  });
 });

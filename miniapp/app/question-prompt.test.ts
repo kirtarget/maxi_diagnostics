@@ -125,7 +125,7 @@ describe("parseQuestionPrompt", () => {
     const blocks = parseQuestionPrompt(question?.prompt ?? "");
     expect(blocks[0]).toEqual({
       kind: "stem",
-      text: "Прочитайте приведённый ниже текст. Преобразуйте, если необходимо, слово, напечатанное заглавными буквами в конце строки так, чтобы оно грамматически соответствовало содержанию текста. Каждый пропуск соответствует отдельному слову.",
+      text: "Преобразуйте, если необходимо, слово, напечатанное заглавными буквами в конце строки так, чтобы оно грамматически соответствовало содержанию текста.",
     });
     expect(blocks).toContainEqual({ kind: "instruction", text: "В ответ запишите полученное слово (без пробелов)." });
     expect(blocks.some((block) => block.kind === "stem" && block.text.includes("В ответ"))).toBe(false);
@@ -254,6 +254,22 @@ describe("table blocks", () => {
     ]);
     expect(blocks.filter((block) => block.kind === "table")).toHaveLength(1);
     expect(blocks[blocks.length - 1]).toEqual({ kind: "instruction", text: "Ответ запишите словом." });
+  });
+
+  it("keeps a truth table in one block instead of splitting off its last row", () => {
+    const blocks = parseQuestionPrompt([
+      "Определите, какому столбцу соответствует каждая переменная.",
+      "Переменная 1 | Переменная 2 | Функция",
+      "??? | ??? | F",
+      "1 | ___ | 0",
+      "0 | 1 | 0",
+      "___ | 1 | 0",
+    ].join("\n"));
+
+    const tables = blocks.filter((block) => block.kind === "table");
+    expect(tables).toHaveLength(1);
+    expect(tables[0].kind === "table" && tables[0].headerRows).toHaveLength(2);
+    expect(tables[0].kind === "table" && tables[0].rows).toHaveLength(3);
   });
 
   it("leaves a lone line with a bar as prose", () => {
