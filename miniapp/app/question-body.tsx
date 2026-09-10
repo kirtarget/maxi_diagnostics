@@ -9,7 +9,7 @@ import { createPromptAnchorAllocator, promptLayout, type PromptLayoutModel } fro
 import { PromptTable } from "./prompt-table";
 import { questionAssetPaths } from "./question-assets";
 import { parseQuestionPrompt, questionTitleClassName } from "./question-prompt";
-import { parseSequenceMatchingPrompt } from "./sequence-matching";
+import { parseSequenceMatchingPrompt, type SequenceMatchingPrompt } from "./sequence-matching";
 import { parseTableGapPrompt } from "./table-gap-matching";
 import type { Question } from "./types";
 
@@ -21,9 +21,15 @@ export type QuestionBodyModel = {
   imagePaths: string[];
   /** Editors that redraw the reference themselves, so the body must not print it twice. */
   ownsReference: boolean;
+  /** The sequence editor that redraws the left column, or null when nothing redraws it. */
+  sequence: SequenceMatchingPrompt | null;
 };
 
-export function questionBodyModel(question: Question): QuestionBodyModel {
+/**
+ * @param withEditor false on read-only surfaces such as the review, where no editor
+ * redraws the reference and hiding those blocks would drop the condition.
+ */
+export function questionBodyModel(question: Question, withEditor = true): QuestionBodyModel {
   const blocks = parseQuestionPrompt(question.prompt);
   const layout = promptLayout(blocks);
   const instructions = blocks.flatMap((block) => block.kind === "instruction" ? [block.text] : []);
@@ -32,7 +38,10 @@ export function questionBodyModel(question: Question): QuestionBodyModel {
     layout,
     instructions: guidance && instructions.length > 0 ? [`${instructions.join(" ")} ${guidance}`] : instructions,
     imagePaths: questionAssetPaths(question),
-    ownsReference: question.type === "input" && Boolean(parseTableGapPrompt(question.prompt, question)),
+    ownsReference: withEditor && question.type === "input" && Boolean(parseTableGapPrompt(question.prompt, question)),
+    sequence: withEditor && question.type === "input"
+      ? parseSequenceMatchingPrompt(question.prompt, question)
+      : null,
   };
 }
 
@@ -61,9 +70,7 @@ export function QuestionBody({ question, subject, model, idPrefix, illustrationA
     document.body.scrollTop = 0;
     headingRef.current?.focus({ preventScroll: true });
   }, [question.id]);
-  const sequenceMatching = question.type === "input"
-    ? parseSequenceMatchingPrompt(question.prompt, question)
-    : null;
+  const sequenceMatching = model.sequence;
   const referenceId = `${idPrefix}-reference`;
 
   return (
