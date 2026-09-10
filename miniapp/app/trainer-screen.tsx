@@ -20,6 +20,7 @@ import {
   trainerFeedbackKind,
   trainerModeLabel,
   type TrainerAction,
+  type TrainerGiveUp,
   type TrainerMode,
   type TrainerHeaderView,
   type TrainerState,
@@ -32,7 +33,7 @@ export type LivesReminderState = {
 export type TrainerScreenProps = {
   state: TrainerState;
   dispatch: Dispatch<TrainerAction>;
-  onAnswer?: (questionId: string, answer: AnswerValue) => void;
+  onAnswer?: (questionId: string, answer: AnswerValue, giveUp?: boolean) => void;
   onFinish?: () => void;
   onHome?: () => void;
   onRetry?: () => void;
@@ -133,6 +134,7 @@ function Feedback({ state, subject, showPrimaryScore, mode }: { state: TrainerSt
 export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onRetry, livesReminder, onRemindLives, offers = [], header, offerDismissed = {}, onOfferDismiss, onOfferEvent, labels }: TrainerScreenProps) {
   const offer = normalizeOffer(offers[0] ?? {});
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [giveUpIntent, setGiveUpIntent] = useState<TrainerGiveUp | null>(null);
   const autoFinishKey = `${state.session?.trainer_session_id ?? ""}:${state.session?.revision ?? ""}`;
   const autoFinishedKey = useRef<string | null>(null);
   useEffect(() => {
@@ -174,13 +176,18 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
   const body = questionBodyModel(question);
   const scored = state.session.mode !== "mistakes";
   const livesLeft = state.session.lives_remaining;
-  const barMessage = state.phase === "feedback"
+  const giveUp = (intent: TrainerGiveUp) => {
+    dispatch({ type: "give_up", intent });
+    onAnswer?.(question.id, state.draftAnswer as AnswerValue, true);
+  };
+  const barMessage = state.notice ?? (state.phase === "feedback"
     ? (isLast ? "Тренировка почти закончена" : "Разбор ниже, дальше следующий вопрос")
     : state.phase === "awaiting_result"
       ? "Проверяем ответ"
       : readiness.isAnswered
         ? (scored && livesLeft === 1 ? "Это последняя жизнь. Неверный ответ закончит тренировку." : "Готово, можно проверить")
-        : readiness.reason;
+        : readiness.reason);
+  const lifeCost = scored ? `Спишется одна жизнь, останется ${Math.max(0, livesLeft - 1)}` : "Жизни в этом режиме не тратятся";
   return <section className="screen trainer-screen" aria-labelledby="trainer-title">
     <AssessmentHeader model={{
       topic: `Задание ${Math.min(questionIndex + 1, state.session.questions.length)} из ${state.session.questions.length} · ${question.topic || subject || "Тренажёр"}`,
@@ -239,6 +246,19 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
         dispatch({ type: "next_question" });
       }}
       message={barMessage}
+      assist={state.phase === "answering" ? [
+        { label: "Показать ответ", caption: lifeCost, onSelect: () => setGiveUpIntent("reveal") },
+        { label: "Пропустить вопрос", caption: lifeCost, onSelect: () => setGiveUpIntent("skip") },
+      ] : undefined}
+    />
+    <ConfirmSheet
+      open={giveUpIntent !== null}
+      title={giveUpIntent === "skip" ? "Пропустить вопрос?" : "Показать ответ?"}
+      message={`${giveUpIntent === "skip" ? "Задание засчитается как неверное." : "Задание засчитается как неверное, а разбор откроется сразу."} ${lifeCost}.`}
+      confirmLabel={giveUpIntent === "skip" ? "Пропустить" : "Показать"}
+      cancelLabel="Вернуться"
+      onCancel={() => setGiveUpIntent(null)}
+      onConfirm={() => { const intent = giveUpIntent; setGiveUpIntent(null); if (intent) giveUp(intent); }}
     />
     <ConfirmSheet open={confirmOpen} onCancel={() => setConfirmOpen(false)} onConfirm={() => { setConfirmOpen(false); onHome?.(); }} />
   </section>;

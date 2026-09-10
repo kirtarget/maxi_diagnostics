@@ -1,5 +1,6 @@
 import type { AnswerValue, BootstrapResponse, PlanReason, Question } from "./types";
 import { answerReadiness } from "./answer-readiness";
+import { lifeNote } from "./trainer-feedback";
 
 /** Plan context the server attaches when a session runs today's plan. */
 export type TrainerPlanInfo = {
@@ -163,6 +164,10 @@ export type TrainerState = {
   finishResult: TrainerFinishResponse | null;
   error: string | null;
   retryPhase: Exclude<TrainerPhase, "error"> | null;
+  /** Set while a give-up request is in flight, so its result knows where to land. */
+  giveUp: TrainerGiveUp | null;
+  /** Carried onto the next question when a skip spends a life without a feedback panel. */
+  notice: string | null;
 };
 
 export const trainerInitialState: TrainerState = {
@@ -176,13 +181,19 @@ export const trainerInitialState: TrainerState = {
   finishResult: null,
   error: null,
   retryPhase: null,
+  giveUp: null,
+  notice: null,
 };
+
+/** Reveal keeps the student on the question; skip carries them to the next one. */
+export type TrainerGiveUp = "reveal" | "skip";
 
 export type TrainerAction =
   | { type: "reset" }
   | { type: "start"; response: TrainerStartResponse }
   | { type: "set_answer"; answer: AnswerValue }
   | { type: "submit_answer" }
+  | { type: "give_up"; intent: TrainerGiveUp }
   | { type: "answer_result"; response: TrainerAnswerResponse }
   | { type: "next_question" }
   | { type: "finish_requested" }
@@ -215,7 +226,21 @@ export function trainerReducer(state: TrainerState, action: TrainerAction): Trai
         answeredQuestionIndex: null,
       };
     case "set_answer":
-      return state.phase === "answering" ? { ...state, draftAnswer: action.answer } : state;
+      return state.phase === "answering" ? { ...state, draftAnswer: action.answer, notice: null } : state;
+    case "give_up":
+      // Unlike a submission this needs no complete answer: not knowing one is the point.
+      return state.phase === "answering" && state.session
+        && (state.session.mode === "mistakes" || state.session.lives_remaining > 0)
+        ? {
+          ...state,
+          phase: "awaiting_result",
+          answeredQuestionIndex: state.currentIndex,
+          submittedAnswer: state.draftAnswer,
+          giveUp: action.intent,
+          notice: null,
+          error: null,
+        }
+        : state;
     case "submit_answer":
       return state.phase === "answering" && state.session
         && (state.session.mode === "mistakes" || state.session.lives_remaining > 0)
@@ -225,6 +250,8 @@ export function trainerReducer(state: TrainerState, action: TrainerAction): Trai
           phase: "awaiting_result",
           answeredQuestionIndex: state.currentIndex,
           submittedAnswer: state.draftAnswer,
+          giveUp: null,
+          notice: null,
           error: null,
         }
         : state;
@@ -232,15 +259,42 @@ export function trainerReducer(state: TrainerState, action: TrainerAction): Trai
       if (!state.session || state.phase !== "awaiting_result" || action.response.trainer_session_id !== state.session.trainer_session_id) return state;
       if (action.response.question_id !== state.session.question_ids[state.answeredQuestionIndex ?? state.currentIndex]) return state;
       if (action.response.revision <= state.session.revision) return state;
-      return {
-        ...state,
-        phase: "feedback",
-        currentIndex: action.response.current_index,
-        answeredQuestionIndex: state.currentIndex,
-        answerResult: action.response,
-        error: null,
-        session: { ...state.session, revision: action.response.revision, status: action.response.status, lives_remaining: action.response.lives_remaining, next_life_at: action.response.next_life_at ?? null },
-      };
+      {
+        const session = { ...state.session, revision: action.response.revision, status: action.response.status, lives_remaining: action.response.lives_remaining, next_life_at: action.response.next_life_at ?? null };
+        const nextIndex = action.response.current_index;
+        const skipped = state.giveUp === "skip"
+          && ["active", "in_progress"].includes(action.response.status)
+          && nextIndex >= 0 && nextIndex < state.session.questions.length;
+        // A skip shows no feedback panel, so the life it spent has to be announced
+        // on the question the student lands on instead.
+        if (skipped) {
+          const life = lifeNote(action.response, session.mode);
+          return {
+            ...state,
+            phase: "answering",
+            currentIndex: nextIndex,
+            answeredQuestionIndex: null,
+            draftAnswer: undefined,
+            submittedAnswer: undefined,
+            answerResult: null,
+            giveUp: null,
+            notice: life ? `Вопрос пропущен. ${life.text}` : "Вопрос пропущен.",
+            error: null,
+            session,
+          };
+        }
+        return {
+          ...state,
+          phase: "feedback",
+          currentIndex: nextIndex,
+          answeredQuestionIndex: state.currentIndex,
+          answerResult: action.response,
+          giveUp: null,
+          notice: null,
+          error: null,
+          session,
+        };
+      }
     case "next_question": {
       const result = state.answerResult;
       if (!state.session || state.phase !== "feedback" || !result || !["active", "in_progress"].includes(result.status)) return state;

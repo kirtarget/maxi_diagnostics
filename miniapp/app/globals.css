@@ -2331,6 +2331,15 @@ select:disabled {
   background: color-mix(in srgb, var(--brand-ink) 8%, var(--brand-background));
 }
 
+.question-assist {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  text-align: center;
+}
+
+.question-assist .question-skip { flex: 1 1 0; align-items: center; }
+
 .question-skip {
   display: flex;
   flex-direction: column;

@@ -749,6 +749,8 @@ export const answerTrainer = (
     answer: AnswerValue;
     revision: number;
     idempotency_key: string;
+    /** The student asked for the answer or dropped the question. */
+    give_up?: boolean;
   },
   fetcher: FetchLike = fetch,
 ) => postDiagnostic<TrainerAnswerResponse>("/api/diagnostics/trainer/answer", initData, payload, fetcher);

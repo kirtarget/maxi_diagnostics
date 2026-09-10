@@ -86,6 +86,10 @@ class TrainerAnswerRequest(ApiRequest):
     trainer_session_id: str = Field(pattern=r"^[A-Za-z0-9_-]{32,64}$")
     question_id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
     answer: Any
+    # The student asked for the answer or dropped the question. The attempt is
+    # recorded as wrong, so the existing lives rule charges it like any other
+    # wrong answer; nothing about that rule changes here.
+    give_up: bool = False
     revision: int = Field(ge=1, le=100000, strict=True)
     idempotency_key: str | None = Field(
         default=None, min_length=1, max_length=128,

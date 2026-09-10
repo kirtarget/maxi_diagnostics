@@ -515,7 +515,7 @@ export default function Home() {
         <TrainerScreen
           state={trainer.state.trainer}
           dispatch={trainer.actions.dispatch}
-          onAnswer={(questionId, answer) => void trainer.actions.answer(questionId, answer)}
+          onAnswer={(questionId, answer, giveUp) => void trainer.actions.answer(questionId, answer, giveUp)}
           onFinish={() => void trainer.actions.finish()}
           onHome={goHome}
           onRetry={trainer.actions.retry}

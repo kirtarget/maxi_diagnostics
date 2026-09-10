@@ -13,6 +13,13 @@ export type ActionBarSkip = {
   onSkip: () => void;
 };
 
+/** A secondary way out of the question, named with what it costs. */
+export type ActionBarAssist = {
+  label: string;
+  caption: string;
+  onSelect: () => void;
+};
+
 export type ActionBarProps = {
   primaryLabel: string;
   primaryDisabled: boolean;
@@ -21,6 +28,8 @@ export type ActionBarProps = {
   message: string;
   messageRole?: "status" | "alert";
   skip?: ActionBarSkip;
+  /** Extra exits, used by the trainer where a question can be revealed or dropped. */
+  assist?: readonly ActionBarAssist[];
 };
 
 /**
@@ -28,7 +37,7 @@ export type ActionBarProps = {
  * Publishes its height as --action-bar-height and lifts itself over the
  * software keyboard, because a fixed element otherwise sits underneath it.
  */
-export function ActionBar({ primaryLabel, primaryDisabled, onPrimary, message, messageRole = "status", skip }: ActionBarProps) {
+export function ActionBar({ primaryLabel, primaryDisabled, onPrimary, message, messageRole = "status", skip, assist }: ActionBarProps) {
   const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,6 +85,16 @@ export function ActionBar({ primaryLabel, primaryDisabled, onPrimary, message, m
       >
         {message}
       </p>
+      {assist && assist.length > 0 && (
+        <div className="question-assist">
+          {assist.map((action) => (
+            <button className="question-skip" key={action.label} onClick={action.onSelect} type="button">
+              <span className="question-skip-label">{action.label}</span>
+              <span className="question-skip-caption">{action.caption}</span>
+            </button>
+          ))}
+        </div>
+      )}
       {skip && (
         <button
           className={`question-skip${skip.available ? "" : " is-reserved"}`}

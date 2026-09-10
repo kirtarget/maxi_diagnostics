@@ -270,6 +270,89 @@ describe("trainer integration contracts", () => {
     expect(html).toContain("Выбери вариант");
   });
 
+  it("offers a reveal and a skip that both name the cost", () => {
+    const state: TrainerState = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [question], lives_remaining: 4,
+      },
+    });
+    const html = renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />);
+    expect(html).toContain("Показать ответ");
+    expect(html).toContain("Пропустить вопрос");
+    expect(html).toContain("Спишется одна жизнь, останется 3");
+  });
+
+  it("gives up without a complete answer and reveals the correct one", () => {
+    let state: TrainerState = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
+        mode: "normal", question_ids: ["q1"], current_index: 0, revision: 1,
+        status: "active", questions: [question], lives_remaining: 4,
+      },
+    });
+    // no draft answer at all: submit_answer must refuse, give_up must not
+    expect(trainerReducer(state, { type: "submit_answer" }).phase).toBe("answering");
+    state = trainerReducer(state, { type: "give_up", intent: "reveal" });
+    expect(state.phase).toBe("awaiting_result");
+    state = trainerReducer(state, {
+      type: "answer_result",
+      response: {
+        trainer_session_id: "s".repeat(32), question_id: "q1", is_correct: false,
+        correct_answer: "4", explanation: null, xp_delta: 0,
+        life_delta: -1, current_index: 1, revision: 2, status: "exhausted", lives_remaining: 3,
+      },
+    });
+    expect(state.phase).toBe("feedback");
+    const html = renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />);
+    expect(html).toContain("Правильный ответ");
+  });
+
+  it("carries a skip straight to the next question and still reports the life", () => {
+    const twoQuestions = { ...question, id: "q2" };
+    let state: TrainerState = trainerReducer(trainerInitialState, {
+      type: "start",
+      response: {
+        trainer_session_id: "s".repeat(32), diagnostic_id: "math", content_version: "v1",
+        mode: "normal", question_ids: ["q1", "q2"], current_index: 0, revision: 1,
+        status: "active", questions: [question, twoQuestions], lives_remaining: 4,
+      },
+    });
+    state = trainerReducer(state, { type: "give_up", intent: "skip" });
+    state = trainerReducer(state, {
+      type: "answer_result",
+      response: {
+        trainer_session_id: "s".repeat(32), question_id: "q1", is_correct: false,
+        correct_answer: "4", explanation: null, xp_delta: 0,
+        life_delta: -1, current_index: 1, revision: 2, status: "active", lives_remaining: 3,
+      },
+    });
+    expect(state.phase).toBe("answering");
+    expect(state.currentIndex).toBe(1);
+    expect(state.answerResult).toBeNull();
+    const html = renderToStaticMarkup(<TrainerScreen state={state} dispatch={() => undefined} />);
+    expect(html).toContain("Вопрос пропущен. −1 жизнь · осталось 3 жизни");
+  });
+
+  it("sends give_up to the real answer endpoint", async () => {
+    const fetcher = fetcherWith({
+      trainer_session_id: "s".repeat(32), question_id: "q1", is_correct: false,
+      correct_answer: "4", explanation: null, xp_delta: 0,
+      life_delta: -1, current_index: 1, revision: 2, status: "exhausted", lives_remaining: 3,
+    });
+    await answerTrainer("signed", {
+      session_scope: "a".repeat(24), trainer_session_id: "s".repeat(32),
+      question_id: "q1", answer: null as never, revision: 1,
+      idempotency_key: "trainer-answer-1", give_up: true,
+    }, fetcher);
+    const body = JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body));
+    expect(body.give_up).toBe(true);
+    expect(body.answer).toBeNull();
+  });
+
   it("shows partial credit as Почти and formats explanation math", () => {
     let state: TrainerState = trainerReducer(trainerInitialState, {
       type: "start",
