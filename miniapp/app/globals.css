@@ -173,15 +173,6 @@ select:disabled {
   border: 1px solid var(--decor-line);
 }
 
-.status-pill {
-  padding: 6px 11px;
-  border-radius: var(--r-pill);
-  color: var(--brand-primary);
-  background: var(--primary-tint);
-  font-size: 11px;
-  font-weight: 700;
-}
-
 /* ============ Screen scaffold ============ */
 
 .screen {

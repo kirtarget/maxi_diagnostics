@@ -153,4 +153,9 @@ describe("accessibility CSS rules that carry the contrast", () => {
     expect(current).toContain("background: white");
     expect(css).not.toMatch(/\.question-progress-node\.is-complete,\s*\.question-progress-node\.is-current/u);
   });
+
+  it("drops the header pill that looked like a button and did nothing", () => {
+    expect(css).not.toContain(".status-pill");
+    expect(readFileSync("app/page.tsx", "utf8")).not.toContain("status-pill");
+  });
 });

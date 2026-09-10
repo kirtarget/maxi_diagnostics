@@ -21,7 +21,6 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BUILD_SCHOOL_NAME: buildBrand.name,
     NEXT_PUBLIC_BUILD_SCHOOL_SHORT_NAME: buildBrand.short_name,
     NEXT_PUBLIC_BUILD_SCHOOL_LOGO: buildBrand.logo,
-    NEXT_PUBLIC_BUILD_RESULT_STATUS: buildBrand.interface.result_in_app,
     NEXT_PUBLIC_BUILD_BOT_USERNAME: buildBrand.bot_username ?? "",
   },
   turbopack: {
