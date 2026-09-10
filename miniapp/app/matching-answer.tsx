@@ -616,10 +616,12 @@ export function MatchingAnswer({ model, value, subject, disabled = false, onChan
     : <MapMatchingAnswer model={model} value={value} subject={subject} disabled={disabled} onChange={onChange} />;
 }
 
-export function AnswerPreview({ markers, selected, label = "Твой ответ" }: {
+export function AnswerPreview({ markers, selected, label = "Твой ответ", compare }: {
   markers: string[];
   selected: string[];
   label?: string;
+  /** Row to compare against position by position. Positions that differ are marked. */
+  compare?: string[];
 }) {
   const values = markers.map((_, index) => selected[index] ?? "");
   // The chip that carries this label is one character wide. A cell named by a
@@ -632,7 +634,12 @@ export function AnswerPreview({ markers, selected, label = "Твой ответ"
       <span>{label}</span>
       <strong>
         {markers.map((marker, index) => (
-          <span key={`${marker}-${index}`}>{values[index] || "—"}<small>{chips[index]}</small></span>
+          <span
+            key={`${marker}-${index}`}
+            className={compare && values[index] !== (compare[index] ?? "") ? "is-mismatch" : undefined}
+          >
+            {values[index] || "—"}<small>{chips[index]}</small>
+          </span>
         ))}
       </strong>
     </div>
