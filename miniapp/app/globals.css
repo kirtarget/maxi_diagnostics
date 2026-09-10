@@ -48,6 +48,8 @@ html {
   --decor-line: color-mix(in srgb, var(--brand-ink) 12%, transparent);
   --control-line: color-mix(in srgb, var(--brand-ink) 38%, white);
   --interactive-line: color-mix(in srgb, var(--brand-ink) 55%, white);
+  /* Disabled labels sit on an ink-tinted surface, so they need more ink than --muted to clear 4.5:1. */
+  --disabled-ink: color-mix(in srgb, var(--brand-ink) 68%, white);
 
   --primary-deep: color-mix(in srgb, var(--brand-primary) 68%, #150a38);
   --primary-tint: color-mix(in srgb, var(--brand-primary) 9%, var(--brand-paper));
@@ -109,7 +111,7 @@ select:focus-visible,
 button:disabled,
 input:disabled,
 select:disabled {
-  color: var(--muted);
+  color: var(--disabled-ink);
   border-style: dashed;
 }
 
@@ -261,7 +263,7 @@ select:disabled {
 .primary-button:active { transform: translateY(1px) scale(0.99); box-shadow: none; }
 
 .primary-button:disabled {
-  color: var(--faint);
+  color: var(--disabled-ink);
   background: color-mix(in srgb, var(--brand-ink) 8%, var(--brand-background));
   box-shadow: none;
   cursor: default;
@@ -1278,7 +1280,7 @@ select:disabled {
 .submit-review-jump {
   min-height: 44px;
   padding: 8px 14px;
-  border: 1.5px solid var(--control-line);
+  border: 1.5px solid var(--interactive-line);
   border-radius: var(--r-pill);
   color: var(--ink);
   background: transparent;
@@ -2359,7 +2361,7 @@ select:disabled {
 .table-gap-select select:disabled,
 .short-answer-control input:disabled,
 .short-answer > input:disabled {
-  color: var(--muted);
+  color: var(--disabled-ink);
   border-style: dashed;
 }
 
@@ -2398,7 +2400,7 @@ select:disabled {
 
 .question-action-bar .question-next:disabled {
   border: 2px dashed var(--control-line);
-  color: var(--muted);
+  color: var(--disabled-ink);
   background: color-mix(in srgb, var(--brand-ink) 8%, var(--brand-background));
 }
 
@@ -3364,12 +3366,16 @@ select:disabled {
   gap: 8px;
 }
 
-.trainer-life-note {
+.trainer-feedback small.trainer-life-note {
   color: white;
   background: color-mix(in srgb, var(--brand-signal) 70%, transparent);
 }
 
-.trainer-life-note.is-warning { background: var(--brand-signal); }
+/* Lime on coral reads at 2.1:1. Ink on the same coral reads at 6.5:1. */
+.trainer-feedback small.trainer-life-note.is-warning {
+  color: var(--brand-ink);
+  background: var(--brand-signal);
+}
 
 .trainer-last-life {
   margin: 0;
