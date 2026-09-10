@@ -2320,6 +2320,11 @@ select:disabled {
   box-shadow: none;
 }
 
+/* The disabled button is pinned with transform: none, so the base hover lift would
+   raise it by 1px at the exact moment the answer completes. That is the shift this
+   bar exists to prevent, only smaller. Press feedback stays. */
+.question-screen .question-next:hover { transform: none; }
+
 .question-screen .question-next:disabled {
   border: 2px dashed var(--control-line);
   color: var(--muted);
