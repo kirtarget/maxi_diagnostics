@@ -18,7 +18,9 @@ export type MathDisplayPart = {
 
 // Aggregate-state and concentration marks are reading conditions, not part of
 // the formula, so they keep body type instead of bold or index sizing.
-const STATE_ANNOTATION = /\((?:р-р|р-ра|ж|г|т|тв|изб|конц|разб|крист|aq)\.?\)/giu;
+// Some source files spell the solution mark with Latin lookalikes, so both
+// alphabets are accepted rather than left to render as part of the formula.
+const STATE_ANNOTATION = /\((?:[рp]-[рp][аa]?|ж|г|т|тв|изб|конц|разб|крист|aq)\.?\)/giu;
 
 function splitAnnotations(text: string): MathDisplayPart[] {
   const parts: MathDisplayPart[] = [];

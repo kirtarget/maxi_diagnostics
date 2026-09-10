@@ -155,6 +155,14 @@ describe("formulas are formatted as one whole token", () => {
     expect(segments[1]?.anchorId).toBe("prompt-sentence-2");
   });
 
+  it("marks the solution note even when the source spells it with Latin letters", () => {
+    const reagents = question("ege-chemistry-1208", "sp-chemistry-ege-2022-q8");
+    const latin = JSON.stringify(reagents).match(/\([pр]-[pр]\)/u);
+    expect(latin, "q8 no longer carries a solution mark").not.toBeNull();
+    const html = renderToStaticMarkup(<FormattedMathText text={`KOH${latin![0]}`} subject="Химия" />);
+    expect(html).toContain(`<span class="math-annotation">${latin![0]}</span>`);
+  });
+
   it("sizes an index and a state annotation by the rules the audit asked for", () => {
     const css = readFileSync(resolve(fileURLToPath(new URL("./globals.css", import.meta.url))), "utf8");
     expect(css).toMatch(/\.math-expression sup,\s*\.math-expression sub \{[^}]*font-size:\s*max\(11px,\s*0\.75em\)/u);
