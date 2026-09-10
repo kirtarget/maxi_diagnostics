@@ -1,3 +1,5 @@
+import { ActionBar } from "./action-bar";
+import { answerReadiness } from "./answer-readiness";
 import { AnswerEditor, textAnswerGuidance, type AnswerEditorLabels } from "./answer-editor";
 import { AnswerPreview, MatchingAnswer, matchingModelFromSequence } from "./matching-answer";
 import { FormattedMathText, FormattedStem } from "./math-display";
@@ -42,6 +44,7 @@ export type QuestionScreenProps = {
   progressAnnouncementRole?: "status" | "alert";
   skipped?: boolean;
   skippedIndexes?: readonly number[];
+  onJumpToQuestion?: (index: number) => void;
 };
 
 export function StructuredAnswerEditor({ question, subject, value, onChange, disabled = false, suppressAutoHint = false, labels }: {
@@ -71,11 +74,6 @@ export type QuestionProgress = {
   message: string;
 };
 
-type AnswerReadiness = {
-  isAnswered: boolean;
-  reason: string;
-};
-
 export function questionProgress(index: number, total: number): QuestionProgress {
   const current = index + 1;
   const percent = Math.round((current / total) * 100);
@@ -88,90 +86,6 @@ export function questionProgress(index: number, total: number): QuestionProgress
         : "Финиш рядом";
 
   return { current, total, percent, message };
-}
-
-function answerReadiness(question: Question, answer: AnswerValue | undefined): AnswerReadiness {
-  switch (question.type) {
-    case "single":
-      return typeof answer === "string" && answer.length > 0
-        ? { isAnswered: true, reason: "" }
-        : { isAnswered: false, reason: "Выбери вариант" };
-    case "multiple": {
-      const selected = Array.isArray(answer) ? answer.length : 0;
-      return selected === question.selection_limit
-        ? { isAnswered: true, reason: "" }
-        : { isAnswered: false, reason: `Выбрано ${selected} из ${question.selection_limit}` };
-    }
-    case "matching": {
-      const value = answer
-        && typeof answer === "object"
-        && !Array.isArray(answer)
-          ? answer
-          : {};
-      const missing = question.items.flatMap((item, index) => {
-        if (value[item.id]) return [];
-        const marker = /^\s*([А-ЯЁA-Z0-9]+)(?:[).]|\s|$)/u.exec(item.label)?.[1];
-        return [marker ?? String(index + 1)];
-      });
-      return missing.length === 0
-        ? { isAnswered: true, reason: "" }
-        : { isAnswered: false, reason: `Осталось заполнить: ${missing.join(", ")}` };
-    }
-    case "text":
-      return isValidTextInput(answer, question.max_length)
-        ? { isAnswered: true, reason: "" }
-        : { isAnswered: false, reason: "Введи ответ" };
-    case "input": {
-      const tableGap = parseTableGapPrompt(question.prompt, question);
-      if (tableGap) {
-        if (isCompleteTableGapAnswer(tableGap, answer)) return { isAnswered: true, reason: "" };
-        const selected = typeof answer === "string" ? [...answer] : [];
-        const duplicate = selected.find((value, index) => selected.indexOf(value) !== index);
-        return duplicate
-          ? { isAnswered: false, reason: `Вариант ${duplicate} выбран дважды` }
-          : {
-            isAnswered: false,
-            reason: `Осталось заполнить: ${tableGap.markers.slice(selected.length).join(", ")}`,
-          };
-      }
-      const matching = parseSequenceMatchingPrompt(question.prompt, question);
-      if (matching) {
-        if (isCompleteSequenceMatchingAnswer(matching, answer)) return { isAnswered: true, reason: "" };
-        const selected = typeof answer === "string" ? [...answer] : [];
-        const duplicate = matching.allowReuse
-          ? undefined
-          : selected.find((value, index) => selected.indexOf(value) !== index);
-        return duplicate
-          ? { isAnswered: false, reason: `Вариант ${duplicate} выбран дважды` }
-          : {
-            isAnswered: false,
-            reason: `Заполнено ${Math.min(selected.length, matching.answerLength)} из ${matching.answerLength}`,
-          };
-      }
-      if (question.answer_format === "sequence" && question.answer_length) {
-        // The server accepts exactly `answer_length` digits, so the button must
-        // not promise a transition the completion request will refuse.
-        const digits = typeof answer === "string" ? [...answer] : [];
-        const wellFormed = digits.every((value) => /^\d$/u.test(value));
-        const duplicate = question.allow_reuse === false
-          ? digits.find((value, index) => digits.indexOf(value) !== index)
-          : undefined;
-        if (wellFormed && !duplicate && digits.length === question.answer_length) {
-          return { isAnswered: true, reason: "" };
-        }
-        return duplicate
-          ? { isAnswered: false, reason: `Вариант ${duplicate} выбран дважды` }
-          : { isAnswered: false, reason: `Заполнено ${Math.min(digits.length, question.answer_length)} из ${question.answer_length}` };
-      }
-      return isValidNumericInput(answer)
-        ? { isAnswered: true, reason: "" }
-        : { isAnswered: false, reason: "Введи число" };
-    }
-    default: {
-      const exhaustiveQuestion: never = question;
-      return exhaustiveQuestion;
-    }
-  }
 }
 
 export function QuestionView({
@@ -191,13 +105,14 @@ export function QuestionView({
   progressAnnouncementRole = "status",
   skipped = false,
   skippedIndexes = [],
+  onJumpToQuestion,
 }: QuestionScreenProps) {
   const progress = questionProgress(index, total);
   const readiness = answerReadiness(question, answer);
   const questionAnnouncement = progressAnnouncement || (
     skipped
       ? "Задание пропущено. Можно вернуться и ответить позже."
-      : !readiness.isAnswered ? readiness.reason : ""
+      : readiness.isAnswered ? "Готово, можно дальше" : readiness.reason
   );
   const imagePaths = questionAssetPaths(question);
   const promptBlocks = parseQuestionPrompt(question.prompt);
@@ -249,6 +164,7 @@ export function QuestionView({
           saveState: progressSaveState,
           progressMessage: `${labels.task_label} ${progress.current} ${labels.of_label} ${progress.total}. ${progress.message}`,
           skippedIndexes,
+          onJumpToQuestion,
           onBack,
           onExit,
           onReference: layout.isLongReference ? focusReference : undefined,
@@ -334,25 +250,19 @@ export function QuestionView({
         />
       )}
 
-      <div className="question-action-bar">
-        <button className="primary-button question-next" disabled={!readiness.isAnswered && !skipped} onClick={onNext} type="button">
-          {index === total - 1 ? labels.get_result : labels.next_question}
-          <span aria-hidden="true">→</span>
-        </button>
-        {!readiness.isAnswered && !skipped && onSkip && (
-          <button className="question-skip" onClick={onSkip} type="button">
-            {index === total - 1 ? "Не знаю, получить результат" : "Не знаю, дальше"}
-          </button>
-        )}
-        <p
-          className="question-announcement"
-          role={progressAnnouncementRole}
-          aria-live={progressAnnouncementRole === "alert" ? "assertive" : "polite"}
-          aria-atomic="true"
-        >
-          {questionAnnouncement}
-        </p>
-      </div>
+      <ActionBar
+        primaryLabel={index === total - 1 ? labels.get_result : labels.next_question}
+        primaryDisabled={!readiness.isAnswered && !skipped}
+        onPrimary={skipped && !readiness.isAnswered && onSkip ? onSkip : onNext}
+        message={questionAnnouncement}
+        messageRole={progressAnnouncementRole}
+        skip={onSkip ? {
+          label: "Пропустить",
+          caption: "Отметим как пропущенное, вернуться можно в любой момент",
+          available: !skipped,
+          onSkip,
+        } : undefined}
+      />
       </div>
     </section>
   );

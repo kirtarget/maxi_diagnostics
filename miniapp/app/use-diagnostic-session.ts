@@ -22,6 +22,7 @@ import {
   updateTextInputAnswer,
 } from "./api";
 import type { ProgressPayload, ProgressSaveQueue } from "./api";
+import { answerReadiness } from "./answer-readiness";
 import { emptyAnswerFor, updateAnswerFromEditor } from "./answer-values";
 import {
   diagnosticLoadInitialState,
@@ -69,6 +70,10 @@ export type DiagnosticSessionState = {
   progressSaveState: ProgressSaveState;
   progressToast: string | null;
   submitWarning: boolean;
+  /** Questions the learner skipped on purpose; sticky until a complete answer replaces the skip. */
+  skippedQuestionIds: string[];
+  /** Set when submission is held back for the unanswered summary. */
+  submitReview: boolean;
 };
 
 export type DiagnosticSessionActions = {
@@ -81,6 +86,9 @@ export type DiagnosticSessionActions = {
   skipQuestion(): void;
   previousQuestion(): void;
   nextQuestion(): void;
+  goToQuestion(index: number): void;
+  confirmSubmit(): void;
+  cancelSubmit(): void;
   flushProgressForExit(): Promise<boolean>;
   openReview(questionId?: string): void;
   openSavedResult(attempt: ServerAttempt): void;
@@ -127,6 +135,8 @@ export function useDiagnosticSession({
   const [exam, setExam] = useState("");
   const [diagnosticId, setDiagnosticId] = useState<string | null>(null);
   const [questionIndex, setQuestionIndex] = useState(0);
+  const [skippedQuestionIds, setSkippedQuestionIds] = useState<string[]>([]);
+  const [submitReview, setSubmitReview] = useState(false);
   const [answers, setAnswers] = useState<AnswerMap>({});
   const [inputDrafts, setInputDrafts] = useState<Record<string, string>>({});
   const [attemptId, setAttemptId] = useState(createAttemptId);
@@ -505,6 +515,8 @@ export function useDiagnosticSession({
     setAnswers({});
     latestAnswers.current = {};
     setInputDrafts({});
+    setSkippedQuestionIds([]);
+    setSubmitReview(false);
     setResult(null);
     setReview(null);
     setReviewIndex(0);
@@ -537,6 +549,11 @@ export function useDiagnosticSession({
   const answerQuestion = (value: AnswerValue) => {
     if (!diagnostic || !brand || !sessionScope) return;
     const question = questions[questionIndex];
+    // A half-filled answer must not silently cancel the skip, or the primary
+    // button goes dark and the skip link reappears under the learner's finger.
+    if (answerReadiness(question, value).isAnswered) {
+      setSkippedQuestionIds((current) => current.filter((id) => id !== question.id));
+    }
     if ((question.type === "input" || question.type === "text") && typeof value === "string") {
       setInputDrafts((current) => ({ ...current, [question.id]: value }));
       const nextAnswers = question.type === "text"
@@ -674,7 +691,7 @@ export function useDiagnosticSession({
 
   const nextQuestion = () => {
     if (questionIndex === questions.length - 1) {
-      void submit();
+      setSubmitReview(true);
       return;
     }
     setQuestionIndex((current) => {
@@ -690,8 +707,9 @@ export function useDiagnosticSession({
     const nextAnswers = { ...answers, [question.id]: emptyAnswerFor(question) };
     latestAnswers.current = nextAnswers;
     setAnswers(nextAnswers);
+    setSkippedQuestionIds((current) => current.includes(question.id) ? current : [...current, question.id]);
     if (questionIndex === questions.length - 1) {
-      void submit(nextAnswers);
+      setSubmitReview(true);
       return;
     }
     setQuestionIndex((current) => {
@@ -700,6 +718,20 @@ export function useDiagnosticSession({
       return next;
     });
   };
+
+  const goToQuestion = (index: number) => {
+    if (index < 0 || index >= questions.length) return;
+    setSubmitReview(false);
+    setQuestionIndex(index);
+    latestQuestionIndex.current = index;
+  };
+
+  const confirmSubmit = () => {
+    setSubmitReview(false);
+    void submit();
+  };
+
+  const cancelSubmit = () => setSubmitReview(false);
 
   const openReview = (questionId?: string) => {
     setReviewQuestionId(questionId ?? null);
@@ -779,6 +811,8 @@ export function useDiagnosticSession({
       progressSaveState,
       progressToast,
       submitWarning,
+      skippedQuestionIds,
+      submitReview,
     },
     actions: {
       hydrate,
@@ -823,6 +857,9 @@ export function useDiagnosticSession({
       skipQuestion,
       previousQuestion,
       nextQuestion,
+      goToQuestion,
+      confirmSubmit,
+      cancelSubmit,
       flushProgressForExit,
       openReview,
       refreshReview,

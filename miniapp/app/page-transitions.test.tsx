@@ -176,6 +176,11 @@ function click(selector: string): void {
   element.click();
 }
 
+/** The last question holds submission behind a summary sheet, so confirm it explicitly. */
+async function confirmSubmission(): Promise<void> {
+  await clickAndSettle(".confirm-sheet .primary-button");
+}
+
 async function clickAndSettle(selector: string): Promise<void> {
   await act(async () => { click(selector); });
 }
@@ -329,6 +334,7 @@ describe("Home screen transitions", () => {
       result: { ...serverResult, mode: "full" },
     });
     await clickAndSettle(".question-skip");
+    await confirmSubmission();
     await settle();
     expect(requestedBodies.find(({ path }) => path === "/api/diagnostics/session/complete")?.body).toMatchObject({ mode: "full" });
   });
@@ -380,6 +386,7 @@ describe("Home screen transitions", () => {
     vi.useFakeTimers();
     try {
       await clickAndSettle(".question-skip");
+      await confirmSubmission();
       await act(async () => { vi.advanceTimersByTime(300); await Promise.resolve(); });
       await settle();
       expect(requestedBodies.find(({ path }) => path.endsWith("/api/diagnostics/session/complete"))?.body)
@@ -564,8 +571,9 @@ describe("Home screen transitions", () => {
       progress_profile: { completion_count: 1, achievement_keys: ["first_diagnostic_completed"] },
       daily_plan: { status: "ready", diagnostic_id: diagnostic.id, subject: diagnostic.subject, exam: diagnostic.exam, plan_date: "2026-09-06", total: 1, completed: 0 },
     }));
-    vi.useFakeTimers();
     await clickAndSettle(".question-next");
+    vi.useFakeTimers();
+    await confirmSubmission();
     expect(screenClasses()).toContain("submit-screen");
     expect(container.querySelector(".submit-note")).toBeNull();
     await act(async () => { vi.advanceTimersByTime(299); await Promise.resolve(); });
@@ -866,8 +874,9 @@ describe("Home screen transitions", () => {
     expect(screenClasses()).toContain("question-screen");
 
     await clickAndSettle(".answer-option");
-    vi.useFakeTimers();
     await clickAndSettle(".question-next");
+    vi.useFakeTimers();
+    await confirmSubmission();
     expect(screenClasses()).toContain("submit-screen");
     expect(container.querySelector(".submit-note")).toBeNull();
 
@@ -909,8 +918,12 @@ describe("Home screen transitions", () => {
     await clickAndSettle(".mode-card.featured");
     await settle();
 
-    expect(container.textContent).toContain("Не знаю, получить результат");
+    expect(container.textContent).toContain("Пропустить");
     await clickAndSettle(".question-skip");
+    // N-09: the skip on the last question opens the summary instead of submitting.
+    expect(screenClasses()).toContain("question-screen");
+    expect(container.querySelector(".submit-review-list")?.textContent).toContain("Задание 1");
+    await confirmSubmission();
     expect(screenClasses()).toContain("submit-screen");
     expect(requestedBodies.find(({ path }) => path === "/api/diagnostics/session/complete")?.body).toMatchObject({
       question_count: 1,
@@ -974,6 +987,7 @@ describe("Home screen transitions", () => {
     expect(container.textContent).not.toContain("Задание пропущено");
     await clickAndSettle(".question-next");
     await clickAndSettle(".question-skip");
+    await confirmSubmission();
 
     expect(requestedBodies.find(({ path }) => path === "/api/diagnostics/session/complete")?.body).toMatchObject({
       question_count: 2,
