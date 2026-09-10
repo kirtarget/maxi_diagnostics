@@ -27,9 +27,7 @@ import type { Brand, DeliveryStatus, PublicDiagnosticSummary, Screen } from "./t
 import type { NavigationIntent, NavigationSelection } from "./navigation-model";
 import { shouldShowBottomNav } from "./navigation-model";
 
-type DisplayBrand = Pick<Brand, "name" | "short_name" | "logo"> & {
-  resultStatus: string;
-};
+type DisplayBrand = Pick<Brand, "name" | "short_name" | "logo">;
 
 const BUILD_BOT_USERNAME = process.env.NEXT_PUBLIC_BUILD_BOT_USERNAME ?? "";
 const BUILD_BOT_URL = /^[A-Za-z][A-Za-z0-9_]{1,28}[Bb][Oo][Tt]$/.test(BUILD_BOT_USERNAME)
@@ -40,7 +38,6 @@ const BUILD_BRAND: DisplayBrand = {
   name: process.env.NEXT_PUBLIC_BUILD_SCHOOL_NAME ?? "School",
   short_name: process.env.NEXT_PUBLIC_BUILD_SCHOOL_SHORT_NAME ?? "School",
   logo: process.env.NEXT_PUBLIC_BUILD_SCHOOL_LOGO ?? "",
-  resultStatus: process.env.NEXT_PUBLIC_BUILD_RESULT_STATUS ?? "Result in the app",
 };
 
 function BrandHeader({
@@ -60,7 +57,6 @@ function BrandHeader({
         )}
         <span>{brand.name}</span>
       </div>
-      <span className="status-pill">{brand.resultStatus}</span>
     </header>
   );
 }
@@ -126,7 +122,6 @@ export default function Home() {
     name: brand.name,
     short_name: brand.short_name,
     logo: brand.logo,
-    resultStatus: brand.interface.result_in_app,
   } : BUILD_BRAND;
   const gameplayProfile = gameplayProfileView({ ...bootstrap?.progress_profile, ...bootstrap?.gameplay_profile });
   const dailyPlan = bootstrap?.daily_plan ?? null;

@@ -70,13 +70,16 @@ export type QuestionProgress = {
 export function questionProgress(index: number, total: number): QuestionProgress {
   const current = index + 1;
   const percent = Math.round((current / total) * 100);
-  const message = current === total
-    ? "Последний рывок"
-    : index === 0
-      ? "Стартуем спокойно"
-      : current <= total / 2
-        ? "Набираем темп"
-        : "Финиш рядом";
+  // One caption per five tasks. Repeating it on every question made students read it as a hint.
+  const message = current % 5 !== 1
+    ? ""
+    : current === total
+      ? "Последний рывок"
+      : current === 1
+        ? "Стартуем спокойно"
+        : current * 2 <= total
+          ? "Набираем темп"
+          : "Финиш рядом";
 
   return { current, total, percent, message };
 }
@@ -132,7 +135,7 @@ export function QuestionView({
           showCount: false,
           backLabel: labels.back,
           saveState: progressSaveState,
-          progressMessage: `${labels.task_label} ${progress.current} ${labels.of_label} ${progress.total}. ${progress.message}`,
+          progressMessage: `${labels.task_label} ${progress.current} ${labels.of_label} ${progress.total}${progress.message ? `. ${progress.message}` : ""}`,
           skippedIndexes,
           onJumpToQuestion,
           onBack,
