@@ -1269,8 +1269,12 @@ select:disabled {
   color: var(--ink);
 }
 
+/* The base size is set through ".question-screen h1", so a bare class cannot
+   win the cascade. The size steps repeat that shape to stay in the fight. */
+.question-screen h1.question-title-medium,
 .question-title-medium { font-size: 17px; }
 
+.question-screen h1.question-title-long,
 .question-title-long { font-size: 16px; font-weight: 650; }
 
 .prompt-sentence { display: inline; }

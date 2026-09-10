@@ -163,6 +163,13 @@ describe("formulas are formatted as one whole token", () => {
     expect(html).toContain(`<span class="math-annotation">${latin![0]}</span>`);
   });
 
+  it("lets the heading size step beat the base rule", () => {
+    const css = readFileSync(resolve(fileURLToPath(new URL("./globals.css", import.meta.url))), "utf8");
+    // The base rule qualifies the element, so an unqualified step would lose.
+    expect(css).toMatch(/\.question-screen h1\.question-title-medium,\s*\.question-title-medium \{[^}]*17px/u);
+    expect(css).toMatch(/\.question-screen h1\.question-title-long,\s*\.question-title-long \{[^}]*16px/u);
+  });
+
   it("sizes an index and a state annotation by the rules the audit asked for", () => {
     const css = readFileSync(resolve(fileURLToPath(new URL("./globals.css", import.meta.url))), "utf8");
     expect(css).toMatch(/\.math-expression sup,\s*\.math-expression sub \{[^}]*font-size:\s*max\(11px,\s*0\.75em\)/u);
