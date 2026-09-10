@@ -456,7 +456,7 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='diagnostic_trainer_sessions_topic_mode_check') THEN
         ALTER TABLE diagnostic_trainer_sessions
             ADD CONSTRAINT diagnostic_trainer_sessions_topic_mode_check
-            CHECK (mode='mistakes' OR topic IS NULL);
+            CHECK (mode IN ('mistakes', 'today') OR topic IS NULL);
     END IF;
 END $$;
 

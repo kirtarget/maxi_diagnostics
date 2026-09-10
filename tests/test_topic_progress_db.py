@@ -96,6 +96,26 @@ async def test_progress_is_scoped_by_content_version(database):
 
 
 @pytest.mark.asyncio
+async def test_today_mode_session_with_a_topic_is_accepted(database):
+    """The trainer-session constraints allow a scored today session on a topic."""
+    from diagnostic.db import trainer
+
+    user_id = new_user_id()
+    await seed_profile(user_id)
+    session, _ = await trainer.start_session(
+        session_id="T" + "0" * 31,
+        user_id=user_id,
+        diagnostic_id=DIAGNOSTIC,
+        content_version=VERSION,
+        mode="today",
+        selected_question_ids=["p1", "p2"],
+        topic="Механика",
+    )
+    assert session["mode"] == "today"
+    assert session["topic"] == "Механика"
+
+
+@pytest.mark.asyncio
 async def test_schema_reapplies_cleanly_and_keeps_rows(database):
     """Re-running the whole DDL is idempotent and preserves recorded progress."""
     user_id = new_user_id()
