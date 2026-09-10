@@ -1226,9 +1226,15 @@ select:disabled {
   background: color-mix(in srgb, white 20%, transparent);
 }
 
-.question-progress-node.is-complete,
-.question-progress-node.is-current {
+.question-progress-node.is-complete {
   background: var(--brand-accent);
+}
+
+/* Where you are now differs from what you finished by width and tone, not by colour alone. */
+.question-progress-node.is-current {
+  flex: 2.2;
+  background: white;
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--brand-ink) 45%, transparent);
 }
 
 .question-progress-node.is-skipped {

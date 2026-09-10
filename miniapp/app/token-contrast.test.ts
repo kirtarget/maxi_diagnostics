@@ -146,4 +146,11 @@ describe("accessibility CSS rules that carry the contrast", () => {
     expect(limePill).toContain("var(--brand-accent)");
     expect(css).toMatch(/\.trainer-feedback small\.trainer-life-note\.is-warning\s*\{[^}]*color:\s*var\(--brand-ink\)/u);
   });
+
+  it("separates the current rail node from the completed ones by more than colour", () => {
+    const current = css.match(/\.question-progress-node\.is-current\s*\{([^}]*)\}/u)?.[1] ?? "";
+    expect(current).toMatch(/flex:\s*2\.2/u);
+    expect(current).toContain("background: white");
+    expect(css).not.toMatch(/\.question-progress-node\.is-complete,\s*\.question-progress-node\.is-current/u);
+  });
 });
