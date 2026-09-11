@@ -2,7 +2,7 @@
 
 import { useCallback, useReducer, useRef, useState, type Dispatch } from "react";
 
-import { answerTrainer, apiErrorDetail, finishTrainer, requestLivesReminder, startTrainer } from "./api";
+import { answerTrainer, apiErrorDetail, finishTrainer, recordCheckpoint, requestLivesReminder, startCheckpoint, startTrainer } from "./api";
 import type { LivesReminderState } from "./trainer-screen";
 import {
   trainerInitialState,
@@ -36,6 +36,8 @@ export type TrainerSessionState = {
 export type TrainerActions = {
   dispatch: Dispatch<TrainerAction>;
   start(diagnosticId: string, mode?: TrainerMode, sourceAttemptId?: string, topic?: string, count?: number): Promise<void>;
+  /** Start the weekly checkpoint for one unit. Runs the same trainer cycle, records a unit pass on finish. */
+  startCheckpoint(diagnosticId: string, contentVersion: string, unitIndex: number): Promise<void>;
   answer(questionId: string, answer: AnswerValue, giveUp?: boolean): Promise<void>;
   finish(): Promise<void>;
   remindLives(): Promise<void>;
@@ -88,8 +90,12 @@ export function useTrainer({
   const sourceAttemptId = useRef<string | null>(null);
   const topic = useRef<string | null>(null);
   const count = useRef<number | undefined>(undefined);
+  const contentVersion = useRef<string | null>(null);
+  const unitIndex = useRef<number | null>(null);
   const requestGeneration = useRef(0);
   const recoveryMode = useRef<"retry" | "restart">("retry");
+  /** Guards the checkpoint record POST against the double finish call the screen makes. */
+  const recordedCheckpointKey = useRef<string | null>(null);
 
   const start = useCallback(async (
     selectedId: string,
@@ -138,6 +144,41 @@ export function useTrainer({
     }
   }, [bootstrap, initData, sessionScope, setScreen]);
 
+  const startCheckpointSession = useCallback(async (
+    selectedId: string,
+    selectedContentVersion: string,
+    selectedUnitIndex: number,
+  ) => {
+    if (!sessionScope || !initData.current) return;
+    const generation = requestGeneration.current + 1;
+    requestGeneration.current = generation;
+    diagnosticId.current = selectedId;
+    mode.current = "checkpoint";
+    sourceAttemptId.current = null;
+    topic.current = null;
+    count.current = undefined;
+    contentVersion.current = selectedContentVersion;
+    unitIndex.current = selectedUnitIndex;
+    recordedCheckpointKey.current = null;
+    recoveryMode.current = "retry";
+    dispatch({ type: "reset" });
+    setLivesReminder({ status: "idle" });
+    setScreen("trainer");
+    try {
+      const response = await startCheckpoint(initData.current, {
+        session_scope: sessionScope,
+        diagnostic_id: selectedId,
+        content_version: selectedContentVersion,
+        unit_index: selectedUnitIndex,
+      });
+      if (generation !== requestGeneration.current) return;
+      dispatch({ type: "start", response });
+    } catch (startError) {
+      if (generation !== requestGeneration.current) return;
+      dispatch({ type: "error", message: trainerErrorMessage(startError) });
+    }
+  }, [initData, sessionScope, setScreen]);
+
   const answer = useCallback(async (questionId: string, value: AnswerValue, giveUp = false) => {
     const session = trainer.session;
     if (!session || !sessionScope || !initData.current) return;
@@ -164,6 +205,30 @@ export function useTrainer({
   const finish = useCallback(async () => {
     const session = trainer.session;
     if (!session || !sessionScope || !initData.current) return;
+    if (mode.current === "checkpoint" && unitIndex.current !== null) {
+      // The screen calls finish twice for one tap (explicit plus auto-finish
+      // effect); a checkpoint record mutates unit state, so run it once per session.
+      const recordKey = session.trainer_session_id;
+      if (recordedCheckpointKey.current === recordKey) return;
+      recordedCheckpointKey.current = recordKey;
+      try {
+        const response = await recordCheckpoint(initData.current, {
+          session_scope: sessionScope,
+          trainer_session_id: session.trainer_session_id,
+          unit_index: unitIndex.current,
+          revision: session.revision,
+        });
+        dispatch({ type: "checkpoint_result", response });
+        void refreshProgress?.();
+      } catch (recordError) {
+        recordedCheckpointKey.current = null;
+        if (RESTART_ON_FINISH.has(apiErrorDetail(recordError) ?? "")) {
+          recoveryMode.current = "restart";
+        }
+        dispatch({ type: "error", message: trainerErrorMessage(recordError) });
+      }
+      return;
+    }
     try {
       const response = await finishTrainer(initData.current, {
         session_scope: sessionScope,
@@ -193,6 +258,10 @@ export function useTrainer({
 
   const retry = useCallback(() => {
     const restart = () => {
+      if (mode.current === "checkpoint" && diagnosticId.current && contentVersion.current !== null && unitIndex.current !== null) {
+        void startCheckpointSession(diagnosticId.current, contentVersion.current, unitIndex.current);
+        return;
+      }
       if (diagnosticId.current) {
         void start(diagnosticId.current, mode.current, sourceAttemptId.current ?? undefined, topic.current ?? undefined, count.current);
       }
@@ -218,10 +287,10 @@ export function useTrainer({
       return;
     }
     void answer(questionId, submitted);
-  }, [answer, finish, start, trainer]);
+  }, [answer, finish, start, startCheckpointSession, trainer]);
 
   return {
     state: { trainer, livesReminder },
-    actions: { dispatch, start, answer, finish, remindLives, retry },
+    actions: { dispatch, start, startCheckpoint: startCheckpointSession, answer, finish, remindLives, retry },
   };
 }

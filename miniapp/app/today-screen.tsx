@@ -7,6 +7,8 @@ export type TodayScreenProps = {
   onStartSession: () => void;
   onOpenPath: () => void;
   onStartOnboarding: () => void;
+  /** Launch the weekly checkpoint blocking today's path. Called with `checkpoint_unit_index`. */
+  onStartCheckpoint: (unitIndex: number) => void;
 };
 
 function TodayHeroStat({ value, label }: { value: string; label: string }) {
@@ -31,7 +33,7 @@ function PathPreviewNode({ node }: { node: TopicPathNode }) {
   );
 }
 
-export function TodayScreen({ today, onStartSession, onOpenPath, onStartOnboarding }: TodayScreenProps) {
+export function TodayScreen({ today, onStartSession, onOpenPath, onStartOnboarding, onStartCheckpoint }: TodayScreenProps) {
   if (today.status === "no_diagnostic") {
     return (
       <section className="screen today-screen" aria-labelledby="today-title">
@@ -59,6 +61,45 @@ export function TodayScreen({ today, onStartSession, onOpenPath, onStartOnboardi
           </button>
         </div>
         <TodayStats today={today} />
+      </section>
+    );
+  }
+
+  if (today.status === "checkpoint") {
+    const preview = pathPreview(today.path);
+    const unitIndex = today.checkpoint_unit_index;
+    return (
+      <section className="screen today-screen" aria-labelledby="today-title">
+        <div className="today-hero today-hero-checkpoint">
+          <div className="today-hero-top">
+            <span className="today-eyebrow">{today.subject} · {today.exam}</span>
+            <span className="today-streak-pill" aria-label={`Серия ${today.streak_days} ${plural(today.streak_days, ["день", "дня", "дней"])}`}>
+              <span aria-hidden="true">🔥</span> {today.streak_days} {plural(today.streak_days, ["день", "дня", "дней"])}
+            </span>
+          </div>
+          <h1 id="today-title">Чекпоинт недели 🎯</h1>
+          <p className="today-lead">Ты закрыл блок тем. Пройди короткий срез — он закрепит блок и откроет следующие темы пути.</p>
+          <button
+            className="primary-button today-cta"
+            onClick={() => { if (unitIndex !== null) onStartCheckpoint(unitIndex); }}
+            type="button"
+            disabled={unitIndex === null}
+          >
+            <span className="today-cta-main">Пройти чекпоинт недели</span>
+            <span className="today-cta-play" aria-hidden="true">▶</span>
+          </button>
+          <TodayStats today={today} />
+        </div>
+
+        <div className="today-path-preview">
+          <div className="today-section-head">
+            <h2>Твой путь</h2>
+            <button className="today-path-link" onClick={onOpenPath} type="button">Весь путь <span aria-hidden="true">→</span></button>
+          </div>
+          <div className="today-path-list">
+            {preview.map((node) => <PathPreviewNode key={node.topic} node={node} />)}
+          </div>
+        </div>
       </section>
     );
   }

@@ -25,7 +25,7 @@ export function submitPresentation(elapsedMs: number): { remainingMs: number; sh
 export const examPreferenceKey = (schoolId: string): string => `diagnostic-exam-preference:${schoolId}`;
 
 export function shouldShowBottomNav(screen: Screen): boolean {
-  return screen !== "question" && screen !== "trainer" && screen !== "submitting" && screen !== "session-complete";
+  return screen !== "question" && screen !== "trainer" && screen !== "submitting" && screen !== "session-complete" && screen !== "checkpoint-result";
 }
 
 export function readExamPreference(schoolId: string, storage?: Storage): string | null {

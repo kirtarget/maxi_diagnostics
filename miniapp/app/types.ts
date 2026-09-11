@@ -8,6 +8,7 @@ export type Screen =
   | "path"
   | "results"
   | "session-complete"
+  | "checkpoint-result"
   | "profile"
   | "league"
   | "mode"
