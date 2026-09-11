@@ -1,6 +1,6 @@
 import { plural } from "./text-utils";
 import type { Question } from "./types";
-import type { TrainerAnswerResponse, TrainerMode } from "./trainer-model";
+import { sessionSpendsLives, type TrainerAnswerResponse, type TrainerMode } from "./trainer-model";
 
 /** ё and е are the same letter to a grader, and case never decides an option. */
 function normalizeLabel(label: string): string {
@@ -36,7 +36,7 @@ export function lifeNote(
   result: Pick<TrainerAnswerResponse, "life_delta" | "lives_remaining">,
   mode: TrainerMode,
 ): TrainerLifeNote | null {
-  if (mode === "mistakes" || result.life_delta >= 0) return null;
+  if (!sessionSpendsLives(mode) || result.life_delta >= 0) return null;
   const left = result.lives_remaining;
   if (left <= 0) return { text: "−1 жизнь · жизни закончились", isWarning: true };
   return {

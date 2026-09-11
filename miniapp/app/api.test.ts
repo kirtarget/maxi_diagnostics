@@ -9,6 +9,8 @@ import {
   loadLocalSession,
   postDiagnostic,
   recordOfferEvent,
+  startCheckpoint,
+  recordCheckpoint,
   reconcileRestoredSession,
   restoreBootstrapSession,
   saveLocalSession,
@@ -400,6 +402,50 @@ describe("diagnostic API payloads", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it("posts the checkpoint start payload for one unit", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    await startCheckpoint("signed-init-data", {
+      session_scope: "scope",
+      diagnostic_id: "oge-physics-197",
+      content_version: "v1",
+      unit_index: 0,
+    }, fetcher);
+    expect(fetcher).toHaveBeenCalledWith("/api/diagnostics/checkpoint/start", expect.objectContaining({
+      body: JSON.stringify({
+        init_data: "signed-init-data",
+        session_scope: "scope",
+        diagnostic_id: "oge-physics-197",
+        content_version: "v1",
+        unit_index: 0,
+      }),
+    }));
+  });
+
+  it("posts the checkpoint record payload with the trainer session and revision", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    await recordCheckpoint("signed-init-data", {
+      session_scope: "scope",
+      trainer_session_id: "cp-1",
+      unit_index: 0,
+      revision: 6,
+    }, fetcher);
+    expect(fetcher).toHaveBeenCalledWith("/api/diagnostics/checkpoint/record", expect.objectContaining({
+      body: JSON.stringify({
+        init_data: "signed-init-data",
+        session_scope: "scope",
+        trainer_session_id: "cp-1",
+        unit_index: 0,
+        revision: 6,
+      }),
+    }));
   });
 
   it("records only the allowlisted offer event fields", async () => {
