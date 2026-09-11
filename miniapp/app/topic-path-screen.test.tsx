@@ -55,6 +55,15 @@ describe("TopicPathScreen", () => {
     expect(html).toContain("Пройдено 2 из 5");
   });
 
+  it("pluralizes the «N из M тем» progress for 1, 2 and 5", () => {
+    const one = renderToStaticMarkup(<TopicPathScreen path={{ ...response, done_count: 0, total_count: 1 }} />);
+    expect(one).toContain("Пройдено 0 из 1 темы");
+    const two = renderToStaticMarkup(<TopicPathScreen path={{ ...response, done_count: 1, total_count: 2 }} />);
+    expect(two).toContain("Пройдено 1 из 2 тем");
+    const five = renderToStaticMarkup(<TopicPathScreen path={{ ...response, done_count: 2, total_count: 5 }} />);
+    expect(five).toContain("Пройдено 2 из 5 тем");
+  });
+
   it("draws the current topic progress bar", () => {
     const html = renderToStaticMarkup(<TopicPathScreen path={response} />);
     expect(html).toContain("path-node-progress");

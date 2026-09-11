@@ -1,6 +1,7 @@
 import type { CheckpointNode as CheckpointNodeData, TopicPathNode, TopicPathResponse } from "./types";
 import { topicMasteryPercent } from "./today-path-model";
 import { checkpointNodeCaption, checkpointNodeMarker } from "./checkpoint-path-model";
+import { plural } from "./text-utils";
 
 export type TopicPathScreenProps = {
   path: TopicPathResponse;
@@ -72,7 +73,7 @@ export function TopicPathScreen({ path, onStartCheckpoint }: TopicPathScreenProp
     <section className="screen path-screen" aria-labelledby="path-title">
       <span className="today-eyebrow">{path.subject} · {path.exam}</span>
       <h1 id="path-title">Твой путь</h1>
-      <p className="path-lead">Темы кодификатора ФИПИ. Каждая открывается, когда закрыта предыдущая. Пройдено {path.done_count} из {path.total_count}.</p>
+      <p className="path-lead">Темы кодификатора ФИПИ. Каждая открывается, когда закрыта предыдущая. Пройдено {path.done_count} из {path.total_count} {plural(path.total_count, ["темы", "тем", "тем"])}.</p>
       <ol className="path-list">
         {path.topics.flatMap((node) => {
           const checkpoint = checkpointByTopicIndex.get(node.index);

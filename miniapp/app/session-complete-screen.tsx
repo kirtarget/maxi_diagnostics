@@ -14,7 +14,8 @@ export function SessionCompleteScreen({ view, onHome, onReview }: SessionComplet
       <span className="session-complete-eyebrow" aria-hidden="true">✦ Сессия закончена ✦</span>
       <h1 id="session-complete-title">Отличная работа!</h1>
       <p className="session-complete-sub">
-        {view.topic ? `${view.topic} · ` : ""}{view.solved} из {view.size} {plural(view.size, ["задание", "задания", "заданий"])}
+        {/* Genitive after «из M»: «0 из 1 задания», «4 из 5 заданий». */}
+        {view.topic ? `${view.topic} · ` : ""}{view.solved} из {view.size} {plural(view.size, ["задания", "заданий", "заданий"])}
       </p>
 
       <div className="session-streak" role="group" aria-label="Серия">
