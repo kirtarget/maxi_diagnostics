@@ -436,7 +436,7 @@ async def answer_question(
                     session_id, question_id, answer, revision, next_revision,
                     idempotency_key, fingerprint, is_correct, public_feedback,
                     xp_delta, life_delta
-                ) VALUES ($1,$2,$3::jsonb,$4,$5,$6,$7,$8,$9::jsonb,$10,$11)
+                ) VALUES ($1,$2,COALESCE($3::jsonb,'null'::jsonb),$4,$5,$6,$7,$8,$9::jsonb,$10,$11)
                 RETURNING question_id, revision, idempotency_key, fingerprint,
                           is_correct, public_feedback, xp_delta, life_delta
                 """,
