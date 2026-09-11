@@ -25,7 +25,6 @@ const UI_OWNED_SOURCE_FILES = [
   "gameplay-profile-model.ts",
   "image-viewer.tsx",
   "layout.tsx",
-  "league-screen.tsx",
   "matching-answer.tsx",
   "math-text.ts",
   "navigation-model.ts",

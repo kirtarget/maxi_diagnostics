@@ -1,4 +1,4 @@
-import type { DailyPlanSummary, DiagnosticMode, PublicDiagnosticSummary, Screen, ServerAttempt } from "./types";
+import type { DiagnosticMode, PublicDiagnosticSummary, Screen, ServerAttempt } from "./types";
 import { plural } from "./text-utils";
 
 /** Navigation is a small state machine. A format is meaningful only after a subject is selected. */
@@ -9,11 +9,6 @@ export type NavigationSelection = {
 };
 
 export type NavigationIntent = { kind: "trainer" } | null;
-
-export type HomePrimaryAction =
-  | { kind: "resume"; label: string; attempt: ServerAttempt }
-  | { kind: "daily-plan"; label: string; plan: DailyPlanSummary }
-  | { kind: "new-diagnostic"; label: string };
 
 export const SUBMIT_MINIMUM_MS = 300;
 
@@ -63,28 +58,6 @@ export function formatDiagnosticDuration(mode: DiagnosticMode, diagnostic: Publi
 export function formatDiagnosticMeta(mode: DiagnosticMode, diagnostic: PublicDiagnosticSummary): string {
   const count = mode === "quick" ? diagnostic.quick_count : diagnostic.full_count;
   return `${count} ${plural(count, ["задание", "задания", "заданий"])} · ${formatDiagnosticDuration(mode, diagnostic)}`;
-}
-
-export function homePrimaryAction({
-  resumableAttempt,
-  dailyPlan,
-}: {
-  resumableAttempt?: ServerAttempt | null;
-  dailyPlan?: DailyPlanSummary | null;
-}): HomePrimaryAction {
-  if (resumableAttempt?.status === "in_progress") {
-    const subject = resumableAttempt.subject ?? "диагностика";
-    const current = Math.min(Math.max(resumableAttempt.question_index + 1, 1), Math.max(resumableAttempt.question_count, 1));
-    return {
-      kind: "resume",
-      label: `Продолжить: ${subject}, задание ${current} из ${resumableAttempt.question_count}`,
-      attempt: resumableAttempt,
-    };
-  }
-  if (dailyPlan?.status === "ready" && dailyPlan.diagnostic_id) {
-    return { kind: "daily-plan", label: `Задания на сегодня: ${dailyPlan.completed} из ${dailyPlan.total}`, plan: dailyPlan };
-  }
-  return { kind: "new-diagnostic", label: "Начать диагностику" };
 }
 
 export function resultFact(attempt: ServerAttempt): string {

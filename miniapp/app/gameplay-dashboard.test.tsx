@@ -1,10 +1,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { GameplayHomeScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
-import { gameplayProfileView } from "./gameplay-profile-model";
+import { SubjectsScreen, WelcomeScreen } from "./navigation-screens";
 
-describe("gameplay dashboard", () => {
+describe("onboarding screens", () => {
   const diagnostics = [{
     id: "math",
     content_version: "v1",
@@ -33,66 +32,5 @@ describe("gameplay dashboard", () => {
     />);
     expect(html).toContain(`${count} ${word} · разбор ответов`);
     expect(html).not.toContain("полный разбор");
-  });
-
-  it("renders server-owned XP, streak, lives, daily goal, and quest", () => {
-    const html = renderToStaticMarkup(<GameplayHomeScreen
-      diagnostics={diagnostics}
-      labels={{ start_diagnostic: "Начать" } as never}
-      profile={gameplayProfileView({
-        xp_total: 140,
-        level: 2,
-        level_progress: 27,
-        streak_days: 4,
-        lives_remaining: 5,
-        daily_goal: { date: null, target: 1, progress: 1, complete: true },
-        quest: { key: "complete_3_activities", date: null, target: 3, progress: 2 },
-      })}
-      onStart={() => undefined}
-      onOpenProfile={() => undefined}
-    />);
-
-    expect(html).toContain("140 XP");
-    expect(html).toContain("4");
-    expect(html).toContain("1/1");
-    expect(html).toContain("2/3 активности");
-    expect(html).toContain("жизни");
-  });
-
-  it.each([
-    [1, "1 диагностика завершена", "Сейчас доступен 1 предмет"],
-    [2, "2 диагностики завершены", "Сейчас доступны 2 предмета"],
-    [5, "5 диагностик завершено", "Сейчас доступны 5 предметов"],
-    [11, "11 диагностик завершено", "Сейчас доступны 11 предметов"],
-    [21, "21 диагностика завершена", "Сейчас доступен 21 предмет"],
-  ])("keeps count agreement for %s", (count, completion, availability) => {
-    const diagnosticsForCount = Array.from({ length: count as number }, (_, index) => ({
-      ...diagnostics[0],
-      id: `subject-${index}`,
-      subject: index === 0 ? "Биология" : `Предмет ${index + 1}`,
-    }));
-    const html = renderToStaticMarkup(<GameplayHomeScreen
-      diagnostics={diagnosticsForCount}
-      labels={{ start_diagnostic: "Начать" } as never}
-      profile={gameplayProfileView({ completion_count: count as number, achievement_keys: [] })}
-      onStart={() => undefined}
-      onOpenProfile={() => undefined}
-    />);
-    expect(html).toContain(completion);
-    expect(html).toContain(availability);
-    if (count === 1) expect(html).toContain("включая биологию");
-  });
-
-  it("does not claim server gameplay facts in the fallback", () => {
-    const html = renderToStaticMarkup(<GameplayHomeScreen
-      diagnostics={diagnostics}
-      labels={{ start_diagnostic: "Начать" } as never}
-      profile={gameplayProfileView({ completion_count: 0, achievement_keys: [] })}
-      onStart={() => undefined}
-      onOpenProfile={() => undefined}
-    />);
-
-    expect(html).not.toContain("дней подряд");
-    expect(html).not.toContain("Квест");
   });
 });

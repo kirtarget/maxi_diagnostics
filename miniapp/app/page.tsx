@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { BottomNav, GameplayHomeScreen, GameplayProfileScreen, ModeScreen, NotTelegramScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
+import { BottomNav, GameplayProfileScreen, ModeScreen, NotTelegramScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
 import { safeAssetPath } from "./question-assets";
 import { QuestionView as TrainingQuestionView } from "./question-screen";
 import {
@@ -16,8 +16,7 @@ import { forecastKind, forecastTrajectory, personalRoute } from "./result-flow-m
 import { loadDeliveryStatus, requestedAttemptId, retryDelivery, scheduleRetestReminder } from "./api";
 import { gameplayProfileView } from "./gameplay-profile-model";
 import { TrainerScreen } from "./trainer-screen";
-import { trainerDiagnosticId, trainerHeaderView } from "./trainer-model";
-import { LeagueScreen } from "./league-screen";
+import { trainerHeaderView } from "./trainer-model";
 import { useBootstrap } from "./use-bootstrap";
 import { useDiagnosticSession } from "./use-diagnostic-session";
 import { useTrainer } from "./use-trainer";
@@ -77,7 +76,7 @@ export default function Home() {
   const [navigationSelection, setNavigationSelection] = useState<NavigationSelection>({ exam: "", diagnosticId: null, mode: null });
   const [navigationIntent, setNavigationIntent] = useState<NavigationIntent>(null);
   const [forecastOrigin, setForecastOrigin] = useState<"result" | "review">("result");
-  const bootstrapSession = useBootstrap(setScreen);
+  const bootstrapSession = useBootstrap();
   const session = useDiagnosticSession({ bootstrap: bootstrapSession, screen, setScreen });
   const trainer = useTrainer({
     bootstrap: bootstrapSession.state.bootstrap,
@@ -92,8 +91,8 @@ export default function Home() {
   });
   const [startSnapshot, setStartSnapshot] = useState<SessionStartSnapshot | null>(null);
 
-  const { bootstrap, error, outsideTelegram, dismissedOfferPlacements, leagueState } = bootstrapSession.state;
-  const { dismissOfferPlacement, handleOfferEvent, openLeague } = bootstrapSession.actions;
+  const { bootstrap, error, outsideTelegram, dismissedOfferPlacements } = bootstrapSession.state;
+  const { dismissOfferPlacement, handleOfferEvent } = bootstrapSession.actions;
   const {
     diagnostic, diagnosticLoad, questions, exam, questionIndex,
     answers, inputDrafts, result, resultDiagnostic, review, reviewIndex, reviewError, syncWarning,
@@ -136,7 +135,6 @@ export default function Home() {
     logo: brand.logo,
   } : BUILD_BRAND;
   const gameplayProfile = gameplayProfileView({ ...bootstrap?.progress_profile, ...bootstrap?.gameplay_profile });
-  const dailyPlan = bootstrap?.daily_plan ?? null;
   const onboardingComplete = bootstrap?.onboarding?.status === "completed"
     || (!bootstrap?.onboarding && Boolean(bootstrap?.progress_profile?.completion_count));
   const goHome = () => {
@@ -267,20 +265,7 @@ export default function Home() {
       if (timer !== undefined) window.clearTimeout(timer);
     };
   }, [screen, replayAttemptId, bootstrapSession.initData, bootstrapSession.sessionScope, deliveryAttempt?.pdf_status, deliveryPollNonce]);
-  const selectedTrainerSubject = diagnostic?.subject
-    ?? resultDiagnostic?.subject
-    ?? (bootstrap?.diagnostics.length === 1 ? bootstrap.diagnostics.at(0)?.subject : null);
-  const trainerDiagnostic = trainerDiagnosticId(bootstrap, selectedTrainerSubject);
   const selectedDiagnostic = bootstrap?.diagnostics.find((item) => item.id === navigationSelection.diagnosticId) ?? null;
-  const openTrainer = () => {
-    if (trainerDiagnostic) {
-      void trainer.actions.start(trainerDiagnostic);
-      return;
-    }
-    setNavigationIntent({ kind: "trainer" });
-    setNavigationSelection((current) => ({ ...current, diagnosticId: null, mode: null }));
-    setScreen("subjects");
-  };
   const trainerHeader = trainerHeaderView(bootstrap, trainer.state.trainer.session);
   const activeAssessment = screen === "question" || screen === "trainer";
 
@@ -435,32 +420,6 @@ export default function Home() {
         />
       )}
 
-      {screen === "home" && bootstrap && bootstrap.diagnostics.length > 0 && (
-        <>
-        <GameplayHomeScreen
-          diagnostics={bootstrap.diagnostics}
-          results={bootstrap.results}
-          resumableAttempt={bootstrap.attempt}
-          lastSubject={bootstrap.results.find((attempt) => attempt.result)?.subject ?? null}
-          labels={bootstrap.school.brand.interface}
-          profile={gameplayProfile}
-          dailyPlan={dailyPlan}
-          onStart={openNewDiagnostic}
-          onResume={() => void session.actions.hydrate(true)}
-          onOpenSubject={openSubject}
-          onOpenResult={session.actions.openSavedResult}
-          onStartPlan={dailyPlan?.diagnostic_id
-            ? () => void trainer.actions.start(dailyPlan.diagnostic_id!, "plan")
-            : undefined}
-          onOpenProfile={() => setScreen("profile")}
-          offers={bootstrap.school.links.offers}
-          onOfferEvent={handleOfferEvent}
-          offerDismissed={Boolean(dismissedOfferPlacements.home)}
-          onOfferDismiss={() => dismissOfferPlacement("home")}
-        />
-        </>
-      )}
-
       {screen === "today" && bootstrap && (
         todayState.kind === "ready" ? (
           <TodayScreen
@@ -540,15 +499,6 @@ export default function Home() {
           profile={gameplayProfile}
           onBack={() => { void refreshToday(); setScreen("today"); }}
           onStart={openNewDiagnostic}
-        />
-      )}
-
-      {screen === "league" && (
-        <LeagueScreen
-          state={leagueState}
-          onRetry={() => void openLeague()}
-          onHome={() => setScreen(bootstrap?.diagnostics.length ? "today" : "welcome")}
-          onTrain={openTrainer}
         />
       )}
 
