@@ -7,8 +7,6 @@ import {
   finishTrainer,
   startTrainer,
 } from "./api";
-import { gameplayProfileView } from "./gameplay-profile-model";
-import { GameplayHomeScreen } from "./navigation-screens";
 import { ResultScreen } from "./result-flow";
 import { ConfirmSheet } from "./confirm-sheet";
 import { TrainerScreen } from "./trainer-screen";
@@ -155,18 +153,6 @@ describe("trainer integration contracts", () => {
     } catch (error) {
       expect(apiErrorDetail(error)).toBe("trainer_content_changed");
     }
-  });
-
-  it("keeps the trainer destination in bottom navigation instead of duplicating it on home", () => {
-    const html = renderToStaticMarkup(<GameplayHomeScreen
-      diagnostics={[{ id: "math", content_version: "v1", exam: "ОГЭ", subject: "Математика", mark: "М", quick_count: 3, full_count: 12, question_count: 12 }]}
-      labels={{ start_diagnostic: "Начать диагностику" } as never}
-      profile={gameplayProfileView({ completion_count: 0, achievement_keys: [] })}
-      onStart={() => undefined}
-      onOpenProfile={() => undefined}
-    />);
-    expect(html).toContain("Начать диагностику");
-    expect(html).not.toContain("Тренировка");
   });
 
   it("renders server feedback for the answered question, including the last question", () => {

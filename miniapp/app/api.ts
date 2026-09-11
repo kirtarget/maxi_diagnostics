@@ -21,7 +21,6 @@ import type {
   TrainerStartResponse,
 } from "./trainer-model";
 import type { OfferPlacement } from "./offer-ux";
-import { parseLeagueResponse, type LeagueResponse } from "./league-model";
 import {
   isEmptyAnswer,
   isValidNumericInput,
@@ -721,17 +720,6 @@ export const retryDelivery = (
   attempt_id: attemptId,
   session_scope: sessionScope,
 });
-
-export async function loadWeeklyLeague(
-  initData: string,
-  sessionScope: string,
-  fetcher: FetchLike = fetch,
-): Promise<LeagueResponse> {
-  const payload = await postDiagnostic<unknown>("/api/diagnostics/league", initData, { session_scope: sessionScope }, fetcher);
-  const league = parseLeagueResponse(payload);
-  if (!league) throw new Error("diagnostic_league_invalid_response");
-  return league;
-}
 
 export type TrainerStartPayload =
   | { session_scope: string; diagnostic_id: string; count: number; mode: "normal" }

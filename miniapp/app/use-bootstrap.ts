@@ -2,18 +2,16 @@
 
 import { useCallback, useRef, useState, type RefObject } from "react";
 
-import { loadBootstrap, loadWeeklyLeague, recordOfferEvent, startOnboarding } from "./api";
-import type { LeagueScreenState } from "./league-model";
+import { loadBootstrap, recordOfferEvent, startOnboarding } from "./api";
 import { dismissOffer, type OfferDismissalState, type OfferPlacement, type OfferTelemetryEvent } from "./offer-ux";
 import { initializeTelegram, loadTelegramBridge } from "./telegram-webapp";
-import type { BootstrapResponse, Screen } from "./types";
+import type { BootstrapResponse } from "./types";
 
 export type BootstrapState = {
   bootstrap: BootstrapResponse | null;
   error: string | null;
   outsideTelegram: boolean;
   dismissedOfferPlacements: OfferDismissalState;
-  leagueState: LeagueScreenState;
 };
 
 /**
@@ -31,7 +29,6 @@ export type BootstrapActions = {
   beginOnboarding(): Promise<boolean>;
   dismissOfferPlacement(placement: OfferPlacement): void;
   handleOfferEvent(event: OfferTelemetryEvent): void;
-  openLeague(): Promise<void>;
 };
 
 export type BootstrapSession = {
@@ -43,12 +40,11 @@ export type BootstrapSession = {
   sessionScope: string | undefined;
 };
 
-export function useBootstrap(setScreen: (screen: Screen) => void): BootstrapSession {
+export function useBootstrap(): BootstrapSession {
   const [bootstrap, setBootstrap] = useState<BootstrapResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [outsideTelegram, setOutsideTelegram] = useState(false);
   const [dismissedOfferPlacements, setDismissedOfferPlacements] = useState<OfferDismissalState>({});
-  const [leagueState, setLeagueState] = useState<LeagueScreenState>({ kind: "loading" });
   const initData = useRef("");
   const schoolId = useRef<string | null>(null);
   const sessionScopeRef = useRef<string | null>(null);
@@ -123,25 +119,12 @@ export function useBootstrap(setScreen: (screen: Screen) => void): BootstrapSess
     }).catch(() => undefined);
   }, [sessionScope]);
 
-  const openLeague = useCallback(async () => {
-    if (!sessionScope || !initData.current) return;
-    setLeagueState({ kind: "loading" });
-    setScreen("league");
-    try {
-      const data = await loadWeeklyLeague(initData.current, sessionScope);
-      setLeagueState({ kind: "ready", data });
-    } catch {
-      setLeagueState({ kind: "error", message: "Не удалось загрузить рейтинг. Повтори попытку." });
-    }
-  }, [sessionScope, setScreen]);
-
   return {
     state: {
       bootstrap,
       error,
       outsideTelegram,
       dismissedOfferPlacements,
-      leagueState,
     },
     actions: {
       load,
@@ -150,7 +133,6 @@ export function useBootstrap(setScreen: (screen: Screen) => void): BootstrapSess
       beginOnboarding,
       dismissOfferPlacement,
       handleOfferEvent,
-      openLeague,
     },
     initData,
     schoolId,

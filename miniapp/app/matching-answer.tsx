@@ -546,7 +546,7 @@ function MapMatchingAnswer({ model, value, subject, disabled = false, onChange }
     <section className={`matching-answer matching-answer-${model.source}`} aria-labelledby="matching-answer-title">
       <div className="matching-answer-intro">
         <span>Ответ без ручного ввода</span>
-        <h2 id="matching-answer-title">Составь соответствие</h2>
+        <h2 id="matching-answer-title">Установи соответствие</h2>
         <p>Для каждого пункта выбери подходящий вариант.</p>
       </div>
       <div className="matching-answer-option-list" aria-label="Список вариантов" role="list">

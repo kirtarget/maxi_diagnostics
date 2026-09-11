@@ -18,7 +18,8 @@ export function CheckpointResultScreen({ result, onViewPath, onHome }: Checkpoin
       <span className="status-symbol" aria-hidden="true">{passed ? "🎉" : "🔁"}</span>
       <h1 id="checkpoint-result-title">{passed ? "Чекпоинт пройден" : "Чекпоинт не пройден"}</h1>
       <p className="checkpoint-result-sub">
-        {mastered} из {total} {plural(total, ["задание", "задания", "заданий"])} закрыто
+        {/* Genitive after «из M»: «0 из 1 задания», «4 из 5 заданий». */}
+        {mastered} из {total} {plural(total, ["задания", "заданий", "заданий"])} закрыто
       </p>
 
       {passed ? (

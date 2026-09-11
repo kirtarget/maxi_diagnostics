@@ -7,12 +7,11 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { GameplayHomeScreen, GameplayProfileScreen, ModeScreen, NotTelegramScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
+import { GameplayProfileScreen, ModeScreen, NotTelegramScreen, SubjectsScreen, WelcomeScreen } from "./navigation-screens";
 import { QuestionView } from "./question-screen";
 import { ForecastEmptyScreen, ForecastScreen, ResultScreen, ReviewScreen, RouteScreen } from "./result-flow";
 import { ConfirmSheet } from "./confirm-sheet";
 import { TrainerScreen } from "./trainer-screen";
-import { LeagueScreen } from "./league-screen";
 import { gameplayProfileView } from "./gameplay-profile-model";
 import brand from "../../school/brand.json";
 import schoolLinks from "../../school/links.json";
@@ -140,7 +139,6 @@ const noop = () => undefined;
 
 const screens: Array<[string, string]> = [
   ["welcome", renderToStaticMarkup(<WelcomeScreen diagnostics={diagnostics} labels={labels} links={links} onStart={noop} />)],
-  ["home", renderToStaticMarkup(<GameplayHomeScreen diagnostics={diagnostics} labels={labels} profile={profile} onStart={noop} onOpenProfile={noop} offers={links.offers} />)],
   ["profile", renderToStaticMarkup(<GameplayProfileScreen profile={profile} onBack={noop} onStart={noop} />)],
   ["mode", renderToStaticMarkup(<ModeScreen diagnostic={diagnostics[0]} labels={labels} onBack={noop} onSelect={noop} />)],
   ["subjects", renderToStaticMarkup(<SubjectsScreen diagnostics={diagnostics} exam="ОГЭ" labels={labels} mode="full" onBack={noop} onExam={noop} onSelect={noop} />)],
@@ -196,13 +194,6 @@ const screens: Array<[string, string]> = [
     error: null,
     retryPhase: null,
   } as never} dispatch={noop} offers={[{ id: "trainer-course", label: "Разобрать темы с преподавателем", button: "Открыть курс", url: "https://school.example/course" }]} offerDismissed={{ trainer: false }} onOfferDismiss={() => undefined} onOfferEvent={noop} />)],
-  ["league", renderToStaticMarkup(<LeagueScreen state={{ kind: "ready", data: { status: "active", week_start: "21 августа", week_end: "27 августа", rows: [
-    { rank: 1, display_label: "Аня К.", xp_week: 2480, is_me: false },
-    { rank: 2, display_label: "Дима С.", xp_week: 2120, is_me: false },
-    { rank: 3, display_label: "Марк В.", xp_week: 1890, is_me: false },
-    { rank: 4, display_label: "Кир", xp_week: 1240, is_me: true },
-    { rank: 5, display_label: "Лиза Т.", xp_week: 980, is_me: false },
-  ], me: { rank: 4, xp_week: 1240 } } }} onHome={noop} />)],
 ];
 
 describe("design preview gallery", () => {

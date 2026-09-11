@@ -67,6 +67,16 @@ describe("SessionCompleteScreen", () => {
     expect(html).toContain("Разбор этой сессии");
   });
 
+  it("keeps the «N из M» tally in the genitive for 1, 2 and 5", () => {
+    const one = renderToStaticMarkup(<SessionCompleteScreen view={{ ...view, solved: 0, size: 1 }} onHome={vi.fn()} />);
+    expect(one).toContain("0 из 1 задания");
+    expect(one).not.toContain("0 из 1 задание ");
+    const two = renderToStaticMarkup(<SessionCompleteScreen view={{ ...view, solved: 1, size: 2 }} onHome={vi.fn()} />);
+    expect(two).toContain("1 из 2 заданий");
+    const five = renderToStaticMarkup(<SessionCompleteScreen view={{ ...view, solved: 4, size: 5 }} onHome={vi.fn()} />);
+    expect(five).toContain("4 из 5 заданий");
+  });
+
   it("omits the review button and growth panels when data is thin", () => {
     const thin: SessionCompleteView = { ...view, masteryPercent: null, masteryBefore: null, masteryDelta: null, toRepeat: 0, streakGrew: false, nextSize: null, nextTopic: null };
     const html = renderToStaticMarkup(<SessionCompleteScreen view={thin} onHome={vi.fn()} />);

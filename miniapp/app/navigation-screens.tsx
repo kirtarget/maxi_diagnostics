@@ -1,33 +1,13 @@
-import { useMemo } from "react";
-import { normalizeOffer, OfferSurface, type OfferTelemetryEvent } from "./offer-ux";
 import { subjectIconKind, type SubjectIconKind } from "./subject-illustration";
 import { achievementCatalog, type GameplayProfileView } from "./gameplay-profile-model";
 import type {
   Brand,
-  DailyPlanSummary,
   DiagnosticMode,
   PublicDiagnosticSummary,
-  ServerAttempt,
   SchoolLinks,
 } from "./types";
-import { formatCompletedDate, formatDiagnosticCount, formatDiagnosticMeta, homePrimaryAction, resultFact } from "./navigation-model";
+import { formatDiagnosticCount, formatDiagnosticMeta } from "./navigation-model";
 import { plural } from "./text-utils";
-
-const SUBJECT_OBJECT_FORMS: Record<string, string> = {
-  "биология": "биологию",
-  "информатика": "информатику",
-  "история": "историю",
-  "математика": "математику",
-  "обществознание": "обществознание",
-  "русский язык": "русский язык",
-  "физика": "физику",
-  "химия": "химию",
-};
-
-function subjectObjectLabel(subject: string): string {
-  const normalized = subject.trim().toLocaleLowerCase("ru-RU");
-  return SUBJECT_OBJECT_FORMS[normalized] ?? `предмет «${subject}»`;
-}
 
 export type BottomNavTarget = "today" | "path" | "results" | "profile";
 
@@ -66,145 +46,6 @@ export type WelcomeScreenProps = {
   links: SchoolLinks;
   onStart: () => void;
 };
-
-export type GameplayHomeScreenProps = {
-  diagnostics: PublicDiagnosticSummary[];
-  results?: ServerAttempt[];
-  resumableAttempt?: ServerAttempt | null;
-  lastSubject?: string | null;
-  labels: Brand["interface"];
-  profile: GameplayProfileView;
-  dailyPlan?: DailyPlanSummary | null;
-  onStart: () => void;
-  onResume?: () => void;
-  onOpenSubject?: (diagnostic: PublicDiagnosticSummary) => void;
-  onOpenResult?: (attempt: ServerAttempt) => void;
-  onStartPlan?: () => void;
-  onOpenProfile: () => void;
-  offers?: SchoolLinks["offers"];
-  onOfferEvent?: (event: OfferTelemetryEvent) => void;
-  offerDismissed?: boolean;
-  onOfferDismiss?: () => void;
-};
-
-export function GameplayHomeScreen({
-  diagnostics,
-  results = [],
-  resumableAttempt,
-  lastSubject,
-  labels,
-  profile,
-  dailyPlan,
-  onStart,
-  onResume,
-  onOpenSubject,
-  onOpenResult,
-  onStartPlan,
-  onOpenProfile,
-  offers = [],
-  onOfferEvent,
-  offerDismissed = false,
-  onOfferDismiss,
-}: GameplayHomeScreenProps) {
-  const offer = useMemo(() => normalizeOffer(offers[0] ?? {}), [offers]);
-  const subjects = [...new Set(diagnostics.map((item) => item.subject))];
-  const pathItems = diagnostics;
-  const firstSubject = subjects[0] ?? "предмет";
-  const primary = homePrimaryAction({ resumableAttempt, dailyPlan });
-  const completedResults = results.filter((attempt) => attempt.result);
-
-  return (
-    <section className="screen gameplay-home" aria-labelledby="gameplay-home-title">
-      <div className="gameplay-home-hero">
-        <h1 id="gameplay-home-title">Продолжай расти <em>шаг за шагом</em></h1>
-        <p className="hero-copy">{profile.onboardingLabel}. Проверь знания и получи понятный план подготовки.</p>
-        <div className="gameplay-level-card">
-          <div className="gameplay-level-row">
-            <span>Уровень {profile.level}</span>
-            <strong>{profile.levelLabel}</strong>
-          </div>
-          <div className="gameplay-progress" role="progressbar" aria-label="Прогресс уровня" aria-valuenow={profile.levelProgress} aria-valuemin={0} aria-valuemax={100}>
-            <span style={{ width: `${profile.levelProgress}%` }} />
-          </div>
-          <small>{profile.completionCount} {plural(profile.completionCount, ["диагностика", "диагностики", "диагностик"])} {plural(profile.completionCount, ["завершена", "завершены", "завершено"])}</small>
-        </div>
-        {profile.serverBacked && (
-          <div className="gameplay-dashboard" aria-label="Игровой прогресс">
-            <div><strong>{profile.xpTotal} XP</strong><small>опыт</small></div>
-            <div><strong>{profile.streakDays}</strong><small>{plural(profile.streakDays ?? 0, ["день", "дня", "дней"])} подряд</small></div>
-            <div className="gameplay-dashboard-lives"><strong>{"♥".repeat(profile.livesRemaining ?? 0)}</strong><small>жизни</small></div>
-            <div><strong>{profile.dailyGoal?.progress}/{profile.dailyGoal?.target}</strong><small>цель дня</small></div>
-          </div>
-        )}
-        {profile.serverBacked && profile.quest && (
-          <div className="gameplay-quest"><div><small>Квест</small><strong>{profile.quest.progress}/{profile.quest.target} {plural(profile.quest.target ?? 0, ["активность", "активности", "активностей"])}</strong></div></div>
-        )}
-        {dailyPlan?.status === "done" && (
-          <p className="gameplay-plan-done" role="status">
-            <span aria-hidden="true">✓</span> План выполнен
-          </p>
-        )}
-      </div>
-
-      <div className="gameplay-home-body">
-        <button
-          className={`primary-button gameplay-home-cta${primary.kind === "daily-plan" ? " gameplay-plan-cta" : ""}`}
-          onClick={primary.kind === "resume" ? (onResume ?? onStart) : primary.kind === "daily-plan" ? onStartPlan : onStart}
-          type="button"
-        >
-          {primary.label} <span aria-hidden="true">→</span>
-        </button>
-        {lastSubject && (
-          <section className="gameplay-next-subject" aria-label={`Следующее для ${lastSubject}`}>
-            <small>Следующее для {lastSubject}</small>
-            <strong>Закрепи тему и двигайся дальше</strong>
-          </section>
-        )}
-        <div className="gameplay-section-heading">
-          <div><h2>Доступные предметы</h2></div>
-          <span className="gameplay-count">Все {diagnostics.length} →</span>
-        </div>
-        <div className="gameplay-path" aria-label="Доступные диагностики">
-          {pathItems.map((item, index) => (
-            <button className="gameplay-path-item" key={item.id} onClick={() => (onOpenSubject ?? onStart)(item)} type="button">
-              <span className={`gameplay-path-node ${index === 0 ? "is-current" : ""}`}>{index + 1}</span>
-              <div><strong>{item.subject}</strong><small>{item.exam} · {formatDiagnosticMeta("quick", item)}</small></div>
-              <span className="gameplay-path-arrow" aria-hidden="true">→</span>
-            </button>
-          ))}
-        </div>
-        <p className="gameplay-path-note">Сейчас {plural(subjects.length || 1, ["доступен", "доступны", "доступны"])} {subjects.length || 1} {plural(subjects.length || 1, ["предмет", "предмета", "предметов"])}, включая {subjectObjectLabel(firstSubject)}.</p>
-
-        {completedResults.length > 0 && (
-          <section className="gameplay-results" aria-label="Предыдущие результаты" aria-labelledby="gameplay-results-title">
-            <div className="gameplay-section-heading"><h2 id="gameplay-results-title">Мои результаты</h2></div>
-            {completedResults.map((attempt) => (
-              <button className="gameplay-result-card secondary-button" key={attempt.attempt_id} onClick={() => onOpenResult?.(attempt)} type="button">
-                <span><strong>{attempt.subject ?? "Диагностика"}</strong><small>{formatCompletedDate(attempt.completed_at)}</small></span>
-                <span><strong>{resultFact(attempt)}</strong><small>{attempt.exam ?? ""}</small></span>
-              </button>
-            ))}
-          </section>
-        )}
-
-        {offer && !offerDismissed && (
-          <OfferSurface
-            offer={offer}
-            placement="home"
-            onClose={onOfferDismiss ?? (() => undefined)}
-            onEvent={onOfferEvent}
-          />
-        )}
-
-        <button className="gameplay-profile-card" onClick={onOpenProfile} type="button">
-          <span className="gameplay-profile-icon" aria-hidden="true">✦</span>
-          <span><strong>Твой профиль</strong><small>{profile.unlockedAchievements.length > 0 ? `Открыто ${profile.unlockedAchievements.length} ${plural(profile.unlockedAchievements.length, ["достижение", "достижения", "достижений"])}` : "Заверши первую диагностику, чтобы открыть достижение"}</small></span>
-          <span aria-hidden="true">→</span>
-        </button>
-      </div>
-    </section>
-  );
-}
 
 export function GameplayProfileScreen({ profile, onBack, onStart }: { profile: GameplayProfileView; onBack: () => void; onStart: () => void }) {
   const unlockedKeys = new Set(profile.unlockedAchievements.map((achievement) => achievement.key));
