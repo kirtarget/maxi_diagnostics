@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { SessionCompleteView } from "./session-complete-model";
 import { plural } from "./text-utils";
 
@@ -52,6 +53,15 @@ export function SessionCompleteScreen({ view, onHome, onReview }: SessionComplet
                   ? `было ${view.masteryBefore}% → стало ${view.masteryPercent}%`
                   : `тема пройдена на ${view.masteryPercent}%`}
               </small>
+              {view.masteryPercent !== null && (
+                <span
+                  className="session-mastery"
+                  aria-hidden="true"
+                  style={{ "--from": `${view.masteryBefore ?? 0}%`, "--to": `${view.masteryPercent}%` } as CSSProperties}
+                >
+                  <span className="session-mastery-fill" />
+                </span>
+              )}
             </span>
             {view.masteryDelta !== null && view.masteryDelta > 0 && <span className="session-change-delta">+{view.masteryDelta}%</span>}
           </div>
