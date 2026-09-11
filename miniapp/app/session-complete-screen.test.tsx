@@ -40,6 +40,27 @@ describe("SessionCompleteScreen", () => {
     expect(html).not.toContain("точность");
   });
 
+  it("draws a mastery bar that grows from the old percent to the new one", () => {
+    const html = renderToStaticMarkup(<SessionCompleteScreen view={view} onHome={vi.fn()} onReview={vi.fn()} />);
+    // The bar animates its width from the before mastery to the after mastery.
+    expect(html).toContain("session-mastery-fill");
+    expect(html).toContain("--from:42%");
+    expect(html).toContain("--to:58%");
+  });
+
+  it("starts the mastery bar at zero when there is no earlier snapshot", () => {
+    const firstTime: SessionCompleteView = { ...view, masteryBefore: null, masteryDelta: null };
+    const html = renderToStaticMarkup(<SessionCompleteScreen view={firstTime} onHome={vi.fn()} />);
+    expect(html).toContain("--from:0%");
+    expect(html).toContain("--to:58%");
+  });
+
+  it("omits the mastery bar when mastery is unknown", () => {
+    const thin: SessionCompleteView = { ...view, masteryPercent: null, masteryBefore: null, masteryDelta: null };
+    const html = renderToStaticMarkup(<SessionCompleteScreen view={thin} onHome={vi.fn()} />);
+    expect(html).not.toContain("session-mastery-fill");
+  });
+
   it("offers home and session review actions", () => {
     const html = renderToStaticMarkup(<SessionCompleteScreen view={view} onHome={vi.fn()} onReview={vi.fn()} />);
     expect(html).toContain("На главную");
