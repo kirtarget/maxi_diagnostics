@@ -1,4 +1,4 @@
-import type { AnswerValue, BootstrapResponse, PlanReason, Question } from "./types";
+import type { AnswerValue, BootstrapResponse, CheckpointRecordResponse, PlanReason, Question } from "./types";
 import { answerReadiness } from "./answer-readiness";
 import { lifeNote } from "./trainer-feedback";
 
@@ -25,9 +25,20 @@ export type TrainerStartResponse = {
   lives_remaining: number;
   next_life_at?: string | null;
   plan?: TrainerPlanInfo | null;
+  /** Present only on a checkpoint session; the unit its срез closes. */
+  unit_index?: number;
 };
 
-export type TrainerMode = "normal" | "mistakes" | "plan";
+export type TrainerMode = "normal" | "mistakes" | "plan" | "today" | "checkpoint";
+
+/**
+ * Whether answering in this mode debits a life. Mistake reviews and weekly
+ * checkpoints run like a diagnostic: they never spend lives, so the lives gate,
+ * the lives header, and the "−1 жизнь" notes all stay off.
+ */
+export function sessionSpendsLives(mode: TrainerMode): boolean {
+  return mode !== "mistakes" && mode !== "checkpoint";
+}
 
 export type TrainerHeaderView = {
   diagnosticId: string;
@@ -45,6 +56,8 @@ export const TRAINER_MODE_LABELS: Record<TrainerMode, string> = {
   normal: "Тренировка",
   mistakes: "Повтор ошибок",
   plan: "План на сегодня",
+  today: "Сегодняшняя сессия",
+  checkpoint: "Чекпоинт недели",
 };
 
 export function trainerModeLabel(mode: TrainerMode): string {
@@ -162,6 +175,8 @@ export type TrainerState = {
   submittedAnswer: AnswerValue | undefined;
   answerResult: TrainerAnswerResponse | null;
   finishResult: TrainerFinishResponse | null;
+  /** Set once a checkpoint session records its outcome, so the result screen can read it. */
+  checkpointResult: CheckpointRecordResponse | null;
   error: string | null;
   retryPhase: Exclude<TrainerPhase, "error"> | null;
   /** Set while a give-up request is in flight, so its result knows where to land. */
@@ -179,6 +194,7 @@ export const trainerInitialState: TrainerState = {
   submittedAnswer: undefined,
   answerResult: null,
   finishResult: null,
+  checkpointResult: null,
   error: null,
   retryPhase: null,
   giveUp: null,
@@ -198,6 +214,7 @@ export type TrainerAction =
   | { type: "next_question" }
   | { type: "finish_requested" }
   | { type: "finish_result"; response: TrainerFinishResponse }
+  | { type: "checkpoint_result"; response: CheckpointRecordResponse }
   | { type: "error"; message: string }
   | { type: "retry" };
 
@@ -230,7 +247,7 @@ export function trainerReducer(state: TrainerState, action: TrainerAction): Trai
     case "give_up":
       // Unlike a submission this needs no complete answer: not knowing one is the point.
       return state.phase === "answering" && state.session
-        && (state.session.mode === "mistakes" || state.session.lives_remaining > 0)
+        && (!sessionSpendsLives(state.session.mode) || state.session.lives_remaining > 0)
         ? {
           ...state,
           phase: "awaiting_result",
@@ -243,7 +260,7 @@ export function trainerReducer(state: TrainerState, action: TrainerAction): Trai
         : state;
     case "submit_answer":
       return state.phase === "answering" && state.session
-        && (state.session.mode === "mistakes" || state.session.lives_remaining > 0)
+        && (!sessionSpendsLives(state.session.mode) || state.session.lives_remaining > 0)
         && isTrainerAnswerComplete(currentQuestion(state)!, state.draftAnswer)
         ? {
           ...state,
@@ -317,6 +334,10 @@ export function trainerReducer(state: TrainerState, action: TrainerAction): Trai
     case "finish_result":
       return state.session && action.response.trainer_session_id === state.session.trainer_session_id
         ? { ...state, phase: "completed", finishResult: action.response, error: null }
+        : state;
+    case "checkpoint_result":
+      return state.session && action.response.unit_index === state.session.unit_index
+        ? { ...state, phase: "completed", checkpointResult: action.response, error: null }
         : state;
     case "error":
       return { ...state, phase: "error", error: action.message, retryPhase: state.phase === "error" ? state.retryPhase : state.phase };

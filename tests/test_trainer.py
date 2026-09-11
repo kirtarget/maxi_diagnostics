@@ -347,6 +347,30 @@ async def test_answer_retry_projects_xp_once_and_finish_is_idempotent(database):
 
 
 @pytest.mark.asyncio
+async def test_give_up_with_no_answer_stores_json_null_not_sql_null(database):
+    # A skip on an untouched question carries no draft answer. The answer column
+    # is NOT NULL, so a give-up must persist JSON null rather than a SQL NULL.
+    user_id = 9_800_000_000 + uuid4().int % 100_000_000
+    session_id, (session, _) = await _start(user_id)
+    fingerprint = trainer.answer_fingerprint(
+        session_id=session_id, question_id="q0", answer=None, revision=1,
+        idempotency_key="give-up-1",
+    )
+    result = await trainer.answer_question(
+        session_id=session_id, user_id=user_id, question_id="q0", answer=None,
+        revision=1, idempotency_key="give-up-1", fingerprint=fingerprint,
+        is_correct=False, public_feedback={"correct_answer": "A"},
+    )
+    assert result["is_correct"] is False
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        stored = await connection.fetchval(
+            "SELECT answer FROM diagnostic_trainer_answers WHERE session_id=$1", session_id
+        )
+    assert stored is None or stored == "null"
+
+
+@pytest.mark.asyncio
 async def test_wrong_answer_spends_one_life_once_and_concurrent_retry_is_safe(database):
     user_id = 9_810_000_000 + uuid4().int % 100_000_000
     session_id, _ = await _start(user_id)

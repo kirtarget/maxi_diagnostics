@@ -69,10 +69,10 @@ describe("KIR-233 navigation surfaces", () => {
   });
 
   it("renders all bottom navigation destinations", () => {
-    const html = renderToStaticMarkup(<BottomNav screen="home" onNavigate={vi.fn()} />);
-    expect(html).toContain("Главная");
-    expect(html).toContain("Тренажёр");
-    expect(html).toContain("Лига");
+    const html = renderToStaticMarkup(<BottomNav screen="today" onNavigate={vi.fn()} />);
+    expect(html).toContain("Сегодня");
+    expect(html).toContain("Путь");
+    expect(html).toContain("Результаты");
     expect(html).toContain("Профиль");
     expect(html).toContain('aria-current="page"');
   });

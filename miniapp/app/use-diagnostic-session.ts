@@ -395,7 +395,7 @@ export function useDiagnosticSession({
         setReviewIndex(0);
         setReviewError(null);
         const onboarding = data.onboarding?.status ?? (data.progress_profile?.completion_count ? "completed" : "welcome");
-        setScreen(onboarding === "completed" ? "home" : onboarding === "selection" ? "subjects" : "welcome");
+        setScreen(onboarding === "completed" ? "today" : onboarding === "selection" ? "subjects" : "welcome");
       }
       return true;
     } catch {

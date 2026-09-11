@@ -17,6 +17,7 @@ import type { AnswerValue, Brand, Question, SchoolLinks } from "./types";
 import {
   planProgress,
   planReasonLabel,
+  sessionSpendsLives,
   trainerFeedbackKind,
   trainerModeLabel,
   type TrainerAction,
@@ -174,7 +175,7 @@ export function TrainerScreen({ state, dispatch, onAnswer, onFinish, onHome, onR
   };
   const modeLabel = header?.modeLabel ?? trainerModeLabel(state.session.mode);
   const body = questionBodyModel(question);
-  const scored = state.session.mode !== "mistakes";
+  const scored = sessionSpendsLives(state.session.mode);
   const livesLeft = state.session.lives_remaining;
   const giveUp = (intent: TrainerGiveUp) => {
     dispatch({ type: "give_up", intent });

@@ -15,14 +15,36 @@ from diagnostic.catalog import (
     public_question,
 )
 from diagnostic.daily_plan import ensure_today_plan, plan_status
-from diagnostic.db import trainer
+from diagnostic.db import attempts, trainer
+from diagnostic.db import topic_progress as topic_progress_store
+from diagnostic.db import topic_checkpoints as topic_checkpoints_store
 from diagnostic.db.gameplay import serialize_gameplay_profile
 from diagnostic.review import fallback_guidance, format_answer
 from diagnostic.scoring import is_answer_correct
+from diagnostic.topic_checkpoint import (
+    build_checkpoints,
+    build_units,
+    checkpoint_unit_question_ids,
+    gate_path,
+    is_passing,
+    serialize_checkpoints,
+)
+from diagnostic.topic_path import (
+    TODAY_SESSION_SIZE,
+    build_topic_path,
+    current_topic,
+    estimate_minutes,
+    select_today_question_ids,
+    serialize_path,
+)
 
 from .dependencies import telegram_user
 from .models import (
+    CheckpointRecordRequest,
+    CheckpointStartRequest,
     DailyPlanRequest,
+    TodayRequest,
+    TopicPathRequest,
     TrainerAnswerRequest,
     TrainerFinishRequest,
     TrainerLivesReminderRequest,
@@ -83,7 +105,45 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
         source_attempt_id = None
         resumable = None
         plan = None
-        if body.mode == "plan":
+        session_topic = None
+        today_started = False
+        if body.mode == "today":
+            progress_map = await topic_progress_store.get_progress_map(
+                user["id"], diagnostic.id, content_version
+            )
+            passed_map = await topic_checkpoints_store.get_passed_map(
+                user["id"], diagnostic.id, content_version
+            )
+            path = gate_path(
+                build_topic_path(diagnostic.questions, progress_map), passed_map
+            )
+            node = current_topic(path)
+            if node is None:
+                raise HTTPException(status_code=409, detail="trainer_path_complete")
+            session_topic = node.topic
+            try:
+                resumable = await trainer.get_resumable_session(
+                    user_id=user["id"], diagnostic_id=diagnostic.id,
+                    content_version=content_version, mode="today",
+                    topic=session_topic,
+                )
+            except ValueError as exc:
+                raise _error(exc) from exc
+            if resumable is not None:
+                questions = tuple(
+                    question for question in diagnostic.questions
+                    if question.id in resumable[0]["question_ids"]
+                )
+            else:
+                selected_ids = select_today_question_ids(
+                    diagnostic.questions, path, progress_map, size=body.count
+                )
+                by_id = {question.id: question for question in diagnostic.questions}
+                questions = tuple(by_id[qid] for qid in selected_ids)
+            if not questions:
+                raise HTTPException(status_code=409, detail="trainer_path_complete")
+            today_started = True
+        elif body.mode == "plan":
             try:
                 plan = await ensure_today_plan(
                     user_id=user["id"],
@@ -120,6 +180,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
             if body.source_attempt_id is None:
                 raise HTTPException(status_code=409, detail="trainer_mistakes_source_required")
             source_attempt_id = body.source_attempt_id
+            session_topic = body.topic
             try:
                 await trainer.validate_mistakes_source(
                     user_id=user["id"], diagnostic_id=diagnostic.id,
@@ -175,7 +236,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
                 if body.count > len(questions):
                     raise HTTPException(status_code=422, detail="trainer_not_enough_questions")
         selected = list(
-            questions if resumable is not None or body.mode == "plan"
+            questions if resumable is not None or body.mode in ("plan", "today")
             else questions[: body.count]
         )
         if not selected:
@@ -191,7 +252,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
                     mode=body.mode,
                     selected_question_ids=[question.id for question in selected],
                     source_attempt_id=source_attempt_id,
-                    topic=body.topic if body.mode == "mistakes" else None,
+                    topic=session_topic,
                 )
             except ValueError as exc:
                 raise _error(exc) from exc
@@ -215,6 +276,10 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
             "lives_remaining": profile_payload["lives_remaining"],
             "next_life_at": profile_payload["next_life_at"],
         }
+        if today_started:
+            _funnel(background_tasks, request, user["id"], "daily_started",
+                    diagnostic.exam, diagnostic.subject,
+                    dedupe_key=f"today/{session['trainer_session_id']}")
         if plan is not None:
             _funnel(background_tasks, request, user["id"], "daily_started",
                     diagnostic.exam, diagnostic.subject,
@@ -275,6 +340,259 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
             "status": plan_status(plan["total"], plan["completed"]),
         }
 
+    @router.post("/path")
+    async def topic_path(body: TopicPathRequest, request: Request) -> dict[str, Any]:
+        user = telegram_user(request, body.init_data)
+        await _require_current_session(request, user["id"], body.session_scope)
+        try:
+            diagnostic = catalog.get(body.diagnostic_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        content_version = catalog.content_version(
+            diagnostic.id, request.app.state.settings.application_secret
+        )
+        if content_version != body.content_version:
+            raise HTTPException(status_code=409, detail="trainer_content_changed")
+        progress_map = await topic_progress_store.get_progress_map(
+            user["id"], diagnostic.id, content_version
+        )
+        passed_map = await topic_checkpoints_store.get_passed_map(
+            user["id"], diagnostic.id, content_version
+        )
+        mastery_path = build_topic_path(diagnostic.questions, progress_map)
+        path = gate_path(mastery_path, passed_map)
+        checkpoints = build_checkpoints(path, passed_map)
+        node = current_topic(path)
+        return {
+            "diagnostic_id": diagnostic.id,
+            "content_version": content_version,
+            "subject": diagnostic.subject,
+            "exam": diagnostic.exam,
+            "current_topic": node.topic if node is not None else None,
+            "done_count": sum(1 for topic_node in path if topic_node.status == "done"),
+            "total_count": len(path),
+            "topics": serialize_path(path),
+            "checkpoints": serialize_checkpoints(checkpoints),
+        }
+
+    @router.post("/today")
+    async def today(body: TodayRequest, request: Request) -> dict[str, Any]:
+        user = telegram_user(request, body.init_data)
+        await _require_current_session(request, user["id"], body.session_scope)
+        gameplay_row = await attempts.get_gameplay_profile(user["id"])
+        gameplay = serialize_gameplay_profile(gameplay_row)
+        base = {
+            "streak_days": gameplay["streak_days"],
+            "daily_goal": gameplay["daily_goal"],
+            "xp_total": gameplay["xp_total"],
+        }
+        diagnostic_id = body.diagnostic_id
+        if diagnostic_id is None:
+            diagnostic_id = await topic_progress_store.latest_completed_diagnostic(user["id"])
+        diagnostic = None
+        if diagnostic_id is not None:
+            try:
+                diagnostic = catalog.get(diagnostic_id)
+            except ValueError:
+                diagnostic = None
+        if diagnostic is None:
+            return {
+                "status": "no_diagnostic",
+                "diagnostic_id": None, "content_version": None,
+                "subject": None, "exam": None, "topic": None,
+                "topic_total": 0, "topic_mastered": 0,
+                "size": 0, "estimated_minutes": 0, "path": [], **base,
+            }
+        content_version = catalog.content_version(
+            diagnostic.id, request.app.state.settings.application_secret
+        )
+        progress_map = await topic_progress_store.get_progress_map(
+            user["id"], diagnostic.id, content_version
+        )
+        passed_map = await topic_checkpoints_store.get_passed_map(
+            user["id"], diagnostic.id, content_version
+        )
+        mastery_path = build_topic_path(diagnostic.questions, progress_map)
+        path = gate_path(mastery_path, passed_map)
+        checkpoints = build_checkpoints(path, passed_map)
+        node = current_topic(path)
+        selected_ids = select_today_question_ids(
+            diagnostic.questions, path, progress_map, size=TODAY_SESSION_SIZE
+        )
+        size = len(selected_ids)
+        pending_checkpoint = next(
+            (item for item in checkpoints if item.status in ("available", "cooldown")),
+            None,
+        )
+        if node is not None and size > 0:
+            status = "ready"
+        elif pending_checkpoint is not None:
+            status = "checkpoint"
+        else:
+            status = "path_complete"
+        return {
+            "status": status,
+            "diagnostic_id": diagnostic.id,
+            "content_version": content_version,
+            "subject": diagnostic.subject,
+            "exam": diagnostic.exam,
+            "topic": node.topic if node is not None else None,
+            "topic_total": node.total if node is not None else 0,
+            "topic_mastered": node.mastered if node is not None else 0,
+            "size": size,
+            "estimated_minutes": estimate_minutes(size),
+            "path": serialize_path(path),
+            "checkpoints": serialize_checkpoints(checkpoints),
+            "checkpoint_unit_index": (
+                pending_checkpoint.unit_index if pending_checkpoint is not None else None
+            ),
+            **base,
+        }
+
+    @router.post("/checkpoint/start")
+    async def checkpoint_start(
+        body: CheckpointStartRequest, request: Request, background_tasks: BackgroundTasks
+    ) -> dict[str, Any]:
+        user = telegram_user(request, body.init_data)
+        await _require_current_session(request, user["id"], body.session_scope)
+        try:
+            diagnostic = catalog.get(body.diagnostic_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        content_version = catalog.content_version(
+            diagnostic.id, request.app.state.settings.application_secret
+        )
+        if content_version != body.content_version:
+            raise HTTPException(status_code=409, detail="trainer_content_changed")
+        progress_map = await topic_progress_store.get_progress_map(
+            user["id"], diagnostic.id, content_version
+        )
+        passed_map = await topic_checkpoints_store.get_passed_map(
+            user["id"], diagnostic.id, content_version
+        )
+        mastery_path = build_topic_path(diagnostic.questions, progress_map)
+        path = gate_path(mastery_path, passed_map)
+        checkpoints = build_checkpoints(path, passed_map)
+        if body.unit_index >= len(checkpoints):
+            raise HTTPException(status_code=422, detail="trainer_checkpoint_unit_unknown")
+        node = checkpoints[body.unit_index]
+        if node.status != "available":
+            raise HTTPException(status_code=409, detail="trainer_checkpoint_unavailable")
+        question_ids = checkpoint_unit_question_ids(
+            diagnostic.questions, path, body.unit_index
+        )
+        if not question_ids:
+            raise HTTPException(status_code=409, detail="trainer_checkpoint_unavailable")
+        session_id = secrets.token_urlsafe(24)
+        try:
+            session, profile = await trainer.start_checkpoint_session(
+                session_id=session_id,
+                user_id=user["id"],
+                diagnostic_id=diagnostic.id,
+                content_version=content_version,
+                selected_question_ids=question_ids,
+            )
+        except ValueError as exc:
+            raise _error(exc) from exc
+        by_id = {question.id: question for question in diagnostic.questions}
+        selected = [
+            by_id[question_id]
+            for question_id in session.get("question_ids", ())
+            if question_id in by_id
+        ]
+        if not selected:
+            raise HTTPException(status_code=409, detail="trainer_content_changed")
+        profile_payload = serialize_gameplay_profile(profile)
+        _funnel(background_tasks, request, user["id"], "daily_started",
+                diagnostic.exam, diagnostic.subject,
+                dedupe_key=f"checkpoint/{session['trainer_session_id']}")
+        return {
+            "ok": True,
+            **session,
+            "unit_index": body.unit_index,
+            "questions": [public_question(question) for question in selected],
+            "lives_remaining": profile_payload["lives_remaining"],
+            "next_life_at": profile_payload["next_life_at"],
+        }
+
+    @router.post("/checkpoint/record")
+    async def checkpoint_record(
+        body: CheckpointRecordRequest, request: Request, background_tasks: BackgroundTasks
+    ) -> dict[str, Any]:
+        user = telegram_user(request, body.init_data)
+        await _require_current_session(request, user["id"], body.session_scope)
+        session = await trainer.get_session(body.trainer_session_id, user["id"])
+        if session is None:
+            raise HTTPException(status_code=404, detail="trainer_session_not_found")
+        if session["mode"] != "checkpoint":
+            raise HTTPException(status_code=409, detail="trainer_checkpoint_session_mismatch")
+        content_version = catalog.content_version(
+            session["diagnostic_id"], request.app.state.settings.application_secret
+        )
+        if content_version != session["content_version"]:
+            raise HTTPException(status_code=409, detail="trainer_content_changed")
+        try:
+            diagnostic = catalog.get(session["diagnostic_id"])
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail="trainer_content_changed") from exc
+        progress_map = await topic_progress_store.get_progress_map(
+            user["id"], diagnostic.id, content_version
+        )
+        passed_map = await topic_checkpoints_store.get_passed_map(
+            user["id"], diagnostic.id, content_version
+        )
+        mastery_path = build_topic_path(diagnostic.questions, progress_map)
+        path = gate_path(mastery_path, passed_map)
+        units = build_units(path)
+        if body.unit_index >= len(units):
+            raise HTTPException(status_code=422, detail="trainer_checkpoint_unit_unknown")
+        expected_ids = checkpoint_unit_question_ids(
+            diagnostic.questions, path, body.unit_index
+        )
+        if set(session["selected_question_ids"]) != set(expected_ids):
+            raise HTTPException(status_code=409, detail="trainer_checkpoint_session_mismatch")
+        try:
+            finished = await trainer.finish_session(
+                session_id=body.trainer_session_id,
+                user_id=user["id"],
+                revision=body.revision,
+            )
+        except ValueError as exc:
+            raise _error(exc) from exc
+        correct_count = int(finished["correct_count"])
+        question_count = int(finished["question_count"])
+        passed = is_passing(correct_count, question_count)
+        if passed and body.unit_index not in passed_map:
+            try:
+                await topic_checkpoints_store.record_pass(
+                    user_id=user["id"],
+                    diagnostic_id=diagnostic.id,
+                    content_version=content_version,
+                    unit_index=body.unit_index,
+                    session_id=body.trainer_session_id,
+                    correct_count=correct_count,
+                    question_count=question_count,
+                )
+            except ValueError as exc:
+                raise _error(exc) from exc
+            _funnel(background_tasks, request, user["id"], "daily_completed",
+                    dedupe_key=f"checkpoint/{body.trainer_session_id}")
+        passed_map = await topic_checkpoints_store.get_passed_map(
+            user["id"], diagnostic.id, content_version
+        )
+        path = gate_path(mastery_path, passed_map)
+        checkpoints = build_checkpoints(path, passed_map)
+        node = checkpoints[body.unit_index] if body.unit_index < len(checkpoints) else None
+        return {
+            "ok": True,
+            "passed": passed,
+            "unit_index": body.unit_index,
+            "mastered_count": correct_count,
+            "question_total": question_count,
+            "checkpoint": serialize_checkpoints([node])[0] if node is not None else None,
+            "checkpoints": serialize_checkpoints(checkpoints),
+        }
+
     @router.post("/trainer/answer")
     async def answer(
         body: TrainerAnswerRequest, request: Request, background_tasks: BackgroundTasks
@@ -323,6 +641,11 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
                 is_correct=False if body.give_up else is_answer_correct(question, body.answer),
                 public_feedback=feedback,
                 timezone_name=request.app.state.settings.timezone,
+                topic=question.topic,
+                topic_question_ids=[
+                    other.id for other in diagnostic.questions
+                    if other.topic == question.topic
+                ],
             )
             is_correct = bool(result.get("is_correct"))
             _funnel(

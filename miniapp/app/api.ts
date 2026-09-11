@@ -10,6 +10,10 @@ import type {
   DeliveryStatus,
   SavedSession,
   ServerAttempt,
+  CheckpointStartResponse,
+  CheckpointRecordResponse,
+  TodaySession,
+  TopicPathResponse,
 } from "./types";
 import type {
   TrainerAnswerResponse,
@@ -732,6 +736,7 @@ export async function loadWeeklyLeague(
 export type TrainerStartPayload =
   | { session_scope: string; diagnostic_id: string; count: number; mode: "normal" }
   | { session_scope: string; diagnostic_id: string; count: number; mode: "plan" }
+  | { session_scope: string; diagnostic_id: string; count: number; mode: "today" }
   | { session_scope: string; diagnostic_id: string; count: number; mode: "mistakes"; source_attempt_id: string; topic?: string };
 
 export const startTrainer = (
@@ -739,6 +744,34 @@ export const startTrainer = (
   payload: TrainerStartPayload,
   fetcher: FetchLike = fetch,
 ) => postDiagnostic<TrainerStartResponse>("/api/diagnostics/trainer/start", initData, payload, fetcher);
+
+/** The ordered topic path with per-topic status and progress. */
+export const loadTopicPath = (
+  initData: string,
+  payload: { session_scope: string; diagnostic_id: string; content_version: string },
+  fetcher: FetchLike = fetch,
+) => postDiagnostic<TopicPathResponse>("/api/diagnostics/path", initData, payload, fetcher);
+
+/** Today's session descriptor for the home screen. Omit `diagnostic_id` to let the server resolve the student's active subject. */
+export const loadToday = (
+  initData: string,
+  payload: { session_scope: string; diagnostic_id?: string },
+  fetcher: FetchLike = fetch,
+) => postDiagnostic<TodaySession>("/api/diagnostics/today", initData, payload, fetcher);
+
+/** Start the weekly checkpoint for one unit. The server picks the срез questions. */
+export const startCheckpoint = (
+  initData: string,
+  payload: { session_scope: string; diagnostic_id: string; content_version: string; unit_index: number },
+  fetcher: FetchLike = fetch,
+) => postDiagnostic<CheckpointStartResponse>("/api/diagnostics/checkpoint/start", initData, payload, fetcher);
+
+/** Finish a checkpoint session and record the unit pass. Answer questions via `answerTrainer` first. */
+export const recordCheckpoint = (
+  initData: string,
+  payload: { session_scope: string; trainer_session_id: string; unit_index: number; revision: number },
+  fetcher: FetchLike = fetch,
+) => postDiagnostic<CheckpointRecordResponse>("/api/diagnostics/checkpoint/record", initData, payload, fetcher);
 
 export const answerTrainer = (
   initData: string,

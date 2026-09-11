@@ -11,6 +11,7 @@ def test_schema_contains_only_starter_tables():
         "diagnostic_funnel_events",
         "diagnostic_notifications",
         "diagnostic_daily_plans",
+        "diagnostic_topic_progress",
         "message_templates",
         "diagnostic_content_drafts",
         "diagnostic_content_audit",
@@ -86,10 +87,58 @@ def test_topic_scoped_trainer_sessions_are_backward_compatible_and_bounded():
     fresh = DDL[start:end]
     assert "topic TEXT" in fresh
     assert "CHECK (topic IS NULL OR length(topic) BETWEEN 1 AND 128)" in fresh
-    assert "CHECK (mode = 'mistakes' OR topic IS NULL)" in fresh
+    assert "CHECK (mode IN ('mistakes', 'today') OR topic IS NULL)" in fresh
     assert "ADD COLUMN IF NOT EXISTS topic TEXT" in fresh
     assert "topic_check" in DDL
     assert "topic_mode_check" in DDL
+
+
+def test_topic_progress_table_is_additive_and_privacy_safe():
+    start = DDL.index("CREATE TABLE IF NOT EXISTS diagnostic_topic_progress")
+    end = DDL.index("idx_diagnostic_topic_progress_lookup")
+    progress_ddl = DDL[start:end]
+    assert "PRIMARY KEY (user_id, diagnostic_id, content_version, topic)" in progress_ddl
+    assert "correct_question_ids JSONB NOT NULL DEFAULT '[]'::jsonb" in progress_ddl
+    assert "done_at TIMESTAMPTZ" in progress_ddl
+    assert "REFERENCES diagnostic_progress_profiles(user_id) ON DELETE CASCADE" in progress_ddl
+    assert "content_version ~ '^[0-9a-f]{64}$'" in progress_ddl
+    # No private answer content ever lands in this table.
+    for forbidden in ("correct_answer", "answers", "init_data", "explanation"):
+        assert forbidden not in progress_ddl.casefold()
+
+
+def test_checkpoint_table_is_additive_and_privacy_safe():
+    start = DDL.index("CREATE TABLE IF NOT EXISTS diagnostic_topic_checkpoints")
+    end = DDL.index("idx_diagnostic_topic_checkpoints_lookup")
+    checkpoint_ddl = DDL[start:end]
+    assert "PRIMARY KEY (user_id, diagnostic_id, content_version, unit_index)" in checkpoint_ddl
+    assert "REFERENCES diagnostic_progress_profiles(user_id) ON DELETE CASCADE" in checkpoint_ddl
+    assert "content_version ~ '^[0-9a-f]{64}$'" in checkpoint_ddl
+    assert "CHECK (correct_count <= question_count)" in checkpoint_ddl
+    # No private answer content ever lands in this table.
+    for forbidden in ("correct_answer", "answers", "init_data", "explanation"):
+        assert forbidden not in checkpoint_ddl.casefold()
+
+
+def test_checkpoint_migration_widens_modes_and_runs_after_earlier_ones():
+    assert "CHECK (mode IN ('normal', 'mistakes', 'plan', 'today', 'checkpoint'))" in DDL
+    assert "2026-09-11-kir-117-checkpoints" in DDL
+    # The checkpoint mode-widening runs after the four-value migrations it relies on.
+    assert DDL.index("2026-09-10-kir-117-today-topic-path") < DDL.index(
+        "2026-09-11-kir-117-checkpoints"
+    )
+    assert DDL.index("CREATE TABLE IF NOT EXISTS diagnostic_topic_checkpoints") < DDL.index(
+        "2026-09-11-kir-117-checkpoints"
+    )
+
+
+def test_today_mode_migration_widens_trainer_modes_after_table_creation():
+    assert "CHECK (mode IN ('normal', 'mistakes', 'plan', 'today'))" in DDL
+    assert "2026-09-10-kir-117-today-topic-path" in DDL
+    for table in ("diagnostic_trainer_sessions", "diagnostic_topic_progress"):
+        assert DDL.index("CREATE TABLE IF NOT EXISTS " + table) < DDL.index(
+            "2026-09-10-kir-117-today-topic-path"
+        )
 
 
 def test_trainer_resume_identity_includes_nullable_topic():
@@ -101,7 +150,7 @@ def test_trainer_resume_identity_includes_nullable_topic():
     )
     assert "topic IS NOT DISTINCT FROM $6" in " ".join(sql.split())
     assert "2026-09-02-kir-173-daily-plan" in DDL
-    assert "CHECK (mode IN ('normal', 'mistakes', 'plan'))" in DDL
+    assert "CHECK (mode IN ('normal', 'mistakes', 'plan', 'today'))" in DDL
 
 
 def test_daily_plan_migration_runs_after_the_tables_it_alters():
