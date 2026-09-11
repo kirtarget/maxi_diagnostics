@@ -26,6 +26,7 @@ import { TodayScreen } from "./today-screen";
 import { TopicPathScreen } from "./topic-path-screen";
 import { ResultsScreen } from "./results-screen";
 import { SessionCompleteScreen } from "./session-complete-screen";
+import { CheckpointResultScreen } from "./checkpoint-result-screen";
 import { sessionCompleteView, type SessionStartSnapshot } from "./session-complete-model";
 import { isEmptyAnswer } from "./answer-values";
 import { ConfirmSheet } from "./confirm-sheet";
@@ -300,6 +301,15 @@ export default function Home() {
     }
     setScreen("path");
   };
+  // The checkpoint node lives on both the path and the home screen; both resolve the
+  // diagnostic from whichever payload they already hold.
+  const startCheckpointSession = (unitIndex: number) => {
+    const source = pathState.kind === "ready" ? pathState.path : readyToday;
+    const diagnosticId = source?.diagnostic_id ?? readyToday?.diagnostic_id ?? null;
+    const contentVersion = source?.content_version ?? readyToday?.content_version ?? null;
+    if (!diagnosticId || !contentVersion) return;
+    void trainer.actions.startCheckpoint(diagnosticId, contentVersion, unitIndex);
+  };
   // Load today's session whenever the home tab is shown without data yet.
   useEffect(() => {
     if (screen === "today" && bootstrapSession.sessionScope && todayState.kind === "idle") {
@@ -315,6 +325,17 @@ export default function Home() {
       setScreen("session-complete");
     }
   }, [screen, todaySessionMode, trainer.state.trainer.phase, refreshToday]);
+  // A finished checkpoint lands on its own result. Refresh today and the path so a
+  // pass reads the unlocked next unit, then show the pass/retry outcome.
+  const checkpointSessionMode = trainer.state.trainer.session?.mode === "checkpoint";
+  const checkpointSession = trainer.state.trainer.session;
+  useEffect(() => {
+    if (screen === "trainer" && checkpointSessionMode && trainer.state.trainer.phase === "completed" && trainer.state.trainer.checkpointResult) {
+      void refreshToday();
+      if (checkpointSession) void loadPath(checkpointSession.diagnostic_id, checkpointSession.content_version);
+      setScreen("checkpoint-result");
+    }
+  }, [screen, checkpointSessionMode, trainer.state.trainer.phase, trainer.state.trainer.checkpointResult, checkpointSession, refreshToday, loadPath]);
 
   const style = brand ? {
     "--brand-primary": brand.colors.primary,
@@ -447,6 +468,7 @@ export default function Home() {
             onStartSession={startTodaySession}
             onOpenPath={openPath}
             onStartOnboarding={openNewDiagnostic}
+            onStartCheckpoint={startCheckpointSession}
           />
         ) : todayState.kind === "error" ? (
           <section className="screen centered-state" role="alert">
@@ -467,7 +489,7 @@ export default function Home() {
 
       {screen === "path" && bootstrap && (
         pathState.kind === "ready" ? (
-          <TopicPathScreen path={pathState.path} />
+          <TopicPathScreen path={pathState.path} onStartCheckpoint={startCheckpointSession} />
         ) : pathState.kind === "error" ? (
           <section className="screen centered-state" role="alert">
             <span className="state-icon" aria-hidden="true">✈️</span>
@@ -498,6 +520,18 @@ export default function Home() {
           view={sessionCompleteView(trainer.state.trainer.finishResult, startSnapshot, readyToday)}
           onHome={goHome}
           onReview={() => setScreen("results")}
+        />
+      )}
+
+      {screen === "checkpoint-result" && trainer.state.trainer.checkpointResult && (
+        <CheckpointResultScreen
+          result={trainer.state.trainer.checkpointResult}
+          onViewPath={() => {
+            const session = trainer.state.trainer.session;
+            if (session) void loadPath(session.diagnostic_id, session.content_version);
+            setScreen("path");
+          }}
+          onHome={goHome}
         />
       )}
 

@@ -1,8 +1,11 @@
-import type { TopicPathNode, TopicPathResponse } from "./types";
+import type { CheckpointNode as CheckpointNodeData, TopicPathNode, TopicPathResponse } from "./types";
 import { topicMasteryPercent } from "./today-path-model";
+import { checkpointNodeCaption, checkpointNodeMarker } from "./checkpoint-path-model";
 
 export type TopicPathScreenProps = {
   path: TopicPathResponse;
+  /** Launch the weekly checkpoint for a unit. Only called for an `available` node. */
+  onStartCheckpoint?: (unitIndex: number) => void;
 };
 
 function PathNode({ node }: { node: TopicPathNode }) {
@@ -30,36 +33,54 @@ function PathNode({ node }: { node: TopicPathNode }) {
   );
 }
 
-/** Visual-only weekly checkpoint marker. The checkpoint mechanic ships in a later package. */
-function CheckpointNode() {
-  return (
-    <li className="path-node path-checkpoint">
+/** The weekly checkpoint node, rendered from real unit state. Clickable only when available. */
+function CheckpointNode({ node, onStart }: { node: CheckpointNodeData; onStart?: (unitIndex: number) => void }) {
+  const caption = checkpointNodeCaption(node);
+  const marker = checkpointNodeMarker(node.status);
+  const body = (
+    <>
       <span className="path-node-rail" aria-hidden="true">
-        <span className="path-node-badge">◆</span>
+        <span className="path-node-badge">{marker}</span>
       </span>
       <div className="path-node-body">
         <strong className="path-node-topic">Чекпоинт недели</strong>
-        <small className="path-node-caption">Короткая диагностика закрывает блок</small>
+        <small className="path-node-caption">{caption}</small>
         <span className="path-checkpoint-tag">Раз в неделю</span>
       </div>
-    </li>
+    </>
   );
+  if (node.status === "available" && onStart) {
+    return (
+      <li className="path-node path-checkpoint is-available">
+        <button type="button" className="path-checkpoint-button" onClick={() => onStart(node.unit_index)}>
+          {body}
+          <span className="path-checkpoint-go" aria-hidden="true">▶</span>
+        </button>
+      </li>
+    );
+  }
+  return <li className={`path-node path-checkpoint is-${node.status}`}>{body}</li>;
 }
 
-export function TopicPathScreen({ path }: TopicPathScreenProps) {
-  const currentIndex = path.topics.findIndex((node) => node.status === "current");
-  const checkpointAfter = currentIndex >= 0
-    ? currentIndex
-    : path.topics.reduce((last, node, index) => (node.status === "done" ? index : last), -1);
+export function TopicPathScreen({ path, onStartCheckpoint }: TopicPathScreenProps) {
+  // Checkpoints sit after the last topic of their unit, keyed by that path index.
+  const checkpointByTopicIndex = new Map<number, CheckpointNodeData>();
+  for (const checkpoint of path.checkpoints) {
+    checkpointByTopicIndex.set(checkpoint.topic_to, checkpoint);
+  }
   return (
     <section className="screen path-screen" aria-labelledby="path-title">
       <span className="today-eyebrow">{path.subject} · {path.exam}</span>
       <h1 id="path-title">Твой путь</h1>
       <p className="path-lead">Темы кодификатора ФИПИ. Каждая открывается, когда закрыта предыдущая. Пройдено {path.done_count} из {path.total_count}.</p>
       <ol className="path-list">
-        {path.topics.map((node, index) => (
-          <PathNode key={node.topic} node={node} />
-        )).flatMap((element, index) => index === checkpointAfter ? [element, <CheckpointNode key="checkpoint" />] : [element])}
+        {path.topics.flatMap((node) => {
+          const checkpoint = checkpointByTopicIndex.get(node.index);
+          const topicNode = <PathNode key={node.topic} node={node} />;
+          return checkpoint
+            ? [topicNode, <CheckpointNode key={`checkpoint-${checkpoint.unit_index}`} node={checkpoint} onStart={onStartCheckpoint} />]
+            : [topicNode];
+        })}
       </ol>
     </section>
   );
