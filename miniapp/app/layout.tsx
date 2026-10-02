@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: `${brand.name} — диагностика знаний`,
-  description: `Диагностика знаний от ${brand.name} с сохранением прогресса и результатом в Telegram.`,
+  description: `Диагностика знаний от ${brand.name} с сохранением прогресса и результата.`,
 };
 
 export const viewport: Viewport = {

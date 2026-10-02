@@ -91,7 +91,7 @@ export default function Home() {
   });
   const [startSnapshot, setStartSnapshot] = useState<SessionStartSnapshot | null>(null);
 
-  const { bootstrap, error, outsideTelegram, dismissedOfferPlacements } = bootstrapSession.state;
+  const { bootstrap, error, outsideTelegram, cardMode, dismissedOfferPlacements } = bootstrapSession.state;
   const { dismissOfferPlacement, handleOfferEvent } = bootstrapSession.actions;
   const {
     diagnostic, diagnosticLoad, questions, exam, questionIndex,
@@ -178,7 +178,7 @@ export default function Home() {
     setDiagnosticExitOpen(false);
     goHome();
   };
-  const routeItems = result ? personalRoute(result) : [];
+  const routeItems = (result ? personalRoute(result) : []).filter((item) => !cardMode || item.kind !== "retest-reminder");
   const [reminderMessage, setReminderMessage] = useState<string | null>(null);
   const reminderGeneration = useRef(0);
   const repeatDiagnostic = () => {
@@ -203,7 +203,7 @@ export default function Home() {
       return;
     }
     const attemptId = session.actions.persistedAttemptId();
-    if (!attemptId || !bootstrapSession.initData.current || !bootstrapSession.sessionScope) return;
+    if (cardMode || !attemptId || !bootstrapSession.initData.current || !bootstrapSession.sessionScope) return;
     const generation = reminderGeneration.current + 1;
     reminderGeneration.current = generation;
     setReminderMessage(null);
@@ -232,7 +232,7 @@ export default function Home() {
   const deliveryStateAttemptId = useRef<string | null>(null);
   const [deliveryPollNonce, restartDeliveryPolling] = useState(0);
   useEffect(() => {
-    if (screen !== "result" || !replayAttemptId || !bootstrapSession.initData.current || !bootstrapSession.sessionScope) return;
+    if (cardMode || screen !== "result" || !replayAttemptId || !bootstrapSession.initData.current || !bootstrapSession.sessionScope) return;
     const attemptChanged = deliveryStateAttemptId.current !== replayAttemptId;
     if (attemptChanged) {
       deliveryStateAttemptId.current = replayAttemptId;
@@ -398,7 +398,7 @@ export default function Home() {
         <section className="screen centered-state">
           <span className="state-icon" aria-hidden="true">📚</span>
           <h1>Диагностики готовятся</h1>
-          <p>Школа скоро добавит предметы. Пришлём уведомление в Telegram, как только всё будет готово.</p>
+          <p>{cardMode ? "Школа скоро добавит предметы." : "Школа скоро добавит предметы. Пришлём уведомление в Telegram, как только всё будет готово."}</p>
           <a className="secondary-button" href={bootstrap.school.links.support} target="_blank" rel="noreferrer">Связаться с поддержкой</a>
         </section>
       )}
@@ -575,18 +575,19 @@ export default function Home() {
           <ResultScreen
             diagnostic={resultDiagnostic}
             result={result}
-            pdfStatus={deliveryStatus ?? deliveryAttempt?.pdf_status ?? null}
+            cardMode={cardMode}
+            pdfStatus={cardMode ? null : deliveryStatus ?? deliveryAttempt?.pdf_status ?? null}
             onReview={session.actions.openReview}
             onForecast={() => { setForecastOrigin("result"); setScreen("forecast"); }}
             onHome={goHome}
             onRetryDelivery={() => {
-              if (!replayAttemptId) return;
+              if (cardMode || !replayAttemptId) return;
               void retryDelivery(bootstrapSession.initData.current, replayAttemptId, bootstrapSession.sessionScope!)
                 .then((response) => setDeliveryStatus(response.status))
                 .then(() => restartDeliveryPolling((value) => value + 1))
                 .catch(() => setDeliveryStatus("failed"));
             }}
-            onOpenChat={BUILD_BOT_URL ? () => {
+            onOpenChat={!cardMode && BUILD_BOT_URL ? () => {
               const webApp = window.Telegram?.WebApp;
               if (webApp?.openTelegramLink) webApp.openTelegramLink(BUILD_BOT_URL);
               else window.open(BUILD_BOT_URL, "_blank", "noopener,noreferrer");
@@ -606,8 +607,8 @@ export default function Home() {
           onFinish={() => void trainer.actions.finish()}
           onHome={goHome}
           onRetry={trainer.actions.retry}
-          livesReminder={trainer.state.livesReminder}
-          onRemindLives={() => void trainer.actions.remindLives()}
+          livesReminder={cardMode ? undefined : trainer.state.livesReminder}
+          onRemindLives={cardMode ? undefined : () => void trainer.actions.remindLives()}
           offers={bootstrap?.school.links.offers}
           header={trainerHeader}
           offerDismissed={dismissedOfferPlacements}

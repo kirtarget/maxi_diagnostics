@@ -97,6 +97,7 @@ export function ResultScreen({
   pdfStatus,
   onRetryDelivery,
   onOpenChat,
+  cardMode = false,
 }: {
   result: ServerResult;
   diagnostic: Pick<PublicDiagnostic, "exam" | "subject">;
@@ -107,6 +108,7 @@ export function ResultScreen({
   onHome?: () => void;
   onRetryDelivery?: () => void;
   onOpenChat?: () => void;
+  cardMode?: boolean;
 }): ReactNode {
   const [checkedExpanded, setCheckedExpanded] = useState(false);
   const checked = result.per_question ?? [];
@@ -170,7 +172,7 @@ export function ResultScreen({
       )}
       <div className="scope-note">
         <strong>Результат сохранён здесь</strong>
-        <span>Он останется в разделе «Мои результаты». Telegram присылает только короткое уведомление со ссылкой на этот экран.</span>
+        <span>{cardMode ? "Он останется в разделе «Мои результаты» и в карте поступления." : "Он останется в разделе «Мои результаты». Telegram присылает только короткое уведомление со ссылкой на этот экран."}</span>
       </div>
       <div className="result-actions">
         <button className="primary-button" onClick={() => onReview()} type="button">Посмотреть, где ошибся ({result.per_question?.filter((question) => question.status !== "correct").length ?? incorrectCount} {plural(result.per_question?.filter((question) => question.status !== "correct").length ?? incorrectCount, ["ошибка", "ошибки", "ошибок"])}) <span aria-hidden="true">→</span></button>
@@ -178,14 +180,14 @@ export function ResultScreen({
         {onHome && <button className="secondary-button" onClick={onHome} type="button">На главную</button>}
         <button className="secondary-button" onClick={onForecast} type="button">План</button>
       </div>
-      {pdfStatus && pdfStatus !== "sent" && (
+      {!cardMode && pdfStatus && pdfStatus !== "sent" && (
         <div className={`delivery-status delivery-${pdfStatus}`} role={pdfStatus === "failed" ? "alert" : undefined}>
           {pdfStatus === "pending" || pdfStatus === "sending" ? "Отправляем ссылку на результат в Telegram…" : null}
           {pdfStatus === "failed" && <><span>Не удалось отправить результат в Telegram.</span>{onRetryDelivery && <button type="button" onClick={onRetryDelivery}>Повторить</button>}</>}
           {pdfStatus === "abandoned" && "Отправка результата в Telegram прекращена после нескольких попыток."}
         </div>
       )}
-      {pdfStatus === "sent" && onOpenChat && <button className="secondary-button" type="button" onClick={onOpenChat}>Открыть чат</button>}
+      {!cardMode && pdfStatus === "sent" && onOpenChat && <button className="secondary-button" type="button" onClick={onOpenChat}>Открыть чат</button>}
       </div>
     </section>
   );

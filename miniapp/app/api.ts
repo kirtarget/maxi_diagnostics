@@ -1,3 +1,4 @@
+import type { CredentialInput } from "./api-credential";
 import type {
   AnswerMap,
   AnswerValue,
@@ -567,7 +568,7 @@ export function clearLocalSession(
 
 export async function postDiagnostic<T>(
   path: string,
-  initData: string,
+  initData: CredentialInput,
   payload: Record<string, unknown> = {},
   fetcher: FetchLike = fetch,
 ): Promise<T> {
@@ -581,7 +582,7 @@ export async function postDiagnostic<T>(
       const response = await fetcher(`${API_BASE_URL}${path}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ init_data: initData, ...payload }),
+        body: JSON.stringify({ ...(typeof initData === "string" ? { init_data: initData } : initData), ...payload }),
         signal: controller.signal,
       });
       if (!response.ok) {
@@ -620,7 +621,7 @@ export async function postDiagnostic<T>(
   throw lastError instanceof Error ? lastError : new Error("diagnostic_api_failed");
 }
 
-export const loadBootstrap = (initData: string) => {
+export const loadBootstrap = (initData: CredentialInput) => {
   const token = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("n");
   return postDiagnostic<BootstrapResponse>("/api/diagnostics/bootstrap", initData,
     token && token.length <= 160 ? { notification_token: token } : undefined);
@@ -633,13 +634,13 @@ export const requestedAttemptId = (): string | null => {
   return attempt && /^[A-Za-z0-9_-]{1,64}$/.test(attempt) ? attempt : null;
 };
 
-export const startOnboarding = (initData: string, sessionScope: string) =>
+export const startOnboarding = (initData: CredentialInput, sessionScope: string) =>
   postDiagnostic<{ status: "selection" | "completed" }>("/api/diagnostics/onboarding", initData, {
     session_scope: sessionScope, status: "selection",
   });
 
 export const loadDiagnostic = async (
-  initData: string,
+  initData: CredentialInput,
   sessionScope: string,
   diagnosticId: string,
   contentVersion: string,
@@ -665,26 +666,26 @@ export const loadDiagnostic = async (
 };
 
 export const saveProgress = (
-  initData: string,
+  initData: CredentialInput,
   payload: ProgressPayload,
 ) => postDiagnostic<{ ok: true; attempt: ServerAttempt }>(
   "/api/diagnostics/session/progress", initData, payload,
 );
 
 export const completeDiagnostic = (
-  initData: string,
+  initData: CredentialInput,
   payload: ReturnType<typeof buildCompletionPayload>,
 ) => postDiagnostic<CompletionResponse>("/api/diagnostics/session/complete", initData, payload);
 
 export const markResultViewed = (
-  initData: string, attemptId: string, sessionScope: string,
+  initData: CredentialInput, attemptId: string, sessionScope: string,
 ) =>
   postDiagnostic<{ ok: true }>("/api/diagnostics/session/viewed", initData, {
     attempt_id: attemptId,
     session_scope: sessionScope,
   });
 
-export const loadReview = (initData: string, attemptId: string, sessionScope: string) =>
+export const loadReview = (initData: CredentialInput, attemptId: string, sessionScope: string) =>
   postDiagnostic<ReviewResponse>("/api/diagnostics/session/review", initData, {
     attempt_id: attemptId,
     session_scope: sessionScope,
@@ -701,21 +702,21 @@ export type RetestReminderResponse =
   | { ok: true; status: "unavailable"; reason: "notifications_disabled" | "cancelled" | "delivery_failed" | "elapsed" };
 
 export const scheduleRetestReminder = (
-  initData: string, attemptId: string, sessionScope: string,
+  initData: CredentialInput, attemptId: string, sessionScope: string,
 ) => postDiagnostic<RetestReminderResponse>("/api/diagnostics/session/retest-reminder", initData, {
   attempt_id: attemptId,
   session_scope: sessionScope,
 });
 
 export const loadDeliveryStatus = (
-  initData: string, attemptId: string, sessionScope: string,
+  initData: CredentialInput, attemptId: string, sessionScope: string,
 ) => postDiagnostic<DeliveryResponse>("/api/diagnostics/session/delivery", initData, {
   attempt_id: attemptId,
   session_scope: sessionScope,
 });
 
 export const retryDelivery = (
-  initData: string, attemptId: string, sessionScope: string,
+  initData: CredentialInput, attemptId: string, sessionScope: string,
 ) => postDiagnostic<DeliveryResponse>("/api/diagnostics/session/delivery/retry", initData, {
   attempt_id: attemptId,
   session_scope: sessionScope,
@@ -728,41 +729,41 @@ export type TrainerStartPayload =
   | { session_scope: string; diagnostic_id: string; count: number; mode: "mistakes"; source_attempt_id: string; topic?: string };
 
 export const startTrainer = (
-  initData: string,
+  initData: CredentialInput,
   payload: TrainerStartPayload,
   fetcher: FetchLike = fetch,
 ) => postDiagnostic<TrainerStartResponse>("/api/diagnostics/trainer/start", initData, payload, fetcher);
 
 /** The ordered topic path with per-topic status and progress. */
 export const loadTopicPath = (
-  initData: string,
+  initData: CredentialInput,
   payload: { session_scope: string; diagnostic_id: string; content_version: string },
   fetcher: FetchLike = fetch,
 ) => postDiagnostic<TopicPathResponse>("/api/diagnostics/path", initData, payload, fetcher);
 
 /** Today's session descriptor for the home screen. Omit `diagnostic_id` to let the server resolve the student's active subject. */
 export const loadToday = (
-  initData: string,
+  initData: CredentialInput,
   payload: { session_scope: string; diagnostic_id?: string },
   fetcher: FetchLike = fetch,
 ) => postDiagnostic<TodaySession>("/api/diagnostics/today", initData, payload, fetcher);
 
 /** Start the weekly checkpoint for one unit. The server picks the срез questions. */
 export const startCheckpoint = (
-  initData: string,
+  initData: CredentialInput,
   payload: { session_scope: string; diagnostic_id: string; content_version: string; unit_index: number },
   fetcher: FetchLike = fetch,
 ) => postDiagnostic<CheckpointStartResponse>("/api/diagnostics/checkpoint/start", initData, payload, fetcher);
 
 /** Finish a checkpoint session and record the unit pass. Answer questions via `answerTrainer` first. */
 export const recordCheckpoint = (
-  initData: string,
+  initData: CredentialInput,
   payload: { session_scope: string; trainer_session_id: string; unit_index: number; revision: number },
   fetcher: FetchLike = fetch,
 ) => postDiagnostic<CheckpointRecordResponse>("/api/diagnostics/checkpoint/record", initData, payload, fetcher);
 
 export const answerTrainer = (
-  initData: string,
+  initData: CredentialInput,
   payload: {
     session_scope: string;
     trainer_session_id: string;
@@ -777,7 +778,7 @@ export const answerTrainer = (
 ) => postDiagnostic<TrainerAnswerResponse>("/api/diagnostics/trainer/answer", initData, payload, fetcher);
 
 export const requestLivesReminder = (
-  initData: string,
+  initData: CredentialInput,
   sessionScope: string,
   fetcher: FetchLike = fetch,
 ) => postDiagnostic<{ ok: true; due_at: string | null }>(
@@ -785,7 +786,7 @@ export const requestLivesReminder = (
 );
 
 export const finishTrainer = (
-  initData: string,
+  initData: CredentialInput,
   payload: { session_scope: string; trainer_session_id: string; revision: number },
   fetcher: FetchLike = fetch,
 ) => postDiagnostic<TrainerFinishResponse>("/api/diagnostics/trainer/finish", initData, payload, fetcher);
@@ -799,7 +800,7 @@ export type OfferEventPayload = {
 };
 
 export const recordOfferEvent = (
-  initData: string,
+  initData: CredentialInput,
   payload: OfferEventPayload,
   fetcher: FetchLike = fetch,
 ) => postDiagnostic<{ ok: true }>("/api/diagnostics/offer-events", initData, payload, fetcher);

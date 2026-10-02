@@ -99,7 +99,7 @@ function TrainerNoLivesScreen({ nextLifeAt, livesReminder, onRemindLives, onHome
     {ready
       ? <button className="primary-button" type="button" onClick={onRetry}>Обновить жизни <span aria-hidden="true">→</span></button>
       : <button className="primary-button" type="button" onClick={onHome}>Пройти диагностику <span aria-hidden="true">→</span></button>}
-    {!ready && (reminderStatus === "scheduled"
+    {!ready && onRemindLives && (reminderStatus === "scheduled"
       ? <p className="lives-reminder-note" role="status">Напомним в Telegram, когда жизни вернутся.</p>
       : <button className="link-button" type="button" disabled={reminderStatus === "pending"} onClick={onRemindLives}>
         {reminderStatus === "pending" ? "Настраиваем напоминание…" : "Напомнить в Telegram, когда жизни вернутся"}
