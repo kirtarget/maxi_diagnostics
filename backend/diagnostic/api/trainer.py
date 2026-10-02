@@ -38,7 +38,7 @@ from diagnostic.topic_path import (
     serialize_path,
 )
 
-from .dependencies import telegram_user
+from .dependencies import request_user
 from .models import (
     CheckpointRecordRequest,
     CheckpointStartRequest,
@@ -93,7 +93,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
 
     @router.post("/trainer/start")
     async def start(body: TrainerStartRequest, request: Request, background_tasks: BackgroundTasks) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         try:
             diagnostic = catalog.get(body.diagnostic_id)
@@ -294,7 +294,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
 
     @router.post("/daily-plan")
     async def daily_plan(body: DailyPlanRequest, request: Request) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         try:
             plan = await ensure_today_plan(
@@ -342,7 +342,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
 
     @router.post("/path")
     async def topic_path(body: TopicPathRequest, request: Request) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         try:
             diagnostic = catalog.get(body.diagnostic_id)
@@ -377,7 +377,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
 
     @router.post("/today")
     async def today(body: TodayRequest, request: Request) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         gameplay_row = await attempts.get_gameplay_profile(user["id"])
         gameplay = serialize_gameplay_profile(gameplay_row)
@@ -453,7 +453,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
     async def checkpoint_start(
         body: CheckpointStartRequest, request: Request, background_tasks: BackgroundTasks
     ) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         try:
             diagnostic = catalog.get(body.diagnostic_id)
@@ -519,7 +519,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
     async def checkpoint_record(
         body: CheckpointRecordRequest, request: Request, background_tasks: BackgroundTasks
     ) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         session = await trainer.get_session(body.trainer_session_id, user["id"])
         if session is None:
@@ -597,7 +597,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
     async def answer(
         body: TrainerAnswerRequest, request: Request, background_tasks: BackgroundTasks
     ) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         session = await trainer.get_session(body.trainer_session_id, user["id"])
         if session is None:
@@ -675,7 +675,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
     async def lives_reminder(
         body: TrainerLivesReminderRequest, request: Request
     ) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         try:
             due_at = await trainer.schedule_lives_refill_reminder(user["id"])
@@ -685,7 +685,7 @@ def create_trainer_router(catalog: DiagnosticCatalog) -> APIRouter:
 
     @router.post("/trainer/finish")
     async def finish(body: TrainerFinishRequest, request: Request, background_tasks: BackgroundTasks) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         try:
             result = await trainer.finish_session(

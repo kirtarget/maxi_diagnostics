@@ -10,7 +10,7 @@ from diagnostic.db import offer_events
 from diagnostic.db.core import get_pool
 from diagnostic.session_identity import session_subject_key
 
-from .dependencies import telegram_user
+from .dependencies import request_user
 from .models import OfferEventRequest
 from .sessions import _funnel, _require_current_session
 
@@ -22,7 +22,7 @@ def create_offer_events_router() -> APIRouter:
     async def record(
         body: OfferEventRequest, request: Request, background_tasks: BackgroundTasks
     ) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         if body.placement not in offer_events.OFFER_PLACEMENTS:
             raise HTTPException(status_code=422, detail="offer_placement_invalid")

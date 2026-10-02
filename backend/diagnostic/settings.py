@@ -256,6 +256,7 @@ class Settings:
     bot_polling_enabled: bool = True
     alert_chat_id: int | None = None
     log_level: str = "INFO"
+    admission_diagnostics_secret: str = ""
 
     @classmethod
     def from_env(cls, *, require_admin: bool = True) -> "Settings":
@@ -320,4 +321,5 @@ class Settings:
             bot_polling_enabled=_boolean_setting("BOT_POLLING_ENABLED", True),
             alert_chat_id=_alert_chat_id(),
             log_level=_log_level(),
+            admission_diagnostics_secret=os.getenv("ADMISSION_DIAGNOSTICS_SECRET", ""),
         )

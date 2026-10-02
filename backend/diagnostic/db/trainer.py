@@ -588,6 +588,8 @@ async def schedule_lives_refill_reminder(
     user_id: int, *, now: datetime | None = None
 ) -> str | None:
     """Queue one Telegram reminder for when the next trainer life arrives."""
+    if user_id < 0:
+        return None
     pool = await get_pool()
     async with pool.acquire() as connection:
         async with connection.transaction():

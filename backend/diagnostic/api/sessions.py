@@ -33,7 +33,7 @@ from diagnostic.session_identity import (
     session_subject_key,
 )
 
-from .dependencies import telegram_user
+from .dependencies import request_user
 from .models import (
     ApiRequest, CatalogRequest, CompletionRequest, ProgressRequest, SessionRequest, OnboardingRequest,
     RetestReminderRequest,
@@ -337,7 +337,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
     async def begin_onboarding(
         body: OnboardingRequest, request: Request, background_tasks: BackgroundTasks,
     ) -> dict[str, str]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         if await onboarding.start_selection(user["id"]):
             _funnel(background_tasks, request, user["id"], "onboarding_started")
@@ -347,7 +347,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
     async def bootstrap(
         body: ApiRequest, request: Request, background_tasks: BackgroundTasks
     ) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         try:
             first_open = await attempts.mark_opened(user["id"])
         except ValueError as exc:
@@ -431,7 +431,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
 
     @router.post("/catalog")
     async def catalog_detail(body: CatalogRequest, request: Request) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         try:
             diagnostic = catalog.get(body.diagnostic_id)
@@ -451,7 +451,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
     async def progress(
         body: ProgressRequest, request: Request, background_tasks: BackgroundTasks
     ) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         diagnostic, expected_ids = _expected_questions(catalog, body.diagnostic_id, body.mode)
         current_version = catalog.content_version(
@@ -523,7 +523,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
     async def complete(
         body: CompletionRequest, request: Request, background_tasks: BackgroundTasks
     ) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         existing = await attempts.get_attempt(body.attempt_id, user["id"])
         if existing is not None and existing["status"] == "completed":
@@ -650,7 +650,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
 
     @router.post("/session/review")
     async def review(body: SessionRequest, request: Request) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         row = await attempts.get_review_attempt(body.attempt_id, user["id"])
         if row is None:
@@ -668,7 +668,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
 
     @router.post("/session/delivery")
     async def delivery_status(body: SessionRequest, request: Request) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         row = await attempts.get_delivery_status(body.attempt_id, user["id"])
         if row is None:
@@ -682,7 +682,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
 
     @router.post("/session/retest-reminder")
     async def retest_reminder(body: RetestReminderRequest, request: Request) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         result = await attempts.schedule_retest_reminder(
             user_id=user["id"], attempt_id=body.attempt_id,
@@ -691,7 +691,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
 
     @router.post("/session/delivery/retry")
     async def retry_delivery(body: SessionRequest, request: Request) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         row = await attempts.retry_delivery(body.attempt_id, user["id"])
         if row is None:
@@ -707,7 +707,7 @@ def create_router(catalog: DiagnosticCatalog) -> APIRouter:
     async def viewed(
         body: SessionRequest, request: Request, background_tasks: BackgroundTasks
     ) -> dict[str, Any]:
-        user = telegram_user(request, body.init_data)
+        user = request_user(request, body)
         await _require_current_session(request, user["id"], body.session_scope)
         try:
             row = await attempts.mark_result_viewed(body.attempt_id, user["id"])

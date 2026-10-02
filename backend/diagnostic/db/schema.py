@@ -94,7 +94,7 @@ BEGIN
         UPDATE diagnostic_attempts
            SET answers='{}'::jsonb, report_snapshot='{}'::jsonb,
                report_assets=NULL, report_asset_bundle_id=NULL, pdf_document=NULL
-         WHERE pdf_status IN ('sent', 'abandoned')
+         WHERE user_id > 0 AND pdf_status IN ('sent', 'abandoned')
            AND (answers <> '{}'::jsonb OR report_snapshot <> '{}'::jsonb
                 OR report_assets IS NOT NULL OR report_asset_bundle_id IS NOT NULL
                 OR pdf_document IS NOT NULL);
