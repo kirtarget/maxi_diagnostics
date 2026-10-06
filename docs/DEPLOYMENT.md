@@ -74,6 +74,12 @@ DIAGNOSTIC_RETENTION_DAYS=365
 IN_PROGRESS_RETENTION_DAYS=30
 ```
 
+Admission-card WebViews require `ADMISSION_DIAGNOSTICS_SECRET` on this server and
+the admission-card site, with the same randomly generated value. Leave it empty to
+disable card tickets and the server-to-server `/api/diagnostics/card-results` endpoint.
+Telegram authentication continues to work. Card credentials expire after two hours.
+Card users have negative IDs and do not receive Telegram deliveries or reminders.
+
 Keep `.env` mode-restricted and outside Git. Back up `APPLICATION_SECRET` with the
 deployment secrets: changing it invalidates browser session namespaces and active
 diagnostic content versions. Rotate it only as a planned security operation.

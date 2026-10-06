@@ -1,4 +1,5 @@
 "use client";
+import type { CredentialInput } from "./api-credential";
 
 import { useCallback, useState } from "react";
 
@@ -32,7 +33,7 @@ export function useTodaySession({
   initData,
   sessionScope,
 }: {
-  initData: { current: string };
+  initData: { current: CredentialInput };
   sessionScope: string | undefined;
 }): TodaySessionHook {
   const [today, setToday] = useState<TodayState>({ kind: "idle" });

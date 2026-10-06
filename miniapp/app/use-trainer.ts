@@ -1,4 +1,5 @@
 "use client";
+import { isCardCredential, type CredentialInput } from "./api-credential";
 
 import { useCallback, useReducer, useRef, useState, type Dispatch } from "react";
 
@@ -59,7 +60,7 @@ export function trainerErrorMessage(error: unknown): string {
     case "trainer_session_not_found":
     case "trainer_session_not_active": return "Эта тренировка больше недоступна. Запусти новую.";
     case "trainer_session_incomplete": return "Сначала ответь на все вопросы.";
-    case "session_expired": return "Сессия Telegram устарела. Перезагрузи приложение.";
+    case "session_expired": return "Сессия устарела. Перезагрузи приложение.";
     case "trainer_not_enough_questions": return "Для тренировки пока недостаточно заданий.";
     case "trainer_no_mistakes": return "В этой диагностике нет ошибок для тренировки.";
     case "trainer_mistakes_source_not_found": return "Результат диагностики больше недоступен для тренировки.";
@@ -78,7 +79,7 @@ export function useTrainer({
   refreshProgress,
 }: {
   bootstrap: BootstrapResponse | null;
-  initData: { current: string };
+  initData: { current: CredentialInput };
   sessionScope: string | undefined;
   setScreen: (screen: Screen) => void;
   refreshProgress?: () => Promise<void>;
@@ -246,6 +247,7 @@ export function useTrainer({
   }, [initData, sessionScope, trainer.session, refreshProgress]);
 
   const remindLives = useCallback(async () => {
+    if (isCardCredential(initData.current)) return;
     if (!sessionScope || !initData.current) return;
     setLivesReminder({ status: "pending" });
     try {

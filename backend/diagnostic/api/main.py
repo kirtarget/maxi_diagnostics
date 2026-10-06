@@ -21,6 +21,7 @@ from .sessions import InvalidAnswerValue, create_router
 from .league import create_league_router
 from .offer_events import create_offer_events_router
 from .trainer import create_trainer_router
+from .card_results import create_card_results_router
 
 
 def create_app(
@@ -85,6 +86,7 @@ def create_app(
     app.include_router(create_league_router())
     app.include_router(create_offer_events_router())
     app.include_router(create_trainer_router(catalog))
+    app.include_router(create_card_results_router())
     install_admin(app)
     return app
 

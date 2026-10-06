@@ -16,6 +16,62 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+@pytest.mark.asyncio
+async def test_card_attempt_preserves_review_without_telegram_queues():
+    user_id = -1234
+    attempt_id = f"attempt-{uuid4()}"
+    await attempts.mark_opened(user_id)
+    await attempts.upsert_progress(attempts.AttemptProgress(
+        attempt_id=attempt_id, user_id=user_id, diagnostic_id="math-10",
+        content_version="a" * 64, exam="ege", subject="math", mode="quick",
+        question_index=0, question_count=2, answers={},
+    ))
+    review = {"review_snapshot": [{"question_id": "q1"}]}
+    result = await attempts.complete_attempt(completion(
+        attempt_id, user_id=user_id, answers={"q1": "A"},
+        result_snapshot={"accuracy_percent": 50}, report_snapshot=review, progress_revision=2,
+    ))
+    assert result["pdf_status"] == "abandoned"
+    assert (await attempts.get_review_attempt(attempt_id, user_id))["report_snapshot"] == review
+    assert await attempts.list_notifications(attempt_id) == []
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute("DELETE FROM diagnostic_schema_migrations WHERE version='2026-08-11-minimize-attempt-data'")
+    await init_db(os.environ["TEST_DATABASE_URL"])
+    await init_db(os.environ["TEST_DATABASE_URL"])
+    assert (await attempts.get_review_attempt(attempt_id, user_id))["report_snapshot"] == review
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute("UPDATE diagnostic_progress_profiles SET streak_days=2, streak_last_date=(now() AT TIME ZONE 'UTC')::date - 1 WHERE user_id=$1", user_id)
+    assert await attempts.schedule_streak_save_notifications() == 0
+    async with pool.acquire() as connection:
+        assert await connection.fetchval("SELECT count(*) FROM diagnostic_notifications WHERE user_id=$1", user_id) == 0
+        await connection.execute("UPDATE diagnostic_attempts SET pdf_status='pending' WHERE attempt_id=$1", attempt_id)
+        await connection.execute("INSERT INTO diagnostic_notifications (dedupe_key,user_id,kind,due_at) VALUES ('legacy-card', $1, 'not_started', now())", user_id)
+    assert await attempts.claim_pending_delivery(attempt_id) is None
+    assert await attempts.count_pending_deliveries() == 0
+    assert await attempts.claim_due_notifications() == []
+    assert (await attempts.get_review_attempt(attempt_id, user_id))["report_snapshot"] == review
+
+
+@pytest.mark.asyncio
+async def test_card_results_returns_fifty_newest_completed_attempts():
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        await connection.execute("""
+            INSERT INTO diagnostic_attempts
+                (attempt_id,user_id,diagnostic_id,content_version,exam,subject,mode,status,
+                 question_index,question_count,answers,completed_at)
+            SELECT 'card-' || n::text, -1234, 'math-10', $1, 'ege', 'math', 'quick', 'completed',
+                   2, 2, '{}'::jsonb, now() + n * interval '1 minute'
+              FROM generate_series(1, 55) n
+        """, "a" * 64)
+    rows = await attempts.list_card_results(-1234)
+    assert len(rows) == 50
+    assert rows[0]["attempt_id"] == "card-55"
+    assert rows[-1]["attempt_id"] == "card-6"
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def database():
     await init_db(os.environ["TEST_DATABASE_URL"])

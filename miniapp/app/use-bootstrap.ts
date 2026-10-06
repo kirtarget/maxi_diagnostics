@@ -5,12 +5,14 @@ import { useCallback, useRef, useState, type RefObject } from "react";
 import { loadBootstrap, recordOfferEvent, startOnboarding } from "./api";
 import { dismissOffer, type OfferDismissalState, type OfferPlacement, type OfferTelemetryEvent } from "./offer-ux";
 import { initializeTelegram, loadTelegramBridge } from "./telegram-webapp";
+import { isCardCredential, readCardCredential, type CredentialInput } from "./api-credential";
 import type { BootstrapResponse } from "./types";
 
 export type BootstrapState = {
   bootstrap: BootstrapResponse | null;
   error: string | null;
   outsideTelegram: boolean;
+  cardMode: boolean;
   dismissedOfferPlacements: OfferDismissalState;
 };
 
@@ -34,7 +36,7 @@ export type BootstrapActions = {
 export type BootstrapSession = {
   state: BootstrapState;
   actions: BootstrapActions;
-  initData: RefObject<string>;
+  initData: RefObject<CredentialInput>;
   schoolId: RefObject<string | null>;
   sessionScopeRef: RefObject<string | null>;
   sessionScope: string | undefined;
@@ -44,8 +46,9 @@ export function useBootstrap(): BootstrapSession {
   const [bootstrap, setBootstrap] = useState<BootstrapResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [outsideTelegram, setOutsideTelegram] = useState(false);
+  const [cardMode, setCardMode] = useState(false);
   const [dismissedOfferPlacements, setDismissedOfferPlacements] = useState<OfferDismissalState>({});
-  const initData = useRef("");
+  const initData = useRef<CredentialInput>("");
   const schoolId = useRef<string | null>(null);
   const sessionScopeRef = useRef<string | null>(null);
   const refreshGeneration = useRef(0);
@@ -53,9 +56,11 @@ export function useBootstrap(): BootstrapSession {
   const sessionScope = bootstrap?.session_scope;
 
   const load = useCallback(async (): Promise<BootstrapLoad> => {
-    await loadTelegramBridge();
-    const webApp = initializeTelegram();
-    initData.current = webApp?.initData ?? "";
+    const cardCredential = readCardCredential() ?? (isCardCredential(initData.current) ? initData.current : null);
+    setCardMode(Boolean(cardCredential));
+    if (!cardCredential) await loadTelegramBridge();
+    const webApp = cardCredential ? undefined : initializeTelegram();
+    initData.current = cardCredential ?? webApp?.initData ?? "";
     if (!initData.current) {
       setOutsideTelegram(true);
       return { status: "outside" };
@@ -124,6 +129,7 @@ export function useBootstrap(): BootstrapSession {
       bootstrap,
       error,
       outsideTelegram,
+      cardMode,
       dismissedOfferPlacements,
     },
     actions: {

@@ -11,8 +11,15 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 class ApiRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    init_data: str = Field(min_length=1, max_length=16384)
+    init_data: str | None = Field(default=None, min_length=1, max_length=16384)
+    card_ticket: str | None = Field(default=None, min_length=1, max_length=512)
     notification_token: str | None = Field(default=None, max_length=160)
+
+    @model_validator(mode="after")
+    def exactly_one_credential(self):
+        if (self.init_data is None) == (self.card_ticket is None):
+            raise ValueError("exactly_one_credential_required")
+        return self
 
 
 class SessionRequest(ApiRequest):

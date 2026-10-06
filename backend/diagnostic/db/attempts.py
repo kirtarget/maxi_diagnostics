@@ -286,7 +286,7 @@ async def mark_opened(user_id: int) -> bool:
                 )
             else:
                 touched = created
-            if touched is not None:
+            if touched is not None and user_id > 0:
                 await connection.execute(
                     """
                     INSERT INTO diagnostic_notifications (dedupe_key, user_id, kind, due_at)
@@ -473,20 +473,21 @@ async def upsert_progress(progress: AttemptProgress):
                 """,
                 progress.user_id,
             )
-            await connection.execute(
-                """
-                INSERT INTO diagnostic_notifications (dedupe_key, user_id, attempt_id, kind, due_at, payload)
-                VALUES ('incomplete:' || $1, $2, $1, 'incomplete', now() + interval '2 hours',
-                        jsonb_build_object('mode', $3::text))
-                ON CONFLICT (dedupe_key) DO UPDATE SET
-                    due_at=EXCLUDED.due_at,
-                    status=CASE WHEN diagnostic_notifications.status='sent' THEN 'sent' ELSE 'pending' END,
-                    payload=EXCLUDED.payload, locked_at=NULL, last_error=NULL, updated_at=now()
-                """,
-                progress.attempt_id,
-                progress.user_id,
-                progress.mode,
-            )
+            if progress.user_id > 0:
+                await connection.execute(
+                    """
+                    INSERT INTO diagnostic_notifications (dedupe_key, user_id, attempt_id, kind, due_at, payload)
+                    VALUES ('incomplete:' || $1, $2, $1, 'incomplete', now() + interval '2 hours',
+                            jsonb_build_object('mode', $3::text))
+                    ON CONFLICT (dedupe_key) DO UPDATE SET
+                        due_at=EXCLUDED.due_at,
+                        status=CASE WHEN diagnostic_notifications.status='sent' THEN 'sent' ELSE 'pending' END,
+                        payload=EXCLUDED.payload, locked_at=NULL, last_error=NULL, updated_at=now()
+                    """,
+                    progress.attempt_id,
+                    progress.user_id,
+                    progress.mode,
+                )
             return row
 
 
@@ -590,7 +591,7 @@ async def complete_attempt(completion: AttemptCompletion):
                     unassessed_part, strong_topics, growth_topics,
                     forecast, result_snapshot, report_snapshot,
                     completed_at, updated_at, pdf_status
-                ) VALUES ($1,$2,$3,$4,$5,$6,$7,'completed',$8,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,now(),now(),'pending')
+                ) VALUES ($1,$2,$3,$4,$5,$6,$7,'completed',$8,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,now(),now(),CASE WHEN $2::bigint < 0 THEN 'abandoned' ELSE 'pending' END)
                 ON CONFLICT (attempt_id) DO UPDATE SET
                     diagnostic_id=EXCLUDED.diagnostic_id,
                     content_version=EXCLUDED.content_version,
@@ -598,6 +599,7 @@ async def complete_attempt(completion: AttemptCompletion):
                     subject=EXCLUDED.subject,
                     mode=EXCLUDED.mode,
                     status='completed',
+                    pdf_status=EXCLUDED.pdf_status,
                     question_index=EXCLUDED.question_index,
                     question_count=EXCLUDED.question_count,
                     answers=EXCLUDED.answers,
@@ -675,7 +677,7 @@ async def complete_attempt(completion: AttemptCompletion):
             ]
             if stored_mode == "quick":
                 notifications.append(("quick_to_full", timedelta(days=3)))
-            for kind, delay in notifications:
+            for kind, delay in notifications if completion.user_id > 0 else []:
                 await connection.execute(
                     """
                     INSERT INTO diagnostic_notifications (dedupe_key, user_id, attempt_id, kind, due_at, payload)
@@ -742,7 +744,7 @@ async def retry_delivery(attempt_id: str, user_id: int):
                 UPDATE diagnostic_attempts
                    SET pdf_status='pending', pdf_locked_at=NULL,
                        pdf_last_error=NULL, updated_at=now()
-                 WHERE attempt_id=$1 AND user_id=$2 AND status='completed'
+                 WHERE attempt_id=$1 AND user_id=$2 AND user_id > 0 AND status='completed'
                    AND pdf_status='failed' AND pdf_attempts < 8
                 """,
                 attempt_id,
@@ -817,6 +819,21 @@ async def list_completed_attempts(user_id: int) -> list:
         )
 
 
+async def list_card_results(user_id: int) -> list:
+    pool = await get_pool()
+    async with pool.acquire() as connection:
+        return await connection.fetch(
+            """
+            SELECT attempt_id, diagnostic_id, mode, completed_at, correct_count,
+                   question_count, result_snapshot, strong_topics, growth_topics
+              FROM diagnostic_attempts
+             WHERE user_id=$1 AND status='completed'
+             ORDER BY completed_at DESC, updated_at DESC LIMIT 50
+            """,
+            user_id,
+        )
+
+
 async def mark_result_viewed(attempt_id: str, user_id: int):
     pool = await get_pool()
     async with pool.acquire() as connection:
@@ -869,6 +886,8 @@ async def list_notifications(attempt_id: str) -> list:
 
 async def schedule_retest_reminder(*, user_id: int, attempt_id: str) -> dict[str, Any]:
     """Return the current retest notification without changing an existing delivery lease."""
+    if user_id < 0:
+        return {"status": "unavailable", "reason": "notifications_disabled"}
     pool = await get_pool()
     async with pool.acquire() as connection:
         async with connection.transaction():
@@ -954,7 +973,7 @@ async def claim_pending_delivery(attempt_id: str | None = None):
             row = await connection.fetchrow(
                 """
                 SELECT attempt_id FROM diagnostic_attempts
-                 WHERE status='completed' AND pdf_delivered_at IS NULL AND pdf_attempts < 8
+                 WHERE user_id > 0 AND status='completed' AND pdf_delivered_at IS NULL AND pdf_attempts < 8
                    AND NOT EXISTS (
                        SELECT 1 FROM diagnostic_erased_users erased
                         WHERE erased.user_id=diagnostic_attempts.user_id
@@ -1034,7 +1053,7 @@ async def count_pending_deliveries() -> int:
         return int(await connection.fetchval(
             """
             SELECT count(*) FROM diagnostic_attempts
-             WHERE status='completed' AND pdf_status IN ('pending', 'failed', 'sending')
+             WHERE user_id > 0 AND status='completed' AND pdf_status IN ('pending', 'failed', 'sending')
             """
         ) or 0)
 
@@ -1281,7 +1300,7 @@ async def schedule_streak_save_notifications(
               CROSS JOIN LATERAL (
                   SELECT (now() AT TIME ZONE $1)::date AS today
               ) AS school
-             WHERE profile.streak_days >= 2
+             WHERE profile.user_id > 0 AND profile.streak_days >= 2
                AND profile.streak_last_date = school.today - 1
                AND NOT EXISTS (
                    SELECT 1 FROM diagnostic_notifications existing
@@ -1320,7 +1339,7 @@ async def claim_due_notifications(limit: int = 1) -> list:
             rows = await connection.fetch(
                 """
                 SELECT * FROM diagnostic_notifications
-                 WHERE due_at <= now() AND attempts < 8
+                 WHERE user_id > 0 AND due_at <= now() AND attempts < 8
                    AND NOT EXISTS (
                        SELECT 1 FROM diagnostic_engagements engagement
                         WHERE engagement.user_id=diagnostic_notifications.user_id
